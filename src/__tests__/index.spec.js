@@ -3,13 +3,13 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import rine from '../index';
+import Rine from '../index';
 
 describe('Given the Rine library', () => {
   describe('when rendering an Rine element', () => {
     it('should call my function', () => {
       const mock = jest.fn();
-      const A = rine(mock);
+      const A = Rine(mock);
 
       render(<A />);
 
@@ -21,7 +21,7 @@ describe('Given the Rine library', () => {
         render(<p>Bar</p>);
         render(<p>Hello world</p>);
       });
-      const A = rine(mock);
+      const A = Rine(mock);
       const { getByText } = render(<A />);
 
       expect(mock).toBeCalledTimes(1);
@@ -29,7 +29,7 @@ describe('Given the Rine library', () => {
     });
     it('should pass down props to our function', () => {
       const mock = jest.fn().mockImplementation(({ message }) => <p>{ message }</p>);
-      const A = rine(mock);
+      const A = Rine(mock);
       const { container } = render(<A message='foo bar'/>);
 
       expect(mock).toBeCalledWith(expect.objectContaining({ message: 'foo bar' }));
@@ -40,7 +40,7 @@ describe('Given the Rine library', () => {
         const B = ({ children }) => {
           return <p>{ children }</p>;
         };
-        const A = rine(({ children, render }) => {
+        const A = Rine(({ children, render }) => {
           render(<B>{ children }</B>);
         });
         const { container } = render(<A>Hello world</A>);
@@ -51,7 +51,7 @@ describe('Given the Rine library', () => {
   });
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
-      const A = rine(async ({ render }) => {
+      const A = Rine(async ({ render }) => {
         act(() => render('Hello'));
         await delay(20);
         act(() => render('world'));
@@ -63,6 +63,20 @@ describe('Given the Rine library', () => {
       await delay(21);
       expect(queryByText('Hello')).toBe(null);
       expect(getByText('world')).toBeDefined();
+    });
+    it('should not try to re-render if the bridge is unmounted', async () => {
+      const spy = jest.spyOn(console, 'error');
+      const A = Rine(async ({ render }) => {
+        await delay(20);
+        act(() => render('world'));
+      });
+
+      const { unmount } = render(<A />);
+
+      unmount();
+      await delay(21);
+      expect(spy).not.toBeCalled();
+      spy.mockRestore();
     });
   });
 });

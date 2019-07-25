@@ -3,7 +3,7 @@ import { render, act, fireEvent } from '@testing-library/react';
 
 import rine from '../index';
 
-describe('Given the Rine library', () => {
+xdescribe('Given the Rine library', () => {
   describe('when', () => {
     it('should', async () => {
       const Input = function () {
