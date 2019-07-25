@@ -3,13 +3,13 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import actml from '../index';
+import rine from '../index';
 
-describe('Given the ActML library', () => {
-  describe('when rendering an ActML element', () => {
+describe('Given the Rine library', () => {
+  describe('when rendering an Rine element', () => {
     it('should call my function', () => {
       const mock = jest.fn();
-      const A = actml(mock);
+      const A = rine(mock);
 
       render(<A />);
 
@@ -21,7 +21,7 @@ describe('Given the ActML library', () => {
         render(<p>Bar</p>);
         render(<p>Hello world</p>);
       });
-      const A = actml(mock);
+      const A = rine(mock);
       const { getByText } = render(<A />);
 
       expect(mock).toBeCalledTimes(1);
@@ -29,7 +29,7 @@ describe('Given the ActML library', () => {
     });
     it('should pass down props to our function', () => {
       const mock = jest.fn().mockImplementation(({ message }) => <p>{ message }</p>);
-      const A = actml(mock);
+      const A = rine(mock);
       const { container } = render(<A message='foo bar'/>);
 
       expect(mock).toBeCalledWith(expect.objectContaining({ message: 'foo bar' }));
@@ -40,7 +40,7 @@ describe('Given the ActML library', () => {
         const B = ({ children }) => {
           return <p>{ children }</p>;
         };
-        const A = actml(({ children, render }) => {
+        const A = rine(({ children, render }) => {
           render(<B>{ children }</B>);
         });
         const { container } = render(<A>Hello world</A>);
@@ -51,7 +51,7 @@ describe('Given the ActML library', () => {
   });
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
-      const A = actml(async ({ render }) => {
+      const A = rine(async ({ render }) => {
         act(() => render('Hello'));
         await delay(20);
         act(() => render('world'));

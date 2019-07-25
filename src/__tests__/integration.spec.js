@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 
-import actml from '../index';
+import rine from '../index';
 
-describe('Given the ActML library', () => {
+describe('Given the Rine library', () => {
   describe('when', () => {
     it('should', async () => {
       const Input = function () {
@@ -16,7 +16,7 @@ describe('Given the ActML library', () => {
           </React.Fragment>
         );
       };
-      const Form = actml(function ({ render }) {
+      const Form = rine(function ({ render }) {
         render(
           <form>
             <Input />

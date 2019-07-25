@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import createActMLElement from './ActMLElement';
+import createRineElement from './RineElement';
 
 const isGenerator = obj => obj && typeof obj['next'] === 'function';
 const isPromise = obj => obj && typeof obj['then'] === 'function';
 
-export default function actml(Component) {
-  const el = createActMLElement(Component);
+export default function rine(Component) {
+  const el = createRineElement(Component);
 
-  return function ActML(props) {
+  return function Rine(props) {
     const [ result, setResult ] = useState(null);
 
     useEffect(() => {

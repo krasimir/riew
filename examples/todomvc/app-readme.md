@@ -1,11 +1,11 @@
-# ActML • [TodoMVC](http://todomvc.com)
+# Rine • [TodoMVC](http://todomvc.com)
 
-> ActML is a library that allows you to use React's JSX syntax for writing business logic.
+> Rine is a library that allows you to use React's JSX syntax for writing business logic.
 
 ## Resources
 
-- [Website](https://github.com/krasimir/actml)
-- [Documentation](https://github.com/krasimir/actml)
+- [Website](https://github.com/krasimir/rine)
+- [Documentation](https://github.com/krasimir/rine)
 - [Used by]()
 - [Blog]()
 - [FAQ]()
