@@ -1,0 +1,13 @@
+assets
+examples
+node_modules
+src
+.babelrc
+.npmignore
+.eslintrc
+.vscode
+NOTES
+*.log
+*.lock
+packages
+lib

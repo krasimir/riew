@@ -1,0 +1,69 @@
+{
+  "name": "rine",
+  "version": "0.1.0",
+  "description": "Procedure programming for React components",
+  "main": "./rine.production.js",
+  "scripts": {
+    "build-dev": "cp ./rine.js ./rine.dev.js && node ./scripts/replaceInFile.js ./rine.dev.js __DEV__ true",
+    "build-production": "cp ./rine.js ./rine.production.js && node ./scripts/replaceInFile.js ./rine.production.js __DEV__ false && uglifyjs ./rine.production.js -o ./rine.production.js --compress unused,dead_code --mangle",
+    "build": "browserify ./lib/index.js -o ./rine.js --standalone rine --external react && yarn build-dev && yarn build-production && rm ./rine.js",
+    "test": "BABEL_ENV=development ./node_modules/.bin/jest \"(.*)\\.spec\\.js\"",
+    "test-watch": "BABEL_ENV=development ./node_modules/.bin/jest \"(.*)\\.spec\\.js\" --watch --verbose false",
+    "transpile": "rm -rf ./lib/* && ./node_modules/.bin/babel ./src --out-dir ./lib --ignore spec.js",
+    "dev": "./node_modules/.bin/babel ./src --out-dir ./lib --ignore spec.js --watch",
+    "release": "yarn test && yarn transpile && yarn build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krasimir/rine.git"
+  },
+  "keywords": [
+    "rine",
+    "react",
+    "procedure",
+    "routine"
+  ],
+  "author": "Krasimir Tsonev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/krasimir/rine/issues"
+  },
+  "homepage": "https://github.com/krasimir/rine#readme",
+  "devDependencies": {
+    "@testing-library/react": "8.0.6",
+    "babel-cli": "6.26.0",
+    "babel-core": "6.26.3",
+    "babel-eslint": "8.0.3",
+    "babel-jest": "23.4.2",
+    "babel-plugin-transform-object-rest-spread": "6.26.0",
+    "babel-preset-es2015": "6.24.1",
+    "babel-preset-react": "6.24.1",
+    "babel-preset-stage-3": "6.24.1",
+    "babelify": "8.0.0",
+    "browserify": "14.5.0",
+    "eslint": "4.18.2",
+    "eslint-plugin-react": "7.5.1",
+    "fsevents": "1.2.4",
+    "jest": "23.5.0",
+    "react": "16.8.6",
+    "react-dom": "16.8.6",
+    "redux": "4.0.0",
+    "regenerator-runtime": "0.12.1",
+    "uglify-js": "^3.0.28"
+  },
+  "browserify": {
+    "transform": [
+      "babelify"
+    ]
+  },
+  "jest": {
+    "setupTestFrameworkScriptFile": "./jest/index.js",
+    "verbose": false,
+    "globals": {
+      "__DEV__": true
+    }
+  },
+  "dependencies": {
+    "fast-deep-equal": "2.0.1"
+  }
+}
