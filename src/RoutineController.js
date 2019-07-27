@@ -3,12 +3,12 @@
 var ids = 0;
 const getId = () => `r${ ++ids }`;
 
-export default function createRoutineController(routine, { putGlobal }) {
+export default function createRoutineController(routine, { broadcast }) {
   let mounted = false;
   let pending = [];
   const id = getId();
 
-  function put(typeToResume, payload, broadcast = true) {
+  function put(typeToResume, payload, shouldBroadcast = true) {
     const toFire = [];
 
     pending = pending.filter(({ type, done, once }) => {
@@ -19,8 +19,8 @@ export default function createRoutineController(routine, { putGlobal }) {
       return true;
     });
     toFire.forEach(func => func(payload));
-    if (broadcast) {
-      putGlobal(typeToResume, payload, id);
+    if (shouldBroadcast) {
+      broadcast(typeToResume, payload, id);
     }
   };
   function take(type, done) {
@@ -54,15 +54,19 @@ export default function createRoutineController(routine, { putGlobal }) {
         },
         take,
         takeEvery,
-        put,
-        // for testing purposes
-        '_rine_pending': () => pending
+        put
       });
     },
     out() {
       mounted = false;
       pending = [];
     },
-    put
+    put,
+    system() {
+      return {
+        mounted,
+        pending
+      };
+    }
   };
 }

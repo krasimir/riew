@@ -4,7 +4,7 @@ import createRoutineController from './RoutineController';
 const isGenerator = obj => obj && typeof obj['next'] === 'function';
 const isPromise = obj => obj && typeof obj['then'] === 'function';
 
-const Rine = {
+export const System = {
   controllers: {},
   addController(controller) {
     this.controllers[ controller.id ] = controller;
@@ -18,6 +18,17 @@ const Rine = {
         this.controllers[id].put(type, payload, false);
       }
     });
+  },
+  debug() {
+    const pending = Object.keys(this.controllers).reduce((arr, id) => {
+      arr = arr.concat(this.controllers[id].system().pending);
+      return arr;
+    }, []);
+
+    return {
+      controllers: this.controllers,
+      pending
+    };
   }
 };
 
@@ -27,12 +38,12 @@ export default function createRineBridge(routine) {
 
     useEffect(() => {
       const controller = createRoutineController(routine, {
-        putGlobal(...args) {
-          Rine.put(...args);
+        broadcast(...args) {
+          System.put(...args);
         }
       });
 
-      Rine.addController(controller);
+      System.addController(controller);
 
       const result = controller.in(setContent, props);
 
@@ -42,7 +53,7 @@ export default function createRineBridge(routine) {
 
       return function () {
         controller.out();
-        Rine.removeController(controller);
+        System.removeController(controller);
       };
     }, []);
 

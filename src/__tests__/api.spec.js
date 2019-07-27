@@ -3,20 +3,19 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import Rine from '../index';
+import Rine, { System } from '../index';
 
 describe('Given the Rine library', () => {
   describe('when using `take` and `put`', () => {
     it(`should
       - pause the routine till the event is fired
       - allow for only one put`, async () => {
-      const A = Rine(async ({ render, take, put, _rine_pending }) => {
+      const A = Rine(async ({ render, take, put }) => {
         act(() => render(<button onClick={ () => put('xxx', 'bar') }>click me</button>));
         const r = await take('xxx');
 
         expect(r).toEqual('bar');
         act(() => render(<p>Yeah</p>));
-        expect(_rine_pending()).toHaveLength(0);
       });
 
       const { container, getByText } = render(<A />);
@@ -27,18 +26,18 @@ describe('Given the Rine library', () => {
       exerciseHTML(container, `
         <p>Yeah</p>
       `);
+      expect(System.debug().pending).toHaveLength(0);
     });
   });
   describe('when using `take` in a fork fashion', () => {
     it(`should
       - run the callback after the put call
       - allow for only one put call`, async () => {
-      const A = Rine(async ({ render, take, put, _rine_pending }) => {
+      const A = Rine(async ({ render, take, put }) => {
         act(() => render(<button onClick={ () => put('foo', 'bar') }>click me</button>));
         take('foo', async (r) => {
           expect(r).toEqual('bar');
           act(() => render(<p>Yeah</p>));
-          expect(_rine_pending()).toHaveLength(0);
         });
       });
 
@@ -49,6 +48,7 @@ describe('Given the Rine library', () => {
       exerciseHTML(container, `
         <p>Yeah</p>
       `);
+      expect(System.debug().pending).toHaveLength(0);
     });
   });
   describe('when using `takeEvery` and `put`', () => {

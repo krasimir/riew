@@ -4,22 +4,6 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = createRineElement;
-function createRineElement(Component) {
-  return {
-    in: function _in(props) {
-      return Component(props);
-    },
-    out: function out() {}
-  };
-}
-
-},{}],2:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
@@ -30,6 +14,101 @@ var _extends = Object.assign || function (target) {
     }
   }return target;
 };
+
+exports.default = createRoutineController;
+/* eslint-disable consistent-return, camelcase */
+
+var ids = 0;
+var getId = function getId() {
+  return "r" + ++ids;
+};
+
+function createRoutineController(routine, _ref) {
+  var broadcast = _ref.broadcast;
+
+  var mounted = false;
+  var pending = [];
+  var id = getId();
+
+  function put(typeToResume, payload) {
+    var shouldBroadcast = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+
+    var toFire = [];
+
+    pending = pending.filter(function (_ref2) {
+      var type = _ref2.type,
+          done = _ref2.done,
+          once = _ref2.once;
+
+      if (type === typeToResume) {
+        toFire.push(done);
+        return !once;
+      }
+      return true;
+    });
+    toFire.forEach(function (func) {
+      return func(payload);
+    });
+    if (shouldBroadcast) {
+      broadcast(typeToResume, payload, id);
+    }
+  };
+  function take(type, done) {
+    if (!done) {
+      var p = new Promise(function (_done) {
+        pending.push({
+          type: type,
+          done: function done() {
+            if (mounted) _done.apply(undefined, arguments);
+          },
+          once: true
+        });
+      });
+
+      return p;
+    }
+    pending.push({ type: type, done: done, once: true });
+  }
+  function takeEvery(type, done) {
+    pending.push({ type: type, done: done, once: false });
+  }
+
+  return {
+    id: id,
+    in: function _in(setContent, props) {
+      mounted = true;
+      return routine(_extends({}, props, {
+        render: function render(content) {
+          if (mounted) setContent(content);
+        },
+
+        take: take,
+        takeEvery: takeEvery,
+        put: put
+      }));
+    },
+    out: function out() {
+      mounted = false;
+      pending = [];
+    },
+
+    put: put,
+    system: function system() {
+      return {
+        mounted: mounted,
+        pending: pending
+      };
+    }
+  };
+}
+
+},{}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.System = undefined;
 
 var _slicedToArray = function () {
   function sliceIterator(arr, i) {
@@ -57,13 +136,13 @@ var _slicedToArray = function () {
   };
 }();
 
-exports.default = rine;
+exports.default = createRineBridge;
 
 var _react = require('react');
 
-var _RineElement = require('./RineElement');
+var _RoutineController = require('./RoutineController');
 
-var _RineElement2 = _interopRequireDefault(_RineElement);
+var _RoutineController2 = _interopRequireDefault(_RoutineController);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -76,34 +155,69 @@ var isPromise = function isPromise(obj) {
   return obj && typeof obj['then'] === 'function';
 };
 
-function rine(Component) {
-  var el = (0, _RineElement2.default)(Component);
+var System = exports.System = {
+  controllers: {},
+  addController: function addController(controller) {
+    this.controllers[controller.id] = controller;
+  },
+  removeController: function removeController(controller) {
+    delete this.controllers[controller.id];
+  },
+  put: function put(type, payload, source) {
+    var _this = this;
 
-  return function Rine(props) {
+    Object.keys(this.controllers).forEach(function (id) {
+      if (id !== source) {
+        _this.controllers[id].put(type, payload, false);
+      }
+    });
+  },
+  debug: function debug() {
+    var _this2 = this;
+
+    var pending = Object.keys(this.controllers).reduce(function (arr, id) {
+      arr = arr.concat(_this2.controllers[id].system().pending);
+      return arr;
+    }, []);
+
+    return {
+      controllers: this.controllers,
+      pending: pending
+    };
+  }
+};
+
+function createRineBridge(routine) {
+  return function RineBridge(props) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
-        result = _useState2[0],
-        setResult = _useState2[1];
+        content = _useState2[0],
+        setContent = _useState2[1];
 
     (0, _react.useEffect)(function () {
-      var initialRender = el.in(_extends({}, props, {
-        render: function render(content) {
-          setResult(content);
+      var controller = (0, _RoutineController2.default)(routine, {
+        broadcast: function broadcast() {
+          System.put.apply(System, arguments);
         }
-      }));
+      });
 
-      if (initialRender && !isPromise(initialRender) && !isGenerator(initialRender)) {
-        setResult(initialRender);
+      System.addController(controller);
+
+      var result = controller.in(setContent, props);
+
+      if (result && !isPromise(result) && !isGenerator(result)) {
+        setContent(result);
       }
 
       return function () {
-        el.out();
+        controller.out();
+        System.removeController(controller);
       };
     }, []);
 
-    return result;
+    return content;
   };
 }
 
-},{"./RineElement":1,"react":"react"}]},{},[2])(2)
+},{"./RoutineController":1,"react":"react"}]},{},[2])(2)
 });

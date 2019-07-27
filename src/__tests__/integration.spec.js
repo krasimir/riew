@@ -3,9 +3,9 @@ import { render, act, fireEvent } from '@testing-library/react';
 
 import rine from '../index';
 
-xdescribe('Given the Rine library', () => {
-  describe('when', () => {
-    it('should', async () => {
+describe('Given the Rine library', () => {
+  describe('when using Rine routine with a hook', () => {
+    it('should keep the hook working', async () => {
       const Input = function () {
         const [ text, setText ] = useState('');
 
@@ -24,11 +24,10 @@ xdescribe('Given the Rine library', () => {
         );
       });
 
-      const { debug, getByTestId } = render(<Form />);
+      const { getByTestId, getByText } = render(<Form />);
 
       fireEvent.change(getByTestId('input'), { target: { value: 'foobar' } });
-
-      debug();
+      expect(getByText('foobar')).toBeDefined();
     });
   });
 });
