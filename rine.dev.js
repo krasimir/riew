@@ -103,6 +103,7 @@ function createRoutineController(routine, _ref) {
 }
 
 },{}],2:[function(require,module,exports){
+(function (global){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -138,7 +139,7 @@ var _slicedToArray = function () {
 
 exports.default = createRineBridge;
 
-var _React = require('React');
+var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
 var _RoutineController = require('./RoutineController');
 
@@ -189,12 +190,12 @@ var System = exports.System = {
 
 function createRineBridge(routine) {
   return function RineBridge(props) {
-    var _useState = (0, _React.useState)(null),
+    var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
         content = _useState2[0],
         setContent = _useState2[1];
 
-    (0, _React.useEffect)(function () {
+    (0, _react.useEffect)(function () {
       var controller = (0, _RoutineController2.default)(routine, {
         broadcast: function broadcast() {
           System.put.apply(System, arguments);
@@ -219,5 +220,6 @@ function createRineBridge(routine) {
   };
 }
 
-},{"./RoutineController":1,"React":"React"}]},{},[2])(2)
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./RoutineController":1}]},{},[2])(2)
 });
