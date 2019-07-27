@@ -138,7 +138,7 @@ var _slicedToArray = function () {
 
 exports.default = createRineBridge;
 
-var _react = require('react');
+var _React = require('React');
 
 var _RoutineController = require('./RoutineController');
 
@@ -189,12 +189,12 @@ var System = exports.System = {
 
 function createRineBridge(routine) {
   return function RineBridge(props) {
-    var _useState = (0, _react.useState)(null),
+    var _useState = (0, _React.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
         content = _useState2[0],
         setContent = _useState2[1];
 
-    (0, _react.useEffect)(function () {
+    (0, _React.useEffect)(function () {
       var controller = (0, _RoutineController2.default)(routine, {
         broadcast: function broadcast() {
           System.put.apply(System, arguments);
@@ -219,5 +219,5 @@ function createRineBridge(routine) {
   };
 }
 
-},{"./RoutineController":1,"react":"react"}]},{},[2])(2)
+},{"./RoutineController":1,"React":"React"}]},{},[2])(2)
 });
