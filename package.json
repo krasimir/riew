@@ -1,12 +1,12 @@
 {
   "name": "rine",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Procedure programming for React components",
   "main": "./rine.production.js",
   "scripts": {
     "build-dev": "cp ./rine.js ./rine.dev.js && node ./scripts/replaceInFile.js ./rine.dev.js __DEV__ true && node ./scripts/replaceInFile.js ./rine.dev.js 'react' 'React'",
     "build-production": "cp ./rine.js ./rine.production.js && node ./scripts/replaceInFile.js ./rine.production.js __DEV__ false && node ./scripts/replaceInFile.js ./rine.production.js 'react' 'React' && uglifyjs ./rine.production.js -o ./rine.production.js --compress unused,dead_code --mangle",
-    "build": "browserify ./lib/index.js -o ./rine.js --standalone rine --external react && yarn build-dev && yarn build-production && rm ./rine.js",
+    "build": "browserify ./lib/index.js -o ./rine.js --standalone rine --external react --insert-global-vars React && yarn build-dev && yarn build-production && rm ./rine.js",
     "test": "BABEL_ENV=development ./node_modules/.bin/jest \"(.*)\\.spec\\.js\"",
     "test-watch": "BABEL_ENV=development ./node_modules/.bin/jest \"(.*)\\.spec\\.js\" --watch --verbose false",
     "transpile": "rm -rf ./lib/* && ./node_modules/.bin/babel ./src --out-dir ./lib --ignore spec.js",
