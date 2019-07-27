@@ -137,7 +137,7 @@ var _slicedToArray = function () {
   };
 }();
 
-exports.default = createRineBridge;
+exports.Rine = Rine;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
@@ -188,7 +188,7 @@ var System = exports.System = {
   }
 };
 
-function createRineBridge(routine) {
+function Rine(routine) {
   return function RineBridge(props) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),

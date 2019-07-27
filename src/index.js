@@ -32,7 +32,7 @@ export const System = {
   }
 };
 
-export default function createRineBridge(routine) {
+export function Rine(routine) {
   return function RineBridge(props) {
     const [ content, setContent ] = useState(null);
 

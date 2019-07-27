@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import Rine, { System } from '../index';
+import { Rine, System } from '../index';
 
 describe('Given the Rine library', () => {
   describe('when using `take` and `put`', () => {

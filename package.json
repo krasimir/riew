@@ -1,8 +1,8 @@
 {
   "name": "rine",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Procedure programming for React components",
-  "main": "./rine.production.js",
+  "main": "./lib",
   "scripts": {
     "build-dev": "cp ./rine.js ./rine.dev.js && node ./scripts/replaceInFile.js ./rine.dev.js __DEV__ true",
     "build-production": "cp ./rine.js ./rine.production.js && node ./scripts/replaceInFile.js ./rine.production.js __DEV__ false && uglifyjs ./rine.production.js -o ./rine.production.js --compress unused,dead_code --mangle",

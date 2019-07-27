@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { render, act, fireEvent } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 
-import rine from '../index';
+import { Rine } from '../index';
 
 describe('Given the Rine library', () => {
   describe('when using Rine routine with a hook', () => {
@@ -16,7 +16,7 @@ describe('Given the Rine library', () => {
           </React.Fragment>
         );
       };
-      const Form = rine(function ({ render }) {
+      const Form = Rine(function ({ render }) {
         render(
           <form>
             <Input />

@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import Rine from '../index';
+import { Rine } from '../index';
 
 describe('Given the Rine library', () => {
   describe('when rendering an Rine element', () => {
