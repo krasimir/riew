@@ -137,7 +137,8 @@ var _slicedToArray = function () {
   };
 }();
 
-exports.Rine = Rine;
+exports.Routine = Routine;
+exports.Partial = Partial;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
@@ -188,7 +189,7 @@ var System = exports.System = {
   }
 };
 
-function Rine(routine) {
+function Routine(routine) {
   return function RineBridge(props) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
@@ -218,6 +219,27 @@ function Rine(routine) {
 
     return content;
   };
+}
+
+function Partial(product, initialValue) {
+  var rerender = function rerender() {};
+  var value = initialValue;
+
+  var RineBridgeComponent = Routine(function (_ref) {
+    var render = _ref.render;
+
+    rerender = function rerender() {
+      return render(product(value));
+    };
+    return rerender();
+  });
+
+  RineBridgeComponent.set = function (newValue) {
+    value = newValue;
+    rerender();
+  };
+
+  return RineBridgeComponent;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})

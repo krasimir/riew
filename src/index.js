@@ -32,7 +32,7 @@ export const System = {
   }
 };
 
-export function Rine(routine) {
+export function Routine(routine) {
   return function RineBridge(props) {
     const [ content, setContent ] = useState(null);
 
@@ -59,4 +59,21 @@ export function Rine(routine) {
 
     return content;
   };
+}
+
+export function Partial(product, initialValue) {
+  let rerender = () => {};
+  let value = initialValue;
+
+  const RineBridgeComponent = Routine(({ render }) => {
+    rerender = () => render(product(value));
+    return rerender();
+  });
+
+  RineBridgeComponent.set = newValue => {
+    value = newValue;
+    rerender();
+  };
+
+  return RineBridgeComponent;
 }

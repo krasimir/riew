@@ -3,13 +3,13 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { Rine } from '../index';
+import { Routine } from '../index';
 
-describe('Given the Rine library', () => {
-  describe('when rendering an Rine element', () => {
+describe('Given the Routine library', () => {
+  describe('when rendering an Routine element', () => {
     it('should call my function', () => {
       const mock = jest.fn();
-      const A = Rine(mock);
+      const A = Routine(mock);
 
       render(<A />);
 
@@ -21,7 +21,7 @@ describe('Given the Rine library', () => {
         render(<p>Bar</p>);
         render(<p>Hello world</p>);
       });
-      const A = Rine(mock);
+      const A = Routine(mock);
       const { getByText } = render(<A />);
 
       expect(mock).toBeCalledTimes(1);
@@ -29,7 +29,7 @@ describe('Given the Rine library', () => {
     });
     it('should pass down props to our function', () => {
       const mock = jest.fn().mockImplementation(({ message }) => <p>{ message }</p>);
-      const A = Rine(mock);
+      const A = Routine(mock);
       const { container } = render(<A message='foo bar'/>);
 
       expect(mock).toBeCalledWith(expect.objectContaining({ message: 'foo bar' }));
@@ -40,7 +40,7 @@ describe('Given the Rine library', () => {
         const B = ({ children }) => {
           return <p>{ children }</p>;
         };
-        const A = Rine(({ children, render }) => {
+        const A = Routine(({ children, render }) => {
           render(<B>{ children }</B>);
         });
         const { container } = render(<A>Hello world</A>);
@@ -51,7 +51,7 @@ describe('Given the Rine library', () => {
   });
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
-      const A = Rine(async ({ render }) => {
+      const A = Routine(async ({ render }) => {
         act(() => render('Hello'));
         await delay(20);
         act(() => render('world'));
@@ -66,7 +66,7 @@ describe('Given the Rine library', () => {
     });
     it('should not try to re-render if the bridge is unmounted', async () => {
       const spy = jest.spyOn(console, 'error');
-      const A = Rine(async ({ render }) => {
+      const A = Routine(async ({ render }) => {
         await delay(20);
         act(() => render('world'));
       });

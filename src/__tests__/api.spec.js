@@ -3,14 +3,14 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { Rine, System } from '../index';
+import { Routine, System, Partial } from '../index';
 
-describe('Given the Rine library', () => {
+describe('Given the Routine library', () => {
   describe('when using `take` and `put`', () => {
     it(`should
       - pause the routine till the event is fired
       - allow for only one put`, async () => {
-      const A = Rine(async ({ render, take, put }) => {
+      const A = Routine(async ({ render, take, put }) => {
         act(() => render(<button onClick={ () => put('xxx', 'bar') }>click me</button>));
         const r = await take('xxx');
 
@@ -33,7 +33,7 @@ describe('Given the Rine library', () => {
     it(`should
       - run the callback after the put call
       - allow for only one put call`, async () => {
-      const A = Rine(async ({ render, take, put }) => {
+      const A = Routine(async ({ render, take, put }) => {
         act(() => render(<button onClick={ () => put('foo', 'bar') }>click me</button>));
         take('foo', async (r) => {
           expect(r).toEqual('bar');
@@ -59,7 +59,7 @@ describe('Given the Rine library', () => {
           <button onClick={ onClick }>click me</button>)
         </React.Fragment>
       );
-      const A = Rine(async ({ render, takeEvery, put }) => {
+      const A = Routine(async ({ render, takeEvery, put }) => {
         let counter = 0;
         let renderCounter = () => act(() => render(<Counter value={ counter } onClick={ () => put('foo', 2) } />));
 
@@ -82,11 +82,11 @@ describe('Given the Rine library', () => {
   });
   describe('when using `take` and `put` in different routines', () => {
     it('should allow the communication between them', async () => {
-      const A = Rine(async ({ take, render }) => {
+      const A = Routine(async ({ take, render }) => {
         await take('foo');
         act(() => render(<p>It works</p>));
       });
-      const B = Rine(async ({ put }) => {
+      const B = Routine(async ({ put }) => {
         await delay(10);
         put('foo');
       });
@@ -101,6 +101,39 @@ describe('Given the Rine library', () => {
       await delay(11);
       exerciseHTML(container, `
         <p>It works</p>
+      `);
+    });
+  });
+  describe('when using a Partial', () => {
+    it('should re-render when the value is updated', async () => {
+      const A = Routine(async ({ render }) => {
+        const Error = Partial((error) => {
+          return error ? <div>{ error }</div> : <span>No error</span>;
+        });
+
+        Error.set('Foo');
+
+        render(
+          <React.Fragment>
+            <Error />
+            <h1>Hey</h1>
+          </React.Fragment>
+        );
+
+        await delay(20);
+        act(() => Error.set('Bar'));
+      });
+
+      const { container } = render(<A />);
+
+      exerciseHTML(container, `
+        <div>Foo</div>
+        <h1>Hey</h1>
+      `);
+      await delay(21);
+      exerciseHTML(container, `
+        <div>Bar</div>
+        <h1>Hey</h1>
       `);
     });
   });
