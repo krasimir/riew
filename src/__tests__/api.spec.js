@@ -122,6 +122,7 @@ describe('Given the Routine library', () => {
 
         await delay(20);
         act(() => Error.set('Bar'));
+        expect(Error.get()).toEqual('Bar')
       });
 
       const { container } = render(<A />);

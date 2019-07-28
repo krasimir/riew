@@ -74,6 +74,7 @@ export function Partial(product, initialValue) {
     value = newValue;
     rerender();
   };
+  RineBridgeComponent.get = () => value;
 
   return RineBridgeComponent;
 }

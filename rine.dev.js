@@ -238,6 +238,9 @@ function Partial(product, initialValue) {
     value = newValue;
     rerender();
   };
+  RineBridgeComponent.get = function () {
+    return value;
+  };
 
   return RineBridgeComponent;
 }
