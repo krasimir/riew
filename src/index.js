@@ -61,20 +61,22 @@ export function Routine(routine) {
   };
 }
 
-export function Partial(product, initialValue) {
-  let rerender = () => {};
-  let value = initialValue;
+export function Partial(product) {
+  return initialValue => {
+    let rerender = () => {};
+    let value = initialValue;
 
-  const RineBridgeComponent = Routine(({ render }) => {
-    rerender = () => render(product(value));
-    return rerender();
-  });
+    const RineBridgeComponent = Routine(({ render }) => {
+      rerender = () => render(product(value));
+      return rerender();
+    });
 
-  RineBridgeComponent.set = newValue => {
-    value = newValue;
-    rerender();
+    RineBridgeComponent.set = newValue => {
+      value = newValue;
+      rerender();
+    };
+    RineBridgeComponent.get = () => value;
+
+    return RineBridgeComponent;
   };
-  RineBridgeComponent.get = () => value;
-
-  return RineBridgeComponent;
 }

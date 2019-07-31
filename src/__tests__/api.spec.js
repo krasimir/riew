@@ -106,10 +106,11 @@ describe('Given the Routine library', () => {
   });
   describe('when using a Partial', () => {
     it('should re-render when the value is updated', async () => {
+      const useError = Partial((error) => {
+        return error ? <div>{ error }</div> : <span>No error</span>;
+      });
       const A = Routine(async ({ render }) => {
-        const Error = Partial((error) => {
-          return error ? <div>{ error }</div> : <span>No error</span>;
-        });
+        const Error = useError();
 
         Error.set('Foo');
 
@@ -136,6 +137,24 @@ describe('Given the Routine library', () => {
         <div>Bar</div>
         <h1>Hey</h1>
       `);
+    });
+  });
+  describe('when we use the `isMounted` method', () => {
+    it('should return the value of the `mounted` flag', async () => {
+      const spy = jest.fn();
+      const A = Routine(async ({ isMounted }) => {
+        spy(isMounted());
+        await delay(10);
+        spy(isMounted());
+      });
+
+      const { unmount } = render(<A />);
+
+      unmount();
+      await delay(11);
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy.mock.calls[0]).toStrictEqual([true]);
+      expect(spy.mock.calls[1]).toStrictEqual([false]);
     });
   });
 });

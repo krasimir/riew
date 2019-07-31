@@ -42,6 +42,9 @@ export default function createRoutineController(routine, { broadcast }) {
   function takeEvery(type, done) {
     pending.push({ type, done, once: false });
   }
+  function isMounted() {
+    return mounted;
+  }
 
   return {
     id,
@@ -54,7 +57,8 @@ export default function createRoutineController(routine, { broadcast }) {
         },
         take,
         takeEvery,
-        put
+        put,
+        isMounted
       });
     },
     out() {
