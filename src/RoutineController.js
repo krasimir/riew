@@ -6,13 +6,15 @@ const getId = () => `r${ ++ids }`;
 export default function createRoutineController(routine, { broadcast }) {
   let mounted = false;
   let pending = [];
+  let renderFunc;
+  let triggerRender;
   const id = getId();
 
-  function put(typeToResume, payload, shouldBroadcast = true) {
+  function put(typeOfAction, payload, shouldBroadcast = true) {
     const toFire = [];
 
     pending = pending.filter(({ type, done, once }) => {
-      if (type === typeToResume) {
+      if (type === typeOfAction) {
         toFire.push(done);
         return !once;
       }
@@ -20,7 +22,7 @@ export default function createRoutineController(routine, { broadcast }) {
     });
     toFire.forEach(func => func(payload));
     if (shouldBroadcast) {
-      broadcast(typeToResume, payload, id);
+      broadcast(typeOfAction, payload, id);
     }
   };
   function take(type, done) {
@@ -50,16 +52,27 @@ export default function createRoutineController(routine, { broadcast }) {
     id,
     in(setContent, props) {
       mounted = true;
+      triggerRender = newProps => {
+        if (mounted) setContent(renderFunc(newProps));
+      };
+
       return routine({
-        ...props,
-        render(content) {
-          if (mounted) setContent(content);
+        render(f) {
+          if (typeof f === 'function') {
+            renderFunc = f;
+          } else {
+            renderFunc = () => f;
+          }
+          triggerRender(props);
         },
         take,
         takeEvery,
         put,
         isMounted
       });
+    },
+    update(props) {
+      triggerRender(props);
     },
     out() {
       mounted = false;

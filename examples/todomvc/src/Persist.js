@@ -1,11 +1,11 @@
 export const ToDo = ({ label }) => ({ label, completed: false, editing: false });
 
 const initialValue = JSON.stringify([
-  ToDo({ label: 'ActML is using JSX' }),
-  ToDo({ label: 'It is like React but not for rendering' })
+  ToDo({ label: 'Rine helps you handle side effects' }),
+  ToDo({ label: 'Rine comes from "Routine"' })
 ]);
 
-export const useLocalStorage = () => {
+export const getInitialTodosData = () => {
   return JSON.parse(localStorage.getItem('todos') || initialValue);
 };
 export const usePersist = (todos) => {

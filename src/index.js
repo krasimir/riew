@@ -33,11 +33,17 @@ export const System = {
 };
 
 export function Routine(routine) {
+  let controller;
+
   return function RineBridge(props) {
     const [ content, setContent ] = useState(null);
 
     useEffect(() => {
-      const controller = createRoutineController(routine, {
+      if (controller) controller.update(props);
+    }, [ props ]);
+
+    useEffect(() => {
+      controller = createRoutineController(routine, {
         broadcast(...args) {
           System.put(...args);
         }

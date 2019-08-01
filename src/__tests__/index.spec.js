@@ -27,9 +27,9 @@ describe('Given the Routine library', () => {
       expect(mock).toBeCalledTimes(1);
       expect(getByText('Hello world')).toBeDefined();
     });
-    it('should pass down props to our function', () => {
+    it('should pass down props to our render function', () => {
       const mock = jest.fn().mockImplementation(({ message }) => <p>{ message }</p>);
-      const A = Routine(mock);
+      const A = Routine(({ render }) => render(mock));
       const { container } = render(<A message='foo bar'/>);
 
       expect(mock).toBeCalledWith(expect.objectContaining({ message: 'foo bar' }));
@@ -40,13 +40,24 @@ describe('Given the Routine library', () => {
         const B = ({ children }) => {
           return <p>{ children }</p>;
         };
-        const A = Routine(({ children, render }) => {
-          render(<B>{ children }</B>);
+        const A = Routine(({ render }) => {
+          render(({ children }) => <B>{ children }</B>);
         });
         const { container } = render(<A>Hello world</A>);
 
         exerciseHTML(container, '<p>Hello world</p>');
       });
+    });
+    it('should re-render the RineBridge component if the props change', () => {
+      const A = Routine(({ render }) => {
+        render(props => <p>The answer is { props.answer }</p>);
+      });
+
+      const { container, rerender } = render(<A answer={ 42 }/>);
+
+      exerciseHTML(container, '<p>The answer is 42</p>');
+      rerender(<A answer={ 10 } />);
+      exerciseHTML(container, '<p>The answer is 10</p>');
     });
   });
   describe('when we use an async function', () => {
@@ -71,7 +82,7 @@ describe('Given the Routine library', () => {
         act(() => render('world'));
       });
 
-      const { unmount } = render(<A />);
+      const { unmount } = render(<A/>);
 
       unmount();
       await delay(21);

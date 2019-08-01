@@ -1,26 +1,15 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.rine = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _extends = Object.assign || function (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];for (var key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key];
-      }
-    }
-  }return target;
-};
-
 exports.default = createRoutineController;
 /* eslint-disable consistent-return, camelcase */
 
 var ids = 0;
 var getId = function getId() {
-  return "r" + ++ids;
+  return 'r' + ++ids;
 };
 
 function createRoutineController(routine, _ref) {
@@ -28,9 +17,11 @@ function createRoutineController(routine, _ref) {
 
   var mounted = false;
   var pending = [];
+  var renderFunc = void 0;
+  var triggerRender = void 0;
   var id = getId();
 
-  function put(typeToResume, payload) {
+  function put(typeOfAction, payload) {
     var shouldBroadcast = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
 
     var toFire = [];
@@ -40,7 +31,7 @@ function createRoutineController(routine, _ref) {
           done = _ref2.done,
           once = _ref2.once;
 
-      if (type === typeToResume) {
+      if (type === typeOfAction) {
         toFire.push(done);
         return !once;
       }
@@ -50,7 +41,7 @@ function createRoutineController(routine, _ref) {
       return func(payload);
     });
     if (shouldBroadcast) {
-      broadcast(typeToResume, payload, id);
+      broadcast(typeOfAction, payload, id);
     }
   };
   function take(type, done) {
@@ -80,16 +71,30 @@ function createRoutineController(routine, _ref) {
     id: id,
     in: function _in(setContent, props) {
       mounted = true;
-      return routine(_extends({}, props, {
-        render: function render(content) {
-          if (mounted) setContent(content);
+      triggerRender = function triggerRender(newProps) {
+        if (mounted) setContent(renderFunc(newProps));
+      };
+
+      return routine({
+        render: function render(f) {
+          if (typeof f === 'function') {
+            renderFunc = f;
+          } else {
+            renderFunc = function renderFunc() {
+              return f;
+            };
+          }
+          triggerRender(props);
         },
 
         take: take,
         takeEvery: takeEvery,
         put: put,
         isMounted: isMounted
-      }));
+      });
+    },
+    update: function update(props) {
+      triggerRender(props);
     },
     out: function out() {
       mounted = false;
@@ -194,6 +199,8 @@ var System = exports.System = {
 };
 
 function Routine(routine) {
+  var controller = void 0;
+
   return function RineBridge(props) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
@@ -201,7 +208,11 @@ function Routine(routine) {
         setContent = _useState2[1];
 
     (0, _react.useEffect)(function () {
-      var controller = (0, _RoutineController2.default)(routine, {
+      if (controller) controller.update(props);
+    }, [props]);
+
+    (0, _react.useEffect)(function () {
+      controller = (0, _RoutineController2.default)(routine, {
         broadcast: function broadcast() {
           System.put.apply(System, arguments);
         }

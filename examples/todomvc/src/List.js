@@ -1,10 +1,8 @@
 import React from 'react';
+import { Routine } from 'rine';
+import { TOGGLE } from './constants';
 
-export default function List() {
-  const todos = [
-    { completed: false, label: 'foo', editing: false }
-  ];
-
+export default Routine(function List({ todos, put }) {
   return (
     <ul className='todo-list'>
       {
@@ -17,9 +15,8 @@ export default function List() {
                 <input
                   className='toggle'
                   type='checkbox'
-                  data-index='${ i }'
-                  data-toggle
-                  checked={ todo.completed } />
+                  checked={ todo.completed }
+                  onChange={ () => put(TOGGLE, i) }/>
                 <label data-index='${ i }' data-label>{ todo.label }</label>
                 <button
                   className='destroy'
@@ -33,4 +30,4 @@ export default function List() {
       }
     </ul>
   );
-}
+});

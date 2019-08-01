@@ -1,10 +1,19 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Routine } from 'rine';
+import { Routine, Partial } from 'rine';
 
 import List from './List';
+import { getInitialTodosData } from './Persist';
+import { TOGGLE } from './constants';
 
-const App = Routine(({ render }) => {
+const createListPartial = Partial(todos => {
+  return <List todos={ todos }/>;
+});
+
+const App = Routine(({ render, takeEvery }) => {
+  const todos = getInitialTodosData();
+  const TodosList = createListPartial(todos);
+
   render(
     <React.Fragment>
       <section className='todoapp'>
@@ -15,7 +24,7 @@ const App = Routine(({ render }) => {
         <section className='main'>
           <input id='toggle-all' className='toggle-all' type='checkbox' />
           <label htmlFor='toggle-all'>Mark all as complete</label>
-          <List />
+          <TodosList />
         </section>
         <footer className='footer'>
           <span className='todo-count'><strong>0</strong> item left</span>
@@ -38,6 +47,11 @@ const App = Routine(({ render }) => {
       </footer>
     </React.Fragment>
   );
+
+  takeEvery(TOGGLE, (index) => {
+    todos[index].completed = !todos[index].completed;
+    TodosList.set(todos);
+  });
 });
 
 ReactDOM.render(<App />, document.querySelector('#container'));
