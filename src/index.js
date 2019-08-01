@@ -31,20 +31,20 @@ export const System = {
 };
 
 export function routine(routine) {
-  let controller;
   const RineBridge = function (props) {
     const [ content, setContent ] = useState(null);
+    let [ controller, setController ] = useState(null);
 
     useEffect(() => {
       if (controller) controller.update(props);
     }, [ props ]);
 
     useEffect(() => {
-      controller = createRoutineController(routine, {
+      setController(controller = createRoutineController(routine, {
         broadcast(...args) {
           System.put(...args);
         }
-      });
+      }));
 
       System.addController(controller);
 

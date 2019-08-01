@@ -6,7 +6,7 @@ import List from './List';
 import { getInitialTodosData, saveTodosData, ToDo } from './Persist';
 import { TOGGLE, ENTER, NEW_TODO, DELETE, EDIT, UPDATE } from './constants';
 
-const App = routine(({ render, takeEvery, put }) => {
+const App = routine(function App({ render, takeEvery, put }) {
   let todos = getInitialTodosData();
   const ListPartial = partial(List, { todos });
 
@@ -26,13 +26,11 @@ const App = routine(({ render, takeEvery, put }) => {
     saveTodosData(todos);
   });
   takeEvery(EDIT, ({ index, value }) => {
-    console.log('EDIT');
     todos[index].editing = value;
     ListPartial.set({ todos });
     saveTodosData(todos);
   });
   takeEvery(UPDATE, ({ index, label }) => {
-    console.log('UPDATE');
     todos[index].label = label;
     todos[index].editing = false;
     ListPartial.set({ todos });
@@ -90,6 +88,10 @@ const App = routine(({ render, takeEvery, put }) => {
 
 ReactDOM.render(<App />, document.querySelector('#container'));
 
-setInterval(function () {
-  console.log(Object.keys(System.debug().controllers).length);
-}, 1000);
+// setInterval(function () {
+//   const controllers = System.debug().controllers;
+
+//   console.log(Object.keys(controllers).map(id => {
+//     return controllers[id].name;
+//   }));
+// }, 1000);

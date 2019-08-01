@@ -90,4 +90,28 @@ describe('Given the Rine library', () => {
       spy.mockRestore();
     });
   });
+  describe('when reusing the same routine', () => {
+    it('should create a separate controller', () => {
+      const R = routine(function ({ render }) {
+        render(props => <p>{ props.answer }</p>);
+      });
+
+      const { container } = render(<R answer='foo' />);
+      const { container: container2, rerender: rerender2 } = render(<R answer='bar' />);
+
+      exerciseHTML(container, `
+        <p>foo</p>
+      `);
+      exerciseHTML(container2, `
+        <p>bar</p>
+      `);
+      rerender2(<R answer='zoo' />);
+      exerciseHTML(container, `
+        <p>foo</p>
+      `);
+      exerciseHTML(container2, `
+        <p>zoo</p>
+      `);
+    });
+  });
 });
