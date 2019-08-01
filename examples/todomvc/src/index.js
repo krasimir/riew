@@ -8,11 +8,9 @@ import { TOGGLE } from './constants';
 
 const App = Routine(({ render, takeEvery, put }) => {
   const todos = getInitialTodosData();
-  const TodosList = Partial(todos => (
-    <List
-      todos={ todos }
-      onToggle={ index => put(TOGGLE, index) } />
-  ), todos);
+  const ListPartial = Partial()
+
+  List.
 
   takeEvery(TOGGLE, (index) => {
     todos[index].completed = !todos[index].completed;
@@ -30,7 +28,7 @@ const App = Routine(({ render, takeEvery, put }) => {
         <section className='main'>
           <input id='toggle-all' className='toggle-all' type='checkbox' />
           <label htmlFor='toggle-all'>Mark all as complete</label>
-          <TodosList />
+          <List onToggle={ index => put(TOGGLE, index) } />
         </section>
         <footer className='footer'>
           <span className='todo-count'><strong>0</strong> item left</span>

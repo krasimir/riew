@@ -38,7 +38,7 @@ export const System = {
   }
 };
 
-export function Routine(routine) {
+export function routine(routine) {
   let controller;
   const RineBridge = function (props) {
     const [ content, setContent ] = useState(null);
@@ -76,17 +76,15 @@ export function Routine(routine) {
   return RineBridge;
 }
 
-export function Partial(Component, initialValue) {
+export function partial(Component, initialValue) {
   let rerender = () => {};
   let value = initialValue;
-
-  const RineBridgeComponent = Routine(function Partial({ render }) {
+  const RineBridgeComponent = routine(function Partial({ render }) {
     rerender = () => render(props => <Component {...props} {...value}/>);
     return rerender();
   });
 
   RineBridgeComponent.displayName = `RinePartial(${ getFuncName(Component) })`;
-
   RineBridgeComponent.set = newValue => {
     value = newValue;
     rerender();

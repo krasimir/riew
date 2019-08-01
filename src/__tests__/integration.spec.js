@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 
-import { Routine } from '../index';
+import { routine } from '../index';
 
-describe('Given the Routine library', () => {
-  describe('when using Routine routine with a hook', () => {
+describe('Given the Rine library', () => {
+  describe('when using routine routine with a hook', () => {
     it('should keep the hook working', async () => {
       const Input = function () {
         const [ text, setText ] = useState('');
@@ -16,7 +16,7 @@ describe('Given the Routine library', () => {
           </React.Fragment>
         );
       };
-      const Form = Routine(function ({ render }) {
+      const Form = routine(function ({ render }) {
         render(
           <form>
             <Input />

@@ -3,13 +3,13 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { Routine } from '../index';
+import { routine } from '../index';
 
-describe('Given the Routine library', () => {
-  describe('when rendering an Routine element', () => {
+describe('Given the Rine library', () => {
+  describe('when rendering an routine element', () => {
     it('should call my function', () => {
       const mock = jest.fn();
-      const A = Routine(mock);
+      const A = routine(mock);
 
       render(<A />);
 
@@ -21,7 +21,7 @@ describe('Given the Routine library', () => {
         render(<p>Bar</p>);
         render(<p>Hello world</p>);
       });
-      const A = Routine(mock);
+      const A = routine(mock);
       const { getByText } = render(<A />);
 
       expect(mock).toBeCalledTimes(1);
@@ -29,7 +29,7 @@ describe('Given the Routine library', () => {
     });
     it('should pass down props to our render function', () => {
       const mock = jest.fn().mockImplementation(({ message }) => <p>{ message }</p>);
-      const A = Routine(({ render }) => render(mock));
+      const A = routine(({ render }) => render(mock));
       const { container } = render(<A message='foo bar'/>);
 
       expect(mock).toBeCalledWith(expect.objectContaining({ message: 'foo bar' }));
@@ -40,7 +40,7 @@ describe('Given the Routine library', () => {
         const B = ({ children }) => {
           return <p>{ children }</p>;
         };
-        const A = Routine(({ render }) => {
+        const A = routine(({ render }) => {
           render(({ children }) => <B>{ children }</B>);
         });
         const { container } = render(<A>Hello world</A>);
@@ -49,7 +49,7 @@ describe('Given the Routine library', () => {
       });
     });
     it('should re-render the RineBridge component if the props change', () => {
-      const A = Routine(({ render }) => {
+      const A = routine(({ render }) => {
         render(props => <p>The answer is { props.answer }</p>);
       });
 
@@ -62,7 +62,7 @@ describe('Given the Routine library', () => {
   });
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
-      const A = Routine(async ({ render }) => {
+      const A = routine(async ({ render }) => {
         act(() => render('Hello'));
         await delay(20);
         act(() => render('world'));
@@ -77,7 +77,7 @@ describe('Given the Routine library', () => {
     });
     it('should not try to re-render if the bridge is unmounted', async () => {
       const spy = jest.spyOn(console, 'error');
-      const A = Routine(async ({ render }) => {
+      const A = routine(async ({ render }) => {
         await delay(20);
         act(() => render('world'));
       });

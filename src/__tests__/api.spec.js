@@ -3,14 +3,14 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { Routine, System, Partial } from '../index';
+import { routine, System, partial } from '../index';
 
-describe('Given the Routine library', () => {
+describe('Given the Rine library', () => {
   describe('when using `take` and `put`', () => {
     it(`should
       - pause the routine till the event is fired
       - allow for only one put`, async () => {
-      const A = Routine(async ({ render, take, put }) => {
+      const A = routine(async ({ render, take, put }) => {
         act(() => render(<button onClick={ () => put('xxx', 'bar') }>click me</button>));
         const r = await take('xxx');
 
@@ -33,7 +33,7 @@ describe('Given the Routine library', () => {
     it(`should
       - run the callback after the put call
       - allow for only one put call`, async () => {
-      const A = Routine(async ({ render, take, put }) => {
+      const A = routine(async ({ render, take, put }) => {
         act(() => render(<button onClick={ () => put('foo', 'bar') }>click me</button>));
         take('foo', async (r) => {
           expect(r).toEqual('bar');
@@ -59,7 +59,7 @@ describe('Given the Routine library', () => {
           <button onClick={ onClick }>click me</button>)
         </React.Fragment>
       );
-      const A = Routine(async ({ render, takeEvery, put }) => {
+      const A = routine(async ({ render, takeEvery, put }) => {
         let counter = 0;
         let renderCounter = () => act(() => render(<Counter value={ counter } onClick={ () => put('foo', 2) } />));
 
@@ -82,11 +82,11 @@ describe('Given the Routine library', () => {
   });
   describe('when using `take` and `put` in different routines', () => {
     it('should allow the communication between them', async () => {
-      const A = Routine(async ({ take, render }) => {
+      const A = routine(async ({ take, render }) => {
         await take('foo');
         act(() => render(<p>It works</p>));
       });
-      const B = Routine(async ({ put }) => {
+      const B = routine(async ({ put }) => {
         await delay(10);
         put('foo');
       });
@@ -104,12 +104,12 @@ describe('Given the Routine library', () => {
       `);
     });
   });
-  describe('when using a Partial', () => {
+  describe('when using a partial', () => {
     it('should re-render when the value is updated', async () => {
-      const Error = Partial(({ error, cls }) => {
+      const Error = partial(({ error, cls }) => {
         return error ? <div className={ cls }>{ error }</div> : <span className={ cls }>No error</span>;
       }, { error: 'Moo' });
-      const A = Routine(async ({ render }) => {
+      const A = routine(async ({ render }) => {
         expect(Error.get().error).toBe('Moo');
         Error.set({ error: 'Foo' });
 
@@ -141,7 +141,7 @@ describe('Given the Routine library', () => {
   describe('when we use the `isMounted` method', () => {
     it('should return the value of the `mounted` flag', async () => {
       const spy = jest.fn();
-      const A = Routine(async ({ isMounted }) => {
+      const A = routine(async ({ isMounted }) => {
         spy(isMounted());
         await delay(10);
         spy(isMounted());

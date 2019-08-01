@@ -156,8 +156,8 @@ var _slicedToArray = function () {
   };
 }();
 
-exports.Routine = Routine;
-exports.Partial = Partial;
+exports.routine = routine;
+exports.partial = partial;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
@@ -216,7 +216,7 @@ var System = exports.System = {
   }
 };
 
-function Routine(routine) {
+function routine(routine) {
   var controller = void 0;
   var RineBridge = function RineBridge(props) {
     var _useState = (0, _react.useState)(null),
@@ -257,11 +257,10 @@ function Routine(routine) {
   return RineBridge;
 }
 
-function Partial(Component, initialValue) {
+function partial(Component, initialValue) {
   var rerender = function rerender() {};
   var value = initialValue;
-
-  var RineBridgeComponent = Routine(function Partial(_ref) {
+  var RineBridgeComponent = routine(function Partial(_ref) {
     var render = _ref.render;
 
     rerender = function rerender() {
@@ -273,7 +272,6 @@ function Partial(Component, initialValue) {
   });
 
   RineBridgeComponent.displayName = 'RinePartial(' + getFuncName(Component) + ')';
-
   RineBridgeComponent.set = function (newValue) {
     value = newValue;
     rerender();
