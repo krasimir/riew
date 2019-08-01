@@ -1,4 +1,5 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.rine = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function (global){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6,10 +7,18 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = createRoutineController;
 
+var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
+
+var _react2 = _interopRequireDefault(_react);
+
 var _utils = require('./utils');
 
-var ids = 0; /* eslint-disable consistent-return, camelcase */
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
 
+/* eslint-disable consistent-return, camelcase */
+var ids = 0;
 var getId = function getId() {
   return 'r' + ++ids;
 };
@@ -19,7 +28,7 @@ function createRoutineController(routine, _ref) {
 
   var mounted = false;
   var pending = [];
-  var renderFunc = void 0;
+  var RenderComponent = void 0;
   var triggerRender = void 0;
   var id = getId();
 
@@ -75,15 +84,15 @@ function createRoutineController(routine, _ref) {
     in: function _in(setContent, props) {
       mounted = true;
       triggerRender = function triggerRender(newProps) {
-        if (mounted) setContent(renderFunc(newProps));
+        if (mounted) setContent(_react2.default.createElement(RenderComponent, newProps));
       };
 
       return routine({
         render: function render(f) {
           if (typeof f === 'function') {
-            renderFunc = f;
+            RenderComponent = f;
           } else {
-            renderFunc = function renderFunc() {
+            RenderComponent = function RenderComponent() {
               return f;
             };
           }
@@ -114,6 +123,7 @@ function createRoutineController(routine, _ref) {
   };
 }
 
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./utils":3}],2:[function(require,module,exports){
 (function (global){
 'use strict';

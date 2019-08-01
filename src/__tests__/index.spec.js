@@ -32,7 +32,10 @@ describe('Given the Rine library', () => {
       const A = routine(({ render }) => render(mock));
       const { container } = render(<A message='foo bar'/>);
 
-      expect(mock).toBeCalledWith(expect.objectContaining({ message: 'foo bar' }));
+      expect(mock).toBeCalledWith(
+        expect.objectContaining({ message: 'foo bar' }),
+        {} // <-- react context
+      );
       exerciseHTML(container, '<p>foo bar</p>');
     });
     describe('when we want to render children', () => {

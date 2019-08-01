@@ -1,22 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { routine } from 'rine';
 
 import { ESC, ENTER } from './constants';
 
 const EditTodo = routine(function EditTodo({ render }) {
-  render(({ index, todo, onUpdateCancel, onUpdate }) => <input
-    className='edit'
-    defaultValue={ todo.label }
-    onBlur={ (e) => onUpdate(index, e.target.value) }
-    onKeyUp={ e => {
-      if (e.keyCode === ESC) {
-        e.target.value = todo.label;
-        onUpdateCancel(index);
-      } else if (e.keyCode === ENTER) {
-        onUpdate(index, e.target.value);
-      }
-    }} />);
+  render(
+    ({ index, todo, onUpdateCancel, onUpdate }) => {
+      useEffect(() => {
+        console.log('boo');
+      }, []);
+      return (
+        <input
+          className='edit'
+          data-label={ todo.label }
+          onBlur={ (e) => onUpdate(index, e.target.value) }
+          onKeyUp={ e => {
+            if (e.keyCode === ESC) {
+              e.target.value = todo.label;
+              onUpdateCancel(index);
+            } else if (e.keyCode === ENTER) {
+              onUpdate(index, e.target.value);
+            }
+          }} />
+      );
+    }
+  );
 });
 
 export default function List({
@@ -40,6 +49,7 @@ export default function List({
                 <button className='destroy' onClick={ () => onDelete(i) }></button>
               </div>
               <EditTodo
+                key={ todo.label }
                 index={ i }
                 todo={ todo }
                 onUpdate={ onUpdate }

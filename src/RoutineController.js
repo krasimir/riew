@@ -1,4 +1,5 @@
 /* eslint-disable consistent-return, camelcase */
+import React from 'react';
 import { getFuncName } from './utils';
 
 var ids = 0;
@@ -7,7 +8,7 @@ const getId = () => `r${ ++ids }`;
 export default function createRoutineController(routine, { broadcast }) {
   let mounted = false;
   let pending = [];
-  let renderFunc;
+  let RenderComponent;
   let triggerRender;
   const id = getId();
 
@@ -55,15 +56,15 @@ export default function createRoutineController(routine, { broadcast }) {
     in(setContent, props) {
       mounted = true;
       triggerRender = newProps => {
-        if (mounted) setContent(renderFunc(newProps));
+        if (mounted) setContent(<RenderComponent {...newProps } />);
       };
 
       return routine({
         render(f) {
           if (typeof f === 'function') {
-            renderFunc = f;
+            RenderComponent = f;
           } else {
-            renderFunc = () => f;
+            RenderComponent = () => f;
           }
           triggerRender(props);
         },
