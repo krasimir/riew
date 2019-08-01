@@ -1,6 +1,4 @@
-import { useState } from '../../../lib';
-
-import { ToDo } from './Store';
+export const ToDo = ({ label }) => ({ label, completed: false, editing: false });
 
 const initialValue = JSON.stringify([
   ToDo({ label: 'ActML is using JSX' }),
@@ -8,10 +6,8 @@ const initialValue = JSON.stringify([
 ]);
 
 export const useLocalStorage = () => {
-  const [ getData ] = useState(JSON.parse(localStorage.getItem('todos') || initialValue));
-
-  return getData();
+  return JSON.parse(localStorage.getItem('todos') || initialValue);
 };
-export const Persist = ({ todos }) => {
+export const usePersist = (todos) => {
   localStorage.setItem('todos', JSON.stringify(todos));
 };

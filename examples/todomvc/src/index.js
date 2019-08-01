@@ -1,40 +1,42 @@
-/** @jsx A */
-import { A, run, Fragment, usePubSub, useState, useEffect, processor } from '../../../lib';
+import React from 'react';
+import ReactDOM from 'react-dom';
 
-import Store from './Store';
-import Renderer from './Renderer';
-import CheckForEditField from './CheckForEditField';
-import { ProgressChecker, FilterOptionsTabs, Container, Footer } from './DOM';
-import { useLocalStorage, Persist } from './Persist';
-
-export const FILTER_ALL = 'FILTER_ALL';
-export const FILTER_ACTIVE = 'FILTER_ACTIVE';
-export const FILTER_COMPLETED = 'FILTER_COMPLETED';
+import List from './List';
 
 function App() {
-  const initialValue = useLocalStorage();
-  const { publish, subscribe } = usePubSub();
-  const [ filter, setFilter ] = useState(FILTER_ALL);
-
-  useEffect(() => {
-    subscribe(FILTER_ALL, () => setFilter(FILTER_ALL));
-    subscribe(FILTER_ACTIVE, () => setFilter(FILTER_ACTIVE));
-    subscribe(FILTER_COMPLETED, () => setFilter(FILTER_COMPLETED));
-  }, []);
-
   return (
-    <Fragment>
-      <Container onUserAction={ publish } />
-      <Footer onUserAction={ publish }/>
-      <Store initialValue={ initialValue }>
-        <FilterOptionsTabs filter={ filter() } />
-        <Renderer filter={ filter() }/>
-        <CheckForEditField />
-        <ProgressChecker />
-        <Persist />
-      </Store>
-    </Fragment>
+    <React.Fragment>
+      <section className='todoapp'>
+        <header className='header'>
+          <h1>todos</h1>
+          <input className='new-todo' placeholder='What needs to be done?' autoFocus />
+        </header>
+        <section className='main'>
+          <input id='toggle-all' className='toggle-all' type='checkbox' />
+          <label htmlFor='toggle-all'>Mark all as complete</label>
+          <List />
+        </section>
+        <footer className='footer'>
+          <span className='todo-count'><strong>0</strong> item left</span>
+          <ul className='filters'>
+            <li>
+              <a href='#/'>All</a>
+            </li>
+            <li>
+              <a href='#/active'>Active</a>
+            </li>
+            <li>
+              <a href='#/completed'>Completed</a>
+            </li>
+          </ul>
+          <button className='clear-completed'>Clear completed</button>
+        </footer>
+      </section>
+      <footer className='info'>
+        Rine
+      </footer>
+    </React.Fragment>
   );
-};
+}
 
-run(<App />);
+ReactDOM.render(<App />, document.querySelector('#container'));
