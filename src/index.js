@@ -81,7 +81,7 @@ export function Partial(product) {
     let rerender = () => {};
     let value = initialValue;
 
-    const RineBridgeComponent = Routine(({ render }) => {
+    const RineBridgeComponent = Routine(function Partial({ render }) {
       rerender = () => render(product(value));
       return rerender();
     });

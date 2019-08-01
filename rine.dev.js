@@ -250,7 +250,7 @@ function Partial(product) {
     var rerender = function rerender() {};
     var value = initialValue;
 
-    var RineBridgeComponent = Routine(function (_ref) {
+    var RineBridgeComponent = Routine(function Partial(_ref) {
       var render = _ref.render;
 
       rerender = function rerender() {
