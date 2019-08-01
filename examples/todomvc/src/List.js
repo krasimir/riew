@@ -2,8 +2,8 @@ import React from 'react';
 import { Routine } from 'rine';
 import { TOGGLE } from './constants';
 
-export default Routine(function List({ todos, put }) {
-  return (
+export default Routine(function List({ render, put }) {
+  render(({ todos }) => (
     <ul className='todo-list'>
       {
         todos.map((todo, i) => {
@@ -29,5 +29,5 @@ export default Routine(function List({ todos, put }) {
         })
       }
     </ul>
-  );
+  ));
 });

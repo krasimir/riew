@@ -3,6 +3,12 @@ import createRoutineController from './RoutineController';
 
 const isGenerator = obj => obj && typeof obj['next'] === 'function';
 const isPromise = obj => obj && typeof obj['then'] === 'function';
+const getFuncName = (func) => {
+  if (func.name) return func.name;
+  let result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
+
+  return result ? result[ 1 ] : 'unknown';
+};
 
 export const System = {
   controllers: {},
@@ -34,8 +40,7 @@ export const System = {
 
 export function Routine(routine) {
   let controller;
-
-  return function RineBridge(props) {
+  const RineBridge = function (props) {
     const [ content, setContent ] = useState(null);
 
     useEffect(() => {
@@ -65,6 +70,10 @@ export function Routine(routine) {
 
     return content;
   };
+
+  RineBridge.displayName = `Rine(${ getFuncName(routine) })`;
+
+  return RineBridge;
 }
 
 export function Partial(product) {

@@ -165,6 +165,12 @@ var isGenerator = function isGenerator(obj) {
 var isPromise = function isPromise(obj) {
   return obj && typeof obj['then'] === 'function';
 };
+var getFuncName = function getFuncName(func) {
+  if (func.name) return func.name;
+  var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
+
+  return result ? result[1] : 'unknown';
+};
 
 var System = exports.System = {
   controllers: {},
@@ -200,8 +206,7 @@ var System = exports.System = {
 
 function Routine(routine) {
   var controller = void 0;
-
-  return function RineBridge(props) {
+  var RineBridge = function RineBridge(props) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
         content = _useState2[0],
@@ -234,6 +239,10 @@ function Routine(routine) {
 
     return content;
   };
+
+  RineBridge.displayName = 'Rine(' + getFuncName(routine) + ')';
+
+  return RineBridge;
 }
 
 function Partial(product) {
