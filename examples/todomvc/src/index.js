@@ -6,13 +6,11 @@ import List from './List';
 import { getInitialTodosData } from './Persist';
 import { TOGGLE } from './constants';
 
-const createListPartial = Partial(todos => {
-  return <List todos={ todos }/>;
-});
-
-const App = Routine(({ render, takeEvery }) => {
+const App = Routine(({ render, takeEvery, put }) => {
   const todos = getInitialTodosData();
-  const TodosList = createListPartial(todos);
+  const TodosList = Partial(function todos(todos) {
+    return <List todos={ todos } onToggle={ index => put(TOGGLE, index) }/>;
+  })(todos);
 
   render(
     <React.Fragment>

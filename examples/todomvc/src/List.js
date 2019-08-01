@@ -1,9 +1,8 @@
 import React from 'react';
-import { Routine } from 'rine';
-import { TOGGLE } from './constants';
+import PropTypes from 'prop-types';
 
-export default Routine(function List({ render, put }) {
-  render(({ todos }) => (
+export default function List({ todos, onToggle }) {
+  return (
     <ul className='todo-list'>
       {
         todos.map((todo, i) => {
@@ -16,7 +15,7 @@ export default Routine(function List({ render, put }) {
                   className='toggle'
                   type='checkbox'
                   checked={ todo.completed }
-                  onChange={ () => put(TOGGLE, i) }/>
+                  onChange={ () => onToggle(i) }/>
                 <label data-index='${ i }' data-label>{ todo.label }</label>
                 <button
                   className='destroy'
@@ -29,5 +28,10 @@ export default Routine(function List({ render, put }) {
         })
       }
     </ul>
-  ));
-});
+  );
+};
+
+List.propTypes = {
+  todos: PropTypes.array.isRequired,
+  onToggle: PropTypes.func.isRequired
+};

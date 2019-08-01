@@ -245,32 +245,30 @@ function Routine(routine) {
   return RineBridge;
 }
 
-function Partial(product) {
-  return function (initialValue) {
-    var rerender = function rerender() {};
-    var value = initialValue;
+function Partial(product, initialValue) {
+  var rerender = function rerender() {};
+  var value = initialValue;
 
-    var RineBridgeComponent = Routine(function Partial(_ref) {
-      var render = _ref.render;
+  var RineBridgeComponent = Routine(function Partial(_ref) {
+    var render = _ref.render;
 
-      rerender = function rerender() {
-        return render(product(value));
-      };
-      return rerender();
-    });
-
-    RineBridgeComponent.displayName = 'Rine(' + getFuncName(product) + ')';
-
-    RineBridgeComponent.set = function (newValue) {
-      value = newValue;
-      rerender();
+    rerender = function rerender() {
+      return render(product(value));
     };
-    RineBridgeComponent.get = function () {
-      return value;
-    };
+    return rerender();
+  });
 
-    return RineBridgeComponent;
+  RineBridgeComponent.displayName = 'Rine(' + getFuncName(product) + ')';
+
+  RineBridgeComponent.set = function (newValue) {
+    value = newValue;
+    rerender();
   };
+  RineBridgeComponent.get = function () {
+    return value;
+  };
+
+  return RineBridgeComponent;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})

@@ -76,24 +76,22 @@ export function Routine(routine) {
   return RineBridge;
 }
 
-export function Partial(product) {
-  return initialValue => {
-    let rerender = () => {};
-    let value = initialValue;
+export function Partial(product, initialValue) {
+  let rerender = () => {};
+  let value = initialValue;
 
-    const RineBridgeComponent = Routine(function Partial({ render }) {
-      rerender = () => render(product(value));
-      return rerender();
-    });
+  const RineBridgeComponent = Routine(function Partial({ render }) {
+    rerender = () => render(product(value));
+    return rerender();
+  });
 
-    RineBridgeComponent.displayName = `Rine(${ getFuncName(product) })`;
+  RineBridgeComponent.displayName = `Rine(${ getFuncName(product) })`;
 
-    RineBridgeComponent.set = newValue => {
-      value = newValue;
-      rerender();
-    };
-    RineBridgeComponent.get = () => value;
-
-    return RineBridgeComponent;
+  RineBridgeComponent.set = newValue => {
+    value = newValue;
+    rerender();
   };
+  RineBridgeComponent.get = () => value;
+
+  return RineBridgeComponent;
 }

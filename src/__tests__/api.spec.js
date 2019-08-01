@@ -106,12 +106,11 @@ describe('Given the Routine library', () => {
   });
   describe('when using a Partial', () => {
     it('should re-render when the value is updated', async () => {
-      const useError = Partial((error) => {
+      const Error = Partial((error) => {
         return error ? <div>{ error }</div> : <span>No error</span>;
-      });
+      }, 'Moo');
       const A = Routine(async ({ render }) => {
-        const Error = useError();
-
+        expect(Error.get()).toBe('Moo');
         Error.set('Foo');
 
         render(
