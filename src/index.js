@@ -86,6 +86,8 @@ export function Partial(product) {
       return rerender();
     });
 
+    RineBridgeComponent.displayName = `Rine(${ getFuncName(product) })`;
+
     RineBridgeComponent.set = newValue => {
       value = newValue;
       rerender();

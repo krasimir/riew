@@ -259,6 +259,8 @@ function Partial(product) {
       return rerender();
     });
 
+    RineBridgeComponent.displayName = 'Rine(' + getFuncName(product) + ')';
+
     RineBridgeComponent.set = function (newValue) {
       value = newValue;
       rerender();
