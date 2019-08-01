@@ -242,12 +242,7 @@ function routine(routine) {
       }));
 
       System.addController(controller);
-
-      var result = controller.in(setContent, props);
-
-      if (result && !(0, _utils.isPromise)(result) && !(0, _utils.isGenerator)(result)) {
-        setContent(result);
-      }
+      controller.in(setContent, props);
 
       return function () {
         controller.out();

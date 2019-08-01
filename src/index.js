@@ -47,12 +47,7 @@ export function routine(routine) {
       }));
 
       System.addController(controller);
-
-      const result = controller.in(setContent, props);
-
-      if (result && !isPromise(result) && !isGenerator(result)) {
-        setContent(result);
-      }
+      controller.in(setContent, props);
 
       return function () {
         controller.out();
