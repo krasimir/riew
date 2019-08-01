@@ -1,7 +1,26 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { routine } from 'rine';
 
-export default function List({ todos, onToggle }) {
+import { ESC, ENTER } from './constants';
+
+const EditTodo = routine(({ render }) => {
+  render(({ index, todo, onUpdateCancel, onUpdate }) => <input
+    className='edit'
+    defaultValue={ todo.label }
+    onBlur={ (e) => onUpdate(index, e.target.value) }
+    onKeyUp={ e => {
+      if (e.keyCode === ESC) {
+        onUpdateCancel(index);
+      } else if (e.keyCode === ENTER) {
+        onUpdate(index, e.target.value);
+      }
+    }} />);
+});
+
+export default function List({
+  todos, onToggle, onDelete, onEdit, onUpdate, onUpdateCancel
+}) {
   return (
     <ul className='todo-list'>
       {
@@ -16,13 +35,15 @@ export default function List({ todos, onToggle }) {
                   type='checkbox'
                   checked={ todo.completed }
                   onChange={ () => onToggle(i) }/>
-                <label data-index='${ i }' data-label>{ todo.label }</label>
-                <button
-                  className='destroy'
-                  data-index='${ i }'
-                  data-delete></button>
+                <label data-index='${ i }' onDoubleClick={ () => onEdit(i) }>{ todo.label }</label>
+                <button className='destroy' onClick={ () => onDelete(i) }></button>
               </div>
-              <input className='edit' value='${ todo.label }' data-index='${ i }' data-edit />
+              <EditTodo
+                index={ i }
+                todo={ todo }
+                onUpdate={ onUpdate }
+                onUpdateCancel={ onUpdateCancel }
+                />
             </li>
           );
         })
@@ -33,5 +54,9 @@ export default function List({ todos, onToggle }) {
 
 List.propTypes = {
   todos: PropTypes.array.isRequired,
-  onToggle: PropTypes.func.isRequired
+  onToggle: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onUpdate: PropTypes.func.isRequired,
+  onUpdateCancel: PropTypes.func.isRequired
 };

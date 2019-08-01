@@ -1,4 +1,5 @@
 /* eslint-disable consistent-return, camelcase */
+import { getFuncName } from './utils';
 
 var ids = 0;
 const getId = () => `r${ ++ids }`;
@@ -50,6 +51,7 @@ export default function createRoutineController(routine, { broadcast }) {
 
   return {
     id,
+    name: getFuncName(routine),
     in(setContent, props) {
       mounted = true;
       triggerRender = newProps => {

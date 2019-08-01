@@ -5,9 +5,11 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = createRoutineController;
-/* eslint-disable consistent-return, camelcase */
 
-var ids = 0;
+var _utils = require('./utils');
+
+var ids = 0; /* eslint-disable consistent-return, camelcase */
+
 var getId = function getId() {
   return 'r' + ++ids;
 };
@@ -69,6 +71,7 @@ function createRoutineController(routine, _ref) {
 
   return {
     id: id,
+    name: (0, _utils.getFuncName)(routine),
     in: function _in(setContent, props) {
       mounted = true;
       triggerRender = function triggerRender(newProps) {
@@ -111,7 +114,7 @@ function createRoutineController(routine, _ref) {
   };
 }
 
-},{}],2:[function(require,module,exports){
+},{"./utils":3}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -167,22 +170,11 @@ var _RoutineController = require('./RoutineController');
 
 var _RoutineController2 = _interopRequireDefault(_RoutineController);
 
+var _utils = require('./utils');
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
-
-var isGenerator = function isGenerator(obj) {
-  return obj && typeof obj['next'] === 'function';
-};
-var isPromise = function isPromise(obj) {
-  return obj && typeof obj['then'] === 'function';
-};
-var getFuncName = function getFuncName(func) {
-  if (func.name) return func.name;
-  var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
-
-  return result ? result[1] : 'unknown';
-};
 
 var System = exports.System = {
   controllers: {},
@@ -239,7 +231,7 @@ function routine(routine) {
 
       var result = controller.in(setContent, props);
 
-      if (result && !isPromise(result) && !isGenerator(result)) {
+      if (result && !(0, _utils.isPromise)(result) && !(0, _utils.isGenerator)(result)) {
         setContent(result);
       }
 
@@ -252,7 +244,7 @@ function routine(routine) {
     return content;
   };
 
-  RineBridge.displayName = 'Rine(' + getFuncName(routine) + ')';
+  RineBridge.displayName = 'Rine(' + (0, _utils.getFuncName)(routine) + ')';
 
   return RineBridge;
 }
@@ -271,7 +263,7 @@ function partial(Component, initialValue) {
     return rerender();
   });
 
-  RineBridgeComponent.displayName = 'RinePartial(' + getFuncName(Component) + ')';
+  RineBridgeComponent.displayName = 'RinePartial(' + (0, _utils.getFuncName)(Component) + ')';
   RineBridgeComponent.set = function (newValue) {
     value = newValue;
     rerender();
@@ -284,5 +276,24 @@ function partial(Component, initialValue) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./RoutineController":1}]},{},[2])(2)
+},{"./RoutineController":1,"./utils":3}],3:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var isGenerator = exports.isGenerator = function isGenerator(obj) {
+  return obj && typeof obj['next'] === 'function';
+};
+var isPromise = exports.isPromise = function isPromise(obj) {
+  return obj && typeof obj['then'] === 'function';
+};
+var getFuncName = exports.getFuncName = function getFuncName(func) {
+  if (func.name) return func.name;
+  var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
+
+  return result ? result[1] : 'unknown';
+};
+
+},{}]},{},[2])(2)
 });

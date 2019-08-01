@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import createRoutineController from './RoutineController';
-
-const isGenerator = obj => obj && typeof obj['next'] === 'function';
-const isPromise = obj => obj && typeof obj['then'] === 'function';
-const getFuncName = (func) => {
-  if (func.name) return func.name;
-  let result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
-
-  return result ? result[ 1 ] : 'unknown';
-};
+import { isPromise, isGenerator, getFuncName } from './utils';
 
 export const System = {
   controllers: {},
