@@ -72,6 +72,9 @@ function createRoutineController(routine, _ref) {
   function takeEvery(type, done) {
     pending.push({ type: type, done: done, once: false });
   }
+  function isMounted() {
+    return mounted;
+  }
 
   return {
     id: id,
@@ -84,7 +87,8 @@ function createRoutineController(routine, _ref) {
 
         take: take,
         takeEvery: takeEvery,
-        put: put
+        put: put,
+        isMounted: isMounted
       }));
     },
     out: function out() {
@@ -221,28 +225,30 @@ function Routine(routine) {
   };
 }
 
-function Partial(product, initialValue) {
-  var rerender = function rerender() {};
-  var value = initialValue;
+function Partial(product) {
+  return function (initialValue) {
+    var rerender = function rerender() {};
+    var value = initialValue;
 
-  var RineBridgeComponent = Routine(function (_ref) {
-    var render = _ref.render;
+    var RineBridgeComponent = Routine(function (_ref) {
+      var render = _ref.render;
 
-    rerender = function rerender() {
-      return render(product(value));
+      rerender = function rerender() {
+        return render(product(value));
+      };
+      return rerender();
+    });
+
+    RineBridgeComponent.set = function (newValue) {
+      value = newValue;
+      rerender();
     };
-    return rerender();
-  });
+    RineBridgeComponent.get = function () {
+      return value;
+    };
 
-  RineBridgeComponent.set = function (newValue) {
-    value = newValue;
-    rerender();
+    return RineBridgeComponent;
   };
-  RineBridgeComponent.get = function () {
-    return value;
-  };
-
-  return RineBridgeComponent;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})

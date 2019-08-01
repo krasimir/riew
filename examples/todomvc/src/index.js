@@ -1,10 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { Routine } from 'rine';
 
 import List from './List';
 
-function App() {
-  return (
+const App = Routine(({ render }) => {
+  render(
     <React.Fragment>
       <section className='todoapp'>
         <header className='header'>
@@ -37,6 +38,6 @@ function App() {
       </footer>
     </React.Fragment>
   );
-}
+});
 
 ReactDOM.render(<App />, document.querySelector('#container'));

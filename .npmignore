@@ -10,4 +10,4 @@ NOTES
 *.log
 *.lock
 packages
-lib
+jest
