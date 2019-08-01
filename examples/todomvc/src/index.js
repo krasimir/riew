@@ -3,14 +3,22 @@ import ReactDOM from 'react-dom';
 import { Routine, Partial } from 'rine';
 
 import List from './List';
-import { getInitialTodosData } from './Persist';
+import { getInitialTodosData, setTodosData } from './Persist';
 import { TOGGLE } from './constants';
 
 const App = Routine(({ render, takeEvery, put }) => {
   const todos = getInitialTodosData();
-  const TodosList = Partial(function todos(todos) {
-    return <List todos={ todos } onToggle={ index => put(TOGGLE, index) }/>;
-  })(todos);
+  const TodosList = Partial(todos => (
+    <List
+      todos={ todos }
+      onToggle={ index => put(TOGGLE, index) } />
+  ), todos);
+
+  takeEvery(TOGGLE, (index) => {
+    todos[index].completed = !todos[index].completed;
+    TodosList.set(todos);
+    setTodosData(todos);
+  });
 
   render(
     <React.Fragment>
@@ -45,11 +53,6 @@ const App = Routine(({ render, takeEvery, put }) => {
       </footer>
     </React.Fragment>
   );
-
-  takeEvery(TOGGLE, (index) => {
-    todos[index].completed = !todos[index].completed;
-    TodosList.set(todos);
-  });
 });
 
 ReactDOM.render(<App />, document.querySelector('#container'));

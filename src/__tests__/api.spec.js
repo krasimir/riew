@@ -106,34 +106,34 @@ describe('Given the Routine library', () => {
   });
   describe('when using a Partial', () => {
     it('should re-render when the value is updated', async () => {
-      const Error = Partial((error) => {
-        return error ? <div>{ error }</div> : <span>No error</span>;
-      }, 'Moo');
+      const Error = Partial(({ error, cls }) => {
+        return error ? <div className={ cls }>{ error }</div> : <span className={ cls }>No error</span>;
+      }, { error: 'Moo' });
       const A = Routine(async ({ render }) => {
-        expect(Error.get()).toBe('Moo');
-        Error.set('Foo');
+        expect(Error.get().error).toBe('Moo');
+        Error.set({ error: 'Foo' });
 
         render(
           <React.Fragment>
-            <Error />
+            <Error cls='error-class'/>
             <h1>Hey</h1>
           </React.Fragment>
         );
 
         await delay(20);
-        act(() => Error.set('Bar'));
-        expect(Error.get()).toEqual('Bar');
+        act(() => Error.set({ error: 'Bar' }));
+        expect(Error.get().error).toEqual('Bar');
       });
 
       const { container } = render(<A />);
 
       exerciseHTML(container, `
-        <div>Foo</div>
+        <div class="error-class">Foo</div>
         <h1>Hey</h1>
       `);
       await delay(21);
       exerciseHTML(container, `
-        <div>Bar</div>
+        <div class="error-class">Bar</div>
         <h1>Hey</h1>
       `);
     });

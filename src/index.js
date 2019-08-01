@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import createRoutineController from './RoutineController';
 
 const isGenerator = obj => obj && typeof obj['next'] === 'function';
@@ -76,16 +76,16 @@ export function Routine(routine) {
   return RineBridge;
 }
 
-export function Partial(product, initialValue) {
+export function Partial(Component, initialValue) {
   let rerender = () => {};
   let value = initialValue;
 
   const RineBridgeComponent = Routine(function Partial({ render }) {
-    rerender = () => render(product(value));
+    rerender = () => render(props => <Component {...props} {...value}/>);
     return rerender();
   });
 
-  RineBridgeComponent.displayName = `Rine(${ getFuncName(product) })`;
+  RineBridgeComponent.displayName = `RinePartial(${ getFuncName(Component) })`;
 
   RineBridgeComponent.set = newValue => {
     value = newValue;

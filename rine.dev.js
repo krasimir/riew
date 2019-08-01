@@ -120,6 +120,16 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.System = undefined;
 
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
+};
+
 var _slicedToArray = function () {
   function sliceIterator(arr, i) {
     var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
@@ -150,6 +160,8 @@ exports.Routine = Routine;
 exports.Partial = Partial;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
+
+var _react2 = _interopRequireDefault(_react);
 
 var _RoutineController = require('./RoutineController');
 
@@ -245,7 +257,7 @@ function Routine(routine) {
   return RineBridge;
 }
 
-function Partial(product, initialValue) {
+function Partial(Component, initialValue) {
   var rerender = function rerender() {};
   var value = initialValue;
 
@@ -253,12 +265,14 @@ function Partial(product, initialValue) {
     var render = _ref.render;
 
     rerender = function rerender() {
-      return render(product(value));
+      return render(function (props) {
+        return _react2.default.createElement(Component, _extends({}, props, value));
+      });
     };
     return rerender();
   });
 
-  RineBridgeComponent.displayName = 'Rine(' + getFuncName(product) + ')';
+  RineBridgeComponent.displayName = 'RinePartial(' + getFuncName(Component) + ')';
 
   RineBridgeComponent.set = function (newValue) {
     value = newValue;

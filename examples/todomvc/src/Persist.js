@@ -8,6 +8,6 @@ const initialValue = JSON.stringify([
 export const getInitialTodosData = () => {
   return JSON.parse(localStorage.getItem('todos') || initialValue);
 };
-export const usePersist = (todos) => {
+export const setTodosData = (todos) => {
   localStorage.setItem('todos', JSON.stringify(todos));
 };
