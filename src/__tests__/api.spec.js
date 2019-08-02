@@ -108,7 +108,7 @@ describe('Given the Rine library', () => {
     it('should re-render when the value is updated', async () => {
       const Error = partial(({ error, cls }) => {
         return error ? <div className={ cls }>{ error }</div> : <span className={ cls }>No error</span>;
-      }, { error: 'Moo' });
+      })({ error: 'Moo' });
       const A = routine(async ({ render }) => {
         expect(Error.get().error).toBe('Moo');
         Error.set({ error: 'Foo' });

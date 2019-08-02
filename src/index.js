@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import createRoutineController from './RoutineController';
-import { isPromise, isGenerator, getFuncName } from './utils';
+import { getFuncName } from './utils';
 
 export const System = {
   controllers: {},
@@ -63,20 +63,22 @@ export function routine(routine) {
   return RineBridge;
 }
 
-export function partial(Component, initialValue) {
-  let rerender = () => {};
-  let value = initialValue;
-  const RineBridgeComponent = routine(function Partial({ render }) {
-    rerender = () => render(props => <Component {...props} {...value}/>);
-    return rerender();
-  });
+export function partial(Component) {
+  return (initialValue) => {
+    let rerender = () => {};
+    let value = initialValue;
+    const RineBridgeComponent = routine(function Partial({ render }) {
+      rerender = () => render(props => <Component {...props} {...value}/>);
+      return rerender();
+    });
 
-  RineBridgeComponent.displayName = `RinePartial(${ getFuncName(Component) })`;
-  RineBridgeComponent.set = newValue => {
-    value = newValue;
-    rerender();
+    RineBridgeComponent.displayName = `RinePartial(${ getFuncName(Component) })`;
+    RineBridgeComponent.set = newValue => {
+      value = newValue;
+      rerender();
+    };
+    RineBridgeComponent.get = () => value;
+
+    return RineBridgeComponent;
   };
-  RineBridgeComponent.get = () => value;
-
-  return RineBridgeComponent;
 }

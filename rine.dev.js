@@ -258,30 +258,32 @@ function routine(routine) {
   return RineBridge;
 }
 
-function partial(Component, initialValue) {
-  var rerender = function rerender() {};
-  var value = initialValue;
-  var RineBridgeComponent = routine(function Partial(_ref) {
-    var render = _ref.render;
+function partial(Component) {
+  return function (initialValue) {
+    var rerender = function rerender() {};
+    var value = initialValue;
+    var RineBridgeComponent = routine(function Partial(_ref) {
+      var render = _ref.render;
 
-    rerender = function rerender() {
-      return render(function (props) {
-        return _react2.default.createElement(Component, _extends({}, props, value));
-      });
+      rerender = function rerender() {
+        return render(function (props) {
+          return _react2.default.createElement(Component, _extends({}, props, value));
+        });
+      };
+      return rerender();
+    });
+
+    RineBridgeComponent.displayName = 'RinePartial(' + (0, _utils.getFuncName)(Component) + ')';
+    RineBridgeComponent.set = function (newValue) {
+      value = newValue;
+      rerender();
     };
-    return rerender();
-  });
+    RineBridgeComponent.get = function () {
+      return value;
+    };
 
-  RineBridgeComponent.displayName = 'RinePartial(' + (0, _utils.getFuncName)(Component) + ')';
-  RineBridgeComponent.set = function (newValue) {
-    value = newValue;
-    rerender();
+    return RineBridgeComponent;
   };
-  RineBridgeComponent.get = function () {
-    return value;
-  };
-
-  return RineBridgeComponent;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
