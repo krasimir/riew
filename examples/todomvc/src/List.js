@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { partial } from 'rine';
 
 import { ESC, ENTER } from './constants';
 
@@ -37,9 +38,16 @@ EditTodo.propTypes = {
   onUpdateCancel: PropTypes.func.isRequired
 };
 
-export default function List({
-  todos, onToggle, onDelete, onEdit, onUpdate, onUpdateCancel
+function List({
+  todos,
+  filter,
+  onToggle,
+  onDelete,
+  onEdit,
+  onUpdate,
+  onUpdateCancel
 }) {
+  console.log(filter);
   return (
     <ul className='todo-list'>
       {
@@ -78,5 +86,8 @@ List.propTypes = {
   onDelete: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onUpdate: PropTypes.func.isRequired,
-  onUpdateCancel: PropTypes.func.isRequired
+  onUpdateCancel: PropTypes.func.isRequired,
+  filter: PropTypes.string.isRequired
 };
+
+export default partial(List);

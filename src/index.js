@@ -58,7 +58,7 @@ export function routine(routine) {
     return content;
   };
 
-  RoutineBridge.displayName = `RoutineBridge(${ getFuncName(routine) })`;
+  RoutineBridge.displayName = `Routine(${ getFuncName(routine) })`;
 
   return RoutineBridge;
 }
@@ -70,8 +70,8 @@ export function partial(Component) {
 
       useEffect(() => {
         PartialBridge.set = (newValue) => {
-          value = newValue;
-          setValue(newValue);
+          value = Object.assign({}, value, newValue);
+          setValue(value);
         };
         PartialBridge.get = () => value;
         return function () {
@@ -85,7 +85,7 @@ export function partial(Component) {
 
     PartialBridge.set = newValue => { initialValue = newValue; };
     PartialBridge.get = () => initialValue;
-    PartialBridge.displayName = `PartialBridge(${ getFuncName(Component) })`;
+    PartialBridge.displayName = `Partial(${ getFuncName(Component) })`;
 
     return PartialBridge;
   };

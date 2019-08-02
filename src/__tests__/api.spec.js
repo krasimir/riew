@@ -138,6 +138,24 @@ describe('Given the Rine library', () => {
         <h1>Hey</h1>
       `);
     });
+    it('should keep the previous props', () => {
+      const mock = jest.fn();
+      const P = partial(function (props) {
+        mock(props);
+        return null;
+      });
+      const Partial = P({ foo: 1 });
+
+      const { rerender } = render(<Partial bar={ 2 }/>);
+
+      expect(mock).toBeCalledWith({ foo: 1, bar: 2 });
+      rerender(<Partial bar={ 3 } />);
+      expect(mock).toBeCalledWith({ foo: 1, bar: 3 });
+      act(() => Partial.set({ foo: 2 }));
+      expect(mock).toBeCalledWith({ foo: 2, bar: 3 });
+      act(() => Partial.set({ zoo: 4 }));
+      expect(mock).toBeCalledWith({ foo: 2, bar: 3, zoo: 4 });
+    });
   });
   describe('when we use the `isMounted` method', () => {
     it('should return the value of the `mounted` flag', async () => {

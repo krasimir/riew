@@ -1,39 +1,56 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { routine, partial, System } from 'rine';
+import { routine, System } from 'rine';
 
 import List from './List';
+import Footer from './Footer';
 import { getInitialTodosData, saveTodosData, ToDo } from './Persist';
-import { TOGGLE, ENTER, NEW_TODO, DELETE, EDIT, UPDATE } from './constants';
+import {
+  TOGGLE,
+  ENTER,
+  NEW_TODO,
+  DELETE,
+  EDIT,
+  UPDATE,
+  ALL,
+  ACTIVE,
+  COMPLETED
+} from './constants';
 
 const App = routine(function App({ render, takeEvery, put }) {
   let todos = getInitialTodosData();
-  const ListPartial = partial(List, { todos });
+  const ListPartial = List({ todos, filter: ALL });
+  const FooterPartial = Footer({ todos });
 
   takeEvery(TOGGLE, (index) => {
     todos[index].completed = !todos[index].completed;
     ListPartial.set({ todos });
+    FooterPartial.set({ todos });
     saveTodosData(todos);
   });
   takeEvery(NEW_TODO, (label) => {
     todos.push(ToDo(label));
     ListPartial.set({ todos });
+    FooterPartial.set({ todos });
     saveTodosData(todos);
   });
   takeEvery(DELETE, (index) => {
     todos = todos.filter((todo, i) => i !== index);
     ListPartial.set({ todos });
+    FooterPartial.set({ todos });
     saveTodosData(todos);
   });
   takeEvery(EDIT, ({ index, value }) => {
     todos[index].editing = value;
     ListPartial.set({ todos });
+    FooterPartial.set({ todos });
     saveTodosData(todos);
   });
   takeEvery(UPDATE, ({ index, label }) => {
     todos[index].label = label;
     todos[index].editing = false;
     ListPartial.set({ todos });
+    FooterPartial.set({ todos });
     saveTodosData(todos);
   });
 
@@ -63,25 +80,12 @@ const App = routine(function App({ render, takeEvery, put }) {
             onUpdate={ (index, label) => put(UPDATE, { index, label }) }
             onUpdateCancel={ index => put(EDIT, { index, value: false }) } />
         </section>
-        <footer className='footer'>
-          <span className='todo-count'><strong>0</strong> item left</span>
-          <ul className='filters'>
-            <li>
-              <a href='#/'>All</a>
-            </li>
-            <li>
-              <a href='#/active'>Active</a>
-            </li>
-            <li>
-              <a href='#/completed'>Completed</a>
-            </li>
-          </ul>
-          <button className='clear-completed'>Clear completed</button>
-        </footer>
+        <FooterPartial
+          all={ () => ListPartial.set({ filter: ALL }) }
+          active={ () => ListPartial.set({ filter: ACTIVE }) }
+          completed={ () => ListPartial.set({ filter: COMPLETED }) }
+          clearCompleted={ () => {} } />
       </section>
-      <footer className='info'>
-        Rine
-      </footer>
     </React.Fragment>
   );
 });

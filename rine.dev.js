@@ -253,7 +253,7 @@ function routine(routine) {
     return content;
   };
 
-  RoutineBridge.displayName = 'RoutineBridge(' + (0, _utils.getFuncName)(routine) + ')';
+  RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(routine) + ')';
 
   return RoutineBridge;
 }
@@ -268,8 +268,8 @@ function partial(Component) {
 
       (0, _react.useEffect)(function () {
         PartialBridge.set = function (newValue) {
-          value = newValue;
-          setValue(newValue);
+          value = Object.assign({}, value, newValue);
+          setValue(value);
         };
         PartialBridge.get = function () {
           return value;
@@ -293,7 +293,7 @@ function partial(Component) {
     PartialBridge.get = function () {
       return initialValue;
     };
-    PartialBridge.displayName = 'PartialBridge(' + (0, _utils.getFuncName)(Component) + ')';
+    PartialBridge.displayName = 'Partial(' + (0, _utils.getFuncName)(Component) + ')';
 
     return PartialBridge;
   };
