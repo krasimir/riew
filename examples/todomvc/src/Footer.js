@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { partial } from 'rine';
 import { ALL, ACTIVE, COMPLETED } from './constants';
 
 function Footer({ todos, filter, all, active, completed, clearCompleted }) {
@@ -38,4 +37,4 @@ Footer.propTypes = {
   filter: PropTypes.string.isRequired
 };
 
-export default partial(Footer);
+export default Footer;

@@ -341,8 +341,10 @@ function connect(Component) {
     (0, _react.useEffect)(function () {
       stores.forEach(function (store) {
         return store.connect(function (newValue) {
-          setValue(Object.assign({}, value, newValue));
-          value = newValue;
+          var n = Object.assign({}, value, newValue);
+
+          setValue(n);
+          value = n;
         });
       });
     }, []);

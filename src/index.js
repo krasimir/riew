@@ -122,10 +122,14 @@ export function connect(Component, ...stores) {
     let [ value, setValue ] = useState(accumulatedValue());
 
     useEffect(() => {
-      stores.forEach(store => store.connect(newValue => {
-        setValue(Object.assign({}, value, newValue));
-        value = newValue;
-      }));
+      stores.forEach(store => store.connect(
+        newValue => {
+          const n = Object.assign({}, value, newValue);
+
+          setValue(n);
+          value = n;
+        }
+      ));
     }, []);
 
     return <Component {...value} {...props}/>;

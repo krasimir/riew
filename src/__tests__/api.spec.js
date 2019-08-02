@@ -179,15 +179,16 @@ describe('Given the Rine library', () => {
     it('should allow us to keep state and hook components', async () => {
       const SpyA = jest.fn().mockImplementation(() => null);
       const R = routine(async () => {
-        const s1 = store({ foo: 'bar' });
-        const s2 = store({ moo: 'bar' });
+        const s1 = store({ foo: '1' });
+        const s2 = store({ moo: '1' });
 
         const ConnectedA = connect(SpyA, s1, s2);
 
         render(<ConnectedA a={ 1 } />);
         await delay(10);
-        act(() => s1.set({ foo: 'zoo' }));
-        act(() => s2.set({ moo: 'zoo' }));
+        act(() => s1.set({ foo: '2' }));
+        act(() => s2.set({ moo: '2' }));
+        act(() => s1.set({ foo: '3' }));
         await delay(10);
         render(<ConnectedA a={ 2 } />);
       });
@@ -196,11 +197,12 @@ describe('Given the Rine library', () => {
 
       await delay(40);
 
-      expect(SpyA).toBeCalledTimes(4);
-      expect(SpyA.mock.calls[0]).toStrictEqual([{ a: 1, foo: 'bar', moo: 'bar' }, {}]);
-      expect(SpyA.mock.calls[1]).toStrictEqual([{ a: 1, foo: 'zoo', moo: 'bar' }, {}]);
-      expect(SpyA.mock.calls[2]).toStrictEqual([{ a: 1, foo: 'zoo', moo: 'zoo' }, {}]);
-      expect(SpyA.mock.calls[3]).toStrictEqual([{ a: 2, foo: 'zoo', moo: 'zoo' }, {}]);
+      expect(SpyA).toBeCalledTimes(5);
+      expect(SpyA.mock.calls[0]).toStrictEqual([{ a: 1, foo: '1', moo: '1' }, {}]);
+      expect(SpyA.mock.calls[1]).toStrictEqual([{ a: 1, foo: '2', moo: '1' }, {}]);
+      expect(SpyA.mock.calls[2]).toStrictEqual([{ a: 1, foo: '2', moo: '2' }, {}]);
+      expect(SpyA.mock.calls[3]).toStrictEqual([{ a: 1, foo: '3', moo: '2' }, {}]);
+      expect(SpyA.mock.calls[4]).toStrictEqual([{ a: 2, foo: '3', moo: '2' }, {}]);
     });
   });
 });

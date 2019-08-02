@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { partial } from 'rine';
 
 import { ESC, ENTER, ALL, COMPLETED, ACTIVE } from './constants';
 
@@ -94,4 +93,4 @@ List.propTypes = {
   filter: PropTypes.string.isRequired
 };
 
-export default partial(List);
+export default List;

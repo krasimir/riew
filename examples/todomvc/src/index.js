@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { routine, System, state } from 'rine';
+import { routine, System, store, connect } from 'rine';
 
 import List from './List';
 import Footer from './Footer';
@@ -18,41 +18,46 @@ import {
 } from './constants';
 
 const App = routine(function App({ render, takeEvery, put }) {
-  const todos = state({ todos: getInitialTodosData() });
-  const filter = state({ filter: ALL });
-  const ListPartial = todos.hook(List);
-  const FooterPartial = Footer({ todos, filter: ListPartial.get().filter });
+  const todos = store({ todos: getInitialTodosData() });
+  const filter = store({ filter: ALL });
+  const ListPartial = connect(List, todos, filter);
+  const FooterPartial = connect(Footer, todos, filter);
 
   takeEvery(TOGGLE, (index) => {
-    todos[index].completed = !todos[index].completed;
-    ListPartial.set({ todos });
-    FooterPartial.set({ todos });
-    saveTodosData(todos);
+    const t = todos.get().todos;
+
+    t[index].completed = !t[index].completed;
+    todos.set({ todos: t });
+    saveTodosData(t);
   });
   takeEvery(NEW_TODO, (label) => {
-    todos.push(ToDo(label));
-    ListPartial.set({ todos });
-    FooterPartial.set({ todos });
+    const t = todos.get().todos;
+
+    t.push(ToDo(label));
+    todos.set({ todos: t });
     saveTodosData(todos);
   });
   takeEvery(DELETE, (index) => {
-    todos = todos.filter((todo, i) => i !== index);
-    ListPartial.set({ todos });
-    FooterPartial.set({ todos });
-    saveTodosData(todos);
+    const t = todos.get().todos;
+
+    t = t.filter((todo, i) => i !== index);
+    todos.set({ todos: t });
+    saveTodosData(t);
   });
   takeEvery(EDIT, ({ index, value }) => {
-    todos[index].editing = value;
-    ListPartial.set({ todos });
-    FooterPartial.set({ todos });
-    saveTodosData(todos);
+    const t = todos.get().todos;
+
+    t[index].editing = value;
+    todos.set({ todos: t });
+    saveTodosData(t);
   });
   takeEvery(UPDATE, ({ index, label }) => {
-    todos[index].label = label;
-    todos[index].editing = false;
-    ListPartial.set({ todos });
-    FooterPartial.set({ todos });
-    saveTodosData(todos);
+    const t = todos.get().todos;
+
+    t[index].label = label;
+    t[index].editing = false;
+    todos.set({ todos: t });
+    saveTodosData(t);
   });
 
   render(
