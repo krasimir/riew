@@ -109,6 +109,7 @@ describe('Given the Rine library', () => {
       const Error = partial(({ error, cls }) => {
         return error ? <div className={ cls }>{ error }</div> : <span className={ cls }>No error</span>;
       })({ error: 'Moo' });
+
       const A = routine(async ({ render }) => {
         expect(Error.get().error).toBe('Moo');
         Error.set({ error: 'Foo' });
@@ -131,7 +132,7 @@ describe('Given the Rine library', () => {
         <div class="error-class">Foo</div>
         <h1>Hey</h1>
       `);
-      await delay(21);
+      await delay(30);
       exerciseHTML(container, `
         <div class="error-class">Bar</div>
         <h1>Hey</h1>

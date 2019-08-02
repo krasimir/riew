@@ -31,7 +31,7 @@ export const System = {
 };
 
 export function routine(routine) {
-  const RineBridge = function (props) {
+  const RoutineBridge = function (props) {
     const [ content, setContent ] = useState(null);
     let [ controller, setController ] = useState(null);
 
@@ -58,27 +58,35 @@ export function routine(routine) {
     return content;
   };
 
-  RineBridge.displayName = `Rine(${ getFuncName(routine) })`;
+  RoutineBridge.displayName = `RoutineBridge(${ getFuncName(routine) })`;
 
-  return RineBridge;
+  return RoutineBridge;
 }
 
 export function partial(Component) {
-  return (initialValue) => {
-    let rerender = () => {};
-    let value = initialValue;
-    const RineBridgeComponent = routine(function Partial({ render }) {
-      rerender = () => render(props => <Component {...props} {...value}/>);
-      return rerender();
-    });
+  return function createPartial(initialValue) {
+    const PartialBridge = function (props) {
+      let [ value, setValue ] = useState(initialValue);
 
-    RineBridgeComponent.displayName = `RinePartial(${ getFuncName(Component) })`;
-    RineBridgeComponent.set = newValue => {
-      value = newValue;
-      rerender();
+      useEffect(() => {
+        PartialBridge.set = (newValue) => {
+          value = newValue;
+          setValue(newValue);
+        };
+        PartialBridge.get = () => value;
+        return function () {
+          PartialBridge.set = newValue => { initialValue = newValue; };
+          PartialBridge.get = () => initialValue;
+        };
+      }, []);
+
+      return <Component {...value} {...props}/>;
     };
-    RineBridgeComponent.get = () => value;
 
-    return RineBridgeComponent;
+    PartialBridge.set = newValue => { initialValue = newValue; };
+    PartialBridge.get = () => initialValue;
+    PartialBridge.displayName = `PartialBridge(${ getFuncName(Component) })`;
+
+    return PartialBridge;
   };
 }
