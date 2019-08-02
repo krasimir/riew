@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { partial } from 'rine';
 
-import { ESC, ENTER } from './constants';
+import { ESC, ENTER, ALL, COMPLETED, ACTIVE } from './constants';
 
 const EditTodo = ({ index, todo, onUpdateCancel, onUpdate }) => {
   const inputEl = useRef(null);
@@ -47,11 +47,15 @@ function List({
   onUpdate,
   onUpdateCancel
 }) {
-  console.log(filter);
   return (
     <ul className='todo-list'>
       {
-        todos.map((todo, i) => {
+        todos.filter(todo => {
+          if (filter === ALL) return true;
+          if (filter === COMPLETED) return todo.completed;
+          if (filter === ACTIVE) return !todo.completed;
+          return true;
+        }).map((todo, i) => {
           const liClass = todo.editing ? 'editing' : (todo.completed ? 'completed' : '');
 
           return (

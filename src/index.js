@@ -75,7 +75,9 @@ export function partial(Component) {
         };
         PartialBridge.get = () => value;
         return function () {
-          PartialBridge.set = newValue => { initialValue = newValue; };
+          PartialBridge.set = newValue => {
+            initialValue = Object.assign({}, initialValue, newValue);
+          };
           PartialBridge.get = () => initialValue;
         };
       }, []);
@@ -83,10 +85,42 @@ export function partial(Component) {
       return <Component {...value} {...props}/>;
     };
 
-    PartialBridge.set = newValue => { initialValue = newValue; };
+    PartialBridge.set = newValue => {
+      initialValue = Object.assign({}, initialValue, newValue);
+    };
     PartialBridge.get = () => initialValue;
     PartialBridge.displayName = `Partial(${ getFuncName(Component) })`;
 
     return PartialBridge;
   };
 }
+
+export function state(initialValue) {
+  let stateValue = initialValue;
+  let hookedComponents = [];
+
+  return {
+    set(newValue) {
+      stateValue = newValue;
+      hookedComponents.forEach(({ rerender }) => rerender(stateValue));
+    },
+    get() {
+      return stateValue;
+    },
+    hook(Component) {
+      const item = {};
+
+      item.rerender = () => {};
+      item.Component = function StateBridge(props) {
+        let [ value, setValue ] = useState(stateValue);
+
+        item.rerender = setValue;
+        return <Component {...value} {...props}/>;
+      };
+
+      item.Component.displayName = `State(${ getFuncName(Component) })`;
+      hookedComponents.push(item);
+      return item.Component;
+    }
+  };
+};

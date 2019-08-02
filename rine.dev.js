@@ -171,6 +171,7 @@ var _slicedToArray = function () {
 
 exports.routine = routine;
 exports.partial = partial;
+exports.state = state;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
@@ -276,7 +277,7 @@ function partial(Component) {
         };
         return function () {
           PartialBridge.set = function (newValue) {
-            initialValue = newValue;
+            initialValue = Object.assign({}, initialValue, newValue);
           };
           PartialBridge.get = function () {
             return initialValue;
@@ -288,7 +289,7 @@ function partial(Component) {
     };
 
     PartialBridge.set = function (newValue) {
-      initialValue = newValue;
+      initialValue = Object.assign({}, initialValue, newValue);
     };
     PartialBridge.get = function () {
       return initialValue;
@@ -298,6 +299,42 @@ function partial(Component) {
     return PartialBridge;
   };
 }
+
+function state(initialValue) {
+  var stateValue = initialValue;
+  var hookedComponents = [];
+
+  return {
+    set: function set(newValue) {
+      stateValue = newValue;
+      hookedComponents.forEach(function (_ref) {
+        var rerender = _ref.rerender;
+        return rerender(stateValue);
+      });
+    },
+    get: function get() {
+      return stateValue;
+    },
+    hook: function hook(Component) {
+      var item = {};
+
+      item.rerender = function () {};
+      item.Component = function StateBridge(props) {
+        var _useState7 = (0, _react.useState)(stateValue),
+            _useState8 = _slicedToArray(_useState7, 2),
+            value = _useState8[0],
+            setValue = _useState8[1];
+
+        item.rerender = setValue;
+        return _react2.default.createElement(Component, _extends({}, value, props));
+      };
+
+      item.Component.displayName = 'State(' + (0, _utils.getFuncName)(Component) + ')';
+      hookedComponents.push(item);
+      return item.Component;
+    }
+  };
+};
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./RoutineController":1,"./utils":3}],3:[function(require,module,exports){

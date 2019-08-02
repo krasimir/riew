@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { routine, System, partial } from '../index';
+import { routine, System, partial, state } from '../index';
 
 describe('Given the Rine library', () => {
   describe('when using `take` and `put`', () => {
@@ -173,6 +173,41 @@ describe('Given the Rine library', () => {
       expect(spy).toHaveBeenCalledTimes(2);
       expect(spy.mock.calls[0]).toStrictEqual([true]);
       expect(spy.mock.calls[1]).toStrictEqual([false]);
+    });
+  });
+  describe('when we use the `store` api', () => {
+    it('should allow us to keep state and hook components', async () => {
+      const SpyA = jest.fn().mockImplementation(() => null);
+      const SpyB = jest.fn().mockImplementation(() => null);
+      const R = routine(async () => {
+        const s = state({ foo: 'bar' });
+
+        const HookedA = s.hook(SpyA);
+        const HookedB = s.hook(SpyB);
+
+        render(
+          <React.Fragment>
+            <HookedA a={ 1 } />
+            <HookedB b={ 1 } />
+          </React.Fragment>
+        );
+        await delay(10);
+        act(() => s.set({ foo: 'zoo' }));
+        await delay(10);
+        render(
+          <React.Fragment>
+            <HookedA a={ 2 } />
+            <HookedB b={ 2 } />
+          </React.Fragment>
+        );
+      });
+
+      render(<R />);
+
+      await delay(30);
+
+      expect(SpyA).toBeCalledTimes(3);
+      expect(SpyB).toBeCalledTimes(3);
     });
   });
 });

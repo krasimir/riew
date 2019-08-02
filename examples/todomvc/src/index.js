@@ -20,7 +20,7 @@ import {
 const App = routine(function App({ render, takeEvery, put }) {
   let todos = getInitialTodosData();
   const ListPartial = List({ todos, filter: ALL });
-  const FooterPartial = Footer({ todos });
+  const FooterPartial = Footer({ todos, filter: ListPartial.get().filter });
 
   takeEvery(TOGGLE, (index) => {
     todos[index].completed = !todos[index].completed;
@@ -81,9 +81,18 @@ const App = routine(function App({ render, takeEvery, put }) {
             onUpdateCancel={ index => put(EDIT, { index, value: false }) } />
         </section>
         <FooterPartial
-          all={ () => ListPartial.set({ filter: ALL }) }
-          active={ () => ListPartial.set({ filter: ACTIVE }) }
-          completed={ () => ListPartial.set({ filter: COMPLETED }) }
+          all={ () => {
+            ListPartial.set({ filter: ALL });
+            FooterPartial.set({ filter: ALL });
+          } }
+          active={ () => {
+            ListPartial.set({ filter: ACTIVE });
+            FooterPartial.set({ filter: ACTIVE });
+          } }
+          completed={ () => {
+            ListPartial.set({ filter: COMPLETED });
+            FooterPartial.set({ filter: COMPLETED });
+          } }
           clearCompleted={ () => {} } />
       </section>
     </React.Fragment>
