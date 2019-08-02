@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { routine, System } from 'rine';
+import { routine, System, state } from 'rine';
 
 import List from './List';
 import Footer from './Footer';
@@ -18,8 +18,9 @@ import {
 } from './constants';
 
 const App = routine(function App({ render, takeEvery, put }) {
-  let todos = getInitialTodosData();
-  const ListPartial = List({ todos, filter: ALL });
+  const todos = state({ todos: getInitialTodosData() });
+  const filter = state({ filter: ALL });
+  const ListPartial = todos.hook(List);
   const FooterPartial = Footer({ todos, filter: ListPartial.get().filter });
 
   takeEvery(TOGGLE, (index) => {

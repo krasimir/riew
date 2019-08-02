@@ -95,32 +95,42 @@ export function partial(Component) {
   };
 }
 
-export function state(initialValue) {
+export function store(initialValue) {
   let stateValue = initialValue;
-  let hookedComponents = [];
+  let updaters = [];
 
   return {
     set(newValue) {
       stateValue = newValue;
-      hookedComponents.forEach(({ rerender }) => rerender(stateValue));
+      updaters.forEach(update => update(stateValue));
     },
     get() {
       return stateValue;
     },
-    hook(Component) {
-      const item = {};
-
-      item.rerender = () => {};
-      item.Component = function StateBridge(props) {
-        let [ value, setValue ] = useState(stateValue);
-
-        item.rerender = setValue;
-        return <Component {...value} {...props}/>;
-      };
-
-      item.Component.displayName = `State(${ getFuncName(Component) })`;
-      hookedComponents.push(item);
-      return item.Component;
+    connect(updateValueInComponent) {
+      updaters.push(updateValueInComponent);
     }
   };
+};
+
+export function connect(Component, ...stores) {
+  const accumulatedValue = () => stores.reduce((value, state) => {
+    return Object.assign({}, value, state.get());
+  }, {});
+
+  function StoreBridge(props) {
+    let [ value, setValue ] = useState(accumulatedValue());
+
+    useEffect(() => {
+      stores.forEach(store => store.connect(newValue => {
+        setValue(Object.assign({}, value, newValue));
+        value = newValue;
+      }));
+    }, []);
+
+    return <Component {...value} {...props}/>;
+  }
+
+  StoreBridge.displayName = `State(${ getFuncName(Component) })`;
+  return StoreBridge;
 };
