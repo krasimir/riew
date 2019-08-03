@@ -51,7 +51,7 @@ describe('Given the Rine library', () => {
         exerciseHTML(container, '<p>Hello world</p>');
       });
     });
-    it('should re-render the RineBridge component if the props change', () => {
+    it('should re-render the bridge component if the props change', () => {
       const A = routine(({ render }) => {
         render(props => <p>The answer is { props.answer }</p>);
       });
@@ -66,9 +66,9 @@ describe('Given the Rine library', () => {
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
       const A = routine(async ({ render }) => {
-        act(() => render('Hello'));
+        act(() => { render('Hello'); });
         await delay(20);
-        act(() => render('world'));
+        act(() => { render('world'); });
       });
 
       const { queryByText, getByText } = render(<A />);
@@ -82,7 +82,7 @@ describe('Given the Rine library', () => {
       const spy = jest.spyOn(console, 'error');
       const A = routine(async ({ render }) => {
         await delay(20);
-        act(() => render('world'));
+        act(() => { render('world'); });
       });
 
       const { unmount } = render(<A/>);
@@ -91,6 +91,24 @@ describe('Given the Rine library', () => {
       await delay(21);
       expect(spy).not.toBeCalled();
       spy.mockRestore();
+    });
+    it('should allow us to wait for the render call to complete', async () => {
+      const spy = jest.fn();
+      const C = ({ foo }) => {
+        spy(foo.value);
+        return null;
+      };
+      const A = routine(async ({ render }) => {
+        const foo = { value: 1 };
+
+        await render(<C foo={ foo } />);
+        foo.value = 2;
+      });
+
+      render(<A />);
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith(1);
     });
   });
   describe('when reusing the same routine', () => {

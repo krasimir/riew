@@ -3,19 +3,24 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { routine, System, partial, store, connect } from '../index';
+import { routine, System, state, connect, put } from '../index';
 
 describe('Given the Rine library', () => {
+  beforeEach(() => {
+    System.reset();
+  });
   describe('when using `take` and `put`', () => {
     it(`should
       - pause the routine till the event is fired
       - allow for only one put`, async () => {
-      const A = routine(async ({ render, take, put }) => {
-        act(() => render(<button onClick={ () => put('xxx', 'bar') }>click me</button>));
+      const A = routine(async ({ render, take }) => {
+        act(() => {
+          render(<button onClick={ () => put('xxx', 'bar') }>click me</button>);
+        });
         const r = await take('xxx');
 
         expect(r).toEqual('bar');
-        act(() => render(<p>Yeah</p>));
+        act(() => { render(<p>Yeah</p>); });
       });
 
       const { container, getByText } = render(<A />);
@@ -33,11 +38,11 @@ describe('Given the Rine library', () => {
     it(`should
       - run the callback after the put call
       - allow for only one put call`, async () => {
-      const A = routine(async ({ render, take, put }) => {
-        act(() => render(<button onClick={ () => put('foo', 'bar') }>click me</button>));
+      const A = routine(async ({ render, take }) => {
+        act(() => { render(<button onClick={ () => put('foo', 'bar') }>click me</button>); });
         take('foo', async (r) => {
           expect(r).toEqual('bar');
-          act(() => render(<p>Yeah</p>));
+          act(() => { render(<p>Yeah</p>); });
         });
       });
 
@@ -59,9 +64,9 @@ describe('Given the Rine library', () => {
           <button onClick={ onClick }>click me</button>)
         </React.Fragment>
       );
-      const A = routine(async ({ render, takeEvery, put }) => {
+      const A = routine(async ({ render, takeEvery }) => {
         let counter = 0;
-        let renderCounter = () => act(() => render(<Counter value={ counter } onClick={ () => put('foo', 2) } />));
+        let renderCounter = () => act(() => { render(<Counter value={ counter } onClick={ () => put('foo', 2) } />); });
 
         renderCounter();
         takeEvery('foo', (payload) => {
@@ -84,9 +89,9 @@ describe('Given the Rine library', () => {
     it('should allow the communication between them', async () => {
       const A = routine(async ({ take, render }) => {
         await take('foo');
-        act(() => render(<p>It works</p>));
+        act(() => { render(<p>It works</p>); });
       });
-      const B = routine(async ({ put }) => {
+      const B = routine(async () => {
         await delay(10);
         put('foo');
       });
@@ -102,59 +107,6 @@ describe('Given the Rine library', () => {
       exerciseHTML(container, `
         <p>It works</p>
       `);
-    });
-  });
-  describe('when using a partial', () => {
-    it('should re-render when the value is updated', async () => {
-      const Error = partial(({ error, cls }) => {
-        return error ? <div className={ cls }>{ error }</div> : <span className={ cls }>No error</span>;
-      })({ error: 'Moo' });
-
-      const A = routine(async ({ render }) => {
-        expect(Error.get().error).toBe('Moo');
-        Error.set({ error: 'Foo' });
-
-        render(
-          <React.Fragment>
-            <Error cls='error-class'/>
-            <h1>Hey</h1>
-          </React.Fragment>
-        );
-
-        await delay(20);
-        act(() => Error.set({ error: 'Bar' }));
-        expect(Error.get().error).toEqual('Bar');
-      });
-
-      const { container } = render(<A />);
-
-      exerciseHTML(container, `
-        <div class="error-class">Foo</div>
-        <h1>Hey</h1>
-      `);
-      await delay(30);
-      exerciseHTML(container, `
-        <div class="error-class">Bar</div>
-        <h1>Hey</h1>
-      `);
-    });
-    it('should keep the previous props', () => {
-      const mock = jest.fn();
-      const P = partial(function (props) {
-        mock(props);
-        return null;
-      });
-      const Partial = P({ foo: 1 });
-
-      const { rerender } = render(<Partial bar={ 2 }/>);
-
-      expect(mock).toBeCalledWith({ foo: 1, bar: 2 });
-      rerender(<Partial bar={ 3 } />);
-      expect(mock).toBeCalledWith({ foo: 1, bar: 3 });
-      act(() => Partial.set({ foo: 2 }));
-      expect(mock).toBeCalledWith({ foo: 2, bar: 3 });
-      act(() => Partial.set({ zoo: 4 }));
-      expect(mock).toBeCalledWith({ foo: 2, bar: 3, zoo: 4 });
     });
   });
   describe('when we use the `isMounted` method', () => {
@@ -176,33 +128,74 @@ describe('Given the Rine library', () => {
     });
   });
   describe('when we use the `store` and `connect` api', () => {
-    it('should allow us to keep state and hook components', async () => {
-      const SpyA = jest.fn().mockImplementation(() => null);
-      const R = routine(async () => {
-        const s1 = store({ foo: '1' });
-        const s2 = store({ moo: '1' });
-
-        const ConnectedA = connect(SpyA, s1, s2);
-
-        render(<ConnectedA a={ 1 } />);
-        await delay(10);
-        act(() => s1.set({ foo: '2' }));
-        act(() => s2.set({ moo: '2' }));
-        act(() => s1.set({ foo: '3' }));
-        await delay(10);
-        render(<ConnectedA a={ 2 } />);
+    it('should properly render the component with the accumulated props', async () => {
+      const A = jest.fn().mockImplementation(function ({ foo }) {
+        return <p>{ foo }</p>;
+      });
+      const foo = state('Hello');
+      const ConnectedA = connect(A, {
+        foo,
+        bar() {
+          return '42';
+        }
       });
 
-      render(<R />);
+      render(<ConnectedA moo={ 'xxx' } />);
 
-      await delay(40);
+      expect(A).toBeCalledWith({ foo: 'Hello', bar: '42', moo: 'xxx' }, {});
+    });
+    it('should re-render if the state changes value (only the updated state)', async () => {
+      let counter = 0;
+      const A = jest.fn().mockImplementation(function ({ foo }) {
+        return <p>{ foo }</p>;
+      });
+      const foo = state('Hello');
+      const ConnectedA = connect(A, {
+        foo,
+        bar() {
+          return ++counter;
+        }
+      });
 
-      expect(SpyA).toBeCalledTimes(5);
-      expect(SpyA.mock.calls[0]).toStrictEqual([{ a: 1, foo: '1', moo: '1' }, {}]);
-      expect(SpyA.mock.calls[1]).toStrictEqual([{ a: 1, foo: '2', moo: '1' }, {}]);
-      expect(SpyA.mock.calls[2]).toStrictEqual([{ a: 1, foo: '2', moo: '2' }, {}]);
-      expect(SpyA.mock.calls[3]).toStrictEqual([{ a: 1, foo: '3', moo: '2' }, {}]);
-      expect(SpyA.mock.calls[4]).toStrictEqual([{ a: 2, foo: '3', moo: '2' }, {}]);
+      render(<ConnectedA />);
+      act(() => foo.set('World'));
+      expect(A.mock.calls[0]).toStrictEqual([{ foo: 'Hello', bar: 1 }, {}]);
+      expect(A.mock.calls[1]).toStrictEqual([{ foo: 'World', bar: 1 }, {}]);
+    });
+    it('should unsubscribe if the component is unmounted', async () => {
+      const A = jest.fn().mockImplementation(() => null);
+      const foo = state('Hello');
+      const ConnectedA = connect(A, { foo });
+
+      const { unmount } = render(<ConnectedA />);
+
+      expect(foo.__subscribers).toHaveLength(1);
+      unmount();
+      expect(foo.__subscribers).toHaveLength(0);
+    });
+    it('should use a reducer to update the value', async () => {
+      const A = jest.fn().mockImplementation(function ({ foo }) {
+        return <p>{ foo }</p>;
+      });
+      const foo = state('Hello', (oldValue, action) => {
+        return `${ oldValue } ${ action.payload }`;
+      });
+      const ConnectedA = connect(A, {
+        foo
+      });
+
+      render(<ConnectedA />);
+      act(() => put('MY_TYPE', 'World'));
+
+      expect(A.mock.calls[0]).toStrictEqual([{ foo: 'Hello' }, {}]);
+      expect(A.mock.calls[1]).toStrictEqual([{ foo: 'Hello World' }, {}]);
+    });
+    it('should allow us to detach the state from the System', async () => {
+      const s = state('foo');
+
+      expect(Object.keys(System.controllers)).toHaveLength(1);
+      s.destroy();
+      expect(Object.keys(System.controllers)).toHaveLength(0);
     });
   });
 });

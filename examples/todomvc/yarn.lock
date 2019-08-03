@@ -3986,10 +3986,10 @@ rimraf@^2.2.8, rimraf@^2.5.4, rimraf@^2.6.1, rimraf@^2.6.2, rimraf@^2.6.3:
   dependencies:
     glob "^7.1.3"
 
-rine@0.22.0:
-  version "0.22.0"
-  resolved "https://registry.yarnpkg.com/rine/-/rine-0.22.0.tgz#6e1871e6807464b459cc5b9f17f550630fd197f8"
-  integrity sha512-ueLl0nEbvL9nHppLjKCqjpqAToLQs0EcKIb0hPtv3BjIlCJ+3Q9YfNaHr1niShYPbiv9Cse0EpDw+bMlGmtowg==
+rine@0.22.1:
+  version "0.22.1"
+  resolved "https://registry.yarnpkg.com/rine/-/rine-0.22.1.tgz#f660a7cbd99320f04f594f01ad6f3e7d8d754cf8"
+  integrity sha512-0WhUdpmz6IT0RgoyiVQwaueVKPyUAVZHHTFzCLJC3RL25J+r8ri/+U7XH+tJHEwBYmPqrN2PPBQXBmZvcN20pg==
 
 ripemd160@^2.0.0, ripemd160@^2.0.1:
   version "2.0.2"

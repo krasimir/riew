@@ -1,6 +1,6 @@
 /* eslint-disable consistent-return, camelcase */
 import React from 'react';
-import { getFuncName } from './utils';
+import { getFuncName } from '../utils';
 
 var ids = 0;
 const getId = () => `r${ ++ids }`;
@@ -10,6 +10,7 @@ export default function createRoutineController(routine, { broadcast }) {
   let pending = [];
   let RenderComponent;
   let triggerRender;
+  let onRendered = () => {};
   const id = getId();
 
   function put(typeOfAction, payload, shouldBroadcast = true) {
@@ -67,15 +68,20 @@ export default function createRoutineController(routine, { broadcast }) {
             RenderComponent = () => f;
           }
           triggerRender(props);
+          return new Promise(done => {
+            onRendered = () => done();
+          });
         },
         take,
         takeEvery,
-        put,
         isMounted
       });
     },
-    update(props) {
+    updated(props) {
       triggerRender(props);
+    },
+    rendered() {
+      onRendered();
     },
     out() {
       mounted = false;
