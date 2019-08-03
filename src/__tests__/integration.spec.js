@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { useState } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 
@@ -16,7 +17,7 @@ describe('Given the Rine library', () => {
           </React.Fragment>
         );
       };
-      const Form = routine(function ({ render }) {
+      const Form = routine(function (render) {
         render(
           <form>
             <Input />

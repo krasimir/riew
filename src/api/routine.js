@@ -8,22 +8,19 @@ export default function routine(routine) {
     const [ content, setContent ] = useState(null);
     let [ controller, setController ] = useState(null);
 
+    // updating props
     useEffect(() => {
       if (controller) controller.updated(props);
     }, [ props ]);
 
+    // to support sync rendering (i.e. await render(...))
     useEffect(() => {
       if (controller) controller.rendered();
     }, [ content ]);
 
     useEffect(() => {
-      setController(controller = createRoutineController(routine, {
-        broadcast(...args) {
-          System.put(...args);
-        }
-      }));
+      setController(controller = createRoutineController(routine));
 
-      System.addController(controller);
       controller.in(setContent, props);
 
       return function () {

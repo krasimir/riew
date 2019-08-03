@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { routine, System, state, connect, put } from '../index';
+import { routine, System, state, connect, put, take, takeEvery } from '../index';
 
 describe('Given the Rine library', () => {
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe('Given the Rine library', () => {
     it(`should
       - pause the routine till the event is fired
       - allow for only one put`, async () => {
-      const A = routine(async ({ render, take }) => {
+      const A = routine(async (render) => {
         act(() => {
           render(<button onClick={ () => put('xxx', 'bar') }>click me</button>);
         });
@@ -31,14 +31,14 @@ describe('Given the Rine library', () => {
       exerciseHTML(container, `
         <p>Yeah</p>
       `);
-      expect(System.debug().pending).toHaveLength(0);
+      expect(System.tasks).toHaveLength(0);
     });
   });
   describe('when using `take` in a fork fashion', () => {
     it(`should
       - run the callback after the put call
       - allow for only one put call`, async () => {
-      const A = routine(async ({ render, take }) => {
+      const A = routine(async (render) => {
         act(() => { render(<button onClick={ () => put('foo', 'bar') }>click me</button>); });
         take('foo', async (r) => {
           expect(r).toEqual('bar');
@@ -53,7 +53,7 @@ describe('Given the Rine library', () => {
       exerciseHTML(container, `
         <p>Yeah</p>
       `);
-      expect(System.debug().pending).toHaveLength(0);
+      expect(System.tasks).toHaveLength(0);
     });
   });
   describe('when using `takeEvery` and `put`', () => {
@@ -64,7 +64,7 @@ describe('Given the Rine library', () => {
           <button onClick={ onClick }>click me</button>)
         </React.Fragment>
       );
-      const A = routine(async ({ render, takeEvery }) => {
+      const A = routine(async (render) => {
         let counter = 0;
         let renderCounter = () => act(() => { render(<Counter value={ counter } onClick={ () => put('foo', 2) } />); });
 
@@ -87,7 +87,7 @@ describe('Given the Rine library', () => {
   });
   describe('when using `take` and `put` in different routines', () => {
     it('should allow the communication between them', async () => {
-      const A = routine(async ({ take, render }) => {
+      const A = routine(async (render) => {
         await take('foo');
         act(() => { render(<p>It works</p>); });
       });
@@ -112,7 +112,7 @@ describe('Given the Rine library', () => {
   describe('when we use the `isMounted` method', () => {
     it('should return the value of the `mounted` flag', async () => {
       const spy = jest.fn();
-      const A = routine(async ({ isMounted }) => {
+      const A = routine(async (render, { isMounted }) => {
         spy(isMounted());
         await delay(10);
         spy(isMounted());
@@ -193,9 +193,9 @@ describe('Given the Rine library', () => {
     it('should allow us to detach the state from the System', async () => {
       const s = state('foo');
 
-      expect(Object.keys(System.controllers)).toHaveLength(1);
+      expect(System.controllers).toHaveLength(1);
       s.destroy();
-      expect(Object.keys(System.controllers)).toHaveLength(0);
+      expect(System.controllers).toHaveLength(0);
     });
   });
 });

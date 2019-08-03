@@ -1,31 +1,76 @@
+/* eslint-disable consistent-return */
+
+var tids = 0;
+const getTaskId = () => `t${ ++tids }`;
+
+function newTask(type, done, controller, once = true) {
+  return {
+    id: getTaskId(),
+    type,
+    done,
+    controller,
+    once
+  };
+}
+
 const System = {
-  controllers: {},
+  tasks: [],
+  controllers: [],
   addController(controller) {
-    this.controllers[ controller.id ] = controller;
+    this.controllers.push(controller);
   },
   removeController(controller) {
-    delete this.controllers[ controller.id ];
+    this.controllers = this.controllers.filter(({ id }) => id !== controller.id);
+    this.tasks = this.tasks.filter(({ controller: c }) => {
+      if (c) {
+        return c.id !== controller.id;
+      }
+      return true;
+    });
   },
-  put(type, payload, source) {
-    Object.keys(this.controllers).forEach(id => {
-      if (id !== source) {
-        this.controllers[id].put(type, payload, false);
+  addTask(type, done, controller, once = true) {
+    const task = newTask(type, done, controller, once);
+
+    this.tasks.push(task);
+    return task;
+  },
+  put(typeOfAction, payload) {
+    const toFire = [];
+
+    this.tasks = this.tasks.filter(({ type, done, once }) => {
+      if (type === typeOfAction) {
+        toFire.push(done);
+        return !once;
+      }
+      return true;
+    });
+    toFire.forEach(func => func(payload));
+
+    this.controllers.forEach(controller => {
+      if ('put' in controller) {
+        controller.put(typeOfAction, payload);
       }
     });
   },
-  debug() {
-    const pending = Object.keys(this.controllers).reduce((arr, id) => {
-      arr = arr.concat(this.controllers[id].system().pending);
-      return arr;
-    }, []);
-
-    return {
-      controllers: this.controllers,
-      pending
-    };
+  take(type, done, sourceController) {
+    if (!done) {
+      return new Promise(promiseDone => {
+        this.addTask(type, promiseDone, sourceController, true);
+      });
+    }
+    return this.addTask(type, done, sourceController, true);
+  },
+  takeEvery(type, done, sourceController) {
+    return this.addTask(
+      type,
+      done,
+      sourceController,
+      false
+    );
   },
   reset() {
-    this.controllers = {};
+    this.controllers = [];
+    this.tasks = [];
   }
 };
 

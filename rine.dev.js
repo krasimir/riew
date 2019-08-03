@@ -11,36 +11,92 @@ var _react = (typeof window !== "undefined" ? window['React'] : typeof global !=
 
 var _react2 = _interopRequireDefault(_react);
 
-var _utils = require('./utils');
+var _utils = require('../utils');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-/* eslint-disable consistent-return, camelcase */
+/* eslint-disable consistent-return */
 var ids = 0;
 var getId = function getId() {
   return 'r' + ++ids;
 };
 
-function createRoutineController(routine, _ref) {
-  var broadcast = _ref.broadcast;
-
+function createRoutineController(routine) {
   var mounted = false;
-  var pending = [];
   var RenderComponent = void 0;
   var triggerRender = void 0;
-  var id = getId();
+  var onRendered = function onRendered() {};
 
-  function put(typeOfAction, payload) {
-    var shouldBroadcast = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+  function isMounted() {
+    return mounted;
+  }
+
+  return {
+    id: getId(),
+    name: (0, _utils.getFuncName)(routine),
+    in: function _in(setContent, props) {
+      mounted = true;
+      triggerRender = function triggerRender(newProps) {
+        if (mounted) setContent(_react2.default.createElement(RenderComponent, newProps));
+      };
+
+      return routine(function render(f) {
+        if (typeof f === 'function') {
+          RenderComponent = f;
+        } else {
+          RenderComponent = function RenderComponent() {
+            return f;
+          };
+        }
+        triggerRender(props);
+        return new Promise(function (done) {
+          onRendered = function onRendered() {
+            return done();
+          };
+        });
+      }, { isMounted: isMounted });
+    },
+    updated: function updated(props) {
+      triggerRender(props);
+    },
+    rendered: function rendered() {
+      onRendered();
+    },
+    out: function out() {
+      mounted = false;
+    }
+  };
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"../utils":7}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+/* eslint-disable consistent-return */
+
+var System = {
+  pending: [],
+  controllers: {},
+  addController: function addController(controller) {
+    this.controllers[controller.id] = controller;
+  },
+  removeController: function removeController(controller) {
+    delete this.controllers[controller.id];
+  },
+  put: function put(typeOfAction, payload) {
+    var _this = this;
 
     var toFire = [];
 
-    pending = pending.filter(function (_ref2) {
-      var type = _ref2.type,
-          done = _ref2.done,
-          once = _ref2.once;
+    this.pending = this.pending.filter(function (_ref) {
+      var type = _ref.type,
+          done = _ref.done,
+          once = _ref.once;
 
       if (type === typeOfAction) {
         toFire.push(done);
@@ -51,87 +107,53 @@ function createRoutineController(routine, _ref) {
     toFire.forEach(function (func) {
       return func(payload);
     });
-    if (shouldBroadcast) {
-      broadcast(typeOfAction, payload, id);
-    }
-  };
-  function take(type, done) {
+
+    Object.keys(this.controllers).forEach(function (id) {
+      if ('put' in _this.controllers[id]) {
+        _this.controllers[id].put(typeOfAction, payload);
+      }
+    });
+  },
+  take: function take(type, done) {
+    var _this2 = this;
+
     if (!done) {
-      var p = new Promise(function (_done) {
-        pending.push({
+      var p = new Promise(function (done) {
+        _this2.pending.push({
           type: type,
-          done: function done() {
-            if (mounted) _done.apply(undefined, arguments);
-          },
+          done: done,
           once: true
         });
       });
 
       return p;
     }
-    pending.push({ type: type, done: done, once: true });
+    this.pending.push({ type: type, done: done, once: true, __pending: 'rine' });
+  },
+  takeEvery: function takeEvery(type, done) {
+    this.pending.push({ type: type, done: done, once: false, __pending: 'rine' });
+  },
+  debug: function debug() {
+    return {
+      controllers: this.controllers,
+      pending: this.pending
+    };
+  },
+  reset: function reset() {
+    this.controllers = {};
+    this.pending = [];
   }
-  function takeEvery(type, done) {
-    pending.push({ type: type, done: done, once: false });
-  }
-  function isMounted() {
-    return mounted;
-  }
+};
 
-  return {
-    id: id,
-    name: (0, _utils.getFuncName)(routine),
-    in: function _in(setContent, props) {
-      mounted = true;
-      triggerRender = function triggerRender(newProps) {
-        if (mounted) setContent(_react2.default.createElement(RenderComponent, newProps));
-      };
+exports.default = System;
 
-      return routine({
-        render: function render(f) {
-          if (typeof f === 'function') {
-            RenderComponent = f;
-          } else {
-            RenderComponent = function RenderComponent() {
-              return f;
-            };
-          }
-          triggerRender(props);
-        },
-
-        take: take,
-        takeEvery: takeEvery,
-        put: put,
-        isMounted: isMounted
-      });
-    },
-    update: function update(props) {
-      triggerRender(props);
-    },
-    out: function out() {
-      mounted = false;
-      pending = [];
-    },
-
-    put: put,
-    system: function system() {
-      return {
-        mounted: mounted,
-        pending: pending
-      };
-    }
-  };
-}
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./utils":3}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 (function (global){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.System = undefined;
 
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
@@ -169,56 +191,127 @@ var _slicedToArray = function () {
   };
 }();
 
-exports.routine = routine;
-exports.partial = partial;
-exports.store = store;
-exports.connect = connect;
+exports.default = connect;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
 var _react2 = _interopRequireDefault(_react);
 
-var _RoutineController = require('./RoutineController');
-
-var _RoutineController2 = _interopRequireDefault(_RoutineController);
-
-var _utils = require('./utils');
+var _utils = require('../utils');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-var System = exports.System = {
-  controllers: {},
-  addController: function addController(controller) {
-    this.controllers[controller.id] = controller;
-  },
-  removeController: function removeController(controller) {
-    delete this.controllers[controller.id];
-  },
-  put: function put(type, payload, source) {
-    var _this = this;
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
 
-    Object.keys(this.controllers).forEach(function (id) {
-      if (id !== source) {
-        _this.controllers[id].put(type, payload, false);
-      }
-    });
-  },
-  debug: function debug() {
-    var _this2 = this;
+function isRineState(value) {
+  return value.__state === 'rine';
+}
+function accumulateProps(map) {
+  return Object.keys(map).reduce(function (props, key) {
+    var value = map[key];
 
-    var pending = Object.keys(this.controllers).reduce(function (arr, id) {
-      arr = arr.concat(_this2.controllers[id].system().pending);
-      return arr;
+    if (isRineState(value)) {
+      props[key] = value.get();
+    } else if (typeof value === 'function') {
+      props[key] = value();
+    }
+    return props;
+  }, {});
+}
+
+function connect(Component, map) {
+  function StateBridge(props) {
+    var _useState = (0, _react.useState)(accumulateProps(map)),
+        _useState2 = _slicedToArray(_useState, 2),
+        aprops = _useState2[0],
+        setAProps = _useState2[1];
+
+    (0, _react.useEffect)(function () {
+      var unsubscribeCallbacks = [];
+
+      Object.keys(map).forEach(function (key) {
+        var value = map[key];
+
+        if (isRineState(value)) {
+          unsubscribeCallbacks.push(value.connect(function (newValue) {
+            return setAProps(_extends({}, aprops, _defineProperty({}, key, newValue)));
+          }));
+        }
+      });
+      return function () {
+        unsubscribeCallbacks.forEach(function (f) {
+          return f();
+        });
+      };
     }, []);
 
-    return {
-      controllers: this.controllers,
-      pending: pending
-    };
+    return _react2.default.createElement(Component, _extends({}, aprops, props));
   }
+
+  StateBridge.displayName = 'State(' + (0, _utils.getFuncName)(Component) + ')';
+  return StateBridge;
 };
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"../utils":7}],4:[function(require,module,exports){
+(function (global){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _slicedToArray = function () {
+  function sliceIterator(arr, i) {
+    var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
+      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;_e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"]) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }return _arr;
+  }return function (arr, i) {
+    if (Array.isArray(arr)) {
+      return arr;
+    } else if (Symbol.iterator in Object(arr)) {
+      return sliceIterator(arr, i);
+    } else {
+      throw new TypeError("Invalid attempt to destructure non-iterable instance");
+    }
+  };
+}();
+
+exports.default = routine;
+
+var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
+
+var _RoutineController = require('./RoutineController');
+
+var _RoutineController2 = _interopRequireDefault(_RoutineController);
+
+var _System = require('./System');
+
+var _System2 = _interopRequireDefault(_System);
+
+var _utils = require('../utils');
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
 
 function routine(routine) {
   var RoutineBridge = function RoutineBridge(props) {
@@ -232,23 +325,27 @@ function routine(routine) {
         controller = _useState4[0],
         setController = _useState4[1];
 
+    // updating props
+
+
     (0, _react.useEffect)(function () {
-      if (controller) controller.update(props);
+      if (controller) controller.updated(props);
     }, [props]);
 
+    // to support sync rendering (i.e. await render(...))
     (0, _react.useEffect)(function () {
-      setController(controller = (0, _RoutineController2.default)(routine, {
-        broadcast: function broadcast() {
-          System.put.apply(System, arguments);
-        }
-      }));
+      if (controller) controller.rendered();
+    }, [content]);
 
-      System.addController(controller);
+    (0, _react.useEffect)(function () {
+      setController(controller = (0, _RoutineController2.default)(routine));
+
+      _System2.default.addController(controller);
       controller.in(setContent, props);
 
       return function () {
         controller.out();
-        System.removeController(controller);
+        _System2.default.removeController(controller);
       };
     }, []);
 
@@ -260,104 +357,130 @@ function routine(routine) {
   return RoutineBridge;
 }
 
-function partial(Component) {
-  return function createPartial(initialValue) {
-    var PartialBridge = function PartialBridge(props) {
-      var _useState5 = (0, _react.useState)(initialValue),
-          _useState6 = _slicedToArray(_useState5, 2),
-          value = _useState6[0],
-          setValue = _useState6[1];
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"../utils":7,"./RoutineController":1,"./System":2}],5:[function(require,module,exports){
+'use strict';
 
-      (0, _react.useEffect)(function () {
-        PartialBridge.set = function (newValue) {
-          value = Object.assign({}, value, newValue);
-          setValue(value);
-        };
-        PartialBridge.get = function () {
-          return value;
-        };
-        return function () {
-          PartialBridge.set = function (newValue) {
-            initialValue = Object.assign({}, initialValue, newValue);
-          };
-          PartialBridge.get = function () {
-            return initialValue;
-          };
-        };
-      }, []);
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = state;
 
-      return _react2.default.createElement(Component, _extends({}, value, props));
-    };
+var _System = require('./System');
 
-    PartialBridge.set = function (newValue) {
-      initialValue = Object.assign({}, initialValue, newValue);
-    };
-    PartialBridge.get = function () {
-      return initialValue;
-    };
-    PartialBridge.displayName = 'Partial(' + (0, _utils.getFuncName)(Component) + ')';
+var _System2 = _interopRequireDefault(_System);
 
-    return PartialBridge;
-  };
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function store(initialValue) {
-  var stateValue = initialValue;
-  var updaters = [];
+var ids = 0;
+var getId = function getId() {
+  return 's' + ++ids;
+};
 
-  return {
+function state(initialValue, reducer) {
+  var subscribersUID = 0;
+  var stateValue = initialValue;
+  var subscribers = [];
+
+  var stateController = {
+    id: getId(),
+    __state: 'rine',
+    __subscribers: subscribers,
     set: function set(newValue) {
       stateValue = newValue;
-      updaters.forEach(function (update) {
+      subscribers.forEach(function (_ref) {
+        var update = _ref.update;
         return update(stateValue);
       });
     },
     get: function get() {
       return stateValue;
     },
-    connect: function connect(updateValueInComponent) {
-      updaters.push(updateValueInComponent);
+    connect: function connect(update) {
+      var _this = this;
+
+      var subscriberId = ++subscribersUID;
+
+      subscribers.push({ id: subscriberId, update: update });
+      return function () {
+        _this.__subscribers = subscribers = subscribers.filter(function (_ref2) {
+          var id = _ref2.id;
+          return id !== subscriberId;
+        });
+      };
+    },
+    destroy: function destroy() {
+      _System2.default.removeController(this);
+    },
+    put: function put(type, payload) {
+      if (reducer) {
+        this.set(reducer(stateValue, { type: type, payload: payload }));
+      }
     }
   };
+
+  _System2.default.addController(stateController);
+
+  return stateController;
 };
 
-function connect(Component) {
-  for (var _len = arguments.length, stores = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    stores[_key - 1] = arguments[_key];
+},{"./System":2}],6:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.takeEvery = exports.take = exports.put = exports.connect = exports.state = exports.routine = exports.System = undefined;
+
+var _System = require('./api/System');
+
+Object.defineProperty(exports, 'System', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_System).default;
   }
+});
 
-  var accumulatedValue = function accumulatedValue() {
-    return stores.reduce(function (value, state) {
-      return Object.assign({}, value, state.get());
-    }, {});
-  };
+var _routine = require('./api/routine');
 
-  function StoreBridge(props) {
-    var _useState7 = (0, _react.useState)(accumulatedValue()),
-        _useState8 = _slicedToArray(_useState7, 2),
-        value = _useState8[0],
-        setValue = _useState8[1];
-
-    (0, _react.useEffect)(function () {
-      stores.forEach(function (store) {
-        return store.connect(function (newValue) {
-          var n = Object.assign({}, value, newValue);
-
-          setValue(n);
-          value = n;
-        });
-      });
-    }, []);
-
-    return _react2.default.createElement(Component, _extends({}, value, props));
+Object.defineProperty(exports, 'routine', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_routine).default;
   }
+});
 
-  StoreBridge.displayName = 'State(' + (0, _utils.getFuncName)(Component) + ')';
-  return StoreBridge;
-};
+var _state = require('./api/state');
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./RoutineController":1,"./utils":3}],3:[function(require,module,exports){
+Object.defineProperty(exports, 'state', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_state).default;
+  }
+});
+
+var _connect = require('./api/connect');
+
+Object.defineProperty(exports, 'connect', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_connect).default;
+  }
+});
+
+var _System2 = _interopRequireDefault(_System);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+var put = exports.put = _System2.default.put.bind(_System2.default);
+var take = exports.take = _System2.default.take.bind(_System2.default);
+var takeEvery = exports.takeEvery = _System2.default.takeEvery.bind(_System2.default);
+
+},{"./api/System":2,"./api/connect":3,"./api/routine":4,"./api/state":5}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -376,5 +499,5 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   return result ? result[1] : 'unknown';
 };
 
-},{}]},{},[2])(2)
+},{}]},{},[6])(6)
 });
