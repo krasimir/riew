@@ -5,14 +5,15 @@ import { getFuncName } from '../utils';
 function isRineState(value) {
   return value.__rine === 'state';
 }
+function getValueFromState(state) {
+  return state.get();
+}
 function accumulateProps(map) {
   return Object.keys(map).reduce((props, key) => {
     const value = map[key];
 
     if (isRineState(value)) {
-      props[key] = value.get();
-    } else if (typeof value === 'function') {
-      props[key] = value();
+      props[key] = getValueFromState(value);
     } else {
       props[key] = value;
     }
@@ -20,7 +21,7 @@ function accumulateProps(map) {
   }, {});
 }
 
-export default function connect(Component, map) {
+export default function connect(Component, map, translate = v => v) {
   function StateBridge(props) {
     let [ aprops, setAProps ] = useState(accumulateProps(map));
 
@@ -31,9 +32,13 @@ export default function connect(Component, map) {
         const value = map[key];
 
         if (isRineState(value)) {
+          const state = value;
+
           unsubscribeCallbacks.push(
-            value.subscribe(
-              newValue => {
+            state.subscribe(
+              () => {
+                const newValue = getValueFromState(state);
+
                 if (!equal(aprops[key], newValue)) {
                   setAProps(aprops = { ...aprops, [key]: newValue });
                 }
@@ -47,7 +52,7 @@ export default function connect(Component, map) {
       };
     }, []);
 
-    return <Component {...aprops} {...props}/>;
+    return <Component {...translate(aprops)} {...props}/>;
   }
 
   StateBridge.displayName = `Connected(${ getFuncName(Component) })`;
