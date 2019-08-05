@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
 
 function isRineState(value) {
-  return value.__state === 'rine';
+  return value.__rine === 'state';
 }
 function accumulateProps(map) {
   return Object.keys(map).reduce((props, key) => {
@@ -31,7 +31,9 @@ export default function connect(Component, map) {
 
         if (isRineState(value)) {
           unsubscribeCallbacks.push(
-            value.connect(newValue => setAProps(aprops = { ...aprops, [key]: newValue }))
+            value.subscribe(
+              newValue => setAProps(aprops = { ...aprops, [key]: newValue })
+            )
           );
         }
       });

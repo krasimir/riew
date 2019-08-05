@@ -6,6 +6,9 @@ import { delay, exerciseHTML } from '../__helpers__';
 import { routine, System, state, connect, put, take, takeEvery } from '../index';
 
 describe('Given the Rine library', () => {
+  beforeEach(() => {
+    System.reset();
+  });
   describe('when we want to render children', () => {
     it('should pass the `children` prop down to our function', () => {
       const B = ({ children }) => {
@@ -81,7 +84,7 @@ describe('Given the Rine library', () => {
         act(() => {
           render(<button onClick={ () => put('xxx', 'bar') }>click me</button>);
         });
-        const r = await take('xxx');
+        const r = await take('xxx').done;
 
         expect(r).toEqual('bar');
         act(() => { render(<p>Yeah</p>); });
@@ -95,7 +98,6 @@ describe('Given the Rine library', () => {
       exerciseHTML(container, `
         <p>Yeah</p>
       `);
-      expect(System.tasks).toHaveLength(0);
     });
   });
   describe('when using `take` in a fork fashion', () => {
@@ -103,7 +105,9 @@ describe('Given the Rine library', () => {
       - run the callback after the put call
       - allow for only one put call`, async () => {
       const A = routine(async (render) => {
-        act(() => { render(<button onClick={ () => put('foo', 'bar') }>click me</button>); });
+        act(() => {
+          render(<button onClick={ () => put('foo', 'bar') }>click me</button>);
+        });
         take('foo', async (r) => {
           expect(r).toEqual('bar');
           act(() => { render(<p>Yeah</p>); });
@@ -117,7 +121,6 @@ describe('Given the Rine library', () => {
       exerciseHTML(container, `
         <p>Yeah</p>
       `);
-      expect(System.tasks).toHaveLength(0);
     });
   });
   describe('when using `takeEvery` and `put`', () => {
@@ -215,6 +218,19 @@ describe('Given the Rine library', () => {
 
       fireEvent.change(getByTestId('input'), { target: { value: 'foobar' } });
       expect(getByText('foobar')).toBeDefined();
+    });
+  });
+  describe('when we unmount a component', () => {
+    it('should clean up the pending tasks', () => {
+      const C = routine(function * () {
+        yield take('foo');
+      });
+
+      const { unmount } = render(<C />);
+
+      expect(System.tasks).toHaveLength(2);
+      unmount();
+      expect(System.tasks).toHaveLength(0);
     });
   });
 });

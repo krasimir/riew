@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import System from '../System';
-import state from '../StateController';
+import state from '../state';
 
 import connect from '../connect';
 

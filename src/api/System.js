@@ -1,76 +1,79 @@
-/* eslint-disable consistent-return */
+/* eslint-disable consistent-return, no-new, no-use-before-define */
 
-var tids = 0;
-const getTaskId = () => `t${ ++tids }`;
+var ids = 0;
+const getId = () => `@@t${ ++ids }`;
 
-function newTask(type, done, controller, once = true) {
-  return {
-    id: getTaskId(),
+function Task(type, callback, once = true) {
+  const task = {
+    __rine: 'task',
+    id: getId(),
+    active: true,
+    once,
     type,
-    done,
-    controller,
-    once
+    callback,
+    done: null,
+    teardown() {
+      this.active = false;
+    },
+    execute(payload) {
+      if (this.active) {
+        this.callback(payload);
+        if (this.once) {
+          System.removeTasks([ this ]);
+        }
+      }
+    }
   };
+
+  if (!callback) {
+    task.done = new Promise(donePromise => {
+      task.callback = donePromise;
+    });
+  }
+
+  return task;
 }
 
 const System = {
   tasks: [],
-  controllers: [],
-  addController(controller) {
-    this.controllers.push(controller);
-  },
-  removeController(controller) {
-    this.controllers = this.controllers.filter(({ id }) => id !== controller.id);
-    this.tasks = this.tasks.filter(({ controller: c }) => {
-      if (c) {
-        return c.id !== controller.id;
-      }
-      return true;
-    });
-  },
-  addTask(type, done, controller, once = true) {
-    const task = newTask(type, done, controller, once);
+  addTask(type, callback, once) {
+    const task = Task(type, callback, once);
 
     this.tasks.push(task);
     return task;
   },
-  put(typeOfAction, payload) {
-    const toFire = [];
+  removeTasks(tasks) {
+    const ids = tasks.reduce((map, task) => {
+      map[ task.id ] = true;
+      return map;
+    }, {});
 
-    this.tasks = this.tasks.filter(({ type, done, once }) => {
-      if (type === typeOfAction) {
-        toFire.push(done);
-        return !once;
+    this.tasks = this.tasks.filter(task => {
+      if (task.id in ids) {
+        task.teardown();
+        return false;
       }
       return true;
     });
-    toFire.forEach(func => func(payload));
-
-    this.controllers.forEach(controller => {
-      if ('put' in controller) {
-        controller.put(typeOfAction, payload);
-      }
+  },
+  put(type, payload) {
+    this.tasks.forEach(task => {
+      if (task.type === type) {
+        task.execute(payload);
+      };
     });
   },
-  take(type, done, sourceController) {
-    if (!done) {
-      return new Promise(promiseDone => {
-        this.addTask(type, promiseDone, sourceController, true);
-      });
-    }
-    return this.addTask(type, done, sourceController, true);
+  take(type, callback) {
+    return this.addTask(type, callback, true);
   },
-  takeEvery(type, done, sourceController) {
-    return this.addTask(
-      type,
-      done,
-      sourceController,
-      false
-    );
+  takeEvery(type, callback) {
+    return this.addTask(type, callback, false);
   },
   reset() {
-    this.controllers = [];
     this.tasks = [];
+  },
+  isTask(task) {
+    return task && task.__rine === 'task';
   }
 };
 

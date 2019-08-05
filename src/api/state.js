@@ -1,16 +1,18 @@
 import System from './System';
 
 var ids = 0;
-const getId = () => `s${ ++ids }`;
+const getId = () => `@@s${ ++ids }`;
 
-export default function createStateController(initialValue, reducer) {
+export default function createState(initialValue, reducer) {
   let subscribersUID = 0;
   let stateValue = initialValue;
   let subscribers = [];
 
-  const stateController = {
-    __state: 'rine',
-    __subscribers: subscribers,
+  const state = {
+    __rine: 'state',
+    __subscribers() {
+      return subscribers;
+    },
     id: getId(),
     set(newValue) {
       stateValue = newValue;
@@ -19,16 +21,17 @@ export default function createStateController(initialValue, reducer) {
     get() {
       return stateValue;
     },
-    connect(update) {
+    subscribe(update) {
       const subscriberId = ++subscribersUID;
 
       subscribers.push({ id: subscriberId, update });
       return () => {
-        this.__subscribers = subscribers = subscribers.filter(({ id }) => id !== subscriberId);
+        subscribers = subscribers.filter(({ id }) => id !== subscriberId);
       };
     },
-    destroy() {
-      System.removeController(this);
+    teardown() {
+      subscribers = [];
+      stateValue = undefined;
     },
     put(type, payload) {
       if (reducer) {
@@ -37,7 +40,9 @@ export default function createStateController(initialValue, reducer) {
     }
   };
 
-  System.addController(stateController);
+  System.addTask(state.id, () => {
+    state.teardown();
+  });
 
-  return stateController;
+  return state;
 };

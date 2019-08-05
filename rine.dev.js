@@ -13,36 +13,44 @@ var _react2 = _interopRequireDefault(_react);
 
 var _utils = require('../utils');
 
+var _System = require('./System');
+
+var _System2 = _interopRequireDefault(_System);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-/* eslint-disable consistent-return */
-var ids = 0;
+var ids = 0; /* eslint-disable consistent-return */
+
 var getId = function getId() {
   return 'r' + ++ids;
 };
 
 function createRoutineController(routine) {
-  var mounted = false;
+  var active = false;
   var RenderComponent = void 0;
   var triggerRender = void 0;
   var onRendered = function onRendered() {};
 
-  function isMounted() {
-    return mounted;
+  function isActive() {
+    return active;
   }
 
-  return {
+  var routineController = {
+    __rine: 'routine',
     id: getId(),
+    isActive: isActive,
     name: (0, _utils.getFuncName)(routine),
     in: function _in(setContent, props) {
-      mounted = true;
+      var controller = this;
+
+      active = true;
       triggerRender = function triggerRender(newProps) {
-        if (mounted) setContent(_react2.default.createElement(RenderComponent, newProps));
+        if (active) setContent(_react2.default.createElement(RenderComponent, newProps));
       };
 
-      return routine(function render(f) {
+      var result = routine(function render(f) {
         if (typeof f === 'function') {
           RenderComponent = f;
         } else {
@@ -56,7 +64,26 @@ function createRoutineController(routine) {
             return done();
           };
         });
-      }, { isMounted: isMounted });
+      }, { isMounted: isActive });
+
+      if ((0, _utils.isGenerator)(result)) {
+        (function processGenerator(genValue) {
+          if (_System2.default.isTask(genValue.value)) {
+            var task = genValue.value;
+
+            task.controller = controller;
+            if (task.done) {
+              task.done.then(function (taskResult) {
+                return processGenerator(result.next(taskResult));
+              });
+              return;
+            }
+          };
+          if (!genValue.done) {
+            processGenerator(result.next(genValue.value));
+          }
+        })(result.next());
+      }
     },
     updated: function updated(props) {
       triggerRender(props);
@@ -65,41 +92,145 @@ function createRoutineController(routine) {
       onRendered();
     },
     out: function out() {
-      mounted = false;
+      active = false;
     }
   };
+
+  _System2.default.addController(routineController);
+
+  return routineController;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":7}],2:[function(require,module,exports){
+},{"../utils":7,"./System":3}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-/* eslint-disable consistent-return */
+exports.default = createStateController;
+
+var _System = require('./System');
+
+var _System2 = _interopRequireDefault(_System);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+var ids = 0;
+var getId = function getId() {
+  return 's' + ++ids;
+};
+
+function createStateController(initialValue, reducer) {
+  var subscribersUID = 0;
+  var stateValue = initialValue;
+  var subscribers = [];
+
+  var stateController = {
+    __rine: 'state',
+    id: getId(),
+    set: function set(newValue) {
+      stateValue = newValue;
+      subscribers.forEach(function (_ref) {
+        var update = _ref.update;
+        return update(stateValue);
+      });
+    },
+    get: function get() {
+      return stateValue;
+    },
+    connect: function connect(update) {
+      var subscriberId = ++subscribersUID;
+
+      subscribers.push({ id: subscriberId, update: update });
+      return function () {
+        subscribers = subscribers.filter(function (_ref2) {
+          var id = _ref2.id;
+          return id !== subscriberId;
+        });
+      };
+    },
+    destroy: function destroy() {
+      _System2.default.removeController(this);
+    },
+    put: function put(type, payload) {
+      if (reducer) {
+        this.set(reducer(stateValue, { type: type, payload: payload }));
+      }
+    }
+  };
+
+  _System2.default.addController(stateController);
+
+  return stateController;
+};
+
+},{"./System":3}],3:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+/* eslint-disable consistent-return, no-new */
+
+var tids = 0;
+var getTaskId = function getTaskId() {
+  return 't' + ++tids;
+};
 
 var System = {
-  pending: [],
-  controllers: {},
+  tasks: [],
+  controllers: [],
   addController: function addController(controller) {
-    this.controllers[controller.id] = controller;
+    this.controllers.push(controller);
   },
   removeController: function removeController(controller) {
-    delete this.controllers[controller.id];
+    this.controllers = this.controllers.filter(function (_ref) {
+      var id = _ref.id;
+      return id !== controller.id;
+    });
+    this.tasks = this.tasks.filter(function (_ref2) {
+      var c = _ref2.controller;
+
+      if (c) {
+        return c.id !== controller.id;
+      }
+      return true;
+    });
+  },
+  addTask: function addTask(type, callback, controller) {
+    var once = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+
+    var task = {
+      __rine: 'task',
+      id: getTaskId(),
+      type: type,
+      callback: callback,
+      controller: controller,
+      once: once
+    };
+
+    if (!callback) {
+      task.done = new Promise(function (donePromise) {
+        task.callback = donePromise;
+      });
+    }
+
+    this.tasks.push(task);
+    return task;
   },
   put: function put(typeOfAction, payload) {
-    var _this = this;
-
     var toFire = [];
 
-    this.pending = this.pending.filter(function (_ref) {
-      var type = _ref.type,
-          done = _ref.done,
-          once = _ref.once;
+    this.tasks = this.tasks.filter(function (_ref3) {
+      var type = _ref3.type,
+          callback = _ref3.callback,
+          once = _ref3.once;
 
       if (type === typeOfAction) {
-        toFire.push(done);
+        toFire.push(callback);
         return !once;
       }
       return true;
@@ -108,46 +239,30 @@ var System = {
       return func(payload);
     });
 
-    Object.keys(this.controllers).forEach(function (id) {
-      if ('put' in _this.controllers[id]) {
-        _this.controllers[id].put(typeOfAction, payload);
+    this.controllers.forEach(function (controller) {
+      if ('put' in controller) {
+        controller.put(typeOfAction, payload);
       }
     });
   },
-  take: function take(type, done) {
-    var _this2 = this;
-
-    if (!done) {
-      var p = new Promise(function (done) {
-        _this2.pending.push({
-          type: type,
-          done: done,
-          once: true
-        });
-      });
-
-      return p;
-    }
-    this.pending.push({ type: type, done: done, once: true, __pending: 'rine' });
+  take: function take(type, callback, sourceController) {
+    return this.addTask(type, callback, sourceController, true);
   },
-  takeEvery: function takeEvery(type, done) {
-    this.pending.push({ type: type, done: done, once: false, __pending: 'rine' });
-  },
-  debug: function debug() {
-    return {
-      controllers: this.controllers,
-      pending: this.pending
-    };
+  takeEvery: function takeEvery(type, callback, sourceController) {
+    return this.addTask(type, callback, sourceController, false);
   },
   reset: function reset() {
-    this.controllers = {};
-    this.pending = [];
+    this.controllers = [];
+    this.tasks = [];
+  },
+  isTask: function isTask(task) {
+    return task && task.__rine === 'task';
   }
 };
 
 exports.default = System;
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -212,7 +327,7 @@ function _defineProperty(obj, key, value) {
 }
 
 function isRineState(value) {
-  return value.__state === 'rine';
+  return value.__rine === 'state';
 }
 function accumulateProps(map) {
   return Object.keys(map).reduce(function (props, key) {
@@ -222,6 +337,8 @@ function accumulateProps(map) {
       props[key] = value.get();
     } else if (typeof value === 'function') {
       props[key] = value();
+    } else {
+      props[key] = value;
     }
     return props;
   }, {});
@@ -242,7 +359,7 @@ function connect(Component, map) {
 
         if (isRineState(value)) {
           unsubscribeCallbacks.push(value.connect(function (newValue) {
-            return setAProps(_extends({}, aprops, _defineProperty({}, key, newValue)));
+            return setAProps(aprops = _extends({}, aprops, _defineProperty({}, key, newValue)));
           }));
         }
       });
@@ -261,7 +378,7 @@ function connect(Component, map) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":7}],4:[function(require,module,exports){
+},{"../utils":7}],5:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -340,7 +457,6 @@ function routine(routine) {
     (0, _react.useEffect)(function () {
       setController(controller = (0, _RoutineController2.default)(routine));
 
-      _System2.default.addController(controller);
       controller.in(setContent, props);
 
       return function () {
@@ -358,75 +474,7 @@ function routine(routine) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":7,"./RoutineController":1,"./System":2}],5:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = state;
-
-var _System = require('./System');
-
-var _System2 = _interopRequireDefault(_System);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-var ids = 0;
-var getId = function getId() {
-  return 's' + ++ids;
-};
-
-function state(initialValue, reducer) {
-  var subscribersUID = 0;
-  var stateValue = initialValue;
-  var subscribers = [];
-
-  var stateController = {
-    id: getId(),
-    __state: 'rine',
-    __subscribers: subscribers,
-    set: function set(newValue) {
-      stateValue = newValue;
-      subscribers.forEach(function (_ref) {
-        var update = _ref.update;
-        return update(stateValue);
-      });
-    },
-    get: function get() {
-      return stateValue;
-    },
-    connect: function connect(update) {
-      var _this = this;
-
-      var subscriberId = ++subscribersUID;
-
-      subscribers.push({ id: subscriberId, update: update });
-      return function () {
-        _this.__subscribers = subscribers = subscribers.filter(function (_ref2) {
-          var id = _ref2.id;
-          return id !== subscriberId;
-        });
-      };
-    },
-    destroy: function destroy() {
-      _System2.default.removeController(this);
-    },
-    put: function put(type, payload) {
-      if (reducer) {
-        this.set(reducer(stateValue, { type: type, payload: payload }));
-      }
-    }
-  };
-
-  _System2.default.addController(stateController);
-
-  return stateController;
-};
-
-},{"./System":2}],6:[function(require,module,exports){
+},{"../utils":7,"./RoutineController":1,"./System":3}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -452,12 +500,12 @@ Object.defineProperty(exports, 'routine', {
   }
 });
 
-var _state = require('./api/state');
+var _StateController = require('./api/StateController');
 
 Object.defineProperty(exports, 'state', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_state).default;
+    return _interopRequireDefault(_StateController).default;
   }
 });
 
@@ -480,7 +528,7 @@ var put = exports.put = _System2.default.put.bind(_System2.default);
 var take = exports.take = _System2.default.take.bind(_System2.default);
 var takeEvery = exports.takeEvery = _System2.default.takeEvery.bind(_System2.default);
 
-},{"./api/System":2,"./api/connect":3,"./api/routine":4,"./api/state":5}],7:[function(require,module,exports){
+},{"./api/StateController":2,"./api/System":3,"./api/connect":4,"./api/routine":5}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
