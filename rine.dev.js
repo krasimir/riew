@@ -27,9 +27,13 @@ function Task(type, callback) {
       if (debug) console.log('teardown:' + this.id + '(type: ' + this.type + ')');
       this.active = false;
     },
-    execute: function execute(payload) {
+    execute: function execute(payload, type) {
       if (this.active) {
-        this.callback(payload);
+        if (type) {
+          this.callback(payload, type);
+        } else {
+          this.callback(payload);
+        }
         if (this.once) {
           if (debug) console.log('  auto removal ' + task.id + '(type: ' + type + ')');
           System.removeTasks([this]);
@@ -78,7 +82,9 @@ var System = {
     this.tasks.forEach(function (task) {
       if (task.type === type) {
         task.execute(payload);
-      };
+      } else if (task.type === '*') {
+        task.execute(payload, type);
+      }
     });
   },
   take: function take(type, callback) {
@@ -443,6 +449,7 @@ function createState(initialValue, reducer) {
   var subscribersUID = 0;
   var stateValue = initialValue;
   var subscribers = [];
+  var reducerTask = void 0;
 
   var state = {
     __rine: 'state',
@@ -483,8 +490,17 @@ function createState(initialValue, reducer) {
     }
   };
 
+  if (reducer) {
+    reducerTask = _System2.default.takeEvery('*', function (payload, type) {
+      return state.put(type, payload);
+    });
+  }
+
   _System2.default.addTask(teardownAction(state.id), function () {
     state.teardown();
+    if (reducerTask) {
+      _System2.default.removeTasks([reducerTask]);
+    }
   });
 
   return state;

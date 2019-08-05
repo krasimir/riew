@@ -44,4 +44,22 @@ describe('Given System', () => {
       expect(System.tasks).toHaveLength(0);
     });
   });
+  describe('when we use a wildcard', () => {
+    it('should fire the task no matter what is the type of the action', () => {
+      const spy1 = jest.fn();
+      const spy2 = jest.fn();
+
+      System.take('*', spy1);
+      System.takeEvery('*', spy2);
+      System.put('foo', 1);
+      System.put('bar', 2);
+
+      expect(spy1).toBeCalledTimes(1);
+      expect(spy2).toBeCalledTimes(2);
+      expect(System.tasks).toHaveLength(1);
+      expect(spy1.mock.calls[0]).toStrictEqual([ 1, 'foo' ]);
+      expect(spy2.mock.calls[0]).toStrictEqual([ 1, 'foo' ]);
+      expect(spy2.mock.calls[1]).toStrictEqual([ 2, 'bar' ]);
+    });
+  });
 });

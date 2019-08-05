@@ -1,4 +1,4 @@
-import createState from '../state';
+import createState, { teardownAction } from '../state';
 import System from '../System';
 
 describe('Given the StateController', () => {
@@ -64,6 +64,23 @@ describe('Given the StateController', () => {
 
       expect(spy).toBeCalledWith(10, { type: 'FOOBAR', payload: 5 });
       expect(c.get()).toEqual(15);
+    });
+    it(`should
+      * call the reducer if a System.put is called
+      * remove the reducer task if the state is teardown`, () => {
+      const spy = jest.fn();
+      const c = createState(10, (oldValue, action) => {
+        spy(oldValue, action);
+        return oldValue + action.payload;
+      });
+
+      System.put('FOOBAR', 5);
+
+      expect(spy).toBeCalledWith(10, { type: 'FOOBAR', payload: 5 });
+      expect(c.get()).toEqual(15);
+      expect(System.tasks).toHaveLength(2);
+      System.put(teardownAction(c.id));
+      expect(System.tasks).toHaveLength(0);
     });
   });
 });

@@ -17,9 +17,13 @@ function Task(type, callback, once = true) {
       if (debug) console.log(`teardown:${ this.id }(type: ${ this.type })`);
       this.active = false;
     },
-    execute(payload) {
+    execute(payload, type) {
       if (this.active) {
-        this.callback(payload);
+        if (type) {
+          this.callback(payload, type);
+        } else {
+          this.callback(payload);
+        }
         if (this.once) {
           if (debug) console.log(`  auto removal ${ task.id }(type: ${ type })`);
           System.removeTasks([ this ]);
@@ -68,7 +72,9 @@ const System = {
     this.tasks.forEach(task => {
       if (task.type === type) {
         task.execute(payload);
-      };
+      } else if (task.type === '*') {
+        task.execute(payload, type);
+      }
     });
   },
   take(type, callback) {

@@ -1,10 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { routine, System, store, connect } from 'rine';
+import { routine, state, put, connect } from 'rine';
 
 import List from './List';
 import Footer from './Footer';
-import { getInitialTodosData, saveTodosData, ToDo } from './Persist';
+import { getInitialTodosData, saveTodosData, reducer } from './Data';
 import {
   TOGGLE,
   ENTER,
@@ -17,48 +17,13 @@ import {
   COMPLETED
 } from './constants';
 
-const App = routine(function App({ render, takeEvery, put }) {
-  const todos = store({ todos: getInitialTodosData() });
-  const filter = store({ filter: ALL });
-  const ListPartial = connect(List, todos, filter);
-  const FooterPartial = connect(Footer, todos, filter);
+const App = routine(function * App(render) {
+  const todos = state(getInitialTodosData(), reducer);
+  const filter = state(ALL);
+  const ListPartial = connect(List, { todos, filter });
+  const FooterPartial = connect(Footer, { todos, filter });
 
-  takeEvery(TOGGLE, (index) => {
-    const t = todos.get().todos;
-
-    t[index].completed = !t[index].completed;
-    todos.set({ todos: t });
-    saveTodosData(t);
-  });
-  takeEvery(NEW_TODO, (label) => {
-    const t = todos.get().todos;
-
-    t.push(ToDo(label));
-    todos.set({ todos: t });
-    saveTodosData(todos);
-  });
-  takeEvery(DELETE, (index) => {
-    const t = todos.get().todos;
-
-    t = t.filter((todo, i) => i !== index);
-    todos.set({ todos: t });
-    saveTodosData(t);
-  });
-  takeEvery(EDIT, ({ index, value }) => {
-    const t = todos.get().todos;
-
-    t[index].editing = value;
-    todos.set({ todos: t });
-    saveTodosData(t);
-  });
-  takeEvery(UPDATE, ({ index, label }) => {
-    const t = todos.get().todos;
-
-    t[index].label = label;
-    t[index].editing = false;
-    todos.set({ todos: t });
-    saveTodosData(t);
-  });
+  todos.subscribe(saveTodosData);
 
   render(
     <React.Fragment>
@@ -106,11 +71,3 @@ const App = routine(function App({ render, takeEvery, put }) {
 });
 
 ReactDOM.render(<App />, document.querySelector('#container'));
-
-// setInterval(function () {
-//   const controllers = System.debug().controllers;
-
-//   console.log(Object.keys(controllers).map(id => {
-//     return controllers[id].name;
-//   }));
-// }, 1000);

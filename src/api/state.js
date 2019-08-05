@@ -10,6 +10,7 @@ export default function createState(initialValue, reducer) {
   let subscribersUID = 0;
   let stateValue = initialValue;
   let subscribers = [];
+  let reducerTask;
 
   const state = {
     __rine: 'state',
@@ -43,8 +44,15 @@ export default function createState(initialValue, reducer) {
     }
   };
 
+  if (reducer) {
+    reducerTask = System.takeEvery('*', (payload, type) => state.put(type, payload));
+  }
+
   System.addTask(teardownAction(state.id), () => {
     state.teardown();
+    if (reducerTask) {
+      System.removeTasks([ reducerTask ]);
+    }
   });
 
   return state;
