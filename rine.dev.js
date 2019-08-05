@@ -10,7 +10,6 @@ var ids = 0;
 var getId = function getId() {
   return '@@t' + ++ids;
 };
-var debug = true && false;
 
 function Task(type, callback) {
   var once = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
@@ -24,7 +23,6 @@ function Task(type, callback) {
     callback: callback,
     done: null,
     teardown: function teardown() {
-      if (debug) console.log('teardown:' + this.id + '(type: ' + this.type + ')');
       this.active = false;
     },
     execute: function execute(payload, type) {
@@ -35,7 +33,6 @@ function Task(type, callback) {
           this.callback(payload);
         }
         if (this.once) {
-          if (debug) console.log('  auto removal ' + task.id + '(type: ' + type + ')');
           System.removeTasks([this]);
         }
       }
@@ -56,8 +53,6 @@ var System = {
   addTask: function addTask(type, callback, once) {
     var task = Task(type, callback, once);
 
-    if (debug) console.log('addTask:' + task.id + '(type: ' + type + ')');
-
     this.tasks.push(task);
     return task;
   },
@@ -66,8 +61,6 @@ var System = {
       map[task.id] = true;
       return map;
     }, {});
-
-    if (debug) console.log('removeTasks:' + Object.keys(ids));
 
     this.tasks = this.tasks.filter(function (task) {
       if (task.id in ids) {
@@ -78,7 +71,6 @@ var System = {
     });
   },
   put: function put(type, payload) {
-    if (debug) console.log('put("' + type + '", ' + JSON.stringify(payload) + ')');
     this.tasks.forEach(function (task) {
       if (task.type === type) {
         task.execute(payload);

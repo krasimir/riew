@@ -52,18 +52,9 @@ const App = routine(function * App(render) {
             onUpdateCancel={ index => put(EDIT, { index, value: false }) } />
         </section>
         <FooterPartial
-          all={ () => {
-            ListPartial.set({ filter: ALL });
-            FooterPartial.set({ filter: ALL });
-          } }
-          active={ () => {
-            ListPartial.set({ filter: ACTIVE });
-            FooterPartial.set({ filter: ACTIVE });
-          } }
-          completed={ () => {
-            ListPartial.set({ filter: COMPLETED });
-            FooterPartial.set({ filter: COMPLETED });
-          } }
+          all={ () => filter.set(ALL) }
+          active={ () => filter.set(ACTIVE) }
+          completed={ () => filter.set(COMPLETED) }
           clearCompleted={ () => {} } />
       </section>
     </React.Fragment>
