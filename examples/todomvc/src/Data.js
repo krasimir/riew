@@ -3,7 +3,8 @@ import {
   NEW_TODO,
   DELETE,
   EDIT,
-  UPDATE
+  UPDATE,
+  CLEAR_COMPLETED
 } from './constants';
 
 export const ToDo = (label) => ({ label, completed: false, editing: false });
@@ -56,6 +57,10 @@ export const reducer = function (todos, { type, payload }) {
         }
         return todo;
       });
+    case CLEAR_COMPLETED:
+      return todos.filter(todo => {
+        return !todo.completed;
+      });
   }
   return todos;
-}
+};

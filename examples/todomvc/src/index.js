@@ -14,7 +14,8 @@ import {
   UPDATE,
   ALL,
   ACTIVE,
-  COMPLETED
+  COMPLETED,
+  CLEAR_COMPLETED
 } from './constants';
 
 const App = routine(function * App(render) {
@@ -55,7 +56,7 @@ const App = routine(function * App(render) {
           all={ () => filter.set(ALL) }
           active={ () => filter.set(ACTIVE) }
           completed={ () => filter.set(COMPLETED) }
-          clearCompleted={ () => {} } />
+          clearCompleted={ () => put(CLEAR_COMPLETED) } />
       </section>
     </React.Fragment>
   );
