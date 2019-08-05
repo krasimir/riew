@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import equal from 'fast-deep-equal';
 import { getFuncName } from '../utils';
 
 function isRineState(value) {
@@ -32,7 +33,11 @@ export default function connect(Component, map) {
         if (isRineState(value)) {
           unsubscribeCallbacks.push(
             value.subscribe(
-              newValue => setAProps(aprops = { ...aprops, [key]: newValue })
+              newValue => {
+                if (!equal(aprops[key], newValue)) {
+                  setAProps(aprops = { ...aprops, [key]: newValue });
+                }
+              }
             )
           );
         }
@@ -45,6 +50,6 @@ export default function connect(Component, map) {
     return <Component {...aprops} {...props}/>;
   }
 
-  StateBridge.displayName = `State(${ getFuncName(Component) })`;
+  StateBridge.displayName = `Connected(${ getFuncName(Component) })`;
   return StateBridge;
 };

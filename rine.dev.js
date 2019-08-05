@@ -152,6 +152,10 @@ var _react = (typeof window !== "undefined" ? window['React'] : typeof global !=
 
 var _react2 = _interopRequireDefault(_react);
 
+var _fastDeepEqual = require('fast-deep-equal');
+
+var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
+
 var _utils = require('../utils');
 
 function _interopRequireDefault(obj) {
@@ -199,7 +203,9 @@ function connect(Component, map) {
 
         if (isRineState(value)) {
           unsubscribeCallbacks.push(value.subscribe(function (newValue) {
-            return setAProps(aprops = _extends({}, aprops, _defineProperty({}, key, newValue)));
+            if (!(0, _fastDeepEqual2.default)(aprops[key], newValue)) {
+              setAProps(aprops = _extends({}, aprops, _defineProperty({}, key, newValue)));
+            }
           }));
         }
       });
@@ -213,12 +219,12 @@ function connect(Component, map) {
     return _react2.default.createElement(Component, _extends({}, aprops, props));
   }
 
-  StateBridge.displayName = 'State(' + (0, _utils.getFuncName)(Component) + ')';
+  StateBridge.displayName = 'Connected(' + (0, _utils.getFuncName)(Component) + ')';
   return StateBridge;
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":6}],3:[function(require,module,exports){
+},{"../utils":6,"fast-deep-equal":7}],3:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -569,6 +575,63 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
 
   return result ? result[1] : 'unknown';
+};
+
+},{}],7:[function(require,module,exports){
+'use strict';
+
+var isArray = Array.isArray;
+var keyList = Object.keys;
+var hasProp = Object.prototype.hasOwnProperty;
+
+module.exports = function equal(a, b) {
+  if (a === b) return true;
+
+  if (a && b && typeof a == 'object' && typeof b == 'object') {
+    var arrA = isArray(a)
+      , arrB = isArray(b)
+      , i
+      , length
+      , key;
+
+    if (arrA && arrB) {
+      length = a.length;
+      if (length != b.length) return false;
+      for (i = length; i-- !== 0;)
+        if (!equal(a[i], b[i])) return false;
+      return true;
+    }
+
+    if (arrA != arrB) return false;
+
+    var dateA = a instanceof Date
+      , dateB = b instanceof Date;
+    if (dateA != dateB) return false;
+    if (dateA && dateB) return a.getTime() == b.getTime();
+
+    var regexpA = a instanceof RegExp
+      , regexpB = b instanceof RegExp;
+    if (regexpA != regexpB) return false;
+    if (regexpA && regexpB) return a.toString() == b.toString();
+
+    var keys = keyList(a);
+    length = keys.length;
+
+    if (length !== keyList(b).length)
+      return false;
+
+    for (i = length; i-- !== 0;)
+      if (!hasProp.call(b, keys[i])) return false;
+
+    for (i = length; i-- !== 0;) {
+      key = keys[i];
+      if (!equal(a[key], b[key])) return false;
+    }
+
+    return true;
+  }
+
+  return a!==a && b!==b;
 };
 
 },{}]},{},[5])(5)

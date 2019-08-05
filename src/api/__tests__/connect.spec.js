@@ -5,6 +5,7 @@ import System from '../System';
 import state from '../state';
 
 import connect from '../connect';
+import { exerciseHTML } from '../../__helpers__';
 
 describe('Given the connect method', () => {
   beforeEach(() => {
@@ -38,6 +39,36 @@ describe('Given the connect method', () => {
       expect(C.mock.calls[1]).toStrictEqual([ { a: 'c', b: 'b', foo: 'bar', zar: 'mar'}, {} ]);
       expect(C.mock.calls[2]).toStrictEqual([ { a: 'c', b: 'd', foo: 'bar', zar: 'mar'}, {} ]);
       expect(C.mock.calls[3]).toStrictEqual([ { a: 'c', b: 'd', foo: 'bar', nom: 'bom'}, {} ]);
+    });
+  });
+  describe('when we connect a component to state that do not change and we use reducers', () => {
+    it('should not re-render the component', () => {
+      const spy = jest.fn();
+      const C = function (props) {
+        spy(props);
+        return <p>{ props.value.message }</p>;
+      };
+      const s1 = state({ message: 'a' }, (value, action) => {
+        return { ...value };
+      });
+      const s2 = state('b', (value, action) => {
+        if (action.type === 'update b') {
+          return action.payload;
+        }
+        return value;
+      });
+      const Connected = connect(C, { value: s1 });
+
+      const { container } = render(<Connected />);
+
+      act(() => System.put('update b', 'new value of b'));
+
+      expect(s2.get()).toBe('new value of b');
+      exerciseHTML(container, `
+        <p>a</p>
+      `);
+      expect(spy).toBeCalledTimes(1);
+      expect(spy.mock.calls[0]).toStrictEqual([ { value: { message: 'a' } }]);
     });
   });
 });
