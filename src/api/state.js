@@ -3,6 +3,9 @@ import System from './System';
 var ids = 0;
 const getId = () => `@@s${ ++ids }`;
 
+export const teardownAction = id => `${ id }_teardown`;
+export const isState = (state) => state && state.__rine === 'state';
+
 export default function createState(initialValue, reducer) {
   let subscribersUID = 0;
   let stateValue = initialValue;
@@ -40,7 +43,7 @@ export default function createState(initialValue, reducer) {
     }
   };
 
-  System.addTask(state.id, () => {
+  System.addTask(teardownAction(state.id), () => {
     state.teardown();
   });
 

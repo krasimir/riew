@@ -3,7 +3,8 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import System from '../System';
 import routine, { createRoutineInstance } from '../routine';
-import { delay } from '../../__helpers__';
+import state from '../state';
+import { delay, exerciseHTML } from '../../__helpers__';
 
 describe('Given the routine method', () => {
   beforeEach(() => {
@@ -120,32 +121,62 @@ describe('Given the routine method', () => {
       expect(spy.mock.calls[1]).toStrictEqual([ { a: 'b' } ]);
     });
     describe('and we yield a task with no callback set', () => {
-      it('should wait for the task done promise to be resolved', async () => {
+      it(`should
+        * wait for the task done promise to be resolved
+        * should clean up the tasks when unmount`, async () => {
         const spy = jest.fn();
-        const c = createRoutineInstance(function * () {
+        const C = routine(function * () {
           const result = yield System.take('foo');
 
           spy(result);
         });
-
-        c.in(() => {});
+        const { unmount } = render(<C />);
 
         System.put('foo', 42);
         await delay(1); // because of the promise
         expect(spy).toBeCalledWith(42);
+        unmount();
+        expect(System.tasks).toHaveLength(0);
       });
     });
     describe('and we yield a task with callback set', () => {
       it('should continue with the routine execution', async () => {
         const spy = jest.fn();
+        const spy2 = jest.fn();
         const c = createRoutineInstance(function * () {
           yield System.take('foo', spy);
+          spy2();
         });
 
         c.in(() => {});
 
+        expect(spy2).toBeCalled();
         System.put('foo', 42);
         expect(spy).toBeCalledWith(42);
+      });
+    });
+    describe('and we yield a state', () => {
+      it(`should
+        * register the state teardown task in the routine
+        * teardown the state when the component is unmounted`, () => {
+        let ss;
+        const R = routine(function * (render) {
+          const s = ss = yield state('foo');
+
+          s.subscribe(() => {});
+          render(<p>{ s.get() }</p>);
+        });
+        const { container, unmount } = render(<R />);
+
+        exerciseHTML(container, `
+          <p>foo</p>
+        `);
+        expect(ss.__subscribers()).toHaveLength(1);
+        expect(ss.get()).toBe('foo');
+        unmount();
+        expect(System.tasks).toHaveLength(0);
+        expect(ss.__subscribers()).toHaveLength(0);
+        expect(ss.get()).toBe(undefined);
       });
     });
   });

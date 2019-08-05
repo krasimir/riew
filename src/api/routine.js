@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import System from './System';
 import { getFuncName, isGenerator } from '../utils';
+import { isState, teardownAction } from './state';
 
 var ids = 0;
 const getId = () => `@@r${ ++ids }`;
@@ -12,7 +13,8 @@ export function createRoutineInstance(routineFunc) {
   let RenderComponent;
   let triggerRender;
   let onRendered = () => {};
-  let tasks = [];
+  let tasksToRemove = [];
+  let actionsToFire = [];
 
   function isMounted() {
     return mounted;
@@ -48,12 +50,14 @@ export function createRoutineInstance(routineFunc) {
           if (System.isTask(genValue.value)) {
             const task = genValue.value;
 
-            tasks.push(task);
+            tasksToRemove.push(task);
             if (task.done) {
               task.done.then(taskResult => processGenerator(result.next(taskResult)));
               return;
             }
-          };
+          } else if (isState(genValue.value)) {
+            actionsToFire.push(teardownAction(genValue.value.id));
+          }
           if (!genValue.done) {
             processGenerator(result.next(genValue.value));
           }
@@ -75,7 +79,8 @@ export function createRoutineInstance(routineFunc) {
     unmountedAction(id),
     () => {
       instance.out();
-      System.removeTasks(tasks);
+      System.removeTasks(tasksToRemove);
+      System.putBulk(actionsToFire);
     }
   );
 

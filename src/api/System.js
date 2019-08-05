@@ -2,6 +2,7 @@
 
 var ids = 0;
 const getId = () => `@@t${ ++ids }`;
+const debug = __DEV__ && false;
 
 function Task(type, callback, once = true) {
   const task = {
@@ -13,12 +14,14 @@ function Task(type, callback, once = true) {
     callback,
     done: null,
     teardown() {
+      if (debug) console.log(`teardown:${ this.id }(type: ${ this.type })`);
       this.active = false;
     },
     execute(payload) {
       if (this.active) {
         this.callback(payload);
         if (this.once) {
+          if (debug) console.log(`  auto removal ${ task.id }(type: ${ type })`);
           System.removeTasks([ this ]);
         }
       }
@@ -39,6 +42,8 @@ const System = {
   addTask(type, callback, once) {
     const task = Task(type, callback, once);
 
+    if (debug) console.log(`addTask:${ task.id }(type: ${ type })`);
+
     this.tasks.push(task);
     return task;
   },
@@ -47,6 +52,8 @@ const System = {
       map[ task.id ] = true;
       return map;
     }, {});
+
+    if (debug) console.log(`removeTasks:${ Object.keys(ids) }`);
 
     this.tasks = this.tasks.filter(task => {
       if (task.id in ids) {
@@ -57,6 +64,7 @@ const System = {
     });
   },
   put(type, payload) {
+    if (debug) console.log(`put("${ type }", ${ JSON.stringify(payload) })`);
     this.tasks.forEach(task => {
       if (task.type === type) {
         task.execute(payload);
@@ -74,6 +82,9 @@ const System = {
   },
   isTask(task) {
     return task && task.__rine === 'task';
+  },
+  putBulk(actions) {
+    actions.forEach(type => this.put(type));
   }
 };
 

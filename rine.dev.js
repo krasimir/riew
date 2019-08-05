@@ -1,268 +1,110 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.rine = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-(function (global){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = createRoutineController;
-
-var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
-
-var _react2 = _interopRequireDefault(_react);
-
-var _utils = require('../utils');
-
-var _System = require('./System');
-
-var _System2 = _interopRequireDefault(_System);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-var ids = 0; /* eslint-disable consistent-return */
-
-var getId = function getId() {
-  return 'r' + ++ids;
-};
-
-function createRoutineController(routine) {
-  var active = false;
-  var RenderComponent = void 0;
-  var triggerRender = void 0;
-  var onRendered = function onRendered() {};
-
-  function isActive() {
-    return active;
-  }
-
-  var routineController = {
-    __rine: 'routine',
-    id: getId(),
-    isActive: isActive,
-    name: (0, _utils.getFuncName)(routine),
-    in: function _in(setContent, props) {
-      var controller = this;
-
-      active = true;
-      triggerRender = function triggerRender(newProps) {
-        if (active) setContent(_react2.default.createElement(RenderComponent, newProps));
-      };
-
-      var result = routine(function render(f) {
-        if (typeof f === 'function') {
-          RenderComponent = f;
-        } else {
-          RenderComponent = function RenderComponent() {
-            return f;
-          };
-        }
-        triggerRender(props);
-        return new Promise(function (done) {
-          onRendered = function onRendered() {
-            return done();
-          };
-        });
-      }, { isMounted: isActive });
-
-      if ((0, _utils.isGenerator)(result)) {
-        (function processGenerator(genValue) {
-          if (_System2.default.isTask(genValue.value)) {
-            var task = genValue.value;
-
-            task.controller = controller;
-            if (task.done) {
-              task.done.then(function (taskResult) {
-                return processGenerator(result.next(taskResult));
-              });
-              return;
-            }
-          };
-          if (!genValue.done) {
-            processGenerator(result.next(genValue.value));
-          }
-        })(result.next());
-      }
-    },
-    updated: function updated(props) {
-      triggerRender(props);
-    },
-    rendered: function rendered() {
-      onRendered();
-    },
-    out: function out() {
-      active = false;
-    }
-  };
-
-  _System2.default.addController(routineController);
-
-  return routineController;
-}
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":7,"./System":3}],2:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = createStateController;
-
-var _System = require('./System');
-
-var _System2 = _interopRequireDefault(_System);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
+/* eslint-disable consistent-return, no-new, no-use-before-define */
 
 var ids = 0;
 var getId = function getId() {
-  return 's' + ++ids;
+  return '@@t' + ++ids;
 };
+var debug = true && false;
 
-function createStateController(initialValue, reducer) {
-  var subscribersUID = 0;
-  var stateValue = initialValue;
-  var subscribers = [];
+function Task(type, callback) {
+  var once = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
 
-  var stateController = {
-    __rine: 'state',
+  var task = {
+    __rine: 'task',
     id: getId(),
-    set: function set(newValue) {
-      stateValue = newValue;
-      subscribers.forEach(function (_ref) {
-        var update = _ref.update;
-        return update(stateValue);
-      });
+    active: true,
+    once: once,
+    type: type,
+    callback: callback,
+    done: null,
+    teardown: function teardown() {
+      if (debug) console.log('teardown:' + this.id + '(type: ' + this.type + ')');
+      this.active = false;
     },
-    get: function get() {
-      return stateValue;
-    },
-    connect: function connect(update) {
-      var subscriberId = ++subscribersUID;
-
-      subscribers.push({ id: subscriberId, update: update });
-      return function () {
-        subscribers = subscribers.filter(function (_ref2) {
-          var id = _ref2.id;
-          return id !== subscriberId;
-        });
-      };
-    },
-    destroy: function destroy() {
-      _System2.default.removeController(this);
-    },
-    put: function put(type, payload) {
-      if (reducer) {
-        this.set(reducer(stateValue, { type: type, payload: payload }));
+    execute: function execute(payload) {
+      if (this.active) {
+        this.callback(payload);
+        if (this.once) {
+          if (debug) console.log('  auto removal ' + task.id + '(type: ' + type + ')');
+          System.removeTasks([this]);
+        }
       }
     }
   };
 
-  _System2.default.addController(stateController);
+  if (!callback) {
+    task.done = new Promise(function (donePromise) {
+      task.callback = donePromise;
+    });
+  }
 
-  return stateController;
-};
-
-},{"./System":3}],3:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-/* eslint-disable consistent-return, no-new */
-
-var tids = 0;
-var getTaskId = function getTaskId() {
-  return 't' + ++tids;
-};
+  return task;
+}
 
 var System = {
   tasks: [],
-  controllers: [],
-  addController: function addController(controller) {
-    this.controllers.push(controller);
-  },
-  removeController: function removeController(controller) {
-    this.controllers = this.controllers.filter(function (_ref) {
-      var id = _ref.id;
-      return id !== controller.id;
-    });
-    this.tasks = this.tasks.filter(function (_ref2) {
-      var c = _ref2.controller;
+  addTask: function addTask(type, callback, once) {
+    var task = Task(type, callback, once);
 
-      if (c) {
-        return c.id !== controller.id;
-      }
-      return true;
-    });
-  },
-  addTask: function addTask(type, callback, controller) {
-    var once = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
-
-    var task = {
-      __rine: 'task',
-      id: getTaskId(),
-      type: type,
-      callback: callback,
-      controller: controller,
-      once: once
-    };
-
-    if (!callback) {
-      task.done = new Promise(function (donePromise) {
-        task.callback = donePromise;
-      });
-    }
+    if (debug) console.log('addTask:' + task.id + '(type: ' + type + ')');
 
     this.tasks.push(task);
     return task;
   },
-  put: function put(typeOfAction, payload) {
-    var toFire = [];
+  removeTasks: function removeTasks(tasks) {
+    var ids = tasks.reduce(function (map, task) {
+      map[task.id] = true;
+      return map;
+    }, {});
 
-    this.tasks = this.tasks.filter(function (_ref3) {
-      var type = _ref3.type,
-          callback = _ref3.callback,
-          once = _ref3.once;
+    if (debug) console.log('removeTasks:' + Object.keys(ids));
 
-      if (type === typeOfAction) {
-        toFire.push(callback);
-        return !once;
+    this.tasks = this.tasks.filter(function (task) {
+      if (task.id in ids) {
+        task.teardown();
+        return false;
       }
       return true;
     });
-    toFire.forEach(function (func) {
-      return func(payload);
-    });
-
-    this.controllers.forEach(function (controller) {
-      if ('put' in controller) {
-        controller.put(typeOfAction, payload);
-      }
+  },
+  put: function put(type, payload) {
+    if (debug) console.log('put("' + type + '", ' + JSON.stringify(payload) + ')');
+    this.tasks.forEach(function (task) {
+      if (task.type === type) {
+        task.execute(payload);
+      };
     });
   },
-  take: function take(type, callback, sourceController) {
-    return this.addTask(type, callback, sourceController, true);
+  take: function take(type, callback) {
+    return this.addTask(type, callback, true);
   },
-  takeEvery: function takeEvery(type, callback, sourceController) {
-    return this.addTask(type, callback, sourceController, false);
+  takeEvery: function takeEvery(type, callback) {
+    return this.addTask(type, callback, false);
   },
   reset: function reset() {
-    this.controllers = [];
     this.tasks = [];
   },
   isTask: function isTask(task) {
     return task && task.__rine === 'task';
+  },
+  putBulk: function putBulk(actions) {
+    var _this = this;
+
+    actions.forEach(function (type) {
+      return _this.put(type);
+    });
   }
 };
 
 exports.default = System;
 
-},{}],4:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -358,7 +200,7 @@ function connect(Component, map) {
         var value = map[key];
 
         if (isRineState(value)) {
-          unsubscribeCallbacks.push(value.connect(function (newValue) {
+          unsubscribeCallbacks.push(value.subscribe(function (newValue) {
             return setAProps(aprops = _extends({}, aprops, _defineProperty({}, key, newValue)));
           }));
         }
@@ -378,7 +220,7 @@ function connect(Component, map) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":7}],5:[function(require,module,exports){
+},{"../utils":6}],3:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -412,13 +254,12 @@ var _slicedToArray = function () {
   };
 }();
 
+exports.createRoutineInstance = createRoutineInstance;
 exports.default = routine;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
-var _RoutineController = require('./RoutineController');
-
-var _RoutineController2 = _interopRequireDefault(_RoutineController);
+var _react2 = _interopRequireDefault(_react);
 
 var _System = require('./System');
 
@@ -426,11 +267,101 @@ var _System2 = _interopRequireDefault(_System);
 
 var _utils = require('../utils');
 
+var _state = require('./state');
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function routine(routine) {
+var ids = 0;
+var getId = function getId() {
+  return '@@r' + ++ids;
+};
+var unmountedAction = function unmountedAction(id) {
+  return id + '_unmounted';
+};
+
+function createRoutineInstance(routineFunc) {
+  var id = getId();
+  var mounted = false;
+  var RenderComponent = void 0;
+  var triggerRender = void 0;
+  var onRendered = function onRendered() {};
+  var tasksToRemove = [];
+  var actionsToFire = [];
+
+  function isMounted() {
+    return mounted;
+  }
+
+  var instance = {
+    __rine: 'routine',
+    id: id,
+    name: (0, _utils.getFuncName)(routineFunc),
+    in: function _in(setContent, props) {
+      mounted = true;
+      triggerRender = function triggerRender(newProps) {
+        if (mounted) setContent(_react2.default.createElement(RenderComponent, newProps));
+      };
+
+      var result = routineFunc(function render(f) {
+        if (typeof f === 'function') {
+          RenderComponent = f;
+        } else {
+          RenderComponent = function RenderComponent() {
+            return f;
+          };
+        }
+        triggerRender(props);
+        return new Promise(function (done) {
+          onRendered = function onRendered() {
+            return done();
+          };
+        });
+      }, { isMounted: isMounted });
+
+      if ((0, _utils.isGenerator)(result)) {
+        (function processGenerator(genValue) {
+          if (_System2.default.isTask(genValue.value)) {
+            var task = genValue.value;
+
+            tasksToRemove.push(task);
+            if (task.done) {
+              task.done.then(function (taskResult) {
+                return processGenerator(result.next(taskResult));
+              });
+              return;
+            }
+          } else if ((0, _state.isState)(genValue.value)) {
+            actionsToFire.push((0, _state.teardownAction)(genValue.value.id));
+          }
+          if (!genValue.done) {
+            processGenerator(result.next(genValue.value));
+          }
+        })(result.next());
+      }
+    },
+    updated: function updated(props) {
+      triggerRender(props);
+    },
+    rendered: function rendered() {
+      onRendered();
+    },
+    out: function out() {
+      mounted = false;
+    }
+  };
+
+  _System2.default.addTask(unmountedAction(id), function () {
+    instance.out();
+    _System2.default.removeTasks(tasksToRemove);
+    _System2.default.putBulk(actionsToFire);
+  });
+
+  return instance;
+}
+
+function routine(routineFunc, options) {
   var RoutineBridge = function RoutineBridge(props) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
@@ -439,42 +370,127 @@ function routine(routine) {
 
     var _useState3 = (0, _react.useState)(null),
         _useState4 = _slicedToArray(_useState3, 2),
-        controller = _useState4[0],
-        setController = _useState4[1];
+        instance = _useState4[0],
+        setInstance = _useState4[1];
 
     // updating props
 
 
     (0, _react.useEffect)(function () {
-      if (controller) controller.updated(props);
+      if (instance) instance.updated(props);
     }, [props]);
 
     // to support sync rendering (i.e. await render(...))
     (0, _react.useEffect)(function () {
-      if (controller) controller.rendered();
+      if (instance) instance.rendered();
     }, [content]);
 
     (0, _react.useEffect)(function () {
-      setController(controller = (0, _RoutineController2.default)(routine));
+      setInstance(instance = createRoutineInstance(routineFunc));
 
-      controller.in(setContent, props);
+      if (true) {
+        if (options && options.onInstanceCreated) {
+          options.onInstanceCreated(instance);
+        }
+      }
+
+      instance.in(setContent, props);
 
       return function () {
-        controller.out();
-        _System2.default.removeController(controller);
+        _System2.default.put(unmountedAction(instance.id));
       };
     }, []);
 
     return content;
   };
 
-  RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(routine) + ')';
+  RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(routineFunc) + ')';
 
   return RoutineBridge;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":7,"./RoutineController":1,"./System":3}],6:[function(require,module,exports){
+},{"../utils":6,"./System":1,"./state":4}],4:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.isState = exports.teardownAction = undefined;
+exports.default = createState;
+
+var _System = require('./System');
+
+var _System2 = _interopRequireDefault(_System);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+var ids = 0;
+var getId = function getId() {
+  return '@@s' + ++ids;
+};
+
+var teardownAction = exports.teardownAction = function teardownAction(id) {
+  return id + '_teardown';
+};
+var isState = exports.isState = function isState(state) {
+  return state && state.__rine === 'state';
+};
+
+function createState(initialValue, reducer) {
+  var subscribersUID = 0;
+  var stateValue = initialValue;
+  var subscribers = [];
+
+  var state = {
+    __rine: 'state',
+    __subscribers: function __subscribers() {
+      return subscribers;
+    },
+
+    id: getId(),
+    set: function set(newValue) {
+      stateValue = newValue;
+      subscribers.forEach(function (_ref) {
+        var update = _ref.update;
+        return update(stateValue);
+      });
+    },
+    get: function get() {
+      return stateValue;
+    },
+    subscribe: function subscribe(update) {
+      var subscriberId = ++subscribersUID;
+
+      subscribers.push({ id: subscriberId, update: update });
+      return function () {
+        subscribers = subscribers.filter(function (_ref2) {
+          var id = _ref2.id;
+          return id !== subscriberId;
+        });
+      };
+    },
+    teardown: function teardown() {
+      subscribers = [];
+      stateValue = undefined;
+    },
+    put: function put(type, payload) {
+      if (reducer) {
+        this.set(reducer(stateValue, { type: type, payload: payload }));
+      }
+    }
+  };
+
+  _System2.default.addTask(teardownAction(state.id), function () {
+    state.teardown();
+  });
+
+  return state;
+};
+
+},{"./System":1}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -500,12 +516,12 @@ Object.defineProperty(exports, 'routine', {
   }
 });
 
-var _StateController = require('./api/StateController');
+var _state = require('./api/state');
 
 Object.defineProperty(exports, 'state', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_StateController).default;
+    return _interopRequireDefault(_state).default;
   }
 });
 
@@ -528,7 +544,7 @@ var put = exports.put = _System2.default.put.bind(_System2.default);
 var take = exports.take = _System2.default.take.bind(_System2.default);
 var takeEvery = exports.takeEvery = _System2.default.takeEvery.bind(_System2.default);
 
-},{"./api/StateController":2,"./api/System":3,"./api/connect":4,"./api/routine":5}],7:[function(require,module,exports){
+},{"./api/System":1,"./api/connect":2,"./api/routine":3,"./api/state":4}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -547,5 +563,5 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   return result ? result[1] : 'unknown';
 };
 
-},{}]},{},[6])(6)
+},{}]},{},[5])(5)
 });
