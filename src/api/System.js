@@ -70,9 +70,15 @@ const System = {
     });
   },
   take(type, callback) {
+    if (Array.isArray(type)) {
+      return type.map(t => this.addTask(t, callback, true));
+    }
     return this.addTask(type, callback, true);
   },
   takeEvery(type, callback) {
+    if (Array.isArray(type)) {
+      return type.map(t => this.addTask(t, callback, false));
+    }
     return this.addTask(type, callback, false);
   },
   reset() {

@@ -80,9 +80,23 @@ var System = {
     });
   },
   take: function take(type, callback) {
+    var _this = this;
+
+    if (Array.isArray(type)) {
+      return type.map(function (t) {
+        return _this.addTask(t, callback, true);
+      });
+    }
     return this.addTask(type, callback, true);
   },
   takeEvery: function takeEvery(type, callback) {
+    var _this2 = this;
+
+    if (Array.isArray(type)) {
+      return type.map(function (t) {
+        return _this2.addTask(t, callback, false);
+      });
+    }
     return this.addTask(type, callback, false);
   },
   reset: function reset() {
@@ -92,10 +106,10 @@ var System = {
     return task && task.__rine === 'task';
   },
   putBulk: function putBulk(actions) {
-    var _this = this;
+    var _this3 = this;
 
     actions.forEach(function (type) {
-      return _this.put(type);
+      return _this3.put(type);
     });
   }
 };

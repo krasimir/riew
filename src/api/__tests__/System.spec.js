@@ -33,6 +33,16 @@ describe('Given System', () => {
       expect(mock.mock.calls[1]).toStrictEqual([200]);
       expect(System.tasks).toHaveLength(1);
     });
+    it('should support an array of types', () => {
+      const spy = jest.fn();
+
+      System.take(['foo', 'bar'], spy);
+      System.takeEvery(['foo', 'bar'], spy);
+      System.put('foo');
+      System.put('bar');
+
+      expect(spy).toBeCalledTimes(4);
+    });
   });
   describe('when we removeTasks', () => {
     it('should remove the tasks in the array', () => {
