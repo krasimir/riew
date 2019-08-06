@@ -296,6 +296,8 @@ var _utils = require('../utils');
 
 var _state = require('./state');
 
+var _state2 = _interopRequireDefault(_state);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -330,43 +332,47 @@ function createRoutineInstance(routineFunc) {
       triggerRender = function triggerRender(newProps) {
         if (mounted) setContent(_react2.default.createElement(RenderComponent, newProps));
       };
-
-      var result = routineFunc(function render(f) {
-        if (typeof f === 'function') {
-          RenderComponent = f;
-        } else {
-          RenderComponent = function RenderComponent() {
-            return f;
-          };
-        }
-        triggerRender(props);
-        return new Promise(function (done) {
-          onRendered = function onRendered() {
-            return done();
-          };
-        });
-      }, { isMounted: isMounted });
-
-      if ((0, _utils.isGenerator)(result)) {
-        (function processGenerator(genValue) {
-          if (_System2.default.isTask(genValue.value)) {
-            var task = genValue.value;
-
-            tasksToRemove.push(task);
-            if (task.done) {
-              task.done.then(function (taskResult) {
-                return processGenerator(result.next(taskResult));
-              });
-              return;
-            }
-          } else if ((0, _state.isState)(genValue.value)) {
-            actionsToFire.push((0, _state.teardownAction)(genValue.value.id));
+      routineFunc({
+        render: function render(f) {
+          if (!mounted) return Promise.resolve();
+          if (typeof f === 'function') {
+            RenderComponent = f;
+          } else {
+            RenderComponent = function RenderComponent() {
+              return f;
+            };
           }
-          if (!genValue.done) {
-            processGenerator(result.next(genValue.value));
-          }
-        })(result.next());
-      }
+          triggerRender(props);
+          return new Promise(function (done) {
+            onRendered = function onRendered() {
+              return done();
+            };
+          });
+        },
+        put: function put() {
+          return _System2.default.put.apply(_System2.default, arguments);
+        },
+        take: function take() {
+          var task = _System2.default.take.apply(_System2.default, arguments);
+
+          tasksToRemove.push(task);
+          return task.done;
+        },
+        takeEvery: function takeEvery() {
+          var task = _System2.default.takeEvery.apply(_System2.default, arguments);
+
+          tasksToRemove.push(task);
+          return task;
+        },
+        state: function state() {
+          var state = _state2.default.apply(undefined, arguments);
+
+          actionsToFire.push((0, _state.teardownAction)(state.id));
+          return state;
+        },
+
+        isMounted: isMounted
+      });
     },
     updated: function updated(props) {
       triggerRender(props);
@@ -435,6 +441,22 @@ function routine(routineFunc, options) {
 
   return RoutineBridge;
 }
+
+/*
+
+if (System.isTask(genValue.value)) {
+            const task = genValue.value;
+
+            tasksToRemove.push(task);
+            if (task.done) {
+              task.done.then(taskResult => processGenerator(result.next(taskResult)));
+              return;
+            }
+          } else if (isState(genValue.value)) {
+            actionsToFire.push(teardownAction(genValue.value.id));
+          }
+
+*/
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../utils":6,"./System":1,"./state":4}],4:[function(require,module,exports){

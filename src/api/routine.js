@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import System from './System';
-import { getFuncName, isGenerator } from '../utils';
-import { isState, teardownAction } from './state';
+import { getFuncName } from '../utils';
+import createState, { teardownAction } from './state';
 
 var ids = 0;
 const getId = () => `@@r${ ++ids }`;
@@ -29,40 +29,44 @@ export function createRoutineInstance(routineFunc) {
       triggerRender = newProps => {
         if (mounted) setContent(<RenderComponent {...newProps } />);
       };
-
-      const result = routineFunc(
-        function render(f) {
-          if (typeof f === 'function') {
-            RenderComponent = f;
-          } else {
-            RenderComponent = () => f;
-          }
-          triggerRender(props);
-          return new Promise(done => {
-            onRendered = () => done();
-          });
-        },
-        { isMounted }
-      );
-
-      if (isGenerator(result)) {
-        (function processGenerator(genValue) {
-          if (System.isTask(genValue.value)) {
-            const task = genValue.value;
+      routineFunc(
+        {
+          render(f) {
+            if (!mounted) return Promise.resolve();
+            if (typeof f === 'function') {
+              RenderComponent = f;
+            } else {
+              RenderComponent = () => f;
+            }
+            triggerRender(props);
+            return new Promise(done => {
+              onRendered = () => done();
+            });
+          },
+          put(...args) {
+            return System.put(...args);
+          },
+          take(...args) {
+            const task = System.take(...args);
 
             tasksToRemove.push(task);
-            if (task.done) {
-              task.done.then(taskResult => processGenerator(result.next(taskResult)));
-              return;
-            }
-          } else if (isState(genValue.value)) {
-            actionsToFire.push(teardownAction(genValue.value.id));
-          }
-          if (!genValue.done) {
-            processGenerator(result.next(genValue.value));
-          }
-        })(result.next());
-      }
+            return task.done;
+          },
+          takeEvery(...args) {
+            const task = System.takeEvery(...args);
+
+            tasksToRemove.push(task);
+            return task;
+          },
+          state(...args) {
+            const state = createState(...args);
+
+            actionsToFire.push(teardownAction(state.id));
+            return state;
+          },
+          isMounted
+        }
+      );
     },
     updated(props) {
       triggerRender(props);
@@ -125,3 +129,19 @@ export default function routine(routineFunc, options) {
 
   return RoutineBridge;
 }
+
+/*
+
+if (System.isTask(genValue.value)) {
+            const task = genValue.value;
+
+            tasksToRemove.push(task);
+            if (task.done) {
+              task.done.then(taskResult => processGenerator(result.next(taskResult)));
+              return;
+            }
+          } else if (isState(genValue.value)) {
+            actionsToFire.push(teardownAction(genValue.value.id));
+          }
+
+*/

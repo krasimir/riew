@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { routine, System, state, connect, put, take, takeEvery } from '../index';
+import { routine, System } from '../index';
 
 describe('Given the Rine library', () => {
   beforeEach(() => {
@@ -14,7 +14,7 @@ describe('Given the Rine library', () => {
       const B = ({ children }) => {
         return <p>{ children }</p>;
       };
-      const A = routine(render => {
+      const A = routine(({ render }) => {
         render(({ children }) => <B>{ children }</B>);
       });
       const { container } = render(<A>Hello world</A>);
@@ -24,7 +24,7 @@ describe('Given the Rine library', () => {
   });
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
-      const A = routine(async (render) => {
+      const A = routine(async ({ render }) => {
         act(() => { render('Hello'); });
         await delay(20);
         act(() => { render('world'); });
@@ -39,7 +39,7 @@ describe('Given the Rine library', () => {
     });
     it('should not try to re-render if the bridge is unmounted', async () => {
       const spy = jest.spyOn(console, 'error');
-      const A = routine(async (render) => {
+      const A = routine(async ({ render }) => {
         await delay(20);
         act(() => { render('world'); });
       });
@@ -54,7 +54,7 @@ describe('Given the Rine library', () => {
   });
   describe('when reusing the same routine', () => {
     it('should create a separate controller', () => {
-      const R = routine(function (render) {
+      const R = routine(function ({ render }) {
         render(props => <p>{ props.answer }</p>);
       });
 
@@ -80,11 +80,11 @@ describe('Given the Rine library', () => {
     it(`should
       - pause the routine till the event is fired
       - allow for only one put`, async () => {
-      const A = routine(async (render) => {
+      const A = routine(async ({ render, take, put }) => {
         act(() => {
           render(<button onClick={ () => put('xxx', 'bar') }>click me</button>);
         });
-        const r = await take('xxx').done;
+        const r = await take('xxx');
 
         expect(r).toEqual('bar');
         act(() => { render(<p>Yeah</p>); });
@@ -104,7 +104,7 @@ describe('Given the Rine library', () => {
     it(`should
       - run the callback after the put call
       - allow for only one put call`, async () => {
-      const A = routine(async (render) => {
+      const A = routine(async ({ render, take, put }) => {
         act(() => {
           render(<button onClick={ () => put('foo', 'bar') }>click me</button>);
         });
@@ -131,7 +131,7 @@ describe('Given the Rine library', () => {
           <button onClick={ onClick }>click me</button>)
         </React.Fragment>
       );
-      const A = routine(async (render) => {
+      const A = routine(async ({ render, takeEvery, put }) => {
         let counter = 0;
         let renderCounter = () => act(() => { render(<Counter value={ counter } onClick={ () => put('foo', 2) } />); });
 
@@ -154,11 +154,11 @@ describe('Given the Rine library', () => {
   });
   describe('when using `take` and `put` in different routines', () => {
     it('should allow the communication between them', async () => {
-      const A = routine(async (render) => {
+      const A = routine(async ({ render, take }) => {
         await take('foo');
         act(() => { render(<p>It works</p>); });
       });
-      const B = routine(async () => {
+      const B = routine(async ({ put }) => {
         await delay(10);
         put('foo');
       });
@@ -179,7 +179,7 @@ describe('Given the Rine library', () => {
   describe('when we use the `isMounted` method', () => {
     it('should return the value of the `mounted` flag', async () => {
       const spy = jest.fn();
-      const A = routine(async (render, { isMounted }) => {
+      const A = routine(async ({ isMounted }) => {
         spy(isMounted());
         await delay(10);
         spy(isMounted());
@@ -206,7 +206,7 @@ describe('Given the Rine library', () => {
           </React.Fragment>
         );
       };
-      const Form = routine(function (render) {
+      const Form = routine(function ({ render }) {
         render(
           <form>
             <Input />
@@ -222,8 +222,8 @@ describe('Given the Rine library', () => {
   });
   describe('when we unmount a component', () => {
     it('should clean up the pending tasks', () => {
-      const C = routine(function * () {
-        yield take('foo');
+      const C = routine(function ({ take }) {
+        take('foo');
       });
 
       const { unmount } = render(<C />);
