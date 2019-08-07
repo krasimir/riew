@@ -2059,7 +2059,7 @@ extglob@^2.0.4:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
-fast-deep-equal@^2.0.1:
+fast-deep-equal@2.0.1, fast-deep-equal@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/fast-deep-equal/-/fast-deep-equal-2.0.1.tgz#7b05218ddf9667bf7f370bf7fdb2cb15fdd0aa49"
   integrity sha1-ewUhjd+WZ79/Nwv3/bLLFf3Qqkk=
@@ -3986,10 +3986,12 @@ rimraf@^2.2.8, rimraf@^2.5.4, rimraf@^2.6.1, rimraf@^2.6.2, rimraf@^2.6.3:
   dependencies:
     glob "^7.1.3"
 
-rine@0.24.1:
-  version "0.24.1"
-  resolved "https://registry.yarnpkg.com/rine/-/rine-0.24.1.tgz#61169c40fbd4b190df8330bce80e161b2cfb5d31"
-  integrity sha512-W5NTA2U9fxX2W0AOxmzilgxYQCNByjvRyAsIX9Ry8HmhSaQ7Kitdll3ZCc6YnV0g1zZ8E7ZnS6SiCDRwjDNZBA==
+rine@0.28.0:
+  version "0.28.0"
+  resolved "https://registry.yarnpkg.com/rine/-/rine-0.28.0.tgz#5d58df85fafb52e31c6161150bfb70d750988a3c"
+  integrity sha512-+GBa08/znq8RTigejdvEDlkrgPiShY+URCncZIhmiXMDkebaggCX7LsGks3q4OnZiTVuit0ZYpgfcUj+CpH8dg==
+  dependencies:
+    fast-deep-equal "2.0.1"
 
 ripemd160@^2.0.0, ripemd160@^2.0.1:
   version "2.0.2"

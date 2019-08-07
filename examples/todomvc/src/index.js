@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { routine, state, put, connect } from 'rine';
+import { routine, connect } from 'rine';
 
 import List from './List';
 import Footer from './Footer';
@@ -18,7 +18,7 @@ import {
   CLEAR_COMPLETED
 } from './constants';
 
-const App = routine(function * App(render) {
+const App = routine(function App({ render, state, put }) {
   const todos = state(getInitialTodosData(), reducer);
   const filter = state(ALL);
   const ListPartial = connect(List, { todos, filter });
