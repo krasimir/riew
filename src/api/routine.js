@@ -6,11 +6,12 @@ import createState, { teardownAction } from './state';
 var ids = 0;
 const getId = () => `@@r${ ++ids }`;
 const unmountedAction = id => `${ id }_unmounted`;
+const updatedAction = id => `${ id }_updated`;
 
 export function createRoutineInstance(routineFunc) {
   let id = getId();
   let mounted = false;
-  let RenderComponent;
+  let RenderComponent = () => null;
   let triggerRender;
   let onRendered = () => {};
   let tasksToRemove = [];
@@ -31,17 +32,27 @@ export function createRoutineInstance(routineFunc) {
       };
       routineFunc(
         {
-          render(f) {
+          render(obj) {
             if (!mounted) return Promise.resolve();
-            if (typeof f === 'function') {
-              RenderComponent = f;
+            if (React.isValidElement(obj) || typeof obj === 'string' || typeof obj === 'number') {
+              RenderComponent = () => obj;
+            } else if (obj === null) {
+              RenderComponent = () => null;
+            } else if (typeof obj === 'function') {
+              RenderComponent = obj;
             } else {
-              RenderComponent = () => f;
+              throw new Error('"render" method accepts only React component, React element or null.');
             }
             triggerRender(props);
             return new Promise(done => {
               onRendered = () => done();
             });
+          },
+          takeProps(callback) {
+            const task = System.take(updatedAction(id), callback);
+
+            tasksToRemove.push(task);
+            callback(props);
           },
           put(...args) {
             return System.put(...args);
@@ -69,6 +80,7 @@ export function createRoutineInstance(routineFunc) {
       );
     },
     updated(props) {
+      System.put(updatedAction(id), props);
       triggerRender(props);
     },
     rendered() {
@@ -106,6 +118,7 @@ export default function routine(routineFunc, options) {
       if (instance) instance.rendered();
     }, [ content ]);
 
+    // mounting
     useEffect(() => {
       setInstance(instance = createRoutineInstance(routineFunc));
 
@@ -129,19 +142,3 @@ export default function routine(routineFunc, options) {
 
   return RoutineBridge;
 }
-
-/*
-
-if (System.isTask(genValue.value)) {
-            const task = genValue.value;
-
-            tasksToRemove.push(task);
-            if (task.done) {
-              task.done.then(taskResult => processGenerator(result.next(taskResult)));
-              return;
-            }
-          } else if (isState(genValue.value)) {
-            actionsToFire.push(teardownAction(genValue.value.id));
-          }
-
-*/

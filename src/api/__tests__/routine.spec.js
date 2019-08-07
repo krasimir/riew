@@ -9,15 +9,16 @@ describe('Given the routine method', () => {
   beforeEach(() => {
     System.reset();
   });
-  describe('when call it', () => {
-    it(`should return a React component that
-      * has a task associated with it
+  describe('when we call it', () => {
+    it(`should
+      * return a React component
+      * create a task for unmounting
       * update the instance when we re-render the component
       * notifies the instance when the component is re-rendered
       * removes the instance when the component is unmounted`, () => {
       let spyIn, spyRendered, spyUpdated, spyOut;
       const C = routine(function ({ render }) {
-        render(<p>Hello world</p>);
+        render(() => <p>Hello world</p>);
       }, {
         onInstanceCreated(instance) {
           spyIn = jest.spyOn(instance, 'in');
@@ -42,15 +43,55 @@ describe('Given the routine method', () => {
       expect(System.tasks).toHaveLength(0);
     });
   });
-  describe('when we create the controller', () => {
-    it('should return a controller with id and name', () => {
+  describe('when we pass a React element to the render method', () => {
+    it('should set that element as a RenderComponent', () => {
+      const C = routine(({ render }) => {
+        render(<p>It works</p>);
+      });
+      const { container } = render(<C />);
+
+      exerciseHTML(container, `
+        <p>It works</p>
+      `);
+    });
+  });
+  describe('when we pass null to the render method', () => {
+    it('should convert that to "() => null" which means render nothing', () => {
+      const C = routine(({ render }) => {
+        render(null);
+      });
+      const { container } = render(<C />);
+
+      exerciseHTML(container, '');
+    });
+  });
+  describe('when we use takeProps', () => {
+    it(`should
+      * fire the callback at least once
+      * fire the callback on every props change`, () => {
+      const propsSpy = jest.fn();
+      const I = routine(function ({ takeProps }) {
+        takeProps(propsSpy);
+      });
+
+      const { rerender } = render(<I foo='bar' />);
+
+      rerender(<I foo='moo' />);
+
+      expect(propsSpy).toBeCalledTimes(2);
+      expect(propsSpy.mock.calls[0]).toStrictEqual([ { foo: 'bar' } ]);
+      expect(propsSpy.mock.calls[1]).toStrictEqual([ { foo: 'moo' } ]);
+    });
+  });
+  describe('when we create routine instance', () => {
+    it('should return a routine instance with id and name', () => {
       const c = createRoutineInstance(function foo() {});
 
       expect(c.id.match(/r[0-9]+/)).not.toBe(null);
       expect(c.name).toBe('foo');
     });
   });
-  describe('when we call `in` method', () => {
+  describe('when we call the `in` method', () => {
     it(`should
       * set the controller to active
       * run the routine function
@@ -70,7 +111,7 @@ describe('Given the routine method', () => {
     });
     it('should allow us to wait till the render is done', (done) => {
       const routine = async ({ render }) => {
-        await render();
+        await render(null);
         done();
       };
       const c = createRoutineInstance(routine);

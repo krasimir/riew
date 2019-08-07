@@ -309,11 +309,16 @@ var getId = function getId() {
 var unmountedAction = function unmountedAction(id) {
   return id + '_unmounted';
 };
+var updatedAction = function updatedAction(id) {
+  return id + '_updated';
+};
 
 function createRoutineInstance(routineFunc) {
   var id = getId();
   var mounted = false;
-  var RenderComponent = void 0;
+  var RenderComponent = function RenderComponent() {
+    return null;
+  };
   var triggerRender = void 0;
   var onRendered = function onRendered() {};
   var tasksToRemove = [];
@@ -333,14 +338,20 @@ function createRoutineInstance(routineFunc) {
         if (mounted) setContent(_react2.default.createElement(RenderComponent, newProps));
       };
       routineFunc({
-        render: function render(f) {
+        render: function render(obj) {
           if (!mounted) return Promise.resolve();
-          if (typeof f === 'function') {
-            RenderComponent = f;
-          } else {
+          if (_react2.default.isValidElement(obj) || typeof obj === 'string' || typeof obj === 'number') {
             RenderComponent = function RenderComponent() {
-              return f;
+              return obj;
             };
+          } else if (obj === null) {
+            RenderComponent = function RenderComponent() {
+              return null;
+            };
+          } else if (typeof obj === 'function') {
+            RenderComponent = obj;
+          } else {
+            throw new Error('"render" method accepts only React component, React element or null.');
           }
           triggerRender(props);
           return new Promise(function (done) {
@@ -348,6 +359,12 @@ function createRoutineInstance(routineFunc) {
               return done();
             };
           });
+        },
+        takeProps: function takeProps(callback) {
+          var task = _System2.default.take(updatedAction(id), callback);
+
+          tasksToRemove.push(task);
+          callback(props);
         },
         put: function put() {
           return _System2.default.put.apply(_System2.default, arguments);
@@ -375,6 +392,7 @@ function createRoutineInstance(routineFunc) {
       });
     },
     updated: function updated(props) {
+      _System2.default.put(updatedAction(id), props);
       triggerRender(props);
     },
     rendered: function rendered() {
@@ -418,6 +436,7 @@ function routine(routineFunc, options) {
       if (instance) instance.rendered();
     }, [content]);
 
+    // mounting
     (0, _react.useEffect)(function () {
       setInstance(instance = createRoutineInstance(routineFunc));
 
@@ -441,22 +460,6 @@ function routine(routineFunc, options) {
 
   return RoutineBridge;
 }
-
-/*
-
-if (System.isTask(genValue.value)) {
-            const task = genValue.value;
-
-            tasksToRemove.push(task);
-            if (task.done) {
-              task.done.then(taskResult => processGenerator(result.next(taskResult)));
-              return;
-            }
-          } else if (isState(genValue.value)) {
-            actionsToFire.push(teardownAction(genValue.value.id));
-          }
-
-*/
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../utils":6,"./System":1,"./state":4}],4:[function(require,module,exports){
