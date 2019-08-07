@@ -233,4 +233,37 @@ describe('Given the Rine library', () => {
       expect(System.tasks).toHaveLength(0);
     });
   });
+  describe('when we use useState hook together with takeProps', () => {
+    it('should get takeProps callback fired every time when we update the state', () => {
+      const FetchTime = routine(async ({ render, takeProps }) => {
+        takeProps(async ({ city }) => {
+          render(<p>{ city }</p>);
+        });
+      });
+      const App = function () {
+        const [ city, setCity ] = useState('');
+
+        return (
+          <React.Fragment>
+            <select onChange={ (e) => setCity(e.target.value) } data-testid='select' >
+              <option value=''>pick a city</option>
+              <option value='London'>London</option>
+              <option value='Paris'>Paris</option>
+              <option value='Barcelona'>Barcelona</option>
+              <option value='Sofia'>Sofia</option>
+            </select>
+            <div data-testid='text'><FetchTime city={ city } /></div>
+          </React.Fragment>
+        );
+      };
+
+      const { getByTestId } = render(<App />);
+
+      exerciseHTML(getByTestId('text'), '<p></p>');
+      fireEvent.change(getByTestId('select'), { target: { value: 'Paris' } });
+      exerciseHTML(getByTestId('text'), '<p>Paris</p>');
+      fireEvent.change(getByTestId('select'), { target: { value: 'Sofia' } });
+      exerciseHTML(getByTestId('text'), '<p>Sofia</p>');
+    });
+  });
 });

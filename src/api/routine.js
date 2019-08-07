@@ -49,7 +49,7 @@ export function createRoutineInstance(routineFunc) {
             });
           },
           takeProps(callback) {
-            const task = System.take(updatedAction(id), callback);
+            const task = System.takeEvery(updatedAction(id), callback);
 
             tasksToRemove.push(task);
             callback(props);
