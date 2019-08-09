@@ -11,41 +11,44 @@ const updatedAction = id => `${ id }_updated`;
 export function createRoutineInstance(routineFunc) {
   let id = getId();
   let mounted = false;
-  let RenderComponent = () => null;
+  let props = null;
   let triggerRender;
-  let onRendered = () => {};
   let tasksToRemove = [];
   let actionsToFire = [];
+  let onRendered;
 
   function isMounted() {
     return mounted;
+  }
+  function updateProps(newProps) {
+    return (props = { ...props, ...newProps });
   }
 
   const instance = {
     __rine: 'routine',
     id,
     name: getFuncName(routineFunc),
-    in(setContent, props) {
+    isMounted,
+    in(initialProps, Component, setContent) {
       mounted = true;
-      triggerRender = newProps => {
-        if (mounted) setContent(<RenderComponent {...newProps } />);
+      updateProps(initialProps);
+      triggerRender = () => {
+        if (mounted) setContent(<Component {...props }/>);
       };
       routineFunc(
         {
-          render(obj) {
+          render(newProps) {
             if (!mounted) return Promise.resolve();
-            if (React.isValidElement(obj) || typeof obj === 'string' || typeof obj === 'number') {
-              RenderComponent = () => obj;
-            } else if (obj === null) {
-              RenderComponent = () => null;
-            } else if (typeof obj === 'function') {
-              RenderComponent = obj;
+            if (typeof newProps === 'string' || typeof newProps === 'number' || React.isValidElement(newProps)) {
+              setContent(newProps);
+            } else if (newProps === null) {
+              setContent(() => null);
             } else {
-              throw new Error('"render" method accepts only React component, React element or null.');
+              if (newProps) updateProps(newProps);
+              triggerRender();
             }
-            triggerRender(props);
             return new Promise(done => {
-              onRendered = () => done();
+              onRendered = done;
             });
           },
           takeProps(callback) {
@@ -79,12 +82,13 @@ export function createRoutineInstance(routineFunc) {
         }
       );
     },
-    updated(props) {
+    updated(newProps) {
+      updateProps(newProps);
       System.put(updatedAction(id), props);
-      triggerRender(props);
+      triggerRender();
     },
     rendered() {
-      onRendered();
+      if (onRendered) onRendered();
     },
     out() {
       mounted = false;
@@ -103,15 +107,15 @@ export function createRoutineInstance(routineFunc) {
   return instance;
 }
 
-export default function routine(routineFunc, options) {
-  const RoutineBridge = function (props) {
-    const [ content, setContent ] = useState(null);
+export default function routine(routineFunc, Component = () => null, options) {
+  const RoutineBridge = function (outerProps) {
     let [ instance, setInstance ] = useState(null);
+    let [ content, setContent ] = useState(null);
 
     // updating props
     useEffect(() => {
-      if (instance) instance.updated(props);
-    }, [ props ]);
+      if (instance) instance.updated(outerProps);
+    }, [ outerProps ]);
 
     // to support sync rendering (i.e. await render(...))
     useEffect(() => {
@@ -128,7 +132,7 @@ export default function routine(routineFunc, options) {
         }
       }
 
-      instance.in(setContent, props);
+      instance.in(outerProps, Component, setContent);
 
       return function () {
         System.put(unmountedAction(instance.id));

@@ -9,19 +9,6 @@ describe('Given the Rine library', () => {
   beforeEach(() => {
     System.reset();
   });
-  describe('when we want to render children', () => {
-    it('should pass the `children` prop down to our function', () => {
-      const B = ({ children }) => {
-        return <p>{ children }</p>;
-      };
-      const A = routine(({ render }) => {
-        render(({ children }) => <B>{ children }</B>);
-      });
-      const { container } = render(<A>Hello world</A>);
-
-      exerciseHTML(container, '<p>Hello world</p>');
-    });
-  });
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
       const A = routine(async ({ render }) => {
@@ -40,7 +27,7 @@ describe('Given the Rine library', () => {
     it('should not try to re-render if the bridge is unmounted', async () => {
       const spy = jest.spyOn(console, 'error');
       const A = routine(async ({ render }) => {
-        await delay(20);
+        await delay(10);
         act(() => { render('world'); });
       });
 
@@ -53,10 +40,10 @@ describe('Given the Rine library', () => {
     });
   });
   describe('when reusing the same routine', () => {
-    it('should create a separate controller', () => {
+    it('should create a separate instance', () => {
       const R = routine(function ({ render }) {
-        render(props => <p>{ props.answer }</p>);
-      });
+        render();
+      }, props => <p>{ props.answer }</p>);
 
       const { container } = render(<R answer='foo' />);
       const { container: container2, rerender: rerender2 } = render(<R answer='bar' />);
@@ -234,7 +221,7 @@ describe('Given the Rine library', () => {
     });
   });
   describe('when we use useState hook together with takeProps', () => {
-    it('should get takeProps callback fired every time when we update the state', () => {
+    it('should get takeProps callback fired every time when we update the state', async () => {
       const FetchTime = routine(async ({ render, takeProps }) => {
         takeProps(async ({ city }) => {
           render(<p>{ city }</p>);

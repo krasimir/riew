@@ -1,11 +1,11 @@
 /* eslint-disable react/prop-types, react/jsx-key */
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import System from '../System';
 import routine, { createRoutineInstance } from '../routine';
 import { delay, exerciseHTML } from '../../__helpers__';
 
-describe('Given the routine method', () => {
+describe('Given the `routine` function', () => {
   beforeEach(() => {
     System.reset();
   });
@@ -13,45 +13,84 @@ describe('Given the routine method', () => {
     it(`should
       * return a React component
       * create a task for unmounting
-      * update the instance when we re-render the component
-      * notifies the instance when the component is re-rendered
+      * update the props when call render or the outer component is re-rendered
+      * triggers rendering on the outer component when called render or outer component is re-rendered
       * removes the instance when the component is unmounted`, () => {
-      let spyIn, spyRendered, spyUpdated, spyOut;
-      const C = routine(function ({ render }) {
-        render(() => <p>Hello world</p>);
-      }, {
-        onInstanceCreated(instance) {
-          spyIn = jest.spyOn(instance, 'in');
-          spyRendered = jest.spyOn(instance, 'rendered');
-          spyUpdated = jest.spyOn(instance, 'updated');
-          spyOut = jest.spyOn(instance, 'out');
+      let spyIn, spyUpdated, spyOut;
+      let Component = jest.fn().mockImplementation(() => null);
+      const C = routine(
+        function ({ render }) {
+          render({ a: 'b' });
+        },
+        Component,
+        {
+          onInstanceCreated(instance) {
+            spyIn = jest.spyOn(instance, 'in');
+            spyUpdated = jest.spyOn(instance, 'updated');
+            spyOut = jest.spyOn(instance, 'out');
+          }
         }
-      });
+      );
 
       const { unmount, rerender } = render(<C foo='bar' />);
 
       expect(System.tasks).toHaveLength(1);
-      rerender(<C moo='zar' />);
+      rerender(<C c='d' />);
       unmount();
 
+      expect(Component.mock.calls).toStrictEqual([
+        [ { foo: 'bar', a: 'b' }, {} ],
+        [ { foo: 'bar', a: 'b', c: 'd' }, {}]
+      ]);
+
+      expect(Component).toBeCalledTimes(2);
       expect(spyIn).toBeCalledTimes(1);
-      expect(spyIn).toBeCalledWith(expect.any(Function), { foo: 'bar' });
-      expect(spyRendered).toBeCalledTimes(2);
+      expect(spyIn).toBeCalledWith({ foo: 'bar' }, expect.any(Function), expect.any(Function));
       expect(spyUpdated).toBeCalledTimes(1);
-      expect(spyUpdated).toBeCalledWith({ moo: 'zar' });
+      expect(spyUpdated).toBeCalledWith({ c: 'd' });
       expect(spyOut).toBeCalledTimes(1);
       expect(System.tasks).toHaveLength(0);
     });
   });
   describe('when we pass a React element to the render method', () => {
-    it('should set that element as a RenderComponent', () => {
-      const C = routine(({ render }) => {
+    it(`should
+      * trigger a new rendering but with the passed element
+      * then later when called again with props should trigger
+        rendering of the original outer component`, async () => {
+      const Component = jest.fn().mockImplementation(({ answer }) => <div>{ answer }</div>);
+      const C = routine(async ({ render }) => {
         render(<p>It works</p>);
-      });
+        await delay(10);
+        act(() => {
+          render({ answer: 42 });
+        });
+      }, Component);
       const { container } = render(<C />);
 
+      exerciseHTML(container, '<p>It works</p>');
+      await delay(20);
+      exerciseHTML(container, '<div>42</div>');
+    });
+  });
+  describe('when we pass a string or a number', () => {
+    it(`should
+      * trigger a new rendering but with the passed value
+      * then later when called again with props should trigger
+        rendering of the original outer component`, async () => {
+      const Component = jest.fn().mockImplementation(({ answer }) => <div>{ answer }</div>);
+      const C = routine(async ({ render }) => {
+        render('Hello world');
+        await delay(10);
+        act(() => {
+          render({ answer: 42 });
+        });
+      }, Component);
+      const { container } = render(<C />);
+
+      exerciseHTML(container, 'Hello world');
+      await delay(20);
       exerciseHTML(container, `
-        <p>It works</p>
+        <div>42</div>
       `);
     });
   });
@@ -91,15 +130,15 @@ describe('Given the routine method', () => {
       expect(c.name).toBe('foo');
     });
   });
-  describe('when we call the `in` method', () => {
+  describe('when we create routine instance and we call the `in` method', () => {
     it(`should
-      * set the controller to active
+      * set the instance to mounted
       * run the routine function
       * pass render function to the routine function
       * pass util methods to the routine function (isMounted)`, () => {
       const routineSpy = jest.fn().mockImplementation(({ render, isMounted }) => {
         expect(isMounted()).toBe(true);
-        render(() => {});
+        render();
       });
       const setContentSpy = jest.fn().mockImplementation((reactElement) => {
         expect(React.isValidElement(reactElement)).toBe(true);
@@ -107,7 +146,7 @@ describe('Given the routine method', () => {
       });
       const c = createRoutineInstance(routineSpy);
 
-      c.in(setContentSpy, { foo: 'bar' });
+      c.in({ foo: 'bar' }, () => null, setContentSpy);
     });
     it('should allow us to wait till the render is done', (done) => {
       const routine = async ({ render }) => {
@@ -116,7 +155,7 @@ describe('Given the routine method', () => {
       };
       const c = createRoutineInstance(routine);
 
-      c.in(() => {});
+      c.in({}, () => null, () => {});
       c.rendered();
     });
     it('should allow us to pass directly a react element to the render', () => {
@@ -124,7 +163,7 @@ describe('Given the routine method', () => {
         render(<p foo='bar'>Hello</p>);
       });
 
-      c.in((reactElement) => {
+      c.in({}, () => null, (reactElement) => {
         expect(React.isValidElement(reactElement)).toBe(true);
       });
     });
@@ -137,12 +176,12 @@ describe('Given the routine method', () => {
         render(F);
       });
 
-      c.in(setContentSpy, { a: 'b' });
+      c.in({ a: 'b' }, F, setContentSpy);
       c.updated({ c: 'd' });
 
       expect(setContentSpy).toBeCalledTimes(2);
       expect(setContentSpy.mock.calls[0]).toStrictEqual([ <F a='b' /> ]);
-      expect(setContentSpy.mock.calls[1]).toStrictEqual([ <F c='d' /> ]);
+      expect(setContentSpy.mock.calls[1]).toStrictEqual([ <F a='b' c='d' /> ]);
     });
   });
   describe('when we use take', () => {
