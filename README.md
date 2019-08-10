@@ -1,41 +1,23 @@
 ![Rine logo](./assets/logo.jpg)
 
-There are two big problem in front-end development - managing state and managing side effects. Rine helps you solve the second one. It gives you an API that allows using an async function called _routine_ as a React component.
+There are two big problem in front-end development - managing state and managing side effects. Rine helps you solve the second one. It gives you an API that runs a function parallel to your React component.
 
 ```jsx
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Routine } from 'rine';
+import { routine } from 'rine';
 
-const MySideEffect = Routine(async function({ render }) {
-  render(<p>Hey, I'm waiting for the data.</p>);
-
-  const data = await fetchData(...);
-
-  render(<p>Oh nice, data is here.</p>);
-});
+const MyComponent = ({ message }) => <h1>{ message }</h1>;
+const MySideEffect = routine(
+  function R({ render }) {
+    render({ message: 'Hey!' });
+  },
+  MyComponent
+);
 
 ReactDOM.render(<MySideEffect />, ...);
 ```
 
-Your routine gets fired once when `<MySideEffect>` is mounted. If that component is unmounted your function doesn't stop but calling `render` does nothing. There is an API to understand if the component is unmounted so you can stop the side effect logic if you need to.
+The routine function `R` gets fired only once when `<MySideEffect>` is mounted. During its work we may call as many times as needed the `render` function. It renders the original `MyComponent`. The example above results in `<MyComponent message='Hey!' />` (or in other words `<h1>Hey!</h1>`).
 
-Here is a working example that gets the current time in London.
-
-```js
-import React, { Fragment } from 'react';
-import { Routine } from 'rine';
-
-const App = Routine(async ({ render, city }) => {
-  render(<p>Getting current time in { city } ...</p>);
-      
-  const result = await fetch(`https://worldtimeapi.org/api/timezone/Europe/${ city }.json`);
-  const { datetime } = await result.json();
-
-  render(`Right now in ${ city } - ${ new Date(datetime).toLocaleString() }`);
-});
-
-ReactDOM.render(<App city='London'/>, document.querySelector('.output')); 
-```
-
-You can play with it [here](https://poet.codes/e/MMBJ8wk8VIR).
+So, why the hell you want to do that. I know that it is difficult to see the benefit from such a small example but what I was always struggling with React is how to handle side effects. We can't make it easily just within the React components. We need some sort of abstraction that lives outside and we just communicate stuff to it. That's why we have Redux ecosystem.
