@@ -124,16 +124,6 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _extends = Object.assign || function (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];for (var key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key];
-      }
-    }
-  }return target;
-};
-
 var _slicedToArray = function () {
   function sliceIterator(arr, i) {
     var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
@@ -160,7 +150,18 @@ var _slicedToArray = function () {
   };
 }();
 
-exports.default = connect;
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
+}; /* eslint-disable consistent-return */
+
+exports.mapStateToProps = mapStateToProps;
+exports.connect = connect;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
@@ -203,43 +204,59 @@ function accumulateProps(map) {
   }, {});
 }
 
+function mapStateToProps(func, map) {
+  var translate = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function (v) {
+    return v;
+  };
+  var noInitialCall = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+
+  var aprops = accumulateProps(map);
+
+  if (noInitialCall === false) {
+    func(translate(aprops));
+  }
+
+  var unsubscribers = Object.keys(map).map(function (key) {
+    var value = map[key];
+
+    if (isRineState(value)) {
+      var state = value;
+
+      return state.subscribe(function () {
+        var newValue = getValueFromState(state);
+
+        if (!(0, _fastDeepEqual2.default)(aprops[key], newValue)) {
+          func(translate(aprops = _extends({}, aprops, _defineProperty({}, key, newValue))));
+        }
+      });
+    }
+  }).filter(function (unsubscribe) {
+    return !!unsubscribe;
+  });
+
+  return function () {
+    return unsubscribers.forEach(function (u) {
+      return u();
+    });
+  };
+}
+
 function connect(Component, map) {
   var translate = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function (v) {
     return v;
   };
 
   function StateBridge(props) {
-    var _useState = (0, _react.useState)(accumulateProps(map)),
+    var _useState = (0, _react.useState)(translate(accumulateProps(map))),
         _useState2 = _slicedToArray(_useState, 2),
         aprops = _useState2[0],
         setAProps = _useState2[1];
 
     (0, _react.useEffect)(function () {
-      var unsubscribeCallbacks = [];
-
-      Object.keys(map).forEach(function (key) {
-        var value = map[key];
-
-        if (isRineState(value)) {
-          var state = value;
-
-          unsubscribeCallbacks.push(state.subscribe(function () {
-            var newValue = getValueFromState(state);
-
-            if (!(0, _fastDeepEqual2.default)(aprops[key], newValue)) {
-              setAProps(aprops = _extends({}, aprops, _defineProperty({}, key, newValue)));
-            }
-          }));
-        }
-      });
-      return function () {
-        unsubscribeCallbacks.forEach(function (f) {
-          return f();
-        });
-      };
+      return mapStateToProps(setAProps, map, translate, true);
     }, []);
 
-    return _react2.default.createElement(Component, _extends({}, translate(aprops), props));
+    return _react2.default.createElement(Component, _extends({}, aprops, props));
   }
 
   StateBridge.displayName = 'Connected(' + (0, _utils.getFuncName)(Component) + ')';
@@ -549,7 +566,7 @@ function createState(initialValue, reducer) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.takeEvery = exports.take = exports.put = exports.connect = exports.state = exports.routine = exports.System = undefined;
+exports.takeEvery = exports.take = exports.put = exports.mapStateToProps = exports.connect = exports.state = exports.routine = exports.System = undefined;
 
 var _System = require('./api/System');
 
@@ -583,7 +600,13 @@ var _connect = require('./api/connect');
 Object.defineProperty(exports, 'connect', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_connect).default;
+    return _connect.connect;
+  }
+});
+Object.defineProperty(exports, 'mapStateToProps', {
+  enumerable: true,
+  get: function get() {
+    return _connect.mapStateToProps;
   }
 });
 

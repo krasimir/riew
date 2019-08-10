@@ -1,3 +1,4 @@
+/* eslint-disable consistent-return */
 import React, { useState, useEffect } from 'react';
 import equal from 'fast-deep-equal';
 import { getFuncName } from '../utils';
@@ -21,38 +22,41 @@ function accumulateProps(map) {
   }, {});
 }
 
-export default function connect(Component, map, translate = v => v) {
-  function StateBridge(props) {
-    let [ aprops, setAProps ] = useState(accumulateProps(map));
+export function mapStateToProps(func, map, translate = v => v, noInitialCall = false) {
+  let aprops = accumulateProps(map);
 
-    useEffect(() => {
-      let unsubscribeCallbacks = [];
+  if (noInitialCall === false) {
+    func(translate(aprops));
+  }
 
-      Object.keys(map).forEach(key => {
-        const value = map[key];
+  const unsubscribers = Object.keys(map).map(key => {
+    const value = map[key];
 
-        if (isRineState(value)) {
-          const state = value;
+    if (isRineState(value)) {
+      const state = value;
 
-          unsubscribeCallbacks.push(
-            state.subscribe(
-              () => {
-                const newValue = getValueFromState(state);
+      return state.subscribe(
+        () => {
+          const newValue = getValueFromState(state);
 
-                if (!equal(aprops[key], newValue)) {
-                  setAProps(aprops = { ...aprops, [key]: newValue });
-                }
-              }
-            )
-          );
+          if (!equal(aprops[key], newValue)) {
+            func(translate(aprops = { ...aprops, [key]: newValue }));
+          }
         }
-      });
-      return () => {
-        unsubscribeCallbacks.forEach(f => f());
-      };
-    }, []);
+      );
+    }
+  }).filter(unsubscribe => !!unsubscribe);
 
-    return <Component {...translate(aprops)} {...props}/>;
+  return () => unsubscribers.forEach(u => u());
+}
+
+export function connect(Component, map, translate = v => v) {
+  function StateBridge(props) {
+    let [ aprops, setAProps ] = useState(translate(accumulateProps(map)));
+
+    useEffect(() => mapStateToProps(setAProps, map, translate, true), []);
+
+    return <Component {...aprops} {...props}/>;
   }
 
   StateBridge.displayName = `Connected(${ getFuncName(Component) })`;

@@ -4,7 +4,7 @@ import { render, act } from '@testing-library/react';
 import System from '../System';
 import state from '../state';
 
-import connect from '../connect';
+import { connect, mapStateToProps } from '../connect';
 import { exerciseHTML } from '../../__helpers__';
 
 describe('Given the connect method', () => {
@@ -100,6 +100,36 @@ describe('Given the connect method', () => {
         { s3: 'oof_xxx', s4: 'rab_xxx' },
         {}
       ]);
+    });
+  });
+  describe('when we use mapStateToProps', () => {
+    it('should call the function at least once and then every time when the state changes', () => {
+      const s1 = state('foo');
+      const s2 = state('bar');
+      const spy = jest.fn();
+
+      mapStateToProps(spy, { s1, s2 });
+      s1.set('oof');
+      s2.set('rab');
+
+      expect(spy).toBeCalledTimes(3);
+      expect(spy.mock.calls[0]).toStrictEqual([{ s1: 'foo', s2: 'bar' }]);
+      expect(spy.mock.calls[1]).toStrictEqual([{ s1: 'oof', s2: 'bar' }]);
+      expect(spy.mock.calls[2]).toStrictEqual([{ s1: 'oof', s2: 'rab' }]);
+    });
+    it('should return a unsubscribe function', () => {
+      const s1 = state('foo');
+      const s2 = state('bar');
+      const spy = jest.fn();
+
+      const unsubscribe = mapStateToProps(spy, { s1, s2, foo: 'boo' });
+
+      expect(unsubscribe).toStrictEqual(expect.any(Function));
+      expect(s1.__subscribers()).toHaveLength(1);
+      expect(s2.__subscribers()).toHaveLength(1);
+      unsubscribe();
+      expect(s1.__subscribers()).toHaveLength(0);
+      expect(s2.__subscribers()).toHaveLength(0);
     });
   });
 });
