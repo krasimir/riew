@@ -316,13 +316,10 @@ var updatedAction = function updatedAction(id) {
 function createRoutineInstance(routineFunc) {
   var id = getId();
   var mounted = false;
-  var RenderComponent = function RenderComponent() {
-    return null;
-  };
-  var triggerRender = void 0;
-  var onRendered = function onRendered() {};
+  var preRoutineProps = null;
   var tasksToRemove = [];
   var actionsToFire = [];
+  var onRendered = void 0;
 
   function isMounted() {
     return mounted;
@@ -332,39 +329,35 @@ function createRoutineInstance(routineFunc) {
     __rine: 'routine',
     id: id,
     name: (0, _utils.getFuncName)(routineFunc),
-    in: function _in(setContent, props) {
+    isMounted: isMounted,
+    in: function _in(initialProps, Component, setContent) {
       mounted = true;
-      triggerRender = function triggerRender(newProps) {
-        if (mounted) setContent(_react2.default.createElement(RenderComponent, newProps));
-      };
+      preRoutineProps = initialProps;
       routineFunc({
-        render: function render(obj) {
+        render: function render(props) {
           if (!mounted) return Promise.resolve();
-          if (_react2.default.isValidElement(obj) || typeof obj === 'string' || typeof obj === 'number') {
-            RenderComponent = function RenderComponent() {
-              return obj;
-            };
-          } else if (obj === null) {
-            RenderComponent = function RenderComponent() {
+          if (typeof props === 'string' || typeof props === 'number' || _react2.default.isValidElement(props)) {
+            setContent(props);
+          } else if (props === null) {
+            setContent(function () {
               return null;
-            };
-          } else if (typeof obj === 'function') {
-            RenderComponent = obj;
+            });
           } else {
-            throw new Error('"render" method accepts only React component, React element or null.');
+            if (props) {
+              setContent(_react2.default.createElement(Component, props));
+            } else {
+              setContent(_react2.default.createElement(Component, null));
+            }
           }
-          triggerRender(props);
           return new Promise(function (done) {
-            onRendered = function onRendered() {
-              return done();
-            };
+            onRendered = done;
           });
         },
         takeProps: function takeProps(callback) {
           var task = _System2.default.takeEvery(updatedAction(id), callback);
 
           tasksToRemove.push(task);
-          callback(props);
+          callback(preRoutineProps);
         },
         put: function put() {
           return _System2.default.put.apply(_System2.default, arguments);
@@ -391,12 +384,11 @@ function createRoutineInstance(routineFunc) {
         isMounted: isMounted
       });
     },
-    updated: function updated(props) {
-      _System2.default.put(updatedAction(id), props);
-      triggerRender(props);
+    updated: function updated(newProps) {
+      _System2.default.put(updatedAction(id), preRoutineProps = newProps);
     },
     rendered: function rendered() {
-      onRendered();
+      if (onRendered) onRendered();
     },
     out: function out() {
       mounted = false;
@@ -404,7 +396,6 @@ function createRoutineInstance(routineFunc) {
   };
 
   _System2.default.addTask(unmountedAction(id), function () {
-    instance.out();
     _System2.default.removeTasks(tasksToRemove);
     _System2.default.putBulk(actionsToFire);
   });
@@ -412,24 +403,29 @@ function createRoutineInstance(routineFunc) {
   return instance;
 }
 
-function routine(routineFunc, options) {
-  var RoutineBridge = function RoutineBridge(props) {
+function routine(routineFunc) {
+  var Component = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {
+    return null;
+  };
+  var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : { createRoutineInstance: createRoutineInstance };
+
+  var RoutineBridge = function RoutineBridge(outerProps) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
-        content = _useState2[0],
-        setContent = _useState2[1];
+        instance = _useState2[0],
+        setInstance = _useState2[1];
 
     var _useState3 = (0, _react.useState)(null),
         _useState4 = _slicedToArray(_useState3, 2),
-        instance = _useState4[0],
-        setInstance = _useState4[1];
+        content = _useState4[0],
+        setContent = _useState4[1];
 
     // updating props
 
 
     (0, _react.useEffect)(function () {
-      if (instance) instance.updated(props);
-    }, [props]);
+      if (instance) instance.updated(outerProps);
+    }, [outerProps]);
 
     // to support sync rendering (i.e. await render(...))
     (0, _react.useEffect)(function () {
@@ -438,17 +434,12 @@ function routine(routineFunc, options) {
 
     // mounting
     (0, _react.useEffect)(function () {
-      setInstance(instance = createRoutineInstance(routineFunc));
+      setInstance(instance = options.createRoutineInstance(routineFunc));
 
-      if (true) {
-        if (options && options.onInstanceCreated) {
-          options.onInstanceCreated(instance);
-        }
-      }
-
-      instance.in(setContent, props);
+      instance.in(outerProps, Component, setContent);
 
       return function () {
+        instance.out();
         _System2.default.put(unmountedAction(instance.id));
       };
     }, []);
