@@ -11,17 +11,13 @@ const updatedAction = id => `${ id }_updated`;
 export function createRoutineInstance(routineFunc) {
   let id = getId();
   let mounted = false;
-  let props = null;
-  let triggerRender;
+  let preRoutineProps = null;
   let tasksToRemove = [];
   let actionsToFire = [];
   let onRendered;
 
   function isMounted() {
     return mounted;
-  }
-  function updateProps(newProps) {
-    return (props = { ...props, ...newProps });
   }
 
   const instance = {
@@ -31,21 +27,21 @@ export function createRoutineInstance(routineFunc) {
     isMounted,
     in(initialProps, Component, setContent) {
       mounted = true;
-      updateProps(initialProps);
-      triggerRender = () => {
-        if (mounted) setContent(<Component {...props }/>);
-      };
+      preRoutineProps = initialProps;
       routineFunc(
         {
-          render(newProps) {
+          render(props) {
             if (!mounted) return Promise.resolve();
-            if (typeof newProps === 'string' || typeof newProps === 'number' || React.isValidElement(newProps)) {
-              setContent(newProps);
-            } else if (newProps === null) {
+            if (typeof props === 'string' || typeof props === 'number' || React.isValidElement(props)) {
+              setContent(props);
+            } else if (props === null) {
               setContent(() => null);
             } else {
-              if (newProps) updateProps(newProps);
-              triggerRender();
+              if (props) {
+                setContent(<Component {...props }/>);
+              } else {
+                setContent(<Component />);
+              }
             }
             return new Promise(done => {
               onRendered = done;
@@ -55,7 +51,7 @@ export function createRoutineInstance(routineFunc) {
             const task = System.takeEvery(updatedAction(id), callback);
 
             tasksToRemove.push(task);
-            callback(props);
+            callback(preRoutineProps);
           },
           put(...args) {
             return System.put(...args);
@@ -83,9 +79,7 @@ export function createRoutineInstance(routineFunc) {
       );
     },
     updated(newProps) {
-      updateProps(newProps);
-      System.put(updatedAction(id), props);
-      triggerRender();
+      System.put(updatedAction(id), preRoutineProps = newProps);
     },
     rendered() {
       if (onRendered) onRendered();
@@ -98,7 +92,6 @@ export function createRoutineInstance(routineFunc) {
   System.addTask(
     unmountedAction(id),
     () => {
-      instance.out();
       System.removeTasks(tasksToRemove);
       System.putBulk(actionsToFire);
     }
@@ -107,7 +100,11 @@ export function createRoutineInstance(routineFunc) {
   return instance;
 }
 
-export default function routine(routineFunc, Component = () => null, options) {
+export default function routine(
+  routineFunc,
+  Component = () => null,
+  options = { createRoutineInstance }
+) {
   const RoutineBridge = function (outerProps) {
     let [ instance, setInstance ] = useState(null);
     let [ content, setContent ] = useState(null);
@@ -124,17 +121,12 @@ export default function routine(routineFunc, Component = () => null, options) {
 
     // mounting
     useEffect(() => {
-      setInstance(instance = createRoutineInstance(routineFunc));
-
-      if (__DEV__) {
-        if (options && options.onInstanceCreated) {
-          options.onInstanceCreated(instance);
-        }
-      }
+      setInstance(instance = options.createRoutineInstance(routineFunc));
 
       instance.in(outerProps, Component, setContent);
 
       return function () {
+        instance.out();
         System.put(unmountedAction(instance.id));
       };
     }, []);

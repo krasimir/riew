@@ -41,8 +41,8 @@ describe('Given the Rine library', () => {
   });
   describe('when reusing the same routine', () => {
     it('should create a separate instance', () => {
-      const R = routine(function ({ render }) {
-        render();
+      const R = routine(function ({ render, takeProps }) {
+        takeProps(render);
       }, props => <p>{ props.answer }</p>);
 
       const { container } = render(<R answer='foo' />);
