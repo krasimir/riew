@@ -18,6 +18,6 @@ const MySideEffect = routine(
 ReactDOM.render(<MySideEffect />, ...);
 ```
 
-The **routine** function `R` gets fired only once when `<MySideEffect>` is mounted. During its work we may call as many times as we needed the `render` function. It renders the original `MyComponent`. The example above results in `<MyComponent message='Hey!' />` (or in other words `<h1>Hey!</h1>`).
+The **routine** function `R` gets fired only once when `<MySideEffect>` is mounted. Calling the `render` function inside means "render my component with this props". The example above results in `<MyComponent message='Hey!' />` (or in other words `<h1>Hey!</h1>`).
 
-So, why the hell you want to do that. I know that it is difficult to see the benefit from such a small example but what I was always struggling with React is how to handle side effects. We can't make it easily just within the React components. We need some sort of abstraction that lives outside and we just communicate stuff to it. That's why we have Redux ecosystem.
+So, why the hell we'll want to do that. I know that it is difficult to see the benefit from such a small example but what I was always struggling with React is how to handle side effects. We can't make it easily just within the React components. We need some sort of abstraction that lives outside and we communicate back and forth. That's why we have the whole Redux ecosystem. In complex apps we can't rely only on React components. I always imagine 

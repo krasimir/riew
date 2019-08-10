@@ -83,19 +83,19 @@ describe('Given the `routine` function', () => {
       });
     });
     describe('when we call the update method', () => {
-      it('should fire any takeProps callbacks', () => {
-        const takePropsSpy = jest.fn();
+      it('should fire any onUpdated callbacks', () => {
+        const onUpdatedSpy = jest.fn();
         const F = () => {};
-        const c = createRoutineInstance(({ takeProps }) => {
-          takeProps(takePropsSpy);
+        const c = createRoutineInstance(({ onUpdated }) => {
+          onUpdated(onUpdatedSpy);
         });
 
         c.in({ a: 'b' }, F, () => {});
         c.updated({ c: 'd' });
 
-        expect(takePropsSpy).toBeCalledTimes(2);
-        expect(takePropsSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
-        expect(takePropsSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
+        expect(onUpdatedSpy).toBeCalledTimes(2);
+        expect(onUpdatedSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
+        expect(onUpdatedSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
       });
     });
     describe('when we use take', () => {
@@ -178,13 +178,13 @@ describe('Given the `routine` function', () => {
         expect(ss.get()).toBe(undefined);
       });
     });
-    describe('and we use "takeProps"', () => {
+    describe('and we use "onUpdated"', () => {
       it(`should
         * fire the callback at least once
         * fire the callback on every props change`, () => {
         const propsSpy = jest.fn();
-        const I = routine(function ({ takeProps }) {
-          takeProps(propsSpy);
+        const I = routine(function ({ onUpdated }) {
+          onUpdated(propsSpy);
         });
 
         const { rerender } = render(<I foo='bar' />);
@@ -194,6 +194,33 @@ describe('Given the `routine` function', () => {
         expect(propsSpy).toBeCalledTimes(2);
         expect(propsSpy.mock.calls[0]).toStrictEqual([ { foo: 'bar' } ]);
         expect(propsSpy.mock.calls[1]).toStrictEqual([ { zoo: 'mar' } ]);
+      });
+    });
+    describe('and we use "setProp"', () => {
+      it(`should
+        * set a permanent prop
+        * update a prop value if it is already set
+        * delete a prop if we don't pass a value`, async () => {
+        const spy = jest.fn().mockImplementation(() => null);
+        const I = routine(async function ({ setProp, render }) {
+          setProp('foo', 'bar');
+          setProp('xoo', 'yoo');
+          render();
+          await delay(20);
+          setProp('foo', 'moo');
+          setProp('xoo');
+          act(() => {
+            render();
+          });
+        }, spy);
+
+        render(<I />);
+
+        await delay(21);
+
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar', xoo: 'yoo' }, {} ]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { foo: 'moo' }, {} ]);
       });
     });
   });

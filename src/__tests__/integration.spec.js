@@ -41,8 +41,8 @@ describe('Given the Rine library', () => {
   });
   describe('when reusing the same routine', () => {
     it('should create a separate instance', () => {
-      const R = routine(function ({ render, takeProps }) {
-        takeProps(render);
+      const R = routine(function ({ render, onUpdated }) {
+        onUpdated(render);
       }, props => <p>{ props.answer }</p>);
 
       const { container } = render(<R answer='foo' />);
@@ -220,10 +220,10 @@ describe('Given the Rine library', () => {
       expect(System.tasks).toHaveLength(0);
     });
   });
-  describe('when we use useState hook together with takeProps', () => {
-    it('should get takeProps callback fired every time when we update the state', async () => {
-      const FetchTime = routine(async ({ render, takeProps }) => {
-        takeProps(async ({ city }) => {
+  describe('when we use useState hook together with onUpdated', () => {
+    it('should get onUpdated callback fired every time when we update the state', async () => {
+      const FetchTime = routine(async ({ render, onUpdated }) => {
+        onUpdated(async ({ city }) => {
           render(<p>{ city }</p>);
         });
       });
