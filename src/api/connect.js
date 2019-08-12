@@ -22,7 +22,7 @@ function accumulateProps(map) {
   }, {});
 }
 
-export function mapStateToProps(func, map, translate = v => v, noInitialCall = false) {
+export function mapStateToProps(map, func, translate = v => v, noInitialCall = false) {
   let aprops = accumulateProps(map);
 
   if (noInitialCall === false) {
@@ -54,7 +54,7 @@ export function connect(Component, map, translate = v => v) {
   function StateBridge(props) {
     let [ aprops, setAProps ] = useState(translate(accumulateProps(map)));
 
-    useEffect(() => mapStateToProps(setAProps, map, translate, true), []);
+    useEffect(() => mapStateToProps(map, setAProps, translate, true), []);
 
     return <Component {...aprops} {...props}/>;
   }

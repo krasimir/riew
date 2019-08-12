@@ -204,7 +204,7 @@ function accumulateProps(map) {
   }, {});
 }
 
-function mapStateToProps(func, map) {
+function mapStateToProps(map, func) {
   var translate = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function (v) {
     return v;
   };
@@ -253,7 +253,7 @@ function connect(Component, map) {
         setAProps = _useState2[1];
 
     (0, _react.useEffect)(function () {
-      return mapStateToProps(setAProps, map, translate, true);
+      return mapStateToProps(map, setAProps, translate, true);
     }, []);
 
     return _react2.default.createElement(Component, _extends({}, aprops, props));

@@ -108,7 +108,7 @@ describe('Given the connect method', () => {
       const s2 = state('bar');
       const spy = jest.fn();
 
-      mapStateToProps(spy, { s1, s2 });
+      mapStateToProps({ s1, s2 }, spy);
       s1.set('oof');
       s2.set('rab');
 
@@ -122,7 +122,7 @@ describe('Given the connect method', () => {
       const s2 = state('bar');
       const spy = jest.fn();
 
-      const unsubscribe = mapStateToProps(spy, { s1, s2, foo: 'boo' });
+      const unsubscribe = mapStateToProps({ s1, s2, foo: 'boo' }, spy);
 
       expect(unsubscribe).toStrictEqual(expect.any(Function));
       expect(s1.__subscribers()).toHaveLength(1);
