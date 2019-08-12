@@ -1,6 +1,6 @@
 {
   "name": "rine",
-  "version": "0.33.0",
+  "version": "0.34.0",
   "description": "Procedure programming for React components",
   "main": "./lib",
   "scripts": {
@@ -52,6 +52,9 @@
     "regenerator-runtime": "0.12.1",
     "uglify-js": "^3.0.28"
   },
+  "dependencies": {
+    "fast-deep-equal": "2.0.1"
+  },
   "browserify": {
     "transform": [
       "babelify",
@@ -67,8 +70,5 @@
     "globals": {
       "__DEV__": true
     }
-  },
-  "dependencies": {
-    "fast-deep-equal": "2.0.1"
   }
 }

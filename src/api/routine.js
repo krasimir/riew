@@ -11,13 +11,28 @@ const updatedAction = id => `${ id }_updated`;
 export function createRoutineInstance(routineFunc) {
   let id = getId();
   let mounted = false;
-  let preRoutineProps = null;
   let tasksToRemove = [];
+  let permanentProps = {};
   let actionsToFire = [];
   let onRendered;
 
   function isMounted() {
     return mounted;
+  }
+  function processProps(props) {
+    const result = {};
+
+    for (let key in props) {
+      if (key.charAt(0) === '$') {
+        permanentProps[key.substr(1, key.length)] = props[key];
+      } else {
+        result[key] = props[key];
+      }
+    }
+    return {
+      ...permanentProps,
+      ...result
+    };
   }
 
   const instance = {
@@ -27,7 +42,6 @@ export function createRoutineInstance(routineFunc) {
     isMounted,
     in(initialProps, Component, setContent) {
       mounted = true;
-      preRoutineProps = initialProps;
       routineFunc(
         {
           render(props) {
@@ -37,7 +51,7 @@ export function createRoutineInstance(routineFunc) {
             } else if (props === null) {
               setContent(() => null);
             } else {
-              setContent(<Component {...props}/>);
+              setContent(<Component {...processProps(props)}/>);
             }
             return new Promise(done => (onRendered = done));
           },
@@ -45,7 +59,7 @@ export function createRoutineInstance(routineFunc) {
             const task = System.takeEvery(updatedAction(id), callback);
 
             tasksToRemove.push(task);
-            callback(preRoutineProps);
+            callback(initialProps);
           },
           put(...args) {
             return System.put(...args);
@@ -73,7 +87,7 @@ export function createRoutineInstance(routineFunc) {
       );
     },
     updated(newProps) {
-      System.put(updatedAction(id), preRoutineProps = newProps);
+      System.put(updatedAction(id), newProps);
     },
     rendered() {
       if (onRendered) onRendered();

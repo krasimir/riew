@@ -133,6 +133,10 @@ describe('Given the `routine` function', () => {
         expect(spy).toBeCalledWith(42);
       });
     });
+  });
+
+  // integration tests
+  describe('when we use the routine bridge and the instance together', () => {
     describe('and we use takeEvery', () => {
       it(`should
         * wait for the task done promise to be resolved
@@ -196,10 +200,27 @@ describe('Given the `routine` function', () => {
         expect(propsSpy.mock.calls[1]).toStrictEqual([ { zoo: 'mar' } ]);
       });
     });
-  });
+    describe('and we use permanent props', () => {
+      it('should preserve a prop for the next render', async () => {
+        const compSpy = jest.fn().mockImplementation(() => null);
+        const I = routine(async function ({ render }) {
+          act(() => {
+            render({ $foo: 'bar' });
+          });
+          await delay(10);
+          act(() => {
+            render();
+          });
+        }, compSpy);
 
-  // integration tests
-  describe('when we use the routine bridge and the instance together', () => {
+        render(<I />);
+
+        await delay(11);
+        expect(compSpy).toBeCalledTimes(2);
+        expect(compSpy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, {} ]);
+        expect(compSpy.mock.calls[1]).toStrictEqual([ { foo: 'bar' }, {} ]);
+      });
+    });
     it('should render nothing by default', () => {
       const R = routine(() => {}, () => <p>Hello</p>);
       const { container } = render(<R />);

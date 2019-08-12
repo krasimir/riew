@@ -298,6 +298,16 @@ var _slicedToArray = function () {
   };
 }();
 
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
+};
+
 exports.createRoutineInstance = createRoutineInstance;
 exports.default = routine;
 
@@ -333,13 +343,25 @@ var updatedAction = function updatedAction(id) {
 function createRoutineInstance(routineFunc) {
   var id = getId();
   var mounted = false;
-  var preRoutineProps = null;
   var tasksToRemove = [];
+  var permanentProps = {};
   var actionsToFire = [];
   var onRendered = void 0;
 
   function isMounted() {
     return mounted;
+  }
+  function processProps(props) {
+    var result = {};
+
+    for (var key in props) {
+      if (key.charAt(0) === '$') {
+        permanentProps[key.substr(1, key.length)] = props[key];
+      } else {
+        result[key] = props[key];
+      }
+    }
+    return _extends({}, permanentProps, result);
   }
 
   var instance = {
@@ -349,7 +371,6 @@ function createRoutineInstance(routineFunc) {
     isMounted: isMounted,
     in: function _in(initialProps, Component, setContent) {
       mounted = true;
-      preRoutineProps = initialProps;
       routineFunc({
         render: function render(props) {
           if (!mounted) return Promise.resolve();
@@ -360,7 +381,7 @@ function createRoutineInstance(routineFunc) {
               return null;
             });
           } else {
-            setContent(_react2.default.createElement(Component, props));
+            setContent(_react2.default.createElement(Component, processProps(props)));
           }
           return new Promise(function (done) {
             return onRendered = done;
@@ -370,7 +391,7 @@ function createRoutineInstance(routineFunc) {
           var task = _System2.default.takeEvery(updatedAction(id), callback);
 
           tasksToRemove.push(task);
-          callback(preRoutineProps);
+          callback(initialProps);
         },
         put: function put() {
           return _System2.default.put.apply(_System2.default, arguments);
@@ -398,7 +419,7 @@ function createRoutineInstance(routineFunc) {
       });
     },
     updated: function updated(newProps) {
-      _System2.default.put(updatedAction(id), preRoutineProps = newProps);
+      _System2.default.put(updatedAction(id), newProps);
     },
     rendered: function rendered() {
       if (onRendered) onRendered();
