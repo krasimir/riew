@@ -12,7 +12,6 @@ export function createRoutineInstance(routineFunc) {
   let id = getId();
   let mounted = false;
   let preRoutineProps = null;
-  let permanentProps = {};
   let tasksToRemove = [];
   let actionsToFire = [];
   let onRendered;
@@ -38,7 +37,7 @@ export function createRoutineInstance(routineFunc) {
             } else if (props === null) {
               setContent(() => null);
             } else {
-              setContent(<Component {...permanentProps } {...props}/>);
+              setContent(<Component {...props}/>);
             }
             return new Promise(done => (onRendered = done));
           },
@@ -47,13 +46,6 @@ export function createRoutineInstance(routineFunc) {
 
             tasksToRemove.push(task);
             callback(preRoutineProps);
-          },
-          setProp(name, value) {
-            if (typeof value === 'undefined') {
-              delete permanentProps[name];
-            } else {
-              permanentProps[name] = value;
-            }
           },
           put(...args) {
             return System.put(...args);

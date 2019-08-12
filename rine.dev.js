@@ -298,16 +298,6 @@ var _slicedToArray = function () {
   };
 }();
 
-var _extends = Object.assign || function (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];for (var key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key];
-      }
-    }
-  }return target;
-};
-
 exports.createRoutineInstance = createRoutineInstance;
 exports.default = routine;
 
@@ -344,7 +334,6 @@ function createRoutineInstance(routineFunc) {
   var id = getId();
   var mounted = false;
   var preRoutineProps = null;
-  var permanentProps = {};
   var tasksToRemove = [];
   var actionsToFire = [];
   var onRendered = void 0;
@@ -371,7 +360,7 @@ function createRoutineInstance(routineFunc) {
               return null;
             });
           } else {
-            setContent(_react2.default.createElement(Component, _extends({}, permanentProps, props)));
+            setContent(_react2.default.createElement(Component, props));
           }
           return new Promise(function (done) {
             return onRendered = done;
@@ -382,13 +371,6 @@ function createRoutineInstance(routineFunc) {
 
           tasksToRemove.push(task);
           callback(preRoutineProps);
-        },
-        setProp: function setProp(name, value) {
-          if (typeof value === 'undefined') {
-            delete permanentProps[name];
-          } else {
-            permanentProps[name] = value;
-          }
         },
         put: function put() {
           return _System2.default.put.apply(_System2.default, arguments);

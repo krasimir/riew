@@ -196,33 +196,6 @@ describe('Given the `routine` function', () => {
         expect(propsSpy.mock.calls[1]).toStrictEqual([ { zoo: 'mar' } ]);
       });
     });
-    describe('and we use "setProp"', () => {
-      it(`should
-        * set a permanent prop
-        * update a prop value if it is already set
-        * delete a prop if we don't pass a value`, async () => {
-        const spy = jest.fn().mockImplementation(() => null);
-        const I = routine(async function ({ setProp, render }) {
-          setProp('foo', 'bar');
-          setProp('xoo', 'yoo');
-          render();
-          await delay(20);
-          setProp('foo', 'moo');
-          setProp('xoo');
-          act(() => {
-            render();
-          });
-        }, spy);
-
-        render(<I />);
-
-        await delay(21);
-
-        expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar', xoo: 'yoo' }, {} ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { foo: 'moo' }, {} ]);
-      });
-    });
   });
 
   // integration tests
