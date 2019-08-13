@@ -19,7 +19,32 @@ import {
   CLEAR_COMPLETED
 } from './constants';
 
-const App = ({ list, footer }) => (
+const App = routine(function App({ render, state }) {
+  const todos = state(getInitialTodosData(), reducer);
+  const filter = state(ALL);
+  const ListPartial = connect(List, { todos, filter });
+  const FooterPartial = connect(Footer, { todos, filter });
+
+  todos.subscribe(saveTodosData);
+
+  render({
+    list: (
+      <ListPartial
+        onToggle={ index => put(TOGGLE, index) }
+        onDelete={ index => put(DELETE, index) }
+        onEdit={ index => put(EDIT, { index, value: true }) }
+        onUpdate={ (index, label) => put(UPDATE, { index, label }) }
+        onUpdateCancel={ index => put(EDIT, { index, value: false }) } />
+    ),
+    footer: (
+      <FooterPartial
+        all={ () => filter.set(ALL) }
+        active={ () => filter.set(ACTIVE) }
+        completed={ () => filter.set(COMPLETED) }
+        clearCompleted={ () => put(CLEAR_COMPLETED) } />
+    )
+  });
+}, ({ list, footer }) => (
   <React.Fragment>
     <section className='todoapp'>
       <header className='header'>
@@ -43,37 +68,6 @@ const App = ({ list, footer }) => (
       { footer }
     </section>
   </React.Fragment>
-);
+));
 
-App.propTypes = {
-  list: PropTypes.object.isRequired,
-  footer: PropTypes.object.isRequired
-};
-
-const RoutineComponent = routine(function App({ render, state }) {
-  const todos = state(getInitialTodosData(), reducer);
-  const filter = state(ALL);
-  const ListPartial = connect(List, { todos, filter });
-  const FooterPartial = connect(Footer, { todos, filter });
-
-  todos.subscribe(saveTodosData);
-  render({
-    list: (
-      <ListPartial
-        onToggle={ index => put(TOGGLE, index) }
-        onDelete={ index => put(DELETE, index) }
-        onEdit={ index => put(EDIT, { index, value: true }) }
-        onUpdate={ (index, label) => put(UPDATE, { index, label }) }
-        onUpdateCancel={ index => put(EDIT, { index, value: false }) } />
-    ),
-    footer: (
-      <FooterPartial
-        all={ () => filter.set(ALL) }
-        active={ () => filter.set(ACTIVE) }
-        completed={ () => filter.set(COMPLETED) }
-        clearCompleted={ () => put(CLEAR_COMPLETED) } />
-    )
-  });
-}, App);
-
-ReactDOM.render(<RoutineComponent />, document.querySelector('#container'));
+ReactDOM.render(<App />, document.querySelector('#container'));

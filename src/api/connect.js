@@ -1,7 +1,5 @@
 /* eslint-disable consistent-return */
-import React, { useState, useEffect } from 'react';
 import equal from 'fast-deep-equal';
-import { getFuncName } from '../utils';
 
 function isRineState(value) {
   return value.__rine === 'state';
@@ -22,7 +20,7 @@ function accumulateProps(map) {
   }, {});
 }
 
-export function mapStateToProps(map, func, translate = v => v, noInitialCall = false) {
+export function connect(map, func, translate = v => v, noInitialCall = false) {
   let aprops = accumulateProps(map);
 
   if (noInitialCall === false) {
@@ -49,16 +47,3 @@ export function mapStateToProps(map, func, translate = v => v, noInitialCall = f
 
   return () => unsubscribers.forEach(u => u());
 }
-
-export function connect(Component, map, translate = v => v) {
-  function StateBridge(props) {
-    let [ aprops, setAProps ] = useState(translate(accumulateProps(map)));
-
-    useEffect(() => mapStateToProps(map, setAProps, translate, true), []);
-
-    return <Component {...aprops} {...props}/>;
-  }
-
-  StateBridge.displayName = `Connected(${ getFuncName(Component) })`;
-  return StateBridge;
-};
