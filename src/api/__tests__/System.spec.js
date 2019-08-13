@@ -44,13 +44,14 @@ describe('Given System', () => {
       expect(spy).toBeCalledTimes(4);
     });
   });
-  describe('when we removeTasks', () => {
+  describe('when we removeTask', () => {
     it('should remove the tasks in the array', () => {
       const task1 = System.take('foo', () => {});
       const task2 = System.take('boo', () => {});
 
       expect(System.tasks).toHaveLength(2);
-      System.removeTasks([ task1, task2 ]);
+      System.removeTask(task1);
+      System.removeTask(task2);
       expect(System.tasks).toHaveLength(0);
     });
   });

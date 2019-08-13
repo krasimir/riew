@@ -22,8 +22,9 @@ function Task(type, callback) {
     type: type,
     callback: callback,
     done: null,
-    teardown: function teardown() {
+    cancel: function cancel() {
       this.active = false;
+      System.removeTask(this);
     },
     execute: function execute(payload, type) {
       if (this.active) {
@@ -33,7 +34,7 @@ function Task(type, callback) {
           this.callback(payload);
         }
         if (this.once) {
-          System.removeTasks([this]);
+          System.removeTask(this);
         }
       }
     }
@@ -56,15 +57,9 @@ var System = {
     this.tasks.push(task);
     return task;
   },
-  removeTasks: function removeTasks(tasks) {
-    var ids = tasks.reduce(function (map, task) {
-      map[task.id] = true;
-      return map;
-    }, {});
-
+  removeTask: function removeTask(taskToRemove) {
     this.tasks = this.tasks.filter(function (task) {
-      if (task.id in ids) {
-        task.teardown();
+      if (task.id === taskToRemove.id) {
         return false;
       }
       return true;
@@ -361,7 +356,9 @@ function createRoutineInstance(routineFunc) {
   };
 
   _System2.default.addTask(unmountedAction(id), function () {
-    _System2.default.removeTasks(tasksToRemove);
+    tasksToRemove.forEach(function (t) {
+      return t.cancel();
+    });
     _System2.default.putBulk(actionsToFire);
   });
 
@@ -501,7 +498,7 @@ function createState(initialValue, reducer) {
   _System2.default.addTask(teardownAction(state.id), function () {
     state.teardown();
     if (reducerTask) {
-      _System2.default.removeTasks([reducerTask]);
+      reducerTask.cancel();
     }
   });
 

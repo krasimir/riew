@@ -51,7 +51,7 @@ export default function createState(initialValue, reducer) {
   System.addTask(teardownAction(state.id), () => {
     state.teardown();
     if (reducerTask) {
-      System.removeTasks([ reducerTask ]);
+      reducerTask.cancel();
     }
   });
 

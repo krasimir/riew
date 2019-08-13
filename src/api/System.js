@@ -12,8 +12,9 @@ function Task(type, callback, once = true) {
     type,
     callback,
     done: null,
-    teardown() {
+    cancel() {
       this.active = false;
+      System.removeTask(this);
     },
     execute(payload, type) {
       if (this.active) {
@@ -23,7 +24,7 @@ function Task(type, callback, once = true) {
           this.callback(payload);
         }
         if (this.once) {
-          System.removeTasks([ this ]);
+          System.removeTask(this);
         }
       }
     }
@@ -46,15 +47,9 @@ const System = {
     this.tasks.push(task);
     return task;
   },
-  removeTasks(tasks) {
-    const ids = tasks.reduce((map, task) => {
-      map[ task.id ] = true;
-      return map;
-    }, {});
-
+  removeTask(taskToRemove) {
     this.tasks = this.tasks.filter(task => {
-      if (task.id in ids) {
-        task.teardown();
+      if (task.id === taskToRemove.id) {
         return false;
       }
       return true;

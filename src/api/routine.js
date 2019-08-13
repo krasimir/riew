@@ -88,7 +88,7 @@ export function createRoutineInstance(routineFunc) {
   System.addTask(
     unmountedAction(id),
     () => {
-      System.removeTasks(tasksToRemove);
+      tasksToRemove.forEach(t => t.cancel());
       System.putBulk(actionsToFire);
     }
   );
