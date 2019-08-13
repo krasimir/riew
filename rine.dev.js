@@ -249,7 +249,7 @@ var _extends = Object.assign || function (target) {
       }
     }
   }return target;
-};
+}; /* eslint-disable no-return-assign */
 
 exports.createRoutineInstance = createRoutineInstance;
 exports.default = routine;
@@ -292,17 +292,8 @@ function createRoutineInstance(routineFunc) {
   function isMounted() {
     return mounted;
   }
-  function prepareProps(props) {
-    var result = {};
-
-    for (var key in props) {
-      if (key.charAt(0) === '$') {
-        permanentProps[key.substr(1, key.length)] = props[key];
-      } else {
-        result[key] = props[key];
-      }
-    }
-    return _extends({}, permanentProps, result);
+  function preserveProps(props) {
+    return permanentProps = _extends({}, permanentProps, props);
   }
 
   var instance = {
@@ -323,7 +314,7 @@ function createRoutineInstance(routineFunc) {
               return null;
             });
           } else {
-            setContent(_react2.default.createElement(Component, prepareProps(props)));
+            setContent(_react2.default.createElement(Component, preserveProps(props)));
           }
           return new Promise(function (done) {
             return onRendered = done;

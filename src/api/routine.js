@@ -1,3 +1,4 @@
+/* eslint-disable no-return-assign */
 import React, { useState, useEffect } from 'react';
 import System from './System';
 import { getFuncName } from '../utils';
@@ -19,20 +20,8 @@ export function createRoutineInstance(routineFunc) {
   function isMounted() {
     return mounted;
   }
-  function prepareProps(props) {
-    const result = {};
-
-    for (let key in props) {
-      if (key.charAt(0) === '$') {
-        permanentProps[key.substr(1, key.length)] = props[key];
-      } else {
-        result[key] = props[key];
-      }
-    }
-    return {
-      ...permanentProps,
-      ...result
-    };
+  function preserveProps(props) {
+    return permanentProps = {...permanentProps, ...props};
   }
 
   const instance = {
@@ -52,7 +41,7 @@ export function createRoutineInstance(routineFunc) {
             } else if (props === null) {
               setContent(() => null);
             } else {
-              setContent(<Component {...prepareProps(props)}/>);
+              setContent(<Component {...preserveProps(props)}/>);
             }
             return new Promise(done => (onRendered = done));
           },

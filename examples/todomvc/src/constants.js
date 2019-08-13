@@ -9,3 +9,4 @@ export const ALL = 'ALL';
 export const ACTIVE = 'ACTIVE';
 export const COMPLETED = 'COMPLETED';
 export const CLEAR_COMPLETED = 'CLEAR_COMPLETED';
+export const CHANGE_FILTER = 'CHANGE_FILTER';

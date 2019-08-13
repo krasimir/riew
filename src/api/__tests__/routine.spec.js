@@ -200,12 +200,12 @@ describe('Given the `routine` function', () => {
         expect(propsSpy.mock.calls[1]).toStrictEqual([ { zoo: 'mar' } ]);
       });
     });
-    describe('and we use permanent props', () => {
+    describe('and when we need permanent props', () => {
       it('should preserve a prop for the next render', async () => {
         const compSpy = jest.fn().mockImplementation(() => null);
         const I = routine(async function ({ render }) {
           act(() => {
-            render({ $foo: 'bar' });
+            render({ foo: 'bar' });
           });
           await delay(10);
           act(() => {

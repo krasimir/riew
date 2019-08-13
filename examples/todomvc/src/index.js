@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import PropTypes from 'prop-types';
 import { routine, connect, put } from 'rine';
 
 import List from './List';
@@ -16,35 +15,26 @@ import {
   ALL,
   ACTIVE,
   COMPLETED,
-  CLEAR_COMPLETED
+  CLEAR_COMPLETED,
+  CHANGE_FILTER
 } from './constants';
 
 const App = routine(function App({ render, state }) {
   const todos = state(getInitialTodosData(), reducer);
-  const filter = state(ALL);
-  const ListPartial = connect(List, { todos, filter });
-  const FooterPartial = connect(Footer, { todos, filter });
-
-  todos.subscribe(saveTodosData);
-
-  render({
-    list: (
-      <ListPartial
-        onToggle={ index => put(TOGGLE, index) }
-        onDelete={ index => put(DELETE, index) }
-        onEdit={ index => put(EDIT, { index, value: true }) }
-        onUpdate={ (index, label) => put(UPDATE, { index, label }) }
-        onUpdateCancel={ index => put(EDIT, { index, value: false }) } />
-    ),
-    footer: (
-      <FooterPartial
-        all={ () => filter.set(ALL) }
-        active={ () => filter.set(ACTIVE) }
-        completed={ () => filter.set(COMPLETED) }
-        clearCompleted={ () => put(CLEAR_COMPLETED) } />
-    )
+  const filter = state(ALL, (current, action) => {
+    if (action.type === CHANGE_FILTER) {
+      return action.payload;
+    }
+    return current;
   });
-}, ({ list, footer }) => (
+
+  connect({ todos }, ({ todos }) => {
+    saveTodosData(todos);
+    render({ todos });
+  });
+  connect({ filter }, render);
+
+}, ({ todos, filter }) => (
   <React.Fragment>
     <section className='todoapp'>
       <header className='header'>
@@ -63,9 +53,22 @@ const App = routine(function App({ render, state }) {
       <section className='main'>
         <input id='toggle-all' className='toggle-all' type='checkbox' />
         <label htmlFor='toggle-all'>Mark all as complete</label>
-        { list }
+        <List
+          todos={ todos }
+          filter={ filter }
+          onToggle={ index => put(TOGGLE, index) }
+          onDelete={ index => put(DELETE, index) }
+          onEdit={ index => put(EDIT, { index, value: true }) }
+          onUpdate={ (index, label) => put(UPDATE, { index, label }) }
+          onUpdateCancel={ index => put(EDIT, { index, value: false }) } />
       </section>
-      { footer }
+        <Footer
+          todos={ todos }
+          filter={ filter }
+          all={ () => put(CHANGE_FILTER, ALL) }
+          active={ () => put(CHANGE_FILTER, ACTIVE) }
+          completed={ () => put(CHANGE_FILTER, COMPLETED) }
+          clearCompleted={ () => put(CLEAR_COMPLETED) } />
     </section>
   </React.Fragment>
 ));
