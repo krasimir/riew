@@ -6,20 +6,20 @@ import createState, { teardownAction } from './state';
 var ids = 0;
 const getId = () => `@@r${ ++ids }`;
 const unmountedAction = id => `${ id }_unmounted`;
-const updatedAction = id => `${ id }_updated`;
 
 export function createRoutineInstance(routineFunc) {
   let id = getId();
   let mounted = false;
   let tasksToRemove = [];
   let permanentProps = {};
-  let actionsToFire = [];
+  let outerProps = createState();
+  let actionsToFire = [ teardownAction(outerProps.id) ];
   let onRendered;
 
   function isMounted() {
     return mounted;
   }
-  function processProps(props) {
+  function prepareProps(props) {
     const result = {};
 
     for (let key in props) {
@@ -42,6 +42,7 @@ export function createRoutineInstance(routineFunc) {
     isMounted,
     in(initialProps, Component, setContent) {
       mounted = true;
+      outerProps.set(initialProps);
       routineFunc(
         {
           render(props) {
@@ -51,15 +52,13 @@ export function createRoutineInstance(routineFunc) {
             } else if (props === null) {
               setContent(() => null);
             } else {
-              setContent(<Component {...processProps(props)}/>);
+              setContent(<Component {...prepareProps(props)}/>);
             }
             return new Promise(done => (onRendered = done));
           },
-          onUpdated(callback) {
-            const task = System.takeEvery(updatedAction(id), callback);
-
-            tasksToRemove.push(task);
-            callback(initialProps);
+          useProps(callback) {
+            outerProps.subscribe(callback);
+            callback(outerProps.get());
           },
           put(...args) {
             return System.put(...args);
@@ -87,7 +86,7 @@ export function createRoutineInstance(routineFunc) {
       );
     },
     updated(newProps) {
-      System.put(updatedAction(id), newProps);
+      outerProps.set(newProps);
     },
     rendered() {
       if (onRendered) onRendered();

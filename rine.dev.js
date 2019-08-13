@@ -336,22 +336,20 @@ var getId = function getId() {
 var unmountedAction = function unmountedAction(id) {
   return id + '_unmounted';
 };
-var updatedAction = function updatedAction(id) {
-  return id + '_updated';
-};
 
 function createRoutineInstance(routineFunc) {
   var id = getId();
   var mounted = false;
   var tasksToRemove = [];
   var permanentProps = {};
-  var actionsToFire = [];
+  var outerProps = (0, _state2.default)();
+  var actionsToFire = [(0, _state.teardownAction)(outerProps.id)];
   var onRendered = void 0;
 
   function isMounted() {
     return mounted;
   }
-  function processProps(props) {
+  function prepareProps(props) {
     var result = {};
 
     for (var key in props) {
@@ -371,6 +369,7 @@ function createRoutineInstance(routineFunc) {
     isMounted: isMounted,
     in: function _in(initialProps, Component, setContent) {
       mounted = true;
+      outerProps.set(initialProps);
       routineFunc({
         render: function render(props) {
           if (!mounted) return Promise.resolve();
@@ -381,17 +380,15 @@ function createRoutineInstance(routineFunc) {
               return null;
             });
           } else {
-            setContent(_react2.default.createElement(Component, processProps(props)));
+            setContent(_react2.default.createElement(Component, prepareProps(props)));
           }
           return new Promise(function (done) {
             return onRendered = done;
           });
         },
-        onUpdated: function onUpdated(callback) {
-          var task = _System2.default.takeEvery(updatedAction(id), callback);
-
-          tasksToRemove.push(task);
-          callback(initialProps);
+        useProps: function useProps(callback) {
+          outerProps.subscribe(callback);
+          callback(outerProps.get());
         },
         put: function put() {
           return _System2.default.put.apply(_System2.default, arguments);
@@ -419,7 +416,7 @@ function createRoutineInstance(routineFunc) {
       });
     },
     updated: function updated(newProps) {
-      _System2.default.put(updatedAction(id), newProps);
+      outerProps.set(newProps);
     },
     rendered: function rendered() {
       if (onRendered) onRendered();

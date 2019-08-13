@@ -83,19 +83,19 @@ describe('Given the `routine` function', () => {
       });
     });
     describe('when we call the update method', () => {
-      it('should fire any onUpdated callbacks', () => {
-        const onUpdatedSpy = jest.fn();
+      it('should fire any props callbacks', () => {
+        const propsSpy = jest.fn();
         const F = () => {};
-        const c = createRoutineInstance(({ onUpdated }) => {
-          onUpdated(onUpdatedSpy);
+        const c = createRoutineInstance(({ useProps }) => {
+          useProps(propsSpy);
         });
 
         c.in({ a: 'b' }, F, () => {});
         c.updated({ c: 'd' });
 
-        expect(onUpdatedSpy).toBeCalledTimes(2);
-        expect(onUpdatedSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
-        expect(onUpdatedSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
+        expect(propsSpy).toBeCalledTimes(2);
+        expect(propsSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
+        expect(propsSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
       });
     });
     describe('when we use take', () => {
@@ -182,13 +182,13 @@ describe('Given the `routine` function', () => {
         expect(ss.get()).toBe(undefined);
       });
     });
-    describe('and we use "onUpdated"', () => {
+    describe('and we use "useProps"', () => {
       it(`should
         * fire the callback at least once
         * fire the callback on every props change`, () => {
         const propsSpy = jest.fn();
-        const I = routine(function ({ onUpdated }) {
-          onUpdated(propsSpy);
+        const I = routine(function ({ useProps }) {
+          useProps(propsSpy);
         });
 
         const { rerender } = render(<I foo='bar' />);
