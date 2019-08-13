@@ -133,7 +133,7 @@ var _extends = Object.assign || function (target) {
   }return target;
 }; /* eslint-disable consistent-return */
 
-exports.connect = connect;
+exports.default = connect;
 
 var _fastDeepEqual = require('fast-deep-equal');
 
@@ -523,7 +523,7 @@ function createState(initialValue, reducer) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.takeEvery = exports.take = exports.put = exports.mapStateToProps = exports.connect = exports.state = exports.routine = exports.System = undefined;
+exports.takeEvery = exports.take = exports.put = exports.connect = exports.state = exports.routine = exports.System = undefined;
 
 var _System = require('./api/System');
 
@@ -557,13 +557,7 @@ var _connect = require('./api/connect');
 Object.defineProperty(exports, 'connect', {
   enumerable: true,
   get: function get() {
-    return _connect.connect;
-  }
-});
-Object.defineProperty(exports, 'mapStateToProps', {
-  enumerable: true,
-  get: function get() {
-    return _connect.mapStateToProps;
+    return _interopRequireDefault(_connect).default;
   }
 });
 

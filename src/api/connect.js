@@ -20,7 +20,7 @@ function accumulateProps(map) {
   }, {});
 }
 
-export function connect(map, func, translate = v => v, noInitialCall = false) {
+export default function connect(map, func, translate = v => v, noInitialCall = false) {
   let aprops = accumulateProps(map);
 
   if (noInitialCall === false) {

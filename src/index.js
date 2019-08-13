@@ -3,7 +3,7 @@ import System from './api/System';
 export { default as System } from './api/System';
 export { default as routine } from './api/routine';
 export { default as state } from './api/state';
-export { connect, mapStateToProps } from './api/connect';
+export { default as connect } from './api/connect';
 
 export const put = System.put.bind(System);
 export const take = System.take.bind(System);

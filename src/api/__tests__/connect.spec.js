@@ -1,7 +1,6 @@
 import System from '../System';
 import state from '../state';
-
-import { connect } from '../connect';
+import connect from '../connect';
 
 describe('Given the connect method', () => {
   beforeEach(() => {
