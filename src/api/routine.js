@@ -55,13 +55,20 @@ export function createRoutineInstance(routineFunc) {
           take(...args) {
             const task = System.take(...args);
 
-            tasksToRemove.push(task);
+            if (Array.isArray(task)) {
+              tasksToRemove = tasksToRemove.concat(task);
+              if (task[0].done) {
+                return Promise.all(task.map(t => t.done));
+              }
+              return task;
+            }
+            tasksToRemove = tasksToRemove.concat([ task ]);
             return task.done;
           },
           takeEvery(...args) {
             const task = System.takeEvery(...args);
 
-            tasksToRemove.push(task);
+            tasksToRemove = tasksToRemove.concat(Array.isArray(task) ? task : [task]);
             return task;
           },
           state(...args) {

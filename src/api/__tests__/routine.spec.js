@@ -295,5 +295,41 @@ describe('Given the `routine` function', () => {
         exerciseHTML(container, '');
       });
     });
+    describe('and we use take or takeEvery with array of types', () => {
+      it('should handle them properly', async () => {
+        const spy = jest.fn();
+        const Component = routine(function ({ take, takeEvery }) {
+          take(['foo', 'bar'], spy);
+          takeEvery([ 'moo', 'zar' ], spy);
+        });
+
+        const { unmount } = render(<Component />);
+
+        act(() => System.put('foo', 1));
+        act(() => System.put('bar', 2));
+        act(() => System.put('moo', 3));
+        act(() => System.put('zar', 4));
+        unmount();
+        act(() => System.put('foo', 1));
+        act(() => System.put('bar', 2));
+        act(() => System.put('moo', 3));
+        act(() => System.put('zar', 4));
+
+        expect(spy).toHaveBeenCalledTimes(4);
+      });
+    });
+    describe('and we use take and await', () => {
+      it('should resume successfully', (done) => {
+        const Component = routine(async function ({ take }) {
+          expect(await take(['foo', 'bar'])).toStrictEqual([1, 2]);
+          done();
+        });
+
+        render(<Component />);
+
+        act(() => System.put('foo', 1));
+        act(() => System.put('bar', 2));
+      });
+    });
   });
 });

@@ -325,13 +325,22 @@ function createRoutineInstance(routineFunc) {
         take: function take() {
           var task = _System2.default.take.apply(_System2.default, arguments);
 
-          tasksToRemove.push(task);
+          if (Array.isArray(task)) {
+            tasksToRemove = tasksToRemove.concat(task);
+            if (task[0].done) {
+              return Promise.all(task.map(function (t) {
+                return t.done;
+              }));
+            }
+            return task;
+          }
+          tasksToRemove = tasksToRemove.concat([task]);
           return task.done;
         },
         takeEvery: function takeEvery() {
           var task = _System2.default.takeEvery.apply(_System2.default, arguments);
 
-          tasksToRemove.push(task);
+          tasksToRemove = tasksToRemove.concat(Array.isArray(task) ? task : [task]);
           return task;
         },
         state: function state() {
