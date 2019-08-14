@@ -48,7 +48,7 @@ export function createRoutineInstance(routineFunc) {
           },
           useProps(callback) {
             outerProps.subscribe(callback);
-            callback(outerProps.get());
+            callback(outerProps());
           },
           put(...args) {
             return System.put(...args);

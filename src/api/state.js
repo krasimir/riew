@@ -12,35 +12,40 @@ export default function createState(initialValue, reducer) {
   let subscribers = [];
   let reducerTask;
 
-  const state = {
-    __rine: 'state',
-    __subscribers() {
-      return subscribers;
-    },
-    id: getId(),
-    set(newValue) {
-      stateValue = newValue;
-      subscribers.forEach(({ update }) => update(stateValue));
-    },
-    get() {
-      return stateValue;
-    },
-    subscribe(update) {
-      const subscriberId = ++subscribersUID;
+  const state = function (newValue) {
+    if (typeof newValue !== 'undefined') {
+      state.set(newValue);
+    }
+    return state.get();
+  };
 
-      subscribers.push({ id: subscriberId, update });
-      return () => {
-        subscribers = subscribers.filter(({ id }) => id !== subscriberId);
-      };
-    },
-    teardown() {
-      subscribers = [];
-      stateValue = undefined;
-    },
-    put(type, payload) {
-      if (reducer) {
-        this.set(reducer(stateValue, { type, payload }));
-      }
+  state.__rine = 'state';
+  state.__subscribers = () => {
+    return subscribers;
+  };
+  state.id = getId();
+  state.set = (newValue) => {
+    stateValue = newValue;
+    subscribers.forEach(({ update }) => update(stateValue));
+  };
+  state.get = () => {
+    return stateValue;
+  };
+  state.subscribe = (update) => {
+    const subscriberId = ++subscribersUID;
+
+    subscribers.push({ id: subscriberId, update });
+    return () => {
+      subscribers = subscribers.filter(({ id }) => id !== subscriberId);
+    };
+  };
+  state.teardown = () => {
+    subscribers = [];
+    stateValue = undefined;
+  };
+  state.put = (type, payload) => {
+    if (reducer) {
+      state.set(reducer(stateValue, { type, payload }));
     }
   };
 

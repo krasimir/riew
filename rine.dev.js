@@ -149,8 +149,8 @@ function _defineProperty(obj, key, value) {
 function isRineState(value) {
   return value.__rine === 'state';
 }
-function getValueFromState(state) {
-  return state.get();
+function getValueFromState(s) {
+  return s();
 }
 function accumulateProps(map) {
   return Object.keys(map).reduce(function (props, key) {
@@ -178,10 +178,10 @@ function connect(map, func) {
     var value = map[key];
 
     if (isRineState(value)) {
-      var state = value;
+      var stateInstance = value;
 
-      return state.subscribe(function () {
-        var newValue = getValueFromState(state);
+      return stateInstance.subscribe(function () {
+        var newValue = getValueFromState(stateInstance);
 
         if (!(0, _fastDeepEqual2.default)(aprops[key], newValue)) {
           func(aprops = _extends({}, aprops, _defineProperty({}, key, newValue)));
@@ -318,7 +318,7 @@ function createRoutineInstance(routineFunc) {
         },
         useProps: function useProps(callback) {
           outerProps.subscribe(callback);
-          callback(outerProps.get());
+          callback(outerProps());
         },
         put: function put() {
           return _System2.default.put.apply(_System2.default, arguments);
@@ -479,42 +479,46 @@ function createState(initialValue, reducer) {
   var subscribers = [];
   var reducerTask = void 0;
 
-  var state = {
-    __rine: 'state',
-    __subscribers: function __subscribers() {
-      return subscribers;
-    },
+  var state = function state(newValue) {
+    if (typeof newValue !== 'undefined') {
+      state.set(newValue);
+    }
+    return state.get();
+  };
 
-    id: getId(),
-    set: function set(newValue) {
-      stateValue = newValue;
-      subscribers.forEach(function (_ref) {
-        var update = _ref.update;
-        return update(stateValue);
+  state.__rine = 'state';
+  state.__subscribers = function () {
+    return subscribers;
+  };
+  state.id = getId();
+  state.set = function (newValue) {
+    stateValue = newValue;
+    subscribers.forEach(function (_ref) {
+      var update = _ref.update;
+      return update(stateValue);
+    });
+  };
+  state.get = function () {
+    return stateValue;
+  };
+  state.subscribe = function (update) {
+    var subscriberId = ++subscribersUID;
+
+    subscribers.push({ id: subscriberId, update: update });
+    return function () {
+      subscribers = subscribers.filter(function (_ref2) {
+        var id = _ref2.id;
+        return id !== subscriberId;
       });
-    },
-    get: function get() {
-      return stateValue;
-    },
-    subscribe: function subscribe(update) {
-      var subscriberId = ++subscribersUID;
-
-      subscribers.push({ id: subscriberId, update: update });
-      return function () {
-        subscribers = subscribers.filter(function (_ref2) {
-          var id = _ref2.id;
-          return id !== subscriberId;
-        });
-      };
-    },
-    teardown: function teardown() {
-      subscribers = [];
-      stateValue = undefined;
-    },
-    put: function put(type, payload) {
-      if (reducer) {
-        this.set(reducer(stateValue, { type: type, payload: payload }));
-      }
+    };
+  };
+  state.teardown = function () {
+    subscribers = [];
+    stateValue = undefined;
+  };
+  state.put = function (type, payload) {
+    if (reducer) {
+      state.set(reducer(stateValue, { type: type, payload: payload }));
     }
   };
 

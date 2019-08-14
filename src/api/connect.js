@@ -4,8 +4,8 @@ import equal from 'fast-deep-equal';
 function isRineState(value) {
   return value.__rine === 'state';
 }
-function getValueFromState(state) {
-  return state.get();
+function getValueFromState(s) {
+  return s();
 }
 function accumulateProps(map) {
   return Object.keys(map).reduce((props, key) => {
@@ -31,11 +31,11 @@ export default function connect(map, func, noInitialCall = false) {
     const value = map[key];
 
     if (isRineState(value)) {
-      const state = value;
+      const stateInstance = value;
 
-      return state.subscribe(
+      return stateInstance.subscribe(
         () => {
-          const newValue = getValueFromState(state);
+          const newValue = getValueFromState(stateInstance);
 
           if (!equal(aprops[key], newValue)) {
             func(aprops = { ...aprops, [key]: newValue });
