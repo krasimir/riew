@@ -20,11 +20,11 @@ function accumulateProps(map) {
   }, {});
 }
 
-export default function connect(map, func, translate = v => v, noInitialCall = false) {
+export default function connect(map, func, noInitialCall = false) {
   let aprops = accumulateProps(map);
 
   if (noInitialCall === false) {
-    func(translate(aprops));
+    func(aprops);
   }
 
   const unsubscribers = Object.keys(map).map(key => {
@@ -38,7 +38,7 @@ export default function connect(map, func, translate = v => v, noInitialCall = f
           const newValue = getValueFromState(state);
 
           if (!equal(aprops[key], newValue)) {
-            func(translate(aprops = { ...aprops, [key]: newValue }));
+            func(aprops = { ...aprops, [key]: newValue });
           }
         }
       );

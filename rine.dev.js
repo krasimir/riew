@@ -166,15 +166,12 @@ function accumulateProps(map) {
 }
 
 function connect(map, func) {
-  var translate = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function (v) {
-    return v;
-  };
-  var noInitialCall = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+  var noInitialCall = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
   var aprops = accumulateProps(map);
 
   if (noInitialCall === false) {
-    func(translate(aprops));
+    func(aprops);
   }
 
   var unsubscribers = Object.keys(map).map(function (key) {
@@ -187,7 +184,7 @@ function connect(map, func) {
         var newValue = getValueFromState(state);
 
         if (!(0, _fastDeepEqual2.default)(aprops[key], newValue)) {
-          func(translate(aprops = _extends({}, aprops, _defineProperty({}, key, newValue))));
+          func(aprops = _extends({}, aprops, _defineProperty({}, key, newValue)));
         }
       });
     }
@@ -263,6 +260,10 @@ var _state = require('./state');
 
 var _state2 = _interopRequireDefault(_state);
 
+var _connect2 = require('./connect');
+
+var _connect3 = _interopRequireDefault(_connect2);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -278,10 +279,10 @@ var unmountedAction = function unmountedAction(id) {
 function createRoutineInstance(routineFunc) {
   var id = getId();
   var mounted = false;
-  var tasksToRemove = [];
-  var permanentProps = {};
   var outerProps = (0, _state2.default)();
-  var actionsToFire = [(0, _state.teardownAction)(outerProps.id)];
+  var permanentProps = {};
+  var funcsToCallOnUnmount = [];
+  var actionsToFireOnUnmount = [(0, _state.teardownAction)(outerProps.id)];
   var onRendered = void 0;
 
   function isMounted() {
@@ -326,7 +327,11 @@ function createRoutineInstance(routineFunc) {
           var task = _System2.default.take.apply(_System2.default, arguments);
 
           if (Array.isArray(task)) {
-            tasksToRemove = tasksToRemove.concat(task);
+            funcsToCallOnUnmount = funcsToCallOnUnmount.concat(task.map(function (t) {
+              return function () {
+                return t.cancel();
+              };
+            }));
             if (task[0].done) {
               return Promise.all(task.map(function (t) {
                 return t.done;
@@ -334,20 +339,35 @@ function createRoutineInstance(routineFunc) {
             }
             return task;
           }
-          tasksToRemove = tasksToRemove.concat([task]);
+          funcsToCallOnUnmount.push(function () {
+            return task.cancel();
+          });
           return task.done;
         },
         takeEvery: function takeEvery() {
           var task = _System2.default.takeEvery.apply(_System2.default, arguments);
 
-          tasksToRemove = tasksToRemove.concat(Array.isArray(task) ? task : [task]);
+          if (Array.isArray(task)) {
+            funcsToCallOnUnmount = funcsToCallOnUnmount.concat(task.map(function (t) {
+              return function () {
+                return t.cancel();
+              };
+            }));
+          } else {
+            funcsToCallOnUnmount.push(function () {
+              return task.cancel();
+            });
+          }
           return task;
         },
         state: function state() {
           var state = _state2.default.apply(undefined, arguments);
 
-          actionsToFire.push((0, _state.teardownAction)(state.id));
+          actionsToFireOnUnmount.push((0, _state.teardownAction)(state.id));
           return state;
+        },
+        connect: function connect() {
+          funcsToCallOnUnmount.push(_connect3.default.apply(undefined, arguments));
         },
 
         isMounted: isMounted
@@ -365,10 +385,10 @@ function createRoutineInstance(routineFunc) {
   };
 
   _System2.default.addTask(unmountedAction(id), function () {
-    tasksToRemove.forEach(function (t) {
-      return t.cancel();
+    funcsToCallOnUnmount.forEach(function (f) {
+      return f();
     });
-    _System2.default.putBulk(actionsToFire);
+    _System2.default.putBulk(actionsToFireOnUnmount);
   });
 
   return instance;
@@ -424,7 +444,7 @@ function routine(routineFunc) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":6,"./System":1,"./state":4}],4:[function(require,module,exports){
+},{"../utils":6,"./System":1,"./connect":2,"./state":4}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import System from './System';
 import { getFuncName } from '../utils';
 import createState, { teardownAction } from './state';
+import connect from './connect';
 
 var ids = 0;
 const getId = () => `@@r${ ++ids }`;
@@ -11,10 +12,10 @@ const unmountedAction = id => `${ id }_unmounted`;
 export function createRoutineInstance(routineFunc) {
   let id = getId();
   let mounted = false;
-  let tasksToRemove = [];
-  let permanentProps = {};
   let outerProps = createState();
-  let actionsToFire = [ teardownAction(outerProps.id) ];
+  let permanentProps = {};
+  let funcsToCallOnUnmount = [];
+  let actionsToFireOnUnmount = [ teardownAction(outerProps.id) ];
   let onRendered;
 
   function isMounted() {
@@ -56,26 +57,33 @@ export function createRoutineInstance(routineFunc) {
             const task = System.take(...args);
 
             if (Array.isArray(task)) {
-              tasksToRemove = tasksToRemove.concat(task);
+              funcsToCallOnUnmount = funcsToCallOnUnmount.concat(task.map(t => (() => t.cancel())));
               if (task[0].done) {
                 return Promise.all(task.map(t => t.done));
               }
               return task;
             }
-            tasksToRemove = tasksToRemove.concat([ task ]);
+            funcsToCallOnUnmount.push(() => task.cancel());
             return task.done;
           },
           takeEvery(...args) {
             const task = System.takeEvery(...args);
 
-            tasksToRemove = tasksToRemove.concat(Array.isArray(task) ? task : [task]);
+            if (Array.isArray(task)) {
+              funcsToCallOnUnmount = funcsToCallOnUnmount.concat(task.map(t => (() => t.cancel())));
+            } else {
+              funcsToCallOnUnmount.push(() => task.cancel());
+            }
             return task;
           },
           state(...args) {
             const state = createState(...args);
 
-            actionsToFire.push(teardownAction(state.id));
+            actionsToFireOnUnmount.push(teardownAction(state.id));
             return state;
+          },
+          connect(...args) {
+            funcsToCallOnUnmount.push(connect(...args));
           },
           isMounted
         }
@@ -95,8 +103,8 @@ export function createRoutineInstance(routineFunc) {
   System.addTask(
     unmountedAction(id),
     () => {
-      tasksToRemove.forEach(t => t.cancel());
-      System.putBulk(actionsToFire);
+      funcsToCallOnUnmount.forEach(f => f());
+      System.putBulk(actionsToFireOnUnmount);
     }
   );
 

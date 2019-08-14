@@ -54,26 +54,4 @@ describe('Given the connect method', () => {
       expect(spy.mock.calls[0]).toStrictEqual([ { value: { message: 'a' } }]);
     });
   });
-  describe('when we use a translate function', () => {
-    it('should get the accumulated props and pass them through the translate function', () => {
-      const spy = jest.fn();
-      const s1 = state('foo');
-      const s2 = state('bar');
-
-      connect({ s1, s2 }, spy, function ({ s1, s2 }) {
-        return {
-          s3: s1 + '_xxx',
-          s4: s2 + '_xxx'
-        };
-      });
-
-      s1.set('oof');
-      s2.set('rab');
-
-      expect(spy).toBeCalledTimes(3);
-      expect(spy.mock.calls[0]).toStrictEqual([ { s3: 'foo_xxx', s4: 'bar_xxx' } ]);
-      expect(spy.mock.calls[1]).toStrictEqual([ { s3: 'oof_xxx', s4: 'bar_xxx' } ]);
-      expect(spy.mock.calls[2]).toStrictEqual([ { s3: 'oof_xxx', s4: 'rab_xxx' } ]);
-    });
-  });
 });

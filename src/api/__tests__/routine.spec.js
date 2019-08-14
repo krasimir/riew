@@ -3,6 +3,7 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import System from '../System';
 import routine, { createRoutineInstance } from '../routine';
+import state from '../state';
 import { delay, exerciseHTML } from '../../__helpers__';
 
 describe('Given the `routine` function', () => {
@@ -310,12 +311,16 @@ describe('Given the `routine` function', () => {
         act(() => System.put('moo', 3));
         act(() => System.put('zar', 4));
         unmount();
-        act(() => System.put('foo', 1));
-        act(() => System.put('bar', 2));
-        act(() => System.put('moo', 3));
-        act(() => System.put('zar', 4));
+        act(() => System.put('foo', 5));
+        act(() => System.put('bar', 6));
+        act(() => System.put('moo', 7));
+        act(() => System.put('zar', 8));
 
         expect(spy).toHaveBeenCalledTimes(4);
+        expect(spy.mock.calls[0]).toStrictEqual([ 1 ]);
+        expect(spy.mock.calls[1]).toStrictEqual([ 2 ]);
+        expect(spy.mock.calls[2]).toStrictEqual([ 3 ]);
+        expect(spy.mock.calls[3]).toStrictEqual([ 4 ]);
       });
     });
     describe('and we use take and await', () => {
@@ -329,6 +334,28 @@ describe('Given the `routine` function', () => {
 
         act(() => System.put('foo', 1));
         act(() => System.put('bar', 2));
+      });
+    });
+    describe('and we use connect', () => {
+      it('should connect to the state and unsubscribe when we unmount', () => {
+        const s1 = state(1);
+        const s2 = state(2);
+        const spy = jest.fn();
+        const Component = routine(async function ({ connect }) {
+          connect({ s1, s2 }, spy);
+        });
+        const { unmount } = render(<Component />);
+
+        act(() => s1.set(3));
+        act(() => s2.set(4));
+        unmount();
+
+        expect(spy).toBeCalledTimes(3);
+        expect(spy.mock.calls[0]).toStrictEqual([ { s1: 1, s2: 2 }]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { s1: 3, s2: 2 }]);
+        expect(spy.mock.calls[2]).toStrictEqual([ { s1: 3, s2: 4 }]);
+        expect(s1.__subscribers()).toHaveLength(0);
+        expect(s2.__subscribers()).toHaveLength(0);
       });
     });
   });
