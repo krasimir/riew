@@ -1,4 +1,48 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.rine = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var items = {};
+var resolver = function resolver(key) {
+  if (items[key]) {
+    return items[key];
+  }
+  throw new Error("Rine registry: missing \"" + key + "\".");
+};
+
+var Registry = {
+  __resolver: resolver,
+  set: function set(key, value) {
+    items[key] = value;
+  },
+  get: function get(key) {
+    return this.__resolver(key);
+  },
+  getBulk: function getBulk(arr) {
+    var _this = this;
+
+    return arr.reduce(function (all, key) {
+      all[key] = _this.get(key);
+      return all;
+    }, {});
+  },
+  remove: function remove(key) {
+    delete items[key];
+  },
+  resolver: function resolver(r) {
+    this.__resolver = r;
+  },
+  reset: function reset() {
+    items = {};
+    this.__resolver = resolver;
+  }
+};
+
+exports.default = Registry;
+
+},{}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -111,7 +155,7 @@ var System = {
 
 exports.default = System;
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -199,7 +243,7 @@ function connect(map, func) {
   };
 }
 
-},{"fast-deep-equal":7}],3:[function(require,module,exports){
+},{"fast-deep-equal":8}],4:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -264,6 +308,10 @@ var _connect2 = require('./connect');
 
 var _connect3 = _interopRequireDefault(_connect2);
 
+var _Registry = require('./Registry');
+
+var _Registry2 = _interopRequireDefault(_Registry);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -276,7 +324,7 @@ var unmountedAction = function unmountedAction(id) {
   return id + '_unmounted';
 };
 
-function createRoutineInstance(routineFunc) {
+function createRoutineInstance(routineFunc, dependencies) {
   var id = getId();
   var mounted = false;
   var outerProps = (0, _state2.default)();
@@ -300,7 +348,7 @@ function createRoutineInstance(routineFunc) {
     in: function _in(initialProps, Component, setContent) {
       mounted = true;
       outerProps.set(initialProps);
-      routineFunc({
+      routineFunc(_extends({}, dependencies, {
         render: function render(props) {
           if (!mounted) return Promise.resolve();
           if (typeof props === 'string' || typeof props === 'number' || _react2.default.isValidElement(props)) {
@@ -371,7 +419,7 @@ function createRoutineInstance(routineFunc) {
         },
 
         isMounted: isMounted
-      });
+      }));
     },
     updated: function updated(newProps) {
       outerProps.set(newProps);
@@ -400,6 +448,7 @@ function routine(routineFunc) {
   };
   var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : { createRoutineInstance: createRoutineInstance };
 
+  var dependencies = [];
   var RoutineBridge = function RoutineBridge(outerProps) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
@@ -425,7 +474,7 @@ function routine(routineFunc) {
 
     // mounting
     (0, _react.useEffect)(function () {
-      setInstance(instance = options.createRoutineInstance(routineFunc));
+      setInstance(instance = options.createRoutineInstance(routineFunc, dependencies));
 
       instance.in(outerProps, Component, setContent);
 
@@ -439,12 +488,20 @@ function routine(routineFunc) {
   };
 
   RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(routineFunc) + ')';
+  RoutineBridge.inject = function () {
+    for (var _len = arguments.length, keys = Array(_len), _key = 0; _key < _len; _key++) {
+      keys[_key] = arguments[_key];
+    }
+
+    dependencies = _Registry2.default.getBulk(keys);
+    return RoutineBridge;
+  };
 
   return RoutineBridge;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":6,"./System":1,"./connect":2,"./state":4}],4:[function(require,module,exports){
+},{"../utils":7,"./Registry":1,"./System":2,"./connect":3,"./state":5}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -457,10 +514,13 @@ var _System = require('./System');
 
 var _System2 = _interopRequireDefault(_System);
 
+var _utils = require('../utils');
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
+/* eslint-disable no-use-before-define, no-return-assign */
 var ids = 0;
 var getId = function getId() {
   return '@@s' + ++ids;
@@ -473,17 +533,45 @@ var isState = exports.isState = function isState(state) {
   return state && state.__rine === 'state';
 };
 
-function createState(initialValue, reducer) {
+function createState(initialValue) {
   var subscribersUID = 0;
   var stateValue = initialValue;
   var subscribers = [];
-  var reducerTask = void 0;
+  var reducerTasks = [];
+  var mutations = [];
+  var mutationInProgress = false;
 
   var state = function state(newValue) {
     if (typeof newValue !== 'undefined') {
       state.set(newValue);
     }
     return state.get();
+  };
+  var doneMutation = function doneMutation(value) {
+    state.set(value);
+    mutationInProgress = false;
+    processMutations();
+  };
+  var processMutations = function processMutations() {
+    if (mutations.length === 0 || mutationInProgress) return;
+    mutationInProgress = true;
+
+    var _mutations$shift = mutations.shift(),
+        reducer = _mutations$shift.reducer,
+        payload = _mutations$shift.payload,
+        done = _mutations$shift.done;
+
+    var result = reducer(stateValue, payload);
+
+    if ((0, _utils.isPromise)(result)) {
+      result.then(function (value) {
+        done(value);
+        doneMutation(value);
+      });
+    } else {
+      done(result);
+      doneMutation(result);
+    }
   };
 
   state.__rine = 'state';
@@ -497,6 +585,7 @@ function createState(initialValue, reducer) {
       var update = _ref.update;
       return update(stateValue);
     });
+    return newValue;
   };
   state.get = function () {
     return stateValue;
@@ -513,38 +602,49 @@ function createState(initialValue, reducer) {
     };
   };
   state.teardown = function () {
-    subscribers = [];
-    stateValue = undefined;
+    _System2.default.put(teardownAction(state.id));
   };
-  state.put = function (type, payload) {
-    if (reducer) {
-      state.set(reducer(stateValue, { type: type, payload: payload }));
+  state.mutation = function (reducer) {
+    for (var _len = arguments.length, types = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      types[_key - 1] = arguments[_key];
     }
-  };
 
-  if (reducer) {
-    reducerTask = _System2.default.takeEvery('*', function (payload, type) {
-      return state.put(type, payload);
-    });
-  }
+    if (types.length > 0) {
+      types.forEach(function (type) {
+        reducerTasks.push(_System2.default.takeEvery(type, function (payload) {
+          mutations.push({ reducer: reducer, payload: payload, done: function done() {} });
+          processMutations();
+        }));
+      });
+    }
+    return function (payload) {
+      return new Promise(function (done) {
+        mutations.push({ reducer: reducer, payload: payload, done: done });
+        processMutations();
+      });
+    };
+  };
 
   _System2.default.addTask(teardownAction(state.id), function () {
-    state.teardown();
-    if (reducerTask) {
-      reducerTask.cancel();
+    subscribers = [];
+    stateValue = undefined;
+    if (reducerTasks.length > 0) {
+      reducerTasks.forEach(function (t) {
+        return t.cancel();
+      });
     }
   });
 
   return state;
 };
 
-},{"./System":1}],5:[function(require,module,exports){
+},{"../utils":7,"./System":2}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.takeEvery = exports.take = exports.put = exports.connect = exports.state = exports.routine = exports.System = undefined;
+exports.resolver = exports.register = exports.takeEvery = exports.take = exports.put = exports.connect = exports.state = exports.rine = exports.System = undefined;
 
 var _System = require('./api/System');
 
@@ -557,7 +657,7 @@ Object.defineProperty(exports, 'System', {
 
 var _routine = require('./api/routine');
 
-Object.defineProperty(exports, 'routine', {
+Object.defineProperty(exports, 'rine', {
   enumerable: true,
   get: function get() {
     return _interopRequireDefault(_routine).default;
@@ -584,6 +684,10 @@ Object.defineProperty(exports, 'connect', {
 
 var _System2 = _interopRequireDefault(_System);
 
+var _Registry = require('./api/Registry');
+
+var _Registry2 = _interopRequireDefault(_Registry);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -591,8 +695,10 @@ function _interopRequireDefault(obj) {
 var put = exports.put = _System2.default.put.bind(_System2.default);
 var take = exports.take = _System2.default.take.bind(_System2.default);
 var takeEvery = exports.takeEvery = _System2.default.takeEvery.bind(_System2.default);
+var register = exports.register = _Registry2.default.set.bind(_Registry2.default);
+var resolver = exports.resolver = _Registry2.default.resolver.bind(_Registry2.default);
 
-},{"./api/System":1,"./api/connect":2,"./api/routine":3,"./api/state":4}],6:[function(require,module,exports){
+},{"./api/Registry":1,"./api/System":2,"./api/connect":3,"./api/routine":4,"./api/state":5}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -611,7 +717,7 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   return result ? result[1] : 'unknown';
 };
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 'use strict';
 
 var isArray = Array.isArray;
@@ -668,5 +774,5 @@ module.exports = function equal(a, b) {
   return a!==a && b!==b;
 };
 
-},{}]},{},[5])(5)
+},{}]},{},[6])(6)
 });

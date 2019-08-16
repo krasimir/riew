@@ -1,5 +1,6 @@
-import state, { teardownAction } from '../state';
+import state from '../state';
 import System from '../System';
+import { delay } from '../../__helpers__';
 
 describe('Given the StateController', () => {
   beforeEach(() => {
@@ -52,35 +53,70 @@ describe('Given the StateController', () => {
       expect(c.__subscribers()).toHaveLength(0);
     });
   });
-  describe('when we use a reducer', () => {
-    it('should call the reducer if we put an action', () => {
-      const spy = jest.fn();
-      const c = state(10, (oldValue, action) => {
-        spy(oldValue, action);
-        return oldValue + action.payload;
-      });
-
-      c.put('FOOBAR', 5);
-
-      expect(spy).toBeCalledWith(10, { type: 'FOOBAR', payload: 5 });
-      expect(c()).toEqual(15);
-    });
+  describe('when we define a mutation', () => {
     it(`should
-      * call the reducer if a System.put is called
-      * remove the reducer task if the state is teardown`, () => {
-      const spy = jest.fn();
-      const c = state(10, (oldValue, action) => {
-        spy(oldValue, action);
-        return oldValue + action.payload;
-      });
+    * return a function that if fired will run the reducer
+    * create a task for listening on that particular action`, () => {
+      const s = state(10);
 
-      System.put('FOOBAR', 5);
+      const add = s.mutation((currentValue, payload) => currentValue + payload, 'foo', 'bar');
 
-      expect(spy).toBeCalledWith(10, { type: 'FOOBAR', payload: 5 });
-      expect(c()).toEqual(15);
-      expect(System.tasks).toHaveLength(2);
-      System.put(teardownAction(c.id));
+      System.put('bar', 6);
+      add(20);
+      System.put('foo', 5);
+
+      expect(s()).toBe(41);
+      expect(System.tasks).toHaveLength(3);
+      s.teardown();
       expect(System.tasks).toHaveLength(0);
+    });
+    describe('and the mutation is async', () => {
+      it(`should
+        * wait till the mutation is over
+        * wait if there is another mutation running at the moment`, async () => {
+        const s = state(10);
+        const add = s.mutation(
+          async (currentValue, payload) => {
+            await delay(5);
+            return currentValue + payload;
+          },
+          'foo',
+          'bar'
+        );
+
+        add(20);
+        System.put('foo', 5);
+        System.put('bar', 6);
+
+        await delay(20);
+
+        expect(s()).toBe(41);
+        expect(System.tasks).toHaveLength(3);
+        s.teardown();
+        expect(System.tasks).toHaveLength(0);
+      });
+      it('should return a promise for when we call the mutation function', (done) => {
+        const s = state(10);
+        const add = s.mutation(
+          async (currentValue, payload) => {
+            await delay(5);
+            return currentValue + payload;
+          }
+        );
+        const minus = s.mutation(async (currentValue, payload) => {
+          await delay(5);
+          return currentValue - payload;
+        });
+
+        Promise.all([
+          add(5),
+          minus(1),
+          minus(1)
+        ]).then(() => {
+          expect(s()).toBe(13);
+          done();
+        });
+      });
     });
   });
 });

@@ -32,26 +32,24 @@ describe('Given the connect method', () => {
       expect(B.__subscribers()).toHaveLength(0);
     });
   });
-  describe('when we connect to state that do not change and we use reducers', () => {
+  describe('when we connect to state that do not change', () => {
     it('should not fire the callback', () => {
       const spy = jest.fn();
-      const s1 = state({ message: 'a' }, (value, action) => {
-        return { ...value };
-      });
-      const s2 = state('b', (value, action) => {
-        if (action.type === 'update b') {
-          return action.payload;
-        }
-        return value;
-      });
+      const s = state('b');
+      const s2 = state('c');
 
-      connect({ value: s1 }, spy);
+      s.mutation((current, mewValue) => {
+        return mewValue;
+      }, 'update b');
+
+      connect({ value: s2 }, spy);
 
       System.put('update b', 'new value of b');
 
-      expect(s2()).toBe('new value of b');
+      expect(s()).toBe('new value of b');
+      expect(s2()).toBe('c');
       expect(spy).toBeCalledTimes(1);
-      expect(spy.mock.calls[0]).toStrictEqual([ { value: { message: 'a' } }]);
+      expect(spy.mock.calls[0]).toStrictEqual([ { value: 'c' }]);
     });
   });
 });
