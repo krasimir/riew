@@ -15,15 +15,10 @@ export default function createState(initialValue) {
   let reducerTasks = [];
   let mutations = [];
   let mutationInProgress = false;
+  const api = {};
 
-  const state = function (newValue) {
-    if (typeof newValue !== 'undefined') {
-      state.set(newValue);
-    }
-    return state.get();
-  };
   const doneMutation = value => {
-    state.set(value);
+    api.set(value);
     mutationInProgress = false;
     processMutations();
   };
@@ -45,20 +40,20 @@ export default function createState(initialValue) {
     }
   };
 
-  state.__rine = 'state';
-  state.__subscribers = () => {
+  api.__rine = 'state';
+  api.__subscribers = () => {
     return subscribers;
   };
-  state.id = getId();
-  state.set = (newValue) => {
+  api.id = getId();
+  api.set = (newValue) => {
     stateValue = newValue;
     subscribers.forEach(({ update }) => update(stateValue));
     return newValue;
   };
-  state.get = () => {
+  api.get = () => {
     return stateValue;
   };
-  state.subscribe = (update) => {
+  api.subscribe = (update) => {
     const subscriberId = ++subscribersUID;
 
     subscribers.push({ id: subscriberId, update });
@@ -66,10 +61,10 @@ export default function createState(initialValue) {
       subscribers = subscribers.filter(({ id }) => id !== subscriberId);
     };
   };
-  state.teardown = () => {
-    System.put(teardownAction(state.id));
+  api.teardown = () => {
+    System.put(teardownAction(api.id));
   };
-  state.mutation = (reducer, ...types) => {
+  api.mutation = (reducer, ...types) => {
     if (types.length > 0) {
       types.forEach(type => {
         reducerTasks.push(
@@ -88,7 +83,7 @@ export default function createState(initialValue) {
     };
   };
 
-  System.addTask(teardownAction(state.id), () => {
+  System.addTask(teardownAction(api.id), () => {
     subscribers = [];
     stateValue = undefined;
     if (reducerTasks.length > 0) {
@@ -96,5 +91,5 @@ export default function createState(initialValue) {
     }
   });
 
-  return state;
+  return api;
 };

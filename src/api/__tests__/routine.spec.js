@@ -178,7 +178,7 @@ describe('Given the `routine` function', () => {
           const s = ss = state('foo');
 
           s.subscribe(() => {});
-          render(<p>{ s() }</p>);
+          render(<p>{ s.get() }</p>);
         });
         const { container, unmount } = render(<R />);
 
@@ -186,11 +186,11 @@ describe('Given the `routine` function', () => {
           <p>foo</p>
         `);
         expect(ss.__subscribers()).toHaveLength(1);
-        expect(ss()).toBe('foo');
+        expect(ss.get()).toBe('foo');
         unmount();
         expect(System.tasks).toHaveLength(0);
         expect(ss.__subscribers()).toHaveLength(0);
-        expect(ss()).toBe(undefined);
+        expect(ss.get()).toBe(undefined);
       });
     });
     describe('and we use "useProps"', () => {
@@ -356,8 +356,12 @@ describe('Given the `routine` function', () => {
         });
         const { unmount } = render(<Component />);
 
-        act(() => s1.set(3));
-        act(() => s2.set(4));
+        act(() => {
+          s1.set(3);
+        });
+        act(() => {
+          s2.set(4);
+        });
         unmount();
 
         expect(spy).toBeCalledTimes(3);

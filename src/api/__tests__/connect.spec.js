@@ -46,8 +46,8 @@ describe('Given the connect method', () => {
 
       System.put('update b', 'new value of b');
 
-      expect(s()).toBe('new value of b');
-      expect(s2()).toBe('c');
+      expect(s.get()).toBe('new value of b');
+      expect(s2.get()).toBe('c');
       expect(spy).toBeCalledTimes(1);
       expect(spy.mock.calls[0]).toStrictEqual([ { value: 'c' }]);
     });

@@ -12,9 +12,9 @@ describe('Given the StateController', () => {
       * create a dedicated task`, () => {
       const c = state('foo');
 
-      expect(c()).toEqual('foo');
-      c('bar');
-      expect(c()).toEqual('bar');
+      expect(c.get()).toEqual('foo');
+      c.set('bar');
+      expect(c.get()).toEqual('bar');
       expect(System.tasks).toHaveLength(1);
     });
   });
@@ -24,7 +24,7 @@ describe('Given the StateController', () => {
       const c = state('foo');
 
       c.subscribe(spy);
-      c('bar');
+      c.set('bar');
 
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('bar');
@@ -36,7 +36,7 @@ describe('Given the StateController', () => {
       const unsubscribe = c.subscribe(spy);
 
       unsubscribe();
-      c('bar');
+      c.set('bar');
 
       expect(spy).not.toBeCalled();
     });
@@ -49,7 +49,7 @@ describe('Given the StateController', () => {
       c.subscribe(spy);
       c.teardown();
 
-      expect(c()).toBe(undefined);
+      expect(c.get()).toBe(undefined);
       expect(c.__subscribers()).toHaveLength(0);
     });
   });
@@ -65,7 +65,7 @@ describe('Given the StateController', () => {
       add(20);
       System.put('foo', 5);
 
-      expect(s()).toBe(41);
+      expect(s.get()).toBe(41);
       expect(System.tasks).toHaveLength(3);
       s.teardown();
       expect(System.tasks).toHaveLength(0);
@@ -90,7 +90,7 @@ describe('Given the StateController', () => {
 
         await delay(20);
 
-        expect(s()).toBe(41);
+        expect(s.get()).toBe(41);
         expect(System.tasks).toHaveLength(3);
         s.teardown();
         expect(System.tasks).toHaveLength(0);
@@ -113,7 +113,7 @@ describe('Given the StateController', () => {
           minus(1),
           minus(1)
         ]).then(() => {
-          expect(s()).toBe(13);
+          expect(s.get()).toBe(13);
           done();
         });
       });

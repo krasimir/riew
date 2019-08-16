@@ -194,7 +194,7 @@ function isRineState(value) {
   return value.__rine === 'state';
 }
 function getValueFromState(s) {
-  return s();
+  return s.get();
 }
 function accumulateProps(map) {
   return Object.keys(map).reduce(function (props, key) {
@@ -366,7 +366,7 @@ function createRoutineInstance(routineFunc, dependencies) {
         },
         useProps: function useProps(callback) {
           outerProps.subscribe(callback);
-          callback(outerProps());
+          callback(outerProps.get());
         },
         put: function put() {
           return _System2.default.put.apply(_System2.default, arguments);
@@ -540,15 +540,10 @@ function createState(initialValue) {
   var reducerTasks = [];
   var mutations = [];
   var mutationInProgress = false;
+  var api = {};
 
-  var state = function state(newValue) {
-    if (typeof newValue !== 'undefined') {
-      state.set(newValue);
-    }
-    return state.get();
-  };
   var doneMutation = function doneMutation(value) {
-    state.set(value);
+    api.set(value);
     mutationInProgress = false;
     processMutations();
   };
@@ -574,12 +569,12 @@ function createState(initialValue) {
     }
   };
 
-  state.__rine = 'state';
-  state.__subscribers = function () {
+  api.__rine = 'state';
+  api.__subscribers = function () {
     return subscribers;
   };
-  state.id = getId();
-  state.set = function (newValue) {
+  api.id = getId();
+  api.set = function (newValue) {
     stateValue = newValue;
     subscribers.forEach(function (_ref) {
       var update = _ref.update;
@@ -587,10 +582,10 @@ function createState(initialValue) {
     });
     return newValue;
   };
-  state.get = function () {
+  api.get = function () {
     return stateValue;
   };
-  state.subscribe = function (update) {
+  api.subscribe = function (update) {
     var subscriberId = ++subscribersUID;
 
     subscribers.push({ id: subscriberId, update: update });
@@ -601,10 +596,10 @@ function createState(initialValue) {
       });
     };
   };
-  state.teardown = function () {
-    _System2.default.put(teardownAction(state.id));
+  api.teardown = function () {
+    _System2.default.put(teardownAction(api.id));
   };
-  state.mutation = function (reducer) {
+  api.mutation = function (reducer) {
     for (var _len = arguments.length, types = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
       types[_key - 1] = arguments[_key];
     }
@@ -625,7 +620,7 @@ function createState(initialValue) {
     };
   };
 
-  _System2.default.addTask(teardownAction(state.id), function () {
+  _System2.default.addTask(teardownAction(api.id), function () {
     subscribers = [];
     stateValue = undefined;
     if (reducerTasks.length > 0) {
@@ -635,7 +630,7 @@ function createState(initialValue) {
     }
   });
 
-  return state;
+  return api;
 };
 
 },{"../utils":7,"./System":2}],6:[function(require,module,exports){

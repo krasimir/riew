@@ -1,40 +1,36 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { routine, connect, put } from 'rine';
+import { rine, connect } from 'rine';
 
 import List from './List';
 import Footer from './Footer';
-import { getInitialTodosData, saveTodosData, reducer } from './Data';
 import {
-  TOGGLE,
+  saveTodosData,
+  toggle,
+  newTodo,
+  editingTodo,
+  updateTodo,
+  deleteTodo,
+  clearCompleted
+} from './Data';
+import {
   ENTER,
-  NEW_TODO,
-  DELETE,
-  EDIT,
-  UPDATE,
   ALL,
   ACTIVE,
-  COMPLETED,
-  CLEAR_COMPLETED,
-  CHANGE_FILTER
+  COMPLETED
 } from './constants';
 
-const App = routine(function App({ render, state }) {
-  const todos = state(getInitialTodosData(), reducer);
-  const filter = state(ALL, (current, action) => {
-    if (action.type === CHANGE_FILTER) {
-      return action.payload;
-    }
-    return current;
-  });
+const App = rine(function App({ render, state, todos }) {
+  const filter = state(ALL);
+  const changeFilter = filter.mutation((current, payload) => payload);
 
   connect({ todos }, ({ todos }) => {
     saveTodosData(todos);
     render({ todos });
   });
   connect({ filter }, render);
-
-}, ({ todos, filter }) => (
+  render({ changeFilter });
+}, ({ todos, filter, changeFilter }) => (
   <React.Fragment>
     <section className='todoapp'>
       <header className='header'>
@@ -45,7 +41,7 @@ const App = routine(function App({ render, state }) {
           autoFocus
           onKeyUp={ e => {
             if (e.keyCode === ENTER) {
-              put(NEW_TODO, e.target.value);
+              newTodo(e.target.value);
               e.target.value = '';
             }
           }}/>
@@ -56,21 +52,23 @@ const App = routine(function App({ render, state }) {
         <List
           todos={ todos }
           filter={ filter }
-          onToggle={ index => put(TOGGLE, index) }
-          onDelete={ index => put(DELETE, index) }
-          onEdit={ index => put(EDIT, { index, value: true }) }
-          onUpdate={ (index, label) => put(UPDATE, { index, label }) }
-          onUpdateCancel={ index => put(EDIT, { index, value: false }) } />
+          onToggle={ toggle }
+          onDelete={ deleteTodo }
+          onEdit={ (index) => editingTodo({ index, value: true }) }
+          onUpdate={ (index, label) => updateTodo({ index, label }) }
+          onUpdateCancel={ index => editingTodo({ index, value: false }) } />
       </section>
         <Footer
           todos={ todos }
           filter={ filter }
-          all={ () => put(CHANGE_FILTER, ALL) }
-          active={ () => put(CHANGE_FILTER, ACTIVE) }
-          completed={ () => put(CHANGE_FILTER, COMPLETED) }
-          clearCompleted={ () => put(CLEAR_COMPLETED) } />
+          all={ () => changeFilter(ALL) }
+          active={ () => changeFilter(ACTIVE) }
+          completed={ () => changeFilter(COMPLETED) }
+          clearCompleted={ clearCompleted } />
     </section>
   </React.Fragment>
 ));
+
+App.inject('todos');
 
 ReactDOM.render(<App />, document.querySelector('#container'));

@@ -5,7 +5,7 @@ function isRineState(value) {
   return value.__rine === 'state';
 }
 function getValueFromState(s) {
-  return s();
+  return s.get();
 }
 function accumulateProps(map) {
   return Object.keys(map).reduce((props, key) => {
