@@ -4,12 +4,13 @@ import System from './System';
 import { getFuncName } from '../utils';
 import createState, { teardownAction } from './state';
 import connect from './connect';
+import Registry from './Registry';
 
 var ids = 0;
 const getId = () => `@@r${ ++ids }`;
 const unmountedAction = id => `${ id }_unmounted`;
 
-export function createRoutineInstance(routineFunc) {
+export function createRoutineInstance(routineFunc, dependencies) {
   let id = getId();
   let mounted = false;
   let outerProps = createState();
@@ -35,6 +36,7 @@ export function createRoutineInstance(routineFunc) {
       outerProps.set(initialProps);
       routineFunc(
         {
+          ...dependencies,
           render(props) {
             if (!mounted) return Promise.resolve();
             if (typeof props === 'string' || typeof props === 'number' || React.isValidElement(props)) {
@@ -116,6 +118,7 @@ export default function routine(
   Component = () => null,
   options = { createRoutineInstance }
 ) {
+  let dependencies = [];
   const RoutineBridge = function (outerProps) {
     let [ instance, setInstance ] = useState(null);
     let [ content, setContent ] = useState(null);
@@ -132,7 +135,7 @@ export default function routine(
 
     // mounting
     useEffect(() => {
-      setInstance(instance = options.createRoutineInstance(routineFunc));
+      setInstance(instance = options.createRoutineInstance(routineFunc, dependencies));
 
       instance.in(outerProps, Component, setContent);
 
@@ -146,6 +149,10 @@ export default function routine(
   };
 
   RoutineBridge.displayName = `Routine(${ getFuncName(routineFunc) })`;
+  RoutineBridge.inject = (...keys) => {
+    dependencies = Registry.getBulk(keys);
+    return RoutineBridge;
+  };
 
   return RoutineBridge;
 }

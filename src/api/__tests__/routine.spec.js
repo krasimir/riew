@@ -134,6 +134,16 @@ describe('Given the `routine` function', () => {
         expect(spy).toBeCalledWith(42);
       });
     });
+    describe('and send some dependencies', () => {
+      it('should pass the dependencies to the routine function', async () => {
+        const spy = jest.fn();
+        const c = createRoutineInstance(spy, { a: 'foo', b: 'bar' });
+
+        c.in(() => {});
+
+        expect(spy).toBeCalledWith(expect.objectContaining({ a: 'foo', b: 'bar' }));
+      });
+    });
   });
 
   // integration tests

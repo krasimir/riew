@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { routine, System } from '../index';
+import { routine, System, register } from '../index';
 
 describe('Given the Rine library', () => {
   beforeEach(() => {
@@ -251,6 +251,27 @@ describe('Given the Rine library', () => {
       exerciseHTML(getByTestId('text'), '<p>Paris</p>');
       fireEvent.change(getByTestId('select'), { target: { value: 'Sofia' } });
       exerciseHTML(getByTestId('text'), '<p>Sofia</p>');
+    });
+  });
+  describe('when we use the registry to define a routine dependency', () => {
+    it('should deliver the dependency', () => {
+      const Service = {
+        getData: jest.fn()
+      };
+      const settings = { answer: 42 };
+
+      register('service', Service);
+      register('settings', settings);
+
+      const routineFunc = ({ service }) => {
+        service.getData(settings.answer);
+      };
+      const C = routine(routineFunc).inject('service', 'settings');
+
+      render(<C />);
+
+      expect(Service.getData).toBeCalledWith(42);
+      expect(Service.getData).toBeCalledTimes(1);
     });
   });
 });
