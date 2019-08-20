@@ -2,6 +2,8 @@ import state from '../state';
 import { delay } from '../../__helpers__';
 
 describe('Given the state', () => {
+
+  /* Integration pipe */
   describe('when we use the `pipe` method', () => {
     it('should create a queue of functions and run them one after each other', () => {
       const arr = [];
@@ -25,7 +27,7 @@ describe('Given the state', () => {
       const arr = [];
       const spyA = jest.fn().mockImplementation(() => arr.push('a'));
       const spyB = jest.fn().mockImplementation(async () => {
-        await delay(10);
+        await delay(5);
         arr.push('b');
       });
       const spyC = jest.fn().mockImplementation(() => arr.push('c'));
@@ -34,7 +36,7 @@ describe('Given the state', () => {
 
       go('boo');
 
-      await delay(12);
+      await delay(6);
 
       expect(spyA).toBeCalledTimes(1);
       expect(spyA).toBeCalledWith('foo', 'boo');
@@ -62,7 +64,15 @@ describe('Given the state', () => {
       expect(spyB.mock.calls[1]).toStrictEqual(['foo', 'zoo']);
       expect(arr).toStrictEqual([ 'mooa', 'moob', 'zooa', 'zoob' ]);
     });
+    it('should have a default piping function', () => {
+      const s = state('foo');
+      const m = s.pipe();
+
+      expect(m()).toBe('foo');
+    });
   });
+
+  /* map */
   describe('when we use the `map` method', () => {
     it(`should
       * map the value
@@ -82,7 +92,7 @@ describe('Given the state', () => {
       const arr = [];
       const s = state('foo');
       const mapper = async (value, payload) => {
-        await delay(10);
+        await delay(5);
         arr.push('b');
         return value + payload;
       };
@@ -91,6 +101,75 @@ describe('Given the state', () => {
 
       expect(result).toBe('foobar');
       expect(arr).toStrictEqual(['a', 'b', 'c']);
+    });
+  });
+
+  /* mutate */
+  describe('when we use the `mutate` method', () => {
+    it('should add a queue item for mutating the state', () => {
+      const s = state('foo');
+      const spy = jest.fn().mockImplementation((current, payload) => current + payload);
+      const m = s.mutate(spy);
+
+      expect(m('bar')).toBe('foobar');
+      expect(s.__get()).toBe('foobar');
+    });
+    it('should support async mutations', async () => {
+      const s = state('foo');
+      const spy = jest.fn().mockImplementation(async (current, payload) => {
+        await delay(5);
+        return current + payload;
+      });
+      const m = s.mutate(spy);
+      const result = await m('bar');
+
+      expect(result).toBe('foobar');
+      expect(s.__get()).toBe('foobar');
+    });
+  });
+
+  /* Integration tests */
+  describe('when we use all the methods', () => {
+    it('should work :)', async () => {
+      const arr = [];
+      const s = state('foo');
+      const spyPipe = jest.fn().mockImplementation(async () => arr.push('pipe'));
+      const spyMap = jest.fn().mockImplementation(async (value, payload) => {
+        await delay(5);
+        arr.push('map');
+        return { message: value + payload };
+      });
+      const spyMutate = jest.fn().mockImplementation(async ({ message }) => {
+        await delay(5);
+        arr.push('mutate');
+        return `The message is ${ message }`;
+      });
+
+      const trigger = s
+        .pipe(spyPipe)
+        .map(spyMap)
+        .pipe(() => {})
+        .pipe(spyPipe)
+        .mutate(spyMutate)
+        .pipe(spyPipe)
+        .map(sentence => sentence.toUpperCase());
+      const result = await trigger('bar');
+
+      expect(result).toBe('THE MESSAGE IS FOOBAR');
+      expect(s.__get()).toBe('The message is foobar');
+      expect(arr).toStrictEqual([
+        'pipe', 'map', 'pipe', 'mutate', 'pipe'
+      ]);
+    });
+  });
+  describe('when we call the same trigger multiple times', () => {
+    it('should keep the queue items separate', () => {
+      const s = state('foo');
+      const m1 = s.map(value => value + 1).pipe(() => {});
+      const m2 = s.map(value => value + 2).map(value => value.toUpperCase());
+
+      expect(m1()).toBe('foo1');
+      expect(m2()).toBe('FOO2');
     });
   });
 });
