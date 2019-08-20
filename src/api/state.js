@@ -5,90 +5,71 @@ import { isPromise } from '../utils';
 var ids = 0;
 const getId = () => `@@s${ ++ids }`;
 
-export const teardownAction = id => `${ id }_teardown`;
-export const isState = (state) => state && state.__rine === 'state';
-
 export default function createState(initialValue) {
-  let subscribersUID = 0;
-  let stateValue = initialValue;
-  let subscribers = [];
-  let reducerTasks = [];
-  let mutations = [];
-  let mutationInProgress = false;
-  const api = {};
+  let value = initialValue;
 
-  const doneMutation = value => {
-    api.set(value);
-    mutationInProgress = false;
-    processMutations();
-  };
-  const processMutations = () => {
-    if (mutations.length === 0 || mutationInProgress) return;
-    mutationInProgress = true;
+  const Queue = function () {
+    const items = [];
 
-    const { reducer, payload, done } = mutations.shift();
-    const result = reducer(stateValue, payload);
+    function processQueue(payload) {
+      let index = 0;
+      let result = value;
 
-    if (isPromise(result)) {
-      result.then(value => {
-        done(value);
-        doneMutation(value);
-      });
-    } else {
-      done(result);
-      doneMutation(result);
+      function next() {
+        index++;
+        if (index < items.length) {
+          return loop();
+        }
+        return result;
+      };
+      function loop() {
+        const { type, func } = items[index];
+
+        switch (type) {
+          case 'pipe':
+            let pipeResult = func(result, ...payload);
+
+            if (isPromise(pipeResult)) {
+              return pipeResult.then(next);
+            }
+            return next();
+          case 'map':
+            result = func(result, ...payload);
+            if (isPromise(result)) {
+              return result.then(asyncResult => {
+                result = asyncResult;
+                return next();
+              });
+            }
+            return next();
+        }
+        throw new Error(`Unsupported method ${ type }.`);
+      };
+
+      return loop();
     }
-  };
 
-  api.__rine = 'state';
-  api.__subscribers = () => {
-    return subscribers;
-  };
-  api.id = getId();
-  api.set = (newValue) => {
-    stateValue = newValue;
-    subscribers.forEach(({ update }) => update(stateValue));
-    return newValue;
-  };
-  api.get = () => {
-    return stateValue;
-  };
-  api.subscribe = (update) => {
-    const subscriberId = ++subscribersUID;
-
-    subscribers.push({ id: subscriberId, update });
-    return () => {
-      subscribers = subscribers.filter(({ id }) => id !== subscriberId);
-    };
-  };
-  api.teardown = () => {
-    System.put(teardownAction(api.id));
-  };
-  api.mutation = (reducer, ...types) => {
-    if (types.length > 0) {
-      types.forEach(type => {
-        reducerTasks.push(
-          System.takeEvery(type, (payload) => {
-            mutations.push({ reducer, payload, done: () => {} });
-            processMutations();
-          })
-        );
-      });
-    }
-    return payload => {
-      return new Promise(done => {
-        mutations.push({ reducer, payload, done });
-        processMutations();
-      });
+    return {
+      add(type, func) {
+        items.push({ type, func });
+      },
+      processQueue
     };
   };
 
-  System.addTask(teardownAction(api.id), () => {
-    subscribers = [];
-    stateValue = undefined;
-    if (reducerTasks.length > 0) {
-      reducerTasks.forEach(t => t.cancel());
-    }
+  const queue = Queue();
+  const methods = ['pipe', 'map'];
+  const api = function (...payload) {
+    return queue.processQueue(payload);
+  };
+
+  api.__id = getId();
+
+  methods.forEach(name => {
+    api[name] = function (func) {
+      queue.add(name, func);
+      return api;
+    };
   });
 
   return api;

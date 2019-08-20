@@ -1,122 +1,96 @@
 import state from '../state';
-import System from '../System';
 import { delay } from '../../__helpers__';
 
-describe('Given the StateController', () => {
-  beforeEach(() => {
-    System.reset();
-  });
-  describe('when we create a state', () => {
-    it(`should
-      * accept an initial value and it should allow us to update the state
-      * create a dedicated task`, () => {
-      const c = state('foo');
+describe('Given the state', () => {
+  describe('when we use the `pipe` method', () => {
+    it('should create a queue of functions and run them one after each other', () => {
+      const arr = [];
+      const spyA = jest.fn().mockImplementation(() => arr.push('a'));
+      const spyB = jest.fn().mockImplementation(() => arr.push('b'));
+      const spyC = jest.fn().mockImplementation(() => arr.push('c'));
+      const s = state('foo');
+      const go = s.pipe(spyA).pipe(spyB).pipe(spyC);
 
-      expect(c.get()).toEqual('foo');
-      c.set('bar');
-      expect(c.get()).toEqual('bar');
-      expect(System.tasks).toHaveLength(1);
+      go('boo');
+
+      expect(spyA).toBeCalledTimes(1);
+      expect(spyA).toBeCalledWith('foo', 'boo');
+      expect(spyB).toBeCalledTimes(1);
+      expect(spyB).toBeCalledWith('foo', 'boo');
+      expect(spyC).toBeCalledTimes(1);
+      expect(spyC).toBeCalledWith('foo', 'boo');
+      expect(arr).toStrictEqual(['a', 'b', 'c']);
     });
-  });
-  describe('when we subscribe to a state', () => {
-    it('should call the subscriber callback when we change the value', () => {
-      const spy = jest.fn();
-      const c = state('foo');
-
-      c.subscribe(spy);
-      c.set('bar');
-
-      expect(spy).toBeCalledTimes(1);
-      expect(spy).toBeCalledWith('bar');
-    });
-    it('should provide an api for unsubscribing', () => {
-      const spy = jest.fn();
-      const c = state('foo');
-
-      const unsubscribe = c.subscribe(spy);
-
-      unsubscribe();
-      c.set('bar');
-
-      expect(spy).not.toBeCalled();
-    });
-  });
-  describe('when we teardown the state', () => {
-    it('should unsubscribe all the subscribers and set the value to undefined', () => {
-      const spy = jest.fn();
-      const c = state('foo');
-
-      c.subscribe(spy);
-      c.teardown();
-
-      expect(c.get()).toBe(undefined);
-      expect(c.__subscribers()).toHaveLength(0);
-    });
-  });
-  describe('when we define a mutation', () => {
-    it(`should
-    * return a function that if fired will run the reducer
-    * create a task for listening on that particular action`, () => {
-      const s = state(10);
-
-      const add = s.mutation((currentValue, payload) => currentValue + payload, 'foo', 'bar');
-
-      System.put('bar', 6);
-      add(20);
-      System.put('foo', 5);
-
-      expect(s.get()).toBe(41);
-      expect(System.tasks).toHaveLength(3);
-      s.teardown();
-      expect(System.tasks).toHaveLength(0);
-    });
-    describe('and the mutation is async', () => {
-      it(`should
-        * wait till the mutation is over
-        * wait if there is another mutation running at the moment`, async () => {
-        const s = state(10);
-        const add = s.mutation(
-          async (currentValue, payload) => {
-            await delay(5);
-            return currentValue + payload;
-          },
-          'foo',
-          'bar'
-        );
-
-        add(20);
-        System.put('foo', 5);
-        System.put('bar', 6);
-
-        await delay(20);
-
-        expect(s.get()).toBe(41);
-        expect(System.tasks).toHaveLength(3);
-        s.teardown();
-        expect(System.tasks).toHaveLength(0);
+    it('should wait if there is any async piping', async () => {
+      const arr = [];
+      const spyA = jest.fn().mockImplementation(() => arr.push('a'));
+      const spyB = jest.fn().mockImplementation(async () => {
+        await delay(10);
+        arr.push('b');
       });
-      it('should return a promise for when we call the mutation function', (done) => {
-        const s = state(10);
-        const add = s.mutation(
-          async (currentValue, payload) => {
-            await delay(5);
-            return currentValue + payload;
-          }
-        );
-        const minus = s.mutation(async (currentValue, payload) => {
-          await delay(5);
-          return currentValue - payload;
-        });
+      const spyC = jest.fn().mockImplementation(() => arr.push('c'));
+      const s = state('foo');
+      const go = s.pipe(spyA).pipe(spyB).pipe(spyC);
 
-        Promise.all([
-          add(5),
-          minus(1),
-          minus(1)
-        ]).then(() => {
-          expect(s.get()).toBe(13);
-          done();
-        });
-      });
+      go('boo');
+
+      await delay(12);
+
+      expect(spyA).toBeCalledTimes(1);
+      expect(spyA).toBeCalledWith('foo', 'boo');
+      expect(spyB).toBeCalledTimes(1);
+      expect(spyB).toBeCalledWith('foo', 'boo');
+      expect(spyC).toBeCalledTimes(1);
+      expect(spyC).toBeCalledWith('foo', 'boo');
+      expect(arr).toStrictEqual(['a', 'b', 'c']);
+    });
+    it('should have separate queue runs if we trigger multiple times', () => {
+      const arr = [];
+      const spyA = jest.fn().mockImplementation((p1, p2) => arr.push(p2 + 'a'));
+      const spyB = jest.fn().mockImplementation((p1, p2) => arr.push(p2 + 'b'));
+      const s = state('foo');
+      const go = s.pipe(spyA).pipe(spyB);
+
+      go('moo');
+      go('zoo');
+
+      expect(spyA).toBeCalledTimes(2);
+      expect(spyA.mock.calls[0]).toStrictEqual(['foo', 'moo']);
+      expect(spyA.mock.calls[1]).toStrictEqual(['foo', 'zoo']);
+      expect(spyB).toBeCalledTimes(2);
+      expect(spyB.mock.calls[0]).toStrictEqual(['foo', 'moo']);
+      expect(spyB.mock.calls[1]).toStrictEqual(['foo', 'zoo']);
+      expect(arr).toStrictEqual([ 'mooa', 'moob', 'zooa', 'zoob' ]);
+    });
+  });
+  describe('when we use the `map` method', () => {
+    it(`should
+      * map the value
+      * change the state value for the next item in the queue`, () => {
+       const s = state('foo');
+       const mapper = jest.fn().mockImplementation(value => ({ message: value }));
+       const spyA = jest.fn();
+       const m = s.map(mapper).pipe(spyA).map(({ message }, payload) => message + payload);
+
+       expect(m(100)).toStrictEqual('foo100');
+       expect(mapper).toBeCalledTimes(1);
+       expect(mapper).toBeCalledWith('foo', 100);
+       expect(spyA).toBeCalledTimes(1);
+       expect(spyA).toBeCalledWith({ message: 'foo' }, 100);
+    });
+    it('should support async mappers', async () => {
+      const arr = [];
+      const s = state('foo');
+      const mapper = async (value, payload) => {
+        await delay(10);
+        arr.push('b');
+        return value + payload;
+      };
+      const m = s.pipe(() => arr.push('a')).map(mapper).pipe(() => arr.push('c'));
+      const result = await m('bar');
+
+      expect(result).toBe('foobar');
+      expect(arr).toStrictEqual(['a', 'b', 'c']);
     });
   });
 });
