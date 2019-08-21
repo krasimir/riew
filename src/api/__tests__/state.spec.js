@@ -128,6 +128,35 @@ describe('Given the state', () => {
     });
   });
 
+  /* filter */
+  describe('when we use the `filter` method', () => {
+    it('should continue the queue only if the filter function returns `true`', () => {
+      const s = state('foo');
+      const spy = jest.fn();
+      const a = s.filter((value) => value === 'boo').map(() => 'moo').pipe(spy);
+
+      expect(a()).toEqual('foo');
+      s.__set('boo');
+      expect(a()).toEqual('moo');
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith('moo');
+    });
+    it('should support an async filter', async () => {
+      const s = state('foo');
+      const spy = jest.fn();
+      const a = s.filter(async (value) => {
+        await delay(5);
+        return value === 'boo';
+      }).map(() => 'moo').pipe(spy);
+
+      expect(await a()).toEqual('foo');
+      s.__set('boo');
+      expect(await a()).toEqual('moo');
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith('moo');
+    });
+  });
+
   /* Integration tests */
   describe('when we use all the methods', () => {
     it('should work :)', async () => {

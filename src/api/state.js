@@ -50,8 +50,24 @@ function processQueue(payload, value, items, setStateValue) {
           }
           setStateValue(result);
           return next();
+      /* -------------------------------------------------- mutate */
+      case 'filter':
+        let filterResult = func(result, ...payload);
+
+        if (isPromise(filterResult)) {
+          return filterResult.then(asyncResult => {
+            if (!asyncResult) {
+              index = items.length;
+            }
+            return next();
+          });
+        }
+        if (!filterResult) {
+          index = items.length;
+        }
+        return next();
     }
-    throw new Error(`Unsupported method ${ type }.`);
+    throw new Error(`Unsupported method "${ type }".`);
   };
 
   return loop();
@@ -59,6 +75,9 @@ function processQueue(payload, value, items, setStateValue) {
 
 export default function createState(initialValue) {
   let value = initialValue;
+
+  const methods = ['pipe', 'map', 'mutate', 'filter'];
+  const stateAPI = {};
 
   const Queue = function (setStateValue) {
     const items = [];
@@ -73,29 +92,18 @@ export default function createState(initialValue) {
     const api = (...payload) => queue.process(payload);
 
     queue.add(typeOfFirstItem, func);
-    api.pipe = (func) => {
-      queue.add('pipe', func);
-      return api;
-    };
-    api.map = (func) => {
-      queue.add('map', func);
-      return api;
-    };
-    api.mutate = (func) => {
-      queue.add('mutate', func);
-      return api;
-    };
+    methods.forEach(methodName => {
+      api[methodName] = (func) => {
+        queue.add(methodName, func);
+        return api;
+      };
+    });
     return api;
   };
 
-  const methods = ['pipe', 'map', 'mutate'];
-  const stateAPI = {};
-
   stateAPI.__id = getId();
   stateAPI.__get = () => value;
-  stateAPI.__set = (newValue) => {
-    value = newValue;
-  };
+  stateAPI.__set = (newValue) => (value = newValue);
 
   methods.forEach(methodName => {
     stateAPI[methodName] = (func) => createQueue(methodName, func);
