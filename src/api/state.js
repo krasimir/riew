@@ -22,7 +22,7 @@ function processQueue(payload, value, items, setStateValue) {
     switch (type) {
       /* -------------------------------------------------- pipe */
       case 'pipe':
-        let pipeResult = (func || function () {})(result, ...payload);
+        let pipeResult = (func[0] || function () {})(result, ...payload);
 
         if (isPromise(pipeResult)) {
           return pipeResult.then(next);
@@ -30,7 +30,7 @@ function processQueue(payload, value, items, setStateValue) {
         return next();
       /* -------------------------------------------------- map */
       case 'map':
-        result = func(result, ...payload);
+        result = func[0](result, ...payload);
         if (isPromise(result)) {
           return result.then(asyncResult => {
             result = asyncResult;
@@ -40,7 +40,7 @@ function processQueue(payload, value, items, setStateValue) {
         return next();
       /* -------------------------------------------------- mutate */
       case 'mutate':
-          result = func(result, ...payload);
+          result = func[0](result, ...payload);
           if (isPromise(result)) {
             return result.then(asyncResult => {
               result = asyncResult;
@@ -50,9 +50,9 @@ function processQueue(payload, value, items, setStateValue) {
           }
           setStateValue(result);
           return next();
-      /* -------------------------------------------------- mutate */
+      /* -------------------------------------------------- filter */
       case 'filter':
-        let filterResult = func(result, ...payload);
+        let filterResult = func[0](result, ...payload);
 
         if (isPromise(filterResult)) {
           return filterResult.then(asyncResult => {
@@ -66,7 +66,24 @@ function processQueue(payload, value, items, setStateValue) {
           index = items.length;
         }
         return next();
+      /* -------------------------------------------------- fork */
+      case 'fork':
+        result = func.map(f => f(result, ...payload));
+        const promises = result.filter(isPromise);
+
+        if (promises.length > 0) {
+          return Promise.all(promises).then(() => {
+            result.forEach((r, index) => {
+              if (isPromise(r)) {
+                r.then(value => (result[index] = value));
+              }
+            });
+            return next();
+          });
+        }
+        return next();
     }
+    /* -------------------------------------------------- error */
     throw new Error(`Unsupported method "${ type }".`);
   };
 
@@ -76,7 +93,7 @@ function processQueue(payload, value, items, setStateValue) {
 export default function createState(initialValue) {
   let value = initialValue;
 
-  const methods = ['pipe', 'map', 'mutate', 'filter'];
+  const methods = ['pipe', 'map', 'mutate', 'filter', 'fork'];
   const stateAPI = {};
 
   const Queue = function (setStateValue) {
@@ -93,7 +110,7 @@ export default function createState(initialValue) {
 
     queue.add(typeOfFirstItem, func);
     methods.forEach(methodName => {
-      api[methodName] = (func) => {
+      api[methodName] = (...func) => {
         queue.add(methodName, func);
         return api;
       };
@@ -106,7 +123,7 @@ export default function createState(initialValue) {
   stateAPI.__set = (newValue) => (value = newValue);
 
   methods.forEach(methodName => {
-    stateAPI[methodName] = (func) => createQueue(methodName, func);
+    stateAPI[methodName] = (...func) => createQueue(methodName, func);
   });
 
   return stateAPI;
