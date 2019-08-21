@@ -197,6 +197,43 @@ describe('Given the state', () => {
     });
   });
 
+  /* branch */
+  describe('when we use the `branch` method', () => {
+    it('should run the branching function if the condition function returns true', () => {
+      const s = state('foo');
+      const spyA = jest.fn();
+      const spyB = jest.fn().mockImplementation(() => 'b');
+      const m = s.branch((value, payload) => value.toUpperCase() === payload, spyA).map(spyB);
+
+      expect(m()).toBe('b');
+      expect(m('FOO')).toBe('foo');
+      expect(spyA).toBeCalledTimes(1);
+      expect(spyA).toBeCalledWith('foo', 'FOO');
+      expect(spyB).toBeCalledTimes(1);
+      expect(spyB).toBeCalledWith('foo');
+    });
+    it('should support async functions', async () => {
+      const s = state('foo');
+      const spyA = jest.fn().mockImplementation(async () => {
+        await delay(7);
+        s.__set('bar');
+      });
+      const spyB = jest.fn().mockImplementation(() => 'b');
+      const m = s.branch(async (value, payload) => {
+        await delay(5);
+        return value.toUpperCase() === payload;
+      }, spyA).map(spyB);
+
+      expect(await m()).toBe('b');
+      expect(await m('FOO')).toBe('foo');
+      expect(spyA).toBeCalledTimes(1);
+      expect(spyA).toBeCalledWith('foo', 'FOO');
+      expect(spyB).toBeCalledTimes(1);
+      expect(spyB).toBeCalledWith('foo');
+      expect(s.__get()).toBe('bar');
+    });
+  });
+
   /* Integration tests */
   describe('when we use all the methods', () => {
     it('should work :)', async () => {

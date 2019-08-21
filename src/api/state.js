@@ -82,6 +82,23 @@ function processQueue(payload, value, items, setStateValue) {
           });
         }
         return next();
+      /* -------------------------------------------------- branch */
+      case 'branch':
+        const conditionResult = func[0](result, ...payload);
+        const runTruthy = (value) => {
+          if (value) {
+            const r = func[1](result, ...payload);
+
+            index = items.length;
+            return isPromise(r) ? r.then(next) : next();
+          }
+          return next();
+        };
+
+        if (isPromise(conditionResult)) {
+          return conditionResult.then(runTruthy);
+        }
+        return runTruthy(conditionResult);
     }
     /* -------------------------------------------------- error */
     throw new Error(`Unsupported method "${ type }".`);
@@ -93,7 +110,7 @@ function processQueue(payload, value, items, setStateValue) {
 export default function createState(initialValue) {
   let value = initialValue;
 
-  const methods = ['pipe', 'map', 'mutate', 'filter', 'fork'];
+  const methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch'];
   const stateAPI = {};
 
   const Queue = function (setStateValue) {
