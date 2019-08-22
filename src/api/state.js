@@ -118,6 +118,9 @@ const Queue = function (setStateValue, getStateValue) {
       };
 
       return items.length > 0 ? loop() : result;
+    },
+    cancel() {
+      items = [];
     }
   };
 };
@@ -127,6 +130,7 @@ export default function createState(initialValue) {
 
   const methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel'];
   const stateAPI = {};
+  let createdQueues = [];
 
   const createQueue = function (typeOfFirstItem, func) {
     const queue = Queue(stateAPI.__set, stateAPI.__get);
@@ -139,12 +143,19 @@ export default function createState(initialValue) {
         return api;
       };
     });
+    createdQueues.push(queue);
     return api;
   };
 
   stateAPI.__id = getId();
   stateAPI.__get = () => value;
   stateAPI.__set = (newValue) => (value = newValue);
+
+  stateAPI.teardown = () => {
+    methods.forEach(methodName => (stateAPI[methodName] = () => {}));
+    createdQueues.forEach(q => q.cancel());
+    createdQueues = [];
+  };
 
   methods.forEach(methodName => {
     stateAPI[methodName] = (...func) => createQueue(methodName, func);

@@ -239,13 +239,38 @@ describe('Given the state', () => {
     it('should empty the queue and disable the creation of new ones', () => {
       const s = state(10);
       const spyA = jest.fn();
+      const spyB = jest.fn();
       const m = s.mutate((value) => value + 1).cancel().pipe(spyA);
+      const n = s.pipe(() => {}).pipe(spyB);
 
       expect(m()).toBe(11);
       expect(m()).toBe(11);
       expect(m()).toBe(11);
+      expect(n()).toBe(11);
       expect(s.__get()).toBe(11);
       expect(spyA).toBeCalledTimes(0);
+      expect(spyB).toBeCalledTimes(1);
+      expect(spyB).toBeCalledWith(11);
+    });
+  });
+
+  /* teardown */
+  describe('when we use the `teardown` method', () => {
+    it('should cancel all the queues', () => {
+      const s = state(10);
+      const spyA = jest.fn();
+      const spyB = jest.fn();
+      const m = s.mutate((value) => value + 1).pipe(spyA);
+      const n = s.pipe(() => {}).pipe(spyB);
+
+      s.teardown();
+      expect(m()).toBe(10);
+      expect(m()).toBe(10);
+      expect(m()).toBe(10);
+      expect(n()).toBe(10);
+      expect(s.__get()).toBe(10);
+      expect(spyA).toBeCalledTimes(0);
+      expect(spyB).toBeCalledTimes(0);
     });
   });
 
