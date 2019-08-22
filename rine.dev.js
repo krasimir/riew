@@ -1,249 +1,26 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Rine = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-var items = {};
-var resolver = function resolver(key) {
-  if (items[key]) {
-    return items[key];
-  }
-  throw new Error("Rine registry: missing \"" + key + "\".");
-};
-
-var Registry = {
-  __resolver: resolver,
-  set: function set(key, value) {
-    items[key] = value;
-  },
-  get: function get(key) {
-    return this.__resolver(key);
-  },
-  getBulk: function getBulk(arr) {
-    var _this = this;
-
-    return arr.reduce(function (all, key) {
-      all[key] = _this.get(key);
-      return all;
-    }, {});
-  },
-  remove: function remove(key) {
-    delete items[key];
-  },
-  resolver: function resolver(r) {
-    this.__resolver = r;
-  },
-  reset: function reset() {
-    items = {};
-    this.__resolver = resolver;
-  }
-};
-
-exports.default = Registry;
-
-},{}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-/* eslint-disable consistent-return, no-new, no-use-before-define */
+exports.react = exports.merge = exports.state = undefined;
 
-var ids = 0;
-var getId = function getId() {
-  return '@@t' + ++ids;
-};
+var _state = require('./state');
 
-function Task(type, callback) {
-  var once = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+var _react = require('./react');
 
-  var task = {
-    __rine: 'task',
-    id: getId(),
-    active: true,
-    once: once,
-    type: type,
-    callback: callback,
-    done: null,
-    cancel: function cancel() {
-      this.active = false;
-      System.removeTask(this);
-    },
-    execute: function execute(payload, type) {
-      if (this.active) {
-        if (type) {
-          this.callback(payload, type);
-        } else {
-          this.callback(payload);
-        }
-        if (this.once) {
-          System.removeTask(this);
-        }
-      }
-    }
-  };
-
-  if (!callback) {
-    task.done = new Promise(function (donePromise) {
-      task.callback = donePromise;
-    });
-  }
-
-  return task;
-}
-
-var System = {
-  tasks: [],
-  addTask: function addTask(type, callback, once) {
-    var task = Task(type, callback, once);
-
-    this.tasks.push(task);
-    return task;
-  },
-  removeTask: function removeTask(taskToRemove) {
-    this.tasks = this.tasks.filter(function (task) {
-      if (task.id === taskToRemove.id) {
-        return false;
-      }
-      return true;
-    });
-  },
-  put: function put(type, payload) {
-    this.tasks.forEach(function (task) {
-      if (task.type === type) {
-        task.execute(payload);
-      } else if (task.type === '*') {
-        task.execute(payload, type);
-      }
-    });
-  },
-  take: function take(type, callback) {
-    var _this = this;
-
-    if (Array.isArray(type)) {
-      return type.map(function (t) {
-        return _this.addTask(t, callback, true);
-      });
-    }
-    return this.addTask(type, callback, true);
-  },
-  takeEvery: function takeEvery(type, callback) {
-    var _this2 = this;
-
-    if (Array.isArray(type)) {
-      return type.map(function (t) {
-        return _this2.addTask(t, callback, false);
-      });
-    }
-    return this.addTask(type, callback, false);
-  },
-  reset: function reset() {
-    this.tasks = [];
-  },
-  isTask: function isTask(task) {
-    return task && task.__rine === 'task';
-  },
-  putBulk: function putBulk(actions) {
-    var _this3 = this;
-
-    actions.forEach(function (type) {
-      return _this3.put(type);
-    });
-  }
-};
-
-exports.default = System;
-
-},{}],3:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _extends = Object.assign || function (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];for (var key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key];
-      }
-    }
-  }return target;
-}; /* eslint-disable consistent-return */
-
-exports.default = connect;
-
-var _fastDeepEqual = require('fast-deep-equal');
-
-var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
+var _react2 = _interopRequireDefault(_react);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
-}
+var state = exports.state = _state.createState;
+var merge = exports.merge = _state.mergeStates;
+var react = exports.react = { routine: _react2.default };
 
-function isRineState(value) {
-  return value.__rine === 'state';
-}
-function getValueFromState(s) {
-  return s.get();
-}
-function accumulateProps(map) {
-  return Object.keys(map).reduce(function (props, key) {
-    var value = map[key];
-
-    if (isRineState(value)) {
-      props[key] = getValueFromState(value);
-    } else {
-      props[key] = value;
-    }
-    return props;
-  }, {});
-}
-
-function connect(map, func) {
-  var noInitialCall = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-
-  var aprops = accumulateProps(map);
-
-  if (noInitialCall === false) {
-    func(aprops);
-  }
-
-  var unsubscribers = Object.keys(map).map(function (key) {
-    var value = map[key];
-
-    if (isRineState(value)) {
-      var stateInstance = value;
-
-      return stateInstance.subscribe(function () {
-        var newValue = getValueFromState(stateInstance);
-
-        if (!(0, _fastDeepEqual2.default)(aprops[key], newValue)) {
-          func(aprops = _extends({}, aprops, _defineProperty({}, key, newValue)));
-        }
-      });
-    }
-  }).filter(function (unsubscribe) {
-    return !!unsubscribe;
-  });
-
-  return function () {
-    return unsubscribers.forEach(function (u) {
-      return u();
-    });
-  };
-}
-
-},{"fast-deep-equal":8}],4:[function(require,module,exports){
+},{"./react":2,"./state":3}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -294,23 +71,9 @@ var _react = (typeof window !== "undefined" ? window['React'] : typeof global !=
 
 var _react2 = _interopRequireDefault(_react);
 
-var _System = require('./System');
-
-var _System2 = _interopRequireDefault(_System);
-
 var _utils = require('../utils');
 
-var _state = require('./state');
-
-var _state2 = _interopRequireDefault(_state);
-
-var _connect2 = require('./connect');
-
-var _connect3 = _interopRequireDefault(_connect2);
-
-var _Registry = require('./Registry');
-
-var _Registry2 = _interopRequireDefault(_Registry);
+var _state2 = require('../state');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -320,17 +83,15 @@ var ids = 0;
 var getId = function getId() {
   return '@@r' + ++ids;
 };
-var unmountedAction = function unmountedAction(id) {
-  return id + '_unmounted';
-};
 
-function createRoutineInstance(routineFunc, dependencies) {
+function createRoutineInstance(routineFunc) {
   var id = getId();
   var mounted = false;
-  var outerProps = (0, _state2.default)();
+  var outerProps = (0, _state2.createState)();
+  var setOuterProps = outerProps.mutate();
+  var getOuterProps = outerProps.map();
   var permanentProps = {};
   var funcsToCallOnUnmount = [];
-  var actionsToFireOnUnmount = [(0, _state.teardownAction)(outerProps.id)];
   var onRendered = void 0;
 
   function isMounted() {
@@ -347,8 +108,8 @@ function createRoutineInstance(routineFunc, dependencies) {
     isMounted: isMounted,
     in: function _in(initialProps, Component, setContent) {
       mounted = true;
-      outerProps.set(initialProps);
-      routineFunc(_extends({}, dependencies, {
+      setOuterProps(initialProps);
+      routineFunc({
         render: function render(props) {
           if (!mounted) return Promise.resolve();
           if (typeof props === 'string' || typeof props === 'number' || _react2.default.isValidElement(props)) {
@@ -365,79 +126,35 @@ function createRoutineInstance(routineFunc, dependencies) {
           });
         },
         useProps: function useProps(callback) {
-          outerProps.subscribe(callback);
-          callback(outerProps.get());
-        },
-        put: function put() {
-          return _System2.default.put.apply(_System2.default, arguments);
-        },
-        take: function take() {
-          var task = _System2.default.take.apply(_System2.default, arguments);
-
-          if (Array.isArray(task)) {
-            funcsToCallOnUnmount = funcsToCallOnUnmount.concat(task.map(function (t) {
-              return function () {
-                return t.cancel();
-              };
-            }));
-            if (task[0].done) {
-              return Promise.all(task.map(function (t) {
-                return t.done;
-              }));
-            }
-            return task;
-          }
-          funcsToCallOnUnmount.push(function () {
-            return task.cancel();
-          });
-          return task.done;
-        },
-        takeEvery: function takeEvery() {
-          var task = _System2.default.takeEvery.apply(_System2.default, arguments);
-
-          if (Array.isArray(task)) {
-            funcsToCallOnUnmount = funcsToCallOnUnmount.concat(task.map(function (t) {
-              return function () {
-                return t.cancel();
-              };
-            }));
-          } else {
-            funcsToCallOnUnmount.push(function () {
-              return task.cancel();
-            });
-          }
-          return task;
+          outerProps.onUpdate().pipe(callback);
+          callback(getOuterProps());
         },
         state: function state() {
-          var state = _state2.default.apply(undefined, arguments);
+          var s = _state2.createState.apply(undefined, arguments);
 
-          actionsToFireOnUnmount.push((0, _state.teardownAction)(state.id));
-          return state;
-        },
-        connect: function connect() {
-          funcsToCallOnUnmount.push(_connect3.default.apply(undefined, arguments));
+          funcsToCallOnUnmount.push(s.teardown);
+          return s;
         },
 
         isMounted: isMounted
-      }));
+      });
     },
     updated: function updated(newProps) {
-      outerProps.set(newProps);
+      setOuterProps(newProps);
     },
     rendered: function rendered() {
       if (onRendered) onRendered();
     },
     out: function out() {
       mounted = false;
+      funcsToCallOnUnmount.forEach(function (f) {
+        return f();
+      });
+      funcsToCallOnUnmount = [];
     }
   };
 
-  _System2.default.addTask(unmountedAction(id), function () {
-    funcsToCallOnUnmount.forEach(function (f) {
-      return f();
-    });
-    _System2.default.putBulk(actionsToFireOnUnmount);
-  });
+  funcsToCallOnUnmount.push(outerProps.teardown);
 
   return instance;
 }
@@ -448,7 +165,6 @@ function routine(routineFunc) {
   };
   var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : { createRoutineInstance: createRoutineInstance };
 
-  var dependencies = [];
   var RoutineBridge = function RoutineBridge(outerProps) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
@@ -474,13 +190,12 @@ function routine(routineFunc) {
 
     // mounting
     (0, _react.useEffect)(function () {
-      setInstance(instance = options.createRoutineInstance(routineFunc, dependencies));
+      setInstance(instance = options.createRoutineInstance(routineFunc));
 
       instance.in(outerProps, Component, setContent);
 
       return function () {
         instance.out();
-        _System2.default.put(unmountedAction(instance.id));
       };
     }, []);
 
@@ -488,212 +203,283 @@ function routine(routineFunc) {
   };
 
   RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(routineFunc) + ')';
-  RoutineBridge.inject = function () {
-    for (var _len = arguments.length, keys = Array(_len), _key = 0; _key < _len; _key++) {
-      keys[_key] = arguments[_key];
-    }
-
-    dependencies = _Registry2.default.getBulk(keys);
-    return RoutineBridge;
-  };
 
   return RoutineBridge;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../utils":7,"./Registry":1,"./System":2,"./connect":3,"./state":5}],5:[function(require,module,exports){
+},{"../state":3,"../utils":4}],3:[function(require,module,exports){
 'use strict';
+
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.isState = exports.teardownAction = undefined;
-exports.default = createState;
 
-var _System = require('./System');
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
 
-var _System2 = _interopRequireDefault(_System);
+exports.createState = createState;
+exports.mergeStates = mergeStates;
 
-var _utils = require('../utils');
+var _utils = require('./utils');
 
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+} /* eslint-disable no-use-before-define, no-return-assign */
 
-/* eslint-disable no-use-before-define, no-return-assign */
 var ids = 0;
 var getId = function getId() {
   return '@@s' + ++ids;
 };
 
-var teardownAction = exports.teardownAction = function teardownAction(id) {
-  return id + '_teardown';
-};
-var isState = exports.isState = function isState(state) {
-  return state && state.__rine === 'state';
+var Queue = function Queue(setStateValue, getStateValue) {
+  var items = [];
+
+  return {
+    add: function add(type, func) {
+      items.push({ type: type, func: func });
+    },
+    process: function process(payload) {
+      var index = 0;
+      var result = getStateValue();
+
+      function next() {
+        index++;
+        if (index < items.length) {
+          return loop();
+        }
+        return result;
+      };
+      function loop() {
+        var _items$index = items[index],
+            type = _items$index.type,
+            func = _items$index.func;
+
+        switch (type) {
+          /* -------------------------------------------------- pipe */
+          case 'pipe':
+            var pipeResult = (func[0] || function () {}).apply(undefined, [result].concat(_toConsumableArray(payload)));
+
+            if ((0, _utils.isPromise)(pipeResult)) {
+              return pipeResult.then(next);
+            }
+            return next();
+          /* -------------------------------------------------- map */
+          case 'map':
+            result = (func[0] || function (value) {
+              return value;
+            }).apply(undefined, [result].concat(_toConsumableArray(payload)));
+            if ((0, _utils.isPromise)(result)) {
+              return result.then(function (asyncResult) {
+                result = asyncResult;
+                return next();
+              });
+            }
+            return next();
+          /* -------------------------------------------------- mutate */
+          case 'mutate':
+            result = (func[0] || function (current, payload) {
+              return payload;
+            }).apply(undefined, [result].concat(_toConsumableArray(payload)));
+            if ((0, _utils.isPromise)(result)) {
+              return result.then(function (asyncResult) {
+                result = asyncResult;
+                setStateValue(result);
+                return next();
+              });
+            }
+            setStateValue(result);
+            return next();
+          /* -------------------------------------------------- filter */
+          case 'filter':
+            var filterResult = func[0].apply(func, [result].concat(_toConsumableArray(payload)));
+
+            if ((0, _utils.isPromise)(filterResult)) {
+              return filterResult.then(function (asyncResult) {
+                if (!asyncResult) {
+                  index = items.length;
+                }
+                return next();
+              });
+            }
+            if (!filterResult) {
+              index = items.length;
+            }
+            return next();
+          /* -------------------------------------------------- fork */
+          case 'fork':
+            result = func.map(function (f) {
+              return f.apply(undefined, [result].concat(_toConsumableArray(payload)));
+            });
+            var promises = result.filter(_utils.isPromise);
+
+            if (promises.length > 0) {
+              return Promise.all(promises).then(function () {
+                result.forEach(function (r, index) {
+                  if ((0, _utils.isPromise)(r)) {
+                    r.then(function (value) {
+                      return result[index] = value;
+                    });
+                  }
+                });
+                return next();
+              });
+            }
+            return next();
+          /* -------------------------------------------------- branch */
+          case 'branch':
+            var conditionResult = func[0].apply(func, [result].concat(_toConsumableArray(payload)));
+            var runTruthy = function runTruthy(value) {
+              if (value) {
+                var r = func[1].apply(func, [result].concat(_toConsumableArray(payload)));
+
+                index = items.length;
+                return (0, _utils.isPromise)(r) ? r.then(next) : next();
+              }
+              return next();
+            };
+
+            if ((0, _utils.isPromise)(conditionResult)) {
+              return conditionResult.then(runTruthy);
+            }
+            return runTruthy(conditionResult);
+          /* -------------------------------------------------- cancel */
+          case 'cancel':
+            index = -1;
+            items = [];
+            return result;
+
+        }
+        /* -------------------------------------------------- error */
+        throw new Error('Unsupported method "' + type + '".');
+      };
+
+      return items.length > 0 ? loop() : result;
+    },
+    cancel: function cancel() {
+      items = [];
+    }
+  };
 };
 
 function createState(initialValue) {
-  var subscribersUID = 0;
-  var stateValue = initialValue;
-  var subscribers = [];
-  var reducerTasks = [];
-  var mutations = [];
-  var mutationInProgress = false;
-  var api = {};
+  var value = initialValue;
 
-  var doneMutation = function doneMutation(value) {
-    api.set(value);
-    mutationInProgress = false;
-    processMutations();
-  };
-  var processMutations = function processMutations() {
-    if (mutations.length === 0 || mutationInProgress) return;
-    mutationInProgress = true;
+  var methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel'];
+  var stateAPI = {};
+  var createdQueues = [];
+  var listeners = [];
 
-    var _mutations$shift = mutations.shift(),
-        reducer = _mutations$shift.reducer,
-        payload = _mutations$shift.payload,
-        done = _mutations$shift.done;
+  var createQueue = function createQueue(typeOfFirstItem, func) {
+    var queue = Queue(stateAPI.__set, stateAPI.__get);
+    var api = function api() {
+      for (var _len = arguments.length, payload = Array(_len), _key = 0; _key < _len; _key++) {
+        payload[_key] = arguments[_key];
+      }
 
-    var result = reducer(stateValue, payload);
+      return queue.process(payload);
+    };
 
-    if ((0, _utils.isPromise)(result)) {
-      result.then(function (value) {
-        done(value);
-        doneMutation(value);
-      });
-    } else {
-      done(result);
-      doneMutation(result);
-    }
-  };
+    queue.add(typeOfFirstItem, func);
+    methods.forEach(function (methodName) {
+      api[methodName] = function () {
+        for (var _len2 = arguments.length, func = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          func[_key2] = arguments[_key2];
+        }
 
-  api.__rine = 'state';
-  api.__subscribers = function () {
-    return subscribers;
-  };
-  api.id = getId();
-  api.set = function (newValue) {
-    stateValue = newValue;
-    subscribers.forEach(function (_ref) {
-      var update = _ref.update;
-      return update(stateValue);
+        queue.add(methodName, func);
+        return api;
+      };
     });
-    return newValue;
+    createdQueues.push(queue);
+    return api;
   };
-  api.get = function () {
-    return stateValue;
-  };
-  api.subscribe = function (update) {
-    var subscriberId = ++subscribersUID;
 
-    subscribers.push({ id: subscriberId, update: update });
-    return function () {
-      subscribers = subscribers.filter(function (_ref2) {
-        var id = _ref2.id;
-        return id !== subscriberId;
-      });
+  stateAPI.__id = getId();
+  stateAPI.__get = function () {
+    return value;
+  };
+  stateAPI.__set = function (newValue) {
+    value = newValue;
+    stateAPI.__triggerListeners();
+  };
+  stateAPI.__triggerListeners = function () {
+    return listeners.forEach(function (l) {
+      return l();
+    });
+  };
+  stateAPI.__listeners = function () {
+    return listeners;
+  };
+
+  stateAPI.teardown = function () {
+    methods.forEach(function (methodName) {
+      return stateAPI[methodName] = function () {};
+    });
+    createdQueues.forEach(function (q) {
+      return q.cancel();
+    });
+    createdQueues = [];
+    listeners = [];
+  };
+  stateAPI.onUpdate = function () {
+    var queueAPI = createQueue('pipe', []);
+
+    listeners.push(queueAPI);
+    return queueAPI;
+  };
+
+  methods.forEach(function (methodName) {
+    stateAPI[methodName] = function () {
+      for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+        func[_key3] = arguments[_key3];
+      }
+
+      return createQueue(methodName, func);
     };
-  };
-  api.teardown = function () {
-    _System2.default.put(teardownAction(api.id));
-  };
-  api.mutation = function (reducer) {
-    for (var _len = arguments.length, types = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      types[_key - 1] = arguments[_key];
-    }
-
-    if (types.length > 0) {
-      types.forEach(function (type) {
-        reducerTasks.push(_System2.default.takeEvery(type, function (payload) {
-          mutations.push({ reducer: reducer, payload: payload, done: function done() {} });
-          processMutations();
-        }));
-      });
-    }
-    return function (payload) {
-      return new Promise(function (done) {
-        mutations.push({ reducer: reducer, payload: payload, done: done });
-        processMutations();
-      });
-    };
-  };
-
-  _System2.default.addTask(teardownAction(api.id), function () {
-    subscribers = [];
-    stateValue = undefined;
-    if (reducerTasks.length > 0) {
-      reducerTasks.forEach(function (t) {
-        return t.cancel();
-      });
-    }
   });
 
-  return api;
+  return stateAPI;
 };
 
-},{"../utils":7,"./System":2}],6:[function(require,module,exports){
-'use strict';
+function mergeStates(statesMap) {
+  var fetchSourceValues = function fetchSourceValues() {
+    return Object.keys(statesMap).reduce(function (result, key) {
+      result[key] = statesMap[key].__get();
+      return result;
+    }, {});
+  };
+  var s = createState(fetchSourceValues());
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.resolver = exports.register = exports.takeEvery = exports.take = exports.put = exports.connect = exports.state = exports.rine = exports.System = undefined;
+  s.__set = function (newValue) {
+    if ((typeof newValue === 'undefined' ? 'undefined' : _typeof(newValue)) !== 'object') {
+      throw new Error('Wrong merged state value. Must be key-value pairs.');
+    }
+    Object.keys(newValue).forEach(function (key) {
+      statesMap[key].__set(newValue[key]);
+    });
+  };
+  s.__get = fetchSourceValues;
 
-var _System = require('./api/System');
+  Object.keys(statesMap).forEach(function (key) {
+    statesMap[key].onUpdate().pipe(s.__triggerListeners);
+  });
 
-Object.defineProperty(exports, 'System', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_System).default;
-  }
-});
-
-var _routine = require('./api/routine');
-
-Object.defineProperty(exports, 'rine', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_routine).default;
-  }
-});
-
-var _state = require('./api/state');
-
-Object.defineProperty(exports, 'state', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_state).default;
-  }
-});
-
-var _connect = require('./api/connect');
-
-Object.defineProperty(exports, 'connect', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_connect).default;
-  }
-});
-
-var _System2 = _interopRequireDefault(_System);
-
-var _Registry = require('./api/Registry');
-
-var _Registry2 = _interopRequireDefault(_Registry);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
+  return s;
 }
 
-var put = exports.put = _System2.default.put.bind(_System2.default);
-var take = exports.take = _System2.default.take.bind(_System2.default);
-var takeEvery = exports.takeEvery = _System2.default.takeEvery.bind(_System2.default);
-var register = exports.register = _Registry2.default.set.bind(_Registry2.default);
-var resolver = exports.resolver = _Registry2.default.resolver.bind(_Registry2.default);
-
-},{"./api/Registry":1,"./api/System":2,"./api/connect":3,"./api/routine":4,"./api/state":5}],7:[function(require,module,exports){
+},{"./utils":4}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -712,62 +498,5 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   return result ? result[1] : 'unknown';
 };
 
-},{}],8:[function(require,module,exports){
-'use strict';
-
-var isArray = Array.isArray;
-var keyList = Object.keys;
-var hasProp = Object.prototype.hasOwnProperty;
-
-module.exports = function equal(a, b) {
-  if (a === b) return true;
-
-  if (a && b && typeof a == 'object' && typeof b == 'object') {
-    var arrA = isArray(a)
-      , arrB = isArray(b)
-      , i
-      , length
-      , key;
-
-    if (arrA && arrB) {
-      length = a.length;
-      if (length != b.length) return false;
-      for (i = length; i-- !== 0;)
-        if (!equal(a[i], b[i])) return false;
-      return true;
-    }
-
-    if (arrA != arrB) return false;
-
-    var dateA = a instanceof Date
-      , dateB = b instanceof Date;
-    if (dateA != dateB) return false;
-    if (dateA && dateB) return a.getTime() == b.getTime();
-
-    var regexpA = a instanceof RegExp
-      , regexpB = b instanceof RegExp;
-    if (regexpA != regexpB) return false;
-    if (regexpA && regexpB) return a.toString() == b.toString();
-
-    var keys = keyList(a);
-    length = keys.length;
-
-    if (length !== keyList(b).length)
-      return false;
-
-    for (i = length; i-- !== 0;)
-      if (!hasProp.call(b, keys[i])) return false;
-
-    for (i = length; i-- !== 0;) {
-      key = keys[i];
-      if (!equal(a[key], b[key])) return false;
-    }
-
-    return true;
-  }
-
-  return a!==a && b!==b;
-};
-
-},{}]},{},[6])(6)
+},{}]},{},[1])(1)
 });
