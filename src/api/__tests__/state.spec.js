@@ -274,6 +274,21 @@ describe('Given the state', () => {
     });
   });
 
+  /* onUpdate */
+  describe('when we use the `onUpdate` method', () => {
+    it('should trigger the queue on a state change', () => {
+      const s = state(10);
+      const spy = jest.fn();
+      const m = s.mutate(value => value + 5);
+
+      s.onUpdate().map(value => value * 2).pipe(spy);
+      m();
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith(30);
+    });
+  });
+
   /* Integration tests */
   describe('when we use all the methods', () => {
     it('should work :)', async () => {

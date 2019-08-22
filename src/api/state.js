@@ -1,5 +1,4 @@
 /* eslint-disable no-use-before-define, no-return-assign */
-import System from './System';
 import { isPromise } from '../utils';
 
 var ids = 0;
@@ -131,6 +130,7 @@ export default function createState(initialValue) {
   const methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel'];
   const stateAPI = {};
   let createdQueues = [];
+  let listeners = [];
 
   const createQueue = function (typeOfFirstItem, func) {
     const queue = Queue(stateAPI.__set, stateAPI.__get);
@@ -149,12 +149,22 @@ export default function createState(initialValue) {
 
   stateAPI.__id = getId();
   stateAPI.__get = () => value;
-  stateAPI.__set = (newValue) => (value = newValue);
+  stateAPI.__set = (newValue) => {
+    value = newValue;
+    listeners.forEach(l => l());
+  };
 
   stateAPI.teardown = () => {
     methods.forEach(methodName => (stateAPI[methodName] = () => {}));
     createdQueues.forEach(q => q.cancel());
     createdQueues = [];
+    listeners = [];
+  };
+  stateAPI.onUpdate = () => {
+    const queueAPI = createQueue('pipe', []);
+
+    listeners.push(queueAPI);
+    return queueAPI;
   };
 
   methods.forEach(methodName => {
