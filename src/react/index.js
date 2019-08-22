@@ -1,22 +1,19 @@
 /* eslint-disable no-return-assign */
 import React, { useState, useEffect } from 'react';
-import System from './System';
 import { getFuncName } from '../utils';
-import createState, { teardownAction } from './state';
-import connect from './connect';
-import Registry from './Registry';
+import { createState as state } from '../state';
 
 var ids = 0;
 const getId = () => `@@r${ ++ids }`;
-const unmountedAction = id => `${ id }_unmounted`;
 
-export function createRoutineInstance(routineFunc, dependencies) {
+export function createRoutineInstance(routineFunc) {
   let id = getId();
   let mounted = false;
-  let outerProps = createState();
+  let outerProps = state();
+  let setOuterProps = outerProps.mutate();
+  let getOuterProps = outerProps.map();
   let permanentProps = {};
   let funcsToCallOnUnmount = [];
-  let actionsToFireOnUnmount = [ teardownAction(outerProps.id) ];
   let onRendered;
 
   function isMounted() {
@@ -33,10 +30,9 @@ export function createRoutineInstance(routineFunc, dependencies) {
     isMounted,
     in(initialProps, Component, setContent) {
       mounted = true;
-      outerProps.set(initialProps);
+      setOuterProps(initialProps);
       routineFunc(
         {
-          ...dependencies,
           render(props) {
             if (!mounted) return Promise.resolve();
             if (typeof props === 'string' || typeof props === 'number' || React.isValidElement(props)) {
@@ -49,66 +45,33 @@ export function createRoutineInstance(routineFunc, dependencies) {
             return new Promise(done => (onRendered = done));
           },
           useProps(callback) {
-            outerProps.subscribe(callback);
-            callback(outerProps.get());
-          },
-          put(...args) {
-            return System.put(...args);
-          },
-          take(...args) {
-            const task = System.take(...args);
-
-            if (Array.isArray(task)) {
-              funcsToCallOnUnmount = funcsToCallOnUnmount.concat(task.map(t => (() => t.cancel())));
-              if (task[0].done) {
-                return Promise.all(task.map(t => t.done));
-              }
-              return task;
-            }
-            funcsToCallOnUnmount.push(() => task.cancel());
-            return task.done;
-          },
-          takeEvery(...args) {
-            const task = System.takeEvery(...args);
-
-            if (Array.isArray(task)) {
-              funcsToCallOnUnmount = funcsToCallOnUnmount.concat(task.map(t => (() => t.cancel())));
-            } else {
-              funcsToCallOnUnmount.push(() => task.cancel());
-            }
-            return task;
+            outerProps.onUpdate().pipe(callback);
+            callback(getOuterProps());
           },
           state(...args) {
-            const state = createState(...args);
+            const s = state(...args);
 
-            actionsToFireOnUnmount.push(teardownAction(state.id));
-            return state;
-          },
-          connect(...args) {
-            funcsToCallOnUnmount.push(connect(...args));
+            funcsToCallOnUnmount.push(s.teardown);
+            return s;
           },
           isMounted
         }
       );
     },
     updated(newProps) {
-      outerProps.set(newProps);
+      setOuterProps(newProps);
     },
     rendered() {
       if (onRendered) onRendered();
     },
     out() {
       mounted = false;
+      funcsToCallOnUnmount.forEach(f => f());
+      funcsToCallOnUnmount = [];
     }
   };
 
-  System.addTask(
-    unmountedAction(id),
-    () => {
-      funcsToCallOnUnmount.forEach(f => f());
-      System.putBulk(actionsToFireOnUnmount);
-    }
-  );
+  funcsToCallOnUnmount.push(outerProps.teardown);
 
   return instance;
 }
@@ -118,7 +81,6 @@ export default function routine(
   Component = () => null,
   options = { createRoutineInstance }
 ) {
-  let dependencies = [];
   const RoutineBridge = function (outerProps) {
     let [ instance, setInstance ] = useState(null);
     let [ content, setContent ] = useState(null);
@@ -135,13 +97,12 @@ export default function routine(
 
     // mounting
     useEffect(() => {
-      setInstance(instance = options.createRoutineInstance(routineFunc, dependencies));
+      setInstance(instance = options.createRoutineInstance(routineFunc));
 
       instance.in(outerProps, Component, setContent);
 
       return function () {
         instance.out();
-        System.put(unmountedAction(instance.id));
       };
     }, []);
 
@@ -149,10 +110,6 @@ export default function routine(
   };
 
   RoutineBridge.displayName = `Routine(${ getFuncName(routineFunc) })`;
-  RoutineBridge.inject = (...keys) => {
-    dependencies = Registry.getBulk(keys);
-    return RoutineBridge;
-  };
 
   return RoutineBridge;
 }

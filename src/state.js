@@ -1,5 +1,5 @@
 /* eslint-disable no-use-before-define, no-return-assign */
-import { isPromise } from '../utils';
+import { isPromise } from './utils';
 
 var ids = 0;
 const getId = () => `@@s${ ++ids }`;
@@ -36,7 +36,7 @@ const Queue = function (setStateValue, getStateValue) {
             return next();
           /* -------------------------------------------------- map */
           case 'map':
-            result = func[0](result, ...payload);
+            result = (func[0] || (value => value))(result, ...payload);
             if (isPromise(result)) {
               return result.then(asyncResult => {
                 result = asyncResult;
@@ -46,7 +46,7 @@ const Queue = function (setStateValue, getStateValue) {
             return next();
           /* -------------------------------------------------- mutate */
           case 'mutate':
-              result = func[0](result, ...payload);
+              result = (func[0] || ((current, payload) => payload))(result, ...payload);
               if (isPromise(result)) {
                 return result.then(asyncResult => {
                   result = asyncResult;
@@ -154,6 +154,7 @@ export function createState(initialValue) {
     stateAPI.__triggerListeners();
   };
   stateAPI.__triggerListeners = () => listeners.forEach(l => l());
+  stateAPI.__listeners = () => listeners;
 
   stateAPI.teardown = () => {
     methods.forEach(methodName => (stateAPI[methodName] = () => {}));

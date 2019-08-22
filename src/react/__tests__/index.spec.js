@@ -1,15 +1,10 @@
 /* eslint-disable react/prop-types, react/jsx-key */
 import React from 'react';
 import { render, act } from '@testing-library/react';
-import System from '../System';
-import routine, { createRoutineInstance } from '../routine';
-import state from '../state';
 import { delay, exerciseHTML } from '../../__helpers__';
+import routine, { createRoutineInstance } from '../index';
 
 describe('Given the `routine` function', () => {
-  beforeEach(() => {
-    System.reset();
-  });
 
   // testing `routine`
   describe('when we have a routine bridge component', () => {
@@ -99,98 +94,30 @@ describe('Given the `routine` function', () => {
         expect(propsSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
       });
     });
-    describe('when we use take', () => {
-      it(`should
-        * wait for the task done promise to be resolved
-        * should clean up the tasks when unmount`, async () => {
-        const spy = jest.fn();
-        const C = routine(async function ({ take }) {
-          const result = await take('foo');
-
-          spy(result);
-        });
-        const { unmount } = render(<C />);
-
-        System.put('foo', 42);
-        await delay(1); // because of the promise
-        expect(spy).toBeCalledWith(42);
-        unmount();
-        expect(System.tasks).toHaveLength(0);
-      });
-    });
-    describe('and we use take in a fork fashion', () => {
-      it('should continue with the routine execution', async () => {
-        const spy = jest.fn();
-        const spy2 = jest.fn();
-        const c = createRoutineInstance(function ({ take }) {
-          take('foo', spy);
-          spy2();
-        });
-
-        c.in(() => {});
-
-        expect(spy2).toBeCalled();
-        System.put('foo', 42);
-        expect(spy).toBeCalledWith(42);
-      });
-    });
-    describe('and send some dependencies', () => {
-      it('should pass the dependencies to the routine function', async () => {
-        const spy = jest.fn();
-        const c = createRoutineInstance(spy, { a: 'foo', b: 'bar' });
-
-        c.in(() => {});
-
-        expect(spy).toBeCalledWith(expect.objectContaining({ a: 'foo', b: 'bar' }));
-      });
-    });
   });
 
   // integration tests
   describe('when we use the routine bridge and the instance together', () => {
-    describe('and we use takeEvery', () => {
-      it(`should
-        * wait for the task done promise to be resolved
-        * should clean up the tasks when unmount`, async () => {
-        const spy = jest.fn();
-        const spy2 = jest.fn();
-        const C = routine(async function ({ takeEvery }) {
-          takeEvery('foo', spy2);
-          spy();
-        });
-        const { unmount } = render(<C />);
-
-        System.put('foo');
-        System.put('foo');
-        unmount();
-
-        expect(spy).toBeCalled();
-        expect(spy2).toBeCalledTimes(2);
-        expect(System.tasks).toHaveLength(0);
-      });
-    });
     describe('and we use a state', () => {
       it(`should
-        * register the state teardown task in the routine
+        * register the state teardown function
         * teardown the state when the component is unmounted`, () => {
         let ss;
         const R = routine(function ({ render, state }) {
           const s = ss = state('foo');
 
-          s.subscribe(() => {});
-          render(<p>{ s.get() }</p>);
+          s.onUpdate().pipe(() => {});
+          render(<p>{ s.map()() }</p>);
         });
         const { container, unmount } = render(<R />);
 
         exerciseHTML(container, `
           <p>foo</p>
         `);
-        expect(ss.__subscribers()).toHaveLength(1);
-        expect(ss.get()).toBe('foo');
+        expect(ss.__listeners()).toHaveLength(1);
+        expect(ss.map()()).toBe('foo');
         unmount();
-        expect(System.tasks).toHaveLength(0);
-        expect(ss.__subscribers()).toHaveLength(0);
-        expect(ss.get()).toBe(undefined);
+        expect(ss.__listeners()).toHaveLength(0);
       });
     });
     describe('and we use "useProps"', () => {
@@ -304,72 +231,6 @@ describe('Given the `routine` function', () => {
         const { container } = render(<C />);
 
         exerciseHTML(container, '');
-      });
-    });
-    describe('and we use take or takeEvery with array of types', () => {
-      it('should handle them properly', async () => {
-        const spy = jest.fn();
-        const Component = routine(function ({ take, takeEvery }) {
-          take(['foo', 'bar'], spy);
-          takeEvery([ 'moo', 'zar' ], spy);
-        });
-
-        const { unmount } = render(<Component />);
-
-        act(() => System.put('foo', 1));
-        act(() => System.put('bar', 2));
-        act(() => System.put('moo', 3));
-        act(() => System.put('zar', 4));
-        unmount();
-        act(() => System.put('foo', 5));
-        act(() => System.put('bar', 6));
-        act(() => System.put('moo', 7));
-        act(() => System.put('zar', 8));
-
-        expect(spy).toHaveBeenCalledTimes(4);
-        expect(spy.mock.calls[0]).toStrictEqual([ 1 ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ 2 ]);
-        expect(spy.mock.calls[2]).toStrictEqual([ 3 ]);
-        expect(spy.mock.calls[3]).toStrictEqual([ 4 ]);
-      });
-    });
-    describe('and we use take and await', () => {
-      it('should resume successfully', (done) => {
-        const Component = routine(async function ({ take }) {
-          expect(await take(['foo', 'bar'])).toStrictEqual([1, 2]);
-          done();
-        });
-
-        render(<Component />);
-
-        act(() => System.put('foo', 1));
-        act(() => System.put('bar', 2));
-      });
-    });
-    describe('and we use connect', () => {
-      it('should connect to the state and unsubscribe when we unmount', () => {
-        const s1 = state(1);
-        const s2 = state(2);
-        const spy = jest.fn();
-        const Component = routine(async function ({ connect }) {
-          connect({ s1, s2 }, spy);
-        });
-        const { unmount } = render(<Component />);
-
-        act(() => {
-          s1.set(3);
-        });
-        act(() => {
-          s2.set(4);
-        });
-        unmount();
-
-        expect(spy).toBeCalledTimes(3);
-        expect(spy.mock.calls[0]).toStrictEqual([ { s1: 1, s2: 2 }]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { s1: 3, s2: 2 }]);
-        expect(spy.mock.calls[2]).toStrictEqual([ { s1: 3, s2: 4 }]);
-        expect(s1.__subscribers()).toHaveLength(0);
-        expect(s2.__subscribers()).toHaveLength(0);
       });
     });
   });

@@ -3,15 +3,14 @@ import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { rine, System, register } from '../index';
+import { react } from '../index';
+
+const { routine } = react;
 
 describe('Given the Rine library', () => {
-  beforeEach(() => {
-    System.reset();
-  });
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
-      const A = rine(async ({ render }) => {
+      const A = routine(async ({ render }) => {
         act(() => { render('Hello'); });
         await delay(20);
         act(() => { render('world'); });
@@ -26,7 +25,7 @@ describe('Given the Rine library', () => {
     });
     it('should not try to re-render if the bridge is unmounted', async () => {
       const spy = jest.spyOn(console, 'error');
-      const A = rine(async ({ render }) => {
+      const A = routine(async ({ render }) => {
         await delay(10);
         act(() => { render('world'); });
       });
@@ -41,7 +40,7 @@ describe('Given the Rine library', () => {
   });
   describe('when reusing the same routine', () => {
     it('should create a separate instance', () => {
-      const R = rine(function ({ render, useProps }) {
+      const R = routine(function ({ render, useProps }) {
         useProps(render);
       }, props => <p>{ props.answer }</p>);
 
@@ -63,110 +62,10 @@ describe('Given the Rine library', () => {
       `);
     });
   });
-  describe('when using `take` and `put`', () => {
-    it(`should
-      - pause the routine till the event is fired
-      - allow for only one put`, async () => {
-      const A = rine(async ({ render, take, put }) => {
-        act(() => {
-          render(<button onClick={ () => put('xxx', 'bar') }>click me</button>);
-        });
-        const r = await take('xxx');
-
-        expect(r).toEqual('bar');
-        act(() => { render(<p>Yeah</p>); });
-      });
-
-      const { container, getByText } = render(<A />);
-
-      fireEvent.click(getByText('click me'));
-
-      await delay(1);
-      exerciseHTML(container, `
-        <p>Yeah</p>
-      `);
-    });
-  });
-  describe('when using `take` in a fork fashion', () => {
-    it(`should
-      - run the callback after the put call
-      - allow for only one put call`, async () => {
-      const A = rine(async ({ render, take, put }) => {
-        act(() => {
-          render(<button onClick={ () => put('foo', 'bar') }>click me</button>);
-        });
-        take('foo', async (r) => {
-          expect(r).toEqual('bar');
-          act(() => { render(<p>Yeah</p>); });
-        });
-      });
-
-      const { container, getByText } = render(<A />);
-
-      fireEvent.click(getByText('click me'));
-
-      exerciseHTML(container, `
-        <p>Yeah</p>
-      `);
-    });
-  });
-  describe('when using `takeEvery` and `put`', () => {
-    it('should fire the callback on every `put`', async () => {
-      const Counter = ({ value, onClick }) => (
-        <React.Fragment>
-          <p>{ value }</p>
-          <button onClick={ onClick }>click me</button>)
-        </React.Fragment>
-      );
-      const A = rine(async ({ render, takeEvery, put }) => {
-        let counter = 0;
-        let renderCounter = () => act(() => { render(<Counter value={ counter } onClick={ () => put('foo', 2) } />); });
-
-        renderCounter();
-        takeEvery('foo', (payload) => {
-          counter += payload;
-          renderCounter();
-        });
-      });
-
-      const { container, getByText } = render(<A />);
-
-      fireEvent.click(getByText('click me'));
-      exerciseHTML(container.querySelector('p'), '2');
-      fireEvent.click(getByText('click me'));
-      fireEvent.click(getByText('click me'));
-      fireEvent.click(getByText('click me'));
-      exerciseHTML(container.querySelector('p'), '8');
-    });
-  });
-  describe('when using `take` and `put` in different routines', () => {
-    it('should allow the communication between them', async () => {
-      const A = rine(async ({ render, take }) => {
-        await take('foo');
-        act(() => { render(<p>It works</p>); });
-      });
-      const B = rine(async ({ put }) => {
-        await delay(10);
-        put('foo');
-      });
-
-      const { container } = render(
-        <React.Fragment>
-          <A />
-          <B />
-        </React.Fragment>
-      );
-
-      await delay(11);
-      exerciseHTML(container, `
-        <p>It works</p>
-      `);
-    });
-  });
   describe('when we use the `isMounted` method', () => {
     it('should return the value of the `mounted` flag', async () => {
       const spy = jest.fn();
-      const A = rine(async ({ isMounted }) => {
+      const A = routine(async ({ isMounted }) => {
         spy(isMounted());
         await delay(10);
         spy(isMounted());
@@ -193,7 +92,7 @@ describe('Given the Rine library', () => {
           </React.Fragment>
         );
       };
-      const Form = rine(function ({ render }) {
+      const Form = routine(function ({ render }) {
         render(
           <form>
             <Input />
@@ -207,22 +106,9 @@ describe('Given the Rine library', () => {
       expect(getByText('foobar')).toBeDefined();
     });
   });
-  describe('when we unmount a component', () => {
-    it('should clean up the pending tasks', () => {
-      const C = rine(function ({ take }) {
-        take('foo');
-      });
-
-      const { unmount } = render(<C />);
-
-      expect(System.tasks).toHaveLength(3);
-      unmount();
-      expect(System.tasks).toHaveLength(0);
-    });
-  });
   describe('when we use useState hook together with useProps', () => {
     it('should get useProps callback fired every time when we update the state', async () => {
-      const FetchTime = rine(async ({ render, useProps }) => {
+      const FetchTime = routine(async ({ render, useProps }) => {
         useProps(async ({ city }) => {
           render(<p>{ city }</p>);
         });
@@ -251,27 +137,6 @@ describe('Given the Rine library', () => {
       exerciseHTML(getByTestId('text'), '<p>Paris</p>');
       fireEvent.change(getByTestId('select'), { target: { value: 'Sofia' } });
       exerciseHTML(getByTestId('text'), '<p>Sofia</p>');
-    });
-  });
-  describe('when we use the registry to define a routine dependency', () => {
-    it('should deliver the dependency', () => {
-      const Service = {
-        getData: jest.fn()
-      };
-      const settings = { answer: 42 };
-
-      register('service', Service);
-      register('settings', settings);
-
-      const routineFunc = ({ service }) => {
-        service.getData(settings.answer);
-      };
-      const C = rine(routineFunc).inject('service', 'settings');
-
-      render(<C />);
-
-      expect(Service.getData).toBeCalledWith(42);
-      expect(Service.getData).toBeCalledTimes(1);
     });
   });
 });

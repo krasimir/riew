@@ -1,5 +1,5 @@
 import { createState, mergeStates } from '../state';
-import { delay } from '../../__helpers__';
+import { delay } from '../__helpers__';
 
 const state = createState;
 const merge = mergeStates;
@@ -105,6 +105,12 @@ describe('Given the state', () => {
       expect(result).toBe('foobar');
       expect(arr).toStrictEqual(['a', 'b', 'c']);
     });
+    it('should work with no function passed', async () => {
+      const s = state('foo');
+      const m = s.map();
+
+      expect(m()).toBe('foo');
+    });
   });
 
   /* mutate */
@@ -128,6 +134,14 @@ describe('Given the state', () => {
 
       expect(result).toBe('foobar');
       expect(s.__get()).toBe('foobar');
+    });
+    it('should work with no function passed', async () => {
+      const s = state('foo');
+      const m = s.mutate();
+
+      m('bar');
+
+      expect(s.__get()).toBe('bar');
     });
   });
 
@@ -343,7 +357,7 @@ describe('Given the state', () => {
   });
 
   /* Integration tests */
-  describe('when we use all the methods', () => {
+  describe('when we have a slightly more complicated code', () => {
     it('should work :)', async () => {
       const arr = [];
       const s = state('foo');
