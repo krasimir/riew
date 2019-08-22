@@ -1,5 +1,8 @@
-import state from '../state';
+import { createState, mergeStates } from '../state';
 import { delay } from '../../__helpers__';
+
+const state = createState;
+const merge = mergeStates;
 
 describe('Given the state', () => {
 
@@ -286,6 +289,56 @@ describe('Given the state', () => {
 
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith(30);
+    });
+  });
+
+  /* merge */
+  describe('when we use the `merge` method', () => {
+    it('should set a merged value coming from the sources', () => {
+      const s1 = state(1);
+      const s2 = state('a');
+      const s = merge({ s1, s2 });
+
+      expect(s.__get()).toStrictEqual({ s1: 1, s2: 'a' });
+    });
+    it('should update the sources when we update the merged state', () => {
+      const s1 = state(1);
+      const s2 = state('a');
+      const s = merge({ s1, s2 });
+
+      s.__set({ s1: 2 });
+
+      expect(s.__get()).toStrictEqual({ s1: 2, s2: 'a' });
+      expect(s1.__get()).toBe(2);
+      expect(s2.__get()).toBe('a');
+    });
+    it('should get the right merged state when we update the source states', () => {
+      const s1 = state(1);
+      const s2 = state('a');
+      const s = merge({ s1, s2 });
+      const getValue = s.map(({ s1, s2 }) => s1 + s2);
+
+      s1.__set(2);
+      s2.__set('b');
+
+      expect(getValue()).toBe('2b');
+      expect(s1.__get()).toBe(2);
+      expect(s2.__get()).toBe('b');
+    });
+    it('should support the listening on the merge state', () => {
+      const s1 = state(1);
+      const s2 = state('a');
+      const s = merge({ s1, s2 });
+      const spy = jest.fn();
+
+      s.onUpdate().pipe(spy);
+
+      s1.__set(2);
+      s2.__set('b');
+
+      expect(spy).toBeCalledTimes(2);
+      expect(spy.mock.calls[0]).toStrictEqual([{ s1: 2, s2: 'a' }]);
+      expect(spy.mock.calls[1]).toStrictEqual([{ s1: 2, s2: 'b' }]);
     });
   });
 

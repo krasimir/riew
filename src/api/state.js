@@ -124,7 +124,7 @@ const Queue = function (setStateValue, getStateValue) {
   };
 };
 
-export default function createState(initialValue) {
+export function createState(initialValue) {
   let value = initialValue;
 
   const methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel'];
@@ -151,8 +151,9 @@ export default function createState(initialValue) {
   stateAPI.__get = () => value;
   stateAPI.__set = (newValue) => {
     value = newValue;
-    listeners.forEach(l => l());
+    stateAPI.__triggerListeners();
   };
+  stateAPI.__triggerListeners = () => listeners.forEach(l => l());
 
   stateAPI.teardown = () => {
     methods.forEach(methodName => (stateAPI[methodName] = () => {}));
@@ -173,3 +174,27 @@ export default function createState(initialValue) {
 
   return stateAPI;
 };
+
+export function mergeStates(statesMap) {
+  const fetchSourceValues = () => Object.keys(statesMap).reduce((result, key) => {
+    result[key] = statesMap[key].__get();
+    return result;
+  }, {});
+  const s = createState(fetchSourceValues());
+
+  s.__set = (newValue) => {
+    if (typeof newValue !== 'object') {
+      throw new Error('Wrong merged state value. Must be key-value pairs.');
+    }
+    Object.keys(newValue).forEach(key => {
+      statesMap[key].__set(newValue[key]);
+    });
+  };
+  s.__get = fetchSourceValues;
+
+  Object.keys(statesMap).forEach(key => {
+    statesMap[key].onUpdate().pipe(s.__triggerListeners);
+  });
+
+  return s;
+}
