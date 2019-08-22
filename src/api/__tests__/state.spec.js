@@ -234,6 +234,21 @@ describe('Given the state', () => {
     });
   });
 
+  /* cancel */
+  describe('when we use the `cancel` method', () => {
+    it('should empty the queue and disable the creation of new ones', () => {
+      const s = state(10);
+      const spyA = jest.fn();
+      const m = s.mutate((value) => value + 1).cancel().pipe(spyA);
+
+      expect(m()).toBe(11);
+      expect(m()).toBe(11);
+      expect(m()).toBe(11);
+      expect(s.__get()).toBe(11);
+      expect(spyA).toBeCalledTimes(0);
+    });
+  });
+
   /* Integration tests */
   describe('when we use all the methods', () => {
     it('should work :)', async () => {
