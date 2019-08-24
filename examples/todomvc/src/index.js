@@ -22,13 +22,21 @@ import {
 
 const App = routine(function App({ render, state }) {
   const filter = state(ALL);
-  const changeFilter = filter.mutate();
+  const viewAll = filter.mutate(() => ALL);
+  const viewActive = filter.mutate(() => ACTIVE);
+  const viewCompleted = filter.mutate(() => COMPLETED);
 
-  todos.onUpdate().map(todos => ({ todos })).pipe(render);
-  filter.onUpdate().map(filter => ({ filter })).pipe(render);
+  todos.onUpdate().mapToKey('todos').pipe(render);
+  filter.onUpdate().mapToKey('filter').pipe(render);
 
-  render({ changeFilter, todos: todos.map()(), filter: filter.map()() });
-}, ({ todos, filter, changeFilter }) => (
+  render({
+    viewAll,
+    viewActive,
+    viewCompleted,
+    todos: todos.get(),
+    filter: filter.get()
+  });
+}, ({ todos, filter, viewAll, viewActive, viewCompleted }) => (
   <React.Fragment>
     <section className='todoapp'>
       <header className='header'>
@@ -59,9 +67,9 @@ const App = routine(function App({ render, state }) {
         <Footer
           todos={ todos }
           filter={ filter }
-          all={ () => changeFilter(ALL) }
-          active={ () => changeFilter(ACTIVE) }
-          completed={ () => changeFilter(COMPLETED) }
+          all={ viewAll }
+          active={ viewActive }
+          completed={ viewCompleted }
           clearCompleted={ clearCompleted } />
     </section>
   </React.Fragment>

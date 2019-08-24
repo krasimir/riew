@@ -44,6 +44,12 @@ const Queue = function (setStateValue, getStateValue) {
               });
             }
             return next();
+          /* -------------------------------------------------- map */
+          case 'mapToKey':
+            const mappingFunc = (value) => ({ [func[0]]: value });
+
+            result = mappingFunc(result, ...payload);
+            return next();
           /* -------------------------------------------------- mutate */
           case 'mutate':
               result = (func[0] || ((current, payload) => payload))(result, ...payload);
@@ -127,7 +133,7 @@ const Queue = function (setStateValue, getStateValue) {
 export function createState(initialValue) {
   let value = initialValue;
 
-  const methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel'];
+  const methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel', 'mapToKey'];
   const stateAPI = {};
   let createdQueues = [];
   let listeners = [];
@@ -157,7 +163,6 @@ export function createState(initialValue) {
   stateAPI.__listeners = () => listeners;
   stateAPI.set = (newValue) => stateAPI.mutate()(newValue);
   stateAPI.get = () => stateAPI.map()();
-  stateAPI.mapToKey = (key) => stateAPI.map(value => ({ [key]: value }));
 
   stateAPI.teardown = () => {
     methods.forEach(methodName => (stateAPI[methodName] = () => {}));

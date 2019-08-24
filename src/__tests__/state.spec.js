@@ -370,9 +370,17 @@ describe('Given the state', () => {
   /* mapToKey */
   describe('when we use the `mapToKey` method', () => {
     it('should map to an object which key is equal to the value of the state', () => {
-      const m = state('foo').mapToKey('myValue');
+      const spy = jest.fn();
+      const s = state('foo');
 
-      expect(m()).toStrictEqual({ myValue: 'foo' });
+      s.onUpdate().mapToKey('myValue').pipe(spy);
+      s.__set('bar');
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith({ myValue: 'bar' });
+    });
+    it('should work as the other queue api methods', () => {
+      expect(state('foo').mapToKey('bar')()).toStrictEqual({ bar: 'foo' });
     });
   });
 
