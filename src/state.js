@@ -133,7 +133,9 @@ const Queue = function (setStateValue, getStateValue) {
 export function createState(initialValue) {
   let value = initialValue;
 
-  const methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel', 'mapToKey'];
+  const methods = [
+    'pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel', 'mapToKey'
+  ];
   const stateAPI = {};
   let createdQueues = [];
   let listeners = [];
