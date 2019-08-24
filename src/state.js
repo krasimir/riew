@@ -4,8 +4,8 @@ import { isPromise } from './utils';
 var ids = 0;
 const getId = () => `@@s${ ++ids }`;
 
-const Queue = function (setStateValue, getStateValue) {
-  let items = [];
+const Queue = function (setStateValue, getStateValue, predefinedItems = []) {
+  let items = [ ...predefinedItems ];
 
   return {
     add(type, func) {
@@ -78,8 +78,8 @@ const Queue = function (setStateValue, getStateValue) {
               index = items.length;
             }
             return next();
-          /* -------------------------------------------------- fork */
-          case 'fork':
+          /* -------------------------------------------------- parallel */
+          case 'parallel':
             result = func.map(f => f(result, ...payload));
             const promises = result.filter(isPromise);
 
@@ -126,6 +126,9 @@ const Queue = function (setStateValue, getStateValue) {
     },
     cancel() {
       items = [];
+    },
+    clone() {
+      return Queue(setStateValue, getStateValue, items);
     }
   };
 };
@@ -134,7 +137,7 @@ export function createState(initialValue) {
   let value = initialValue;
 
   const methods = [
-    'pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel', 'mapToKey'
+    'pipe', 'map', 'mutate', 'filter', 'parallel', 'branch', 'cancel', 'mapToKey'
   ];
   const stateAPI = {};
   let createdQueues = [];
@@ -145,6 +148,7 @@ export function createState(initialValue) {
     const api = (...payload) => queue.process(payload);
 
     queue.add(typeOfFirstItem, func);
+    api.fork = () => createQueue(typeOfFirstItem, func);
     methods.forEach(methodName => {
       api[methodName] = (...func) => {
         queue.add(methodName, func);
@@ -163,9 +167,10 @@ export function createState(initialValue) {
   };
   stateAPI.__triggerListeners = () => listeners.forEach(l => l());
   stateAPI.__listeners = () => listeners;
+  stateAPI.__queues = () => createdQueues;
+
   stateAPI.set = (newValue) => stateAPI.mutate()(newValue);
   stateAPI.get = () => stateAPI.map()();
-
   stateAPI.teardown = () => {
     methods.forEach(methodName => (stateAPI[methodName] = () => {}));
     createdQueues.forEach(q => q.cancel());

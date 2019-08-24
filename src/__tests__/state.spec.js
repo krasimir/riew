@@ -174,14 +174,14 @@ describe('Given the state', () => {
     });
   });
 
-  /* fork */
-  describe('when we use the `fork` method', () => {
+  /* parallel */
+  describe('when we use the `parallel` method', () => {
     it('should run functions in parallel', () => {
       const s = state('foo');
       const spyA = jest.fn().mockImplementation(() => 'a');
       const spyB = jest.fn().mockImplementation(() => 'b');
       const spyC = jest.fn().mockImplementation(() => 'c');
-      const m = s.map(() => 'boo').fork(spyA, spyB, spyC);
+      const m = s.map(() => 'boo').parallel(spyA, spyB, spyC);
 
       expect(m('moo')).toStrictEqual(['a', 'b', 'c']);
       expect(spyA).toBeCalledTimes(1);
@@ -191,7 +191,7 @@ describe('Given the state', () => {
       expect(spyC).toBeCalledTimes(1);
       expect(spyC).toBeCalledWith('boo', 'moo');
     });
-    it('should wait till all the async forks are done', async () => {
+    it('should wait till all the async parallel functions are done', async () => {
       const s = state('foo');
       const spyA = jest.fn().mockImplementation(() => 'a');
       const spyB = jest.fn().mockImplementation(async () => {
@@ -202,7 +202,7 @@ describe('Given the state', () => {
         await delay(7);
         return 'c';
       });
-      const m = s.map(() => 'boo').fork(spyA, spyB, spyC);
+      const m = s.map(() => 'boo').parallel(spyA, spyB, spyC);
 
       expect(await m('moo')).toStrictEqual(['a', 'b', 'c']);
       expect(spyA).toBeCalledTimes(1);
@@ -381,6 +381,26 @@ describe('Given the state', () => {
     });
     it('should work as the other queue api methods', () => {
       expect(state('foo').mapToKey('bar')()).toStrictEqual({ bar: 'foo' });
+    });
+  });
+
+  /* fork */
+  describe('when we use the `fork` method', () => {
+    it('should fork the queue', () => {
+      const spy = jest.fn();
+      const s = state([ 'foo', 'bar' ]);
+      const getFirst = s.map(value => value[0]);
+      const getUp = getFirst.fork().pipe(spy);
+
+      expect(s.__queues()).toHaveLength(2);
+
+      const mapping = getFirst();
+
+      getUp();
+
+      expect(mapping).toBe('foo');
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith('foo');
     });
   });
 

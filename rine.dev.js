@@ -252,7 +252,9 @@ var getId = function getId() {
 };
 
 var Queue = function Queue(setStateValue, getStateValue) {
-  var items = [];
+  var predefinedItems = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+
+  var items = [].concat(_toConsumableArray(predefinedItems));
 
   return {
     add: function add(type, func) {
@@ -333,8 +335,8 @@ var Queue = function Queue(setStateValue, getStateValue) {
               index = items.length;
             }
             return next();
-          /* -------------------------------------------------- fork */
-          case 'fork':
+          /* -------------------------------------------------- parallel */
+          case 'parallel':
             result = func.map(function (f) {
               return f.apply(undefined, [result].concat(_toConsumableArray(payload)));
             });
@@ -385,6 +387,9 @@ var Queue = function Queue(setStateValue, getStateValue) {
     },
     cancel: function cancel() {
       items = [];
+    },
+    clone: function clone() {
+      return Queue(setStateValue, getStateValue, items);
     }
   };
 };
@@ -392,7 +397,7 @@ var Queue = function Queue(setStateValue, getStateValue) {
 function createState(initialValue) {
   var value = initialValue;
 
-  var methods = ['pipe', 'map', 'mutate', 'filter', 'fork', 'branch', 'cancel', 'mapToKey'];
+  var methods = ['pipe', 'map', 'mutate', 'filter', 'parallel', 'branch', 'cancel', 'mapToKey'];
   var stateAPI = {};
   var createdQueues = [];
   var listeners = [];
@@ -408,6 +413,9 @@ function createState(initialValue) {
     };
 
     queue.add(typeOfFirstItem, func);
+    api.fork = function () {
+      return createQueue(typeOfFirstItem, func);
+    };
     methods.forEach(function (methodName) {
       api[methodName] = function () {
         for (var _len2 = arguments.length, func = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
@@ -438,13 +446,16 @@ function createState(initialValue) {
   stateAPI.__listeners = function () {
     return listeners;
   };
+  stateAPI.__queues = function () {
+    return createdQueues;
+  };
+
   stateAPI.set = function (newValue) {
     return stateAPI.mutate()(newValue);
   };
   stateAPI.get = function () {
     return stateAPI.map()();
   };
-
   stateAPI.teardown = function () {
     methods.forEach(function (methodName) {
       return stateAPI[methodName] = function () {};
