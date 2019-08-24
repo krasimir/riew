@@ -11,7 +11,6 @@ export function createRoutineInstance(routineFunc) {
   let mounted = false;
   let outerProps = state();
   let setOuterProps = outerProps.mutate();
-  let getOuterProps = outerProps.map();
   let permanentProps = {};
   let funcsToCallOnUnmount = [];
   let onRendered;
@@ -44,10 +43,7 @@ export function createRoutineInstance(routineFunc) {
             }
             return new Promise(done => (onRendered = done));
           },
-          useProps(callback) {
-            outerProps.onUpdate().pipe(callback);
-            callback(getOuterProps());
-          },
+          props: outerProps,
           state(...args) {
             const s = state(...args);
 

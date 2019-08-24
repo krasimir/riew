@@ -1,6 +1,6 @@
 {
   "name": "rine",
-  "version": "0.46.1",
+  "version": "0.47.0",
   "description": "Procedure programming for React components",
   "main": "./lib",
   "scripts": {

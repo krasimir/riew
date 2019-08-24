@@ -92,7 +92,6 @@ function createRoutineInstance(routineFunc) {
   var mounted = false;
   var outerProps = (0, _state2.createState)();
   var setOuterProps = outerProps.mutate();
-  var getOuterProps = outerProps.map();
   var permanentProps = {};
   var funcsToCallOnUnmount = [];
   var onRendered = void 0;
@@ -128,10 +127,8 @@ function createRoutineInstance(routineFunc) {
             return onRendered = done;
           });
         },
-        useProps: function useProps(callback) {
-          outerProps.onUpdate().pipe(callback);
-          callback(getOuterProps());
-        },
+
+        props: outerProps,
         state: function state() {
           var s = _state2.createState.apply(undefined, arguments);
 
@@ -469,12 +466,7 @@ function createState(initialValue) {
     createdQueues = [];
     listeners = [];
   };
-  stateAPI.onUpdate = function () {
-    var queueAPI = createQueue('pipe', []);
-
-    listeners.push(queueAPI);
-    return queueAPI;
-  };
+  stateAPI.stream = {};
 
   methods.forEach(function (methodName) {
     stateAPI[methodName] = function () {
@@ -483,6 +475,16 @@ function createState(initialValue) {
       }
 
       return createQueue(methodName, func);
+    };
+    stateAPI.stream[methodName] = function () {
+      for (var _len4 = arguments.length, func = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+        func[_key4] = arguments[_key4];
+      }
+
+      var q = createQueue(methodName, func);
+
+      listeners.push(q);
+      return q;
     };
   });
 
@@ -509,7 +511,7 @@ function mergeStates(statesMap) {
   s.__get = fetchSourceValues;
 
   Object.keys(statesMap).forEach(function (key) {
-    statesMap[key].onUpdate().pipe(s.__triggerListeners);
+    statesMap[key].stream.pipe(s.__triggerListeners);
   });
 
   return s;

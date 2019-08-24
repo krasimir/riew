@@ -177,15 +177,16 @@ export function createState(initialValue) {
     createdQueues = [];
     listeners = [];
   };
-  stateAPI.onUpdate = () => {
-    const queueAPI = createQueue('pipe', []);
-
-    listeners.push(queueAPI);
-    return queueAPI;
-  };
+  stateAPI.stream = {};
 
   methods.forEach(methodName => {
     stateAPI[methodName] = (...func) => createQueue(methodName, func);
+    stateAPI.stream[methodName] = (...func) => {
+      const q = createQueue(methodName, func);
+
+      listeners.push(q);
+      return q;
+    };
   });
 
   return stateAPI;
@@ -209,7 +210,7 @@ export function mergeStates(statesMap) {
   s.__get = fetchSourceValues;
 
   Object.keys(statesMap).forEach(key => {
-    statesMap[key].onUpdate().pipe(s.__triggerListeners);
+    statesMap[key].stream.pipe(s.__triggerListeners);
   });
 
   return s;

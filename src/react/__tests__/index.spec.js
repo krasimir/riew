@@ -82,8 +82,8 @@ describe('Given the `routine` function', () => {
       it('should fire any props callbacks', () => {
         const propsSpy = jest.fn();
         const F = () => {};
-        const c = createRoutineInstance(({ useProps }) => {
-          useProps(propsSpy);
+        const c = createRoutineInstance(({ props }) => {
+          props.stream.pipe(propsSpy)();
         });
 
         c.in({ a: 'b' }, F, () => {});
@@ -106,7 +106,7 @@ describe('Given the `routine` function', () => {
         const R = routine(function ({ render, state }) {
           const s = ss = state('foo');
 
-          s.onUpdate().pipe(() => {});
+          s.stream.pipe(() => {});
           render(<p>{ s.map()() }</p>);
         });
         const { container, unmount } = render(<R />);
@@ -120,13 +120,14 @@ describe('Given the `routine` function', () => {
         expect(ss.__listeners()).toHaveLength(0);
       });
     });
-    describe('and we use "useProps"', () => {
+    describe('and we use "props"', () => {
       it(`should
         * fire the callback at least once
         * fire the callback on every props change`, () => {
         const propsSpy = jest.fn();
-        const I = routine(function ({ useProps }) {
-          useProps(propsSpy);
+        const I = routine(function ({ props }) {
+          props.stream.pipe(propsSpy)();
+          expect(props.get()).toStrictEqual({ foo: 'bar' });
         });
 
         const { rerender } = render(<I foo='bar' />);

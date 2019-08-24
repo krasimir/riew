@@ -291,18 +291,22 @@ describe('Given the state', () => {
     });
   });
 
-  /* onUpdate */
-  describe('when we use the `onUpdate` method', () => {
+  /* stream */
+  describe('when we use the `stream` method', () => {
     it('should trigger the queue on a state change', () => {
       const s = state(10);
-      const spy = jest.fn();
+      const spyA = jest.fn();
+      const spyB = jest.fn();
       const m = s.mutate(value => value + 5);
 
-      s.onUpdate().map(value => value * 2).pipe(spy);
+      s.stream.map(value => value * 2).pipe(spyA);
+      s.stream.map(value => value * 4).pipe(spyB);
       m();
 
-      expect(spy).toBeCalledTimes(1);
-      expect(spy).toBeCalledWith(30);
+      expect(spyA).toBeCalledTimes(1);
+      expect(spyA).toBeCalledWith(30);
+      expect(spyB).toBeCalledTimes(1);
+      expect(spyB).toBeCalledWith(60);
     });
   });
 
@@ -345,7 +349,7 @@ describe('Given the state', () => {
       const s = merge({ s1, s2 });
       const spy = jest.fn();
 
-      s.onUpdate().pipe(spy);
+      s.stream.pipe(spy);
 
       s1.__set(2);
       s2.__set('b');
@@ -373,7 +377,7 @@ describe('Given the state', () => {
       const spy = jest.fn();
       const s = state('foo');
 
-      s.onUpdate().mapToKey('myValue').pipe(spy);
+      s.stream.mapToKey('myValue').pipe(spy);
       s.__set('bar');
 
       expect(spy).toBeCalledTimes(1);

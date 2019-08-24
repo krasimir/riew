@@ -40,8 +40,9 @@ describe('Given the Rine library', () => {
   });
   describe('when reusing the same routine', () => {
     it('should create a separate instance', () => {
-      const R = routine(function ({ render, useProps }) {
-        useProps(render);
+      const R = routine(function ({ render, props }) {
+        props.stream.pipe(render);
+        render(props.get());
       }, props => <p>{ props.answer }</p>);
 
       const { container } = render(<R answer='foo' />);
@@ -106,12 +107,12 @@ describe('Given the Rine library', () => {
       expect(getByText('foobar')).toBeDefined();
     });
   });
-  describe('when we use useState hook together with useProps', () => {
-    it('should get useProps callback fired every time when we update the state', async () => {
-      const FetchTime = routine(async ({ render, useProps }) => {
-        useProps(async ({ city }) => {
+  describe('when we use useState hook together with props', () => {
+    it('should get props stream callback fired every time when we update the state', async () => {
+      const FetchTime = routine(async ({ render, props }) => {
+        props.stream.pipe(async ({ city }) => {
           render(<p>{ city }</p>);
-        });
+        })();
       });
       const App = function () {
         const [ city, setCity ] = useState('');
