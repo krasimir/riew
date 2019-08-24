@@ -4,7 +4,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.react = exports.merge = exports.state = undefined;
+exports.react = exports.compose = exports.merge = exports.state = undefined;
 
 var _state = require('./state');
 
@@ -12,15 +12,18 @@ var _react = require('./react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _utils = require('./utils');
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
 var state = exports.state = _state.createState;
 var merge = exports.merge = _state.mergeStates;
+var compose = exports.compose = _utils.compose;
 var react = exports.react = { routine: _react2.default };
 
-},{"./react":2,"./state":3}],2:[function(require,module,exports){
+},{"./react":2,"./state":3,"./utils":4}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -529,6 +532,21 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
 
   return result ? result[1] : 'unknown';
+};
+var compose = exports.compose = function compose() {
+  for (var _len = arguments.length, funcs = Array(_len), _key = 0; _key < _len; _key++) {
+    funcs[_key] = arguments[_key];
+  }
+
+  return function () {
+    for (var _len2 = arguments.length, payload = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      payload[_key2] = arguments[_key2];
+    }
+
+    return funcs.forEach(function (f) {
+      return f.apply(undefined, payload);
+    });
+  };
 };
 
 },{}]},{},[1])(1)
