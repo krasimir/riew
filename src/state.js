@@ -155,6 +155,9 @@ export function createState(initialValue) {
   };
   stateAPI.__triggerListeners = () => listeners.forEach(l => l());
   stateAPI.__listeners = () => listeners;
+  stateAPI.set = (newValue) => stateAPI.mutate()(newValue);
+  stateAPI.get = () => stateAPI.map()();
+  stateAPI.mapToKey = (key) => stateAPI.map(value => ({ [key]: value }));
 
   stateAPI.teardown = () => {
     methods.forEach(methodName => (stateAPI[methodName] = () => {}));

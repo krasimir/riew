@@ -11,3 +11,4 @@ NOTES
 *.lock
 packages
 jest
+scripts

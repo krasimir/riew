@@ -6,7 +6,7 @@ const merge = mergeStates;
 
 describe('Given the state', () => {
 
-  /* Integration pipe */
+  /* pipe */
   describe('when we use the `pipe` method', () => {
     it('should create a queue of functions and run them one after each other', () => {
       const arr = [];
@@ -353,6 +353,26 @@ describe('Given the state', () => {
       expect(spy).toBeCalledTimes(2);
       expect(spy.mock.calls[0]).toStrictEqual([{ s1: 2, s2: 'a' }]);
       expect(spy.mock.calls[1]).toStrictEqual([{ s1: 2, s2: 'b' }]);
+    });
+  });
+
+  /* get & set */
+  describe('when we use `get` and `set`', () => {
+    it('should get and set the current value', () => {
+      const s = state('foo');
+
+      s.set('bar');
+      expect(s.__get('bar'));
+      expect(s.get()).toBe('bar');
+    });
+  });
+
+  /* mapToKey */
+  describe('when we use the `mapToKey` method', () => {
+    it('should map to an object which key is equal to the value of the state', () => {
+      const m = state('foo').mapToKey('myValue');
+
+      expect(m()).toStrictEqual({ myValue: 'foo' });
     });
   });
 

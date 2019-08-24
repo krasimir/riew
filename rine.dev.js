@@ -228,6 +228,14 @@ exports.mergeStates = mergeStates;
 
 var _utils = require('./utils');
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
+
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
@@ -421,6 +429,17 @@ function createState(initialValue) {
   };
   stateAPI.__listeners = function () {
     return listeners;
+  };
+  stateAPI.set = function (newValue) {
+    return stateAPI.mutate()(newValue);
+  };
+  stateAPI.get = function () {
+    return stateAPI.map()();
+  };
+  stateAPI.mapToKey = function (key) {
+    return stateAPI.map(function (value) {
+      return _defineProperty({}, key, value);
+    });
   };
 
   stateAPI.teardown = function () {

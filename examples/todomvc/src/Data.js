@@ -1,4 +1,4 @@
-import { state, register } from 'rine';
+import { state } from 'rine';
 
 export const ToDo = (label) => ({ label, completed: false, editing: false });
 
@@ -6,15 +6,15 @@ const initialValue = JSON.stringify([
   ToDo('Rine helps you handle side effects'),
   ToDo('Rine comes from "Routine"')
 ]);
-const getInitialTodosData = () => {
-  return JSON.parse(localStorage.getItem('todos') || initialValue);
-};
-const todos = state(getInitialTodosData());
-
-export const saveTodosData = (todos) => {
+const saveTodosData = (todos) => {
   localStorage.setItem('todos', JSON.stringify(todos));
 };
-export const toggle = todos.mutation((todos, payload) => {
+
+export const todos = state(JSON.parse(localStorage.getItem('todos') || initialValue));
+
+todos.onUpdate().pipe(saveTodosData);
+
+export const toggle = todos.mutate((todos, payload) => {
   return todos.map((todo, i) => {
     if (i === payload) {
       return {
@@ -25,9 +25,9 @@ export const toggle = todos.mutation((todos, payload) => {
     return todo;
   });
 });
-export const newTodo = todos.mutation((todos, payload) => [ ...todos, ToDo(payload) ]);
-export const deleteTodo = todos.mutation((todos, payload) => todos.filter((todo, i) => i !== payload));
-export const editingTodo = todos.mutation((todos, payload) => {
+export const newTodo = todos.mutate((todos, payload) => [ ...todos, ToDo(payload) ]);
+export const deleteTodo = todos.mutate((todos, payload) => todos.filter((todo, i) => i !== payload));
+export const editingTodo = todos.mutate((todos, payload) => {
   return todos.map((todo, i) => {
     if (i === payload.index) {
       return {
@@ -38,7 +38,7 @@ export const editingTodo = todos.mutation((todos, payload) => {
     return todo;
   });
 });
-export const updateTodo = todos.mutation((todos, payload) => {
+export const updateTodo = todos.mutate((todos, payload) => {
   return todos.map((todo, i) => {
     if (i === payload.index) {
       return {
@@ -50,10 +50,8 @@ export const updateTodo = todos.mutation((todos, payload) => {
     return todo;
   });
 });
-export const clearCompleted = todos.mutation((todos) => {
+export const clearCompleted = todos.mutate((todos) => {
   return todos.filter(todo => {
     return !todo.completed;
   });
 });
-
-register('todos', todos);
