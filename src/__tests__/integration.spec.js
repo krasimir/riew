@@ -41,8 +41,8 @@ describe('Given the Rine library', () => {
   describe('when reusing the same routine', () => {
     it('should create a separate instance', () => {
       const R = routine(function ({ render, props }) {
-        props.stream.pipe(render);
-        render(props.get());
+        props.pipe(render);
+        render(props());
       }, props => <p>{ props.answer }</p>);
 
       const { container } = render(<R answer='foo' />);
@@ -107,12 +107,12 @@ describe('Given the Rine library', () => {
       expect(getByText('foobar')).toBeDefined();
     });
   });
-  describe('when we use useState hook together with props', () => {
+  describe('when we use useState hook together with props streaming', () => {
     it('should get props stream callback fired every time when we update the state', async () => {
       const FetchTime = routine(async ({ render, props }) => {
-        props.stream.pipe(async ({ city }) => {
+        props.pipe(async ({ city }) => {
           render(<p>{ city }</p>);
-        })();
+        });
       });
       const App = function () {
         const [ city, setCity ] = useState('');
@@ -133,7 +133,7 @@ describe('Given the Rine library', () => {
 
       const { getByTestId } = render(<App />);
 
-      exerciseHTML(getByTestId('text'), '<p></p>');
+      exerciseHTML(getByTestId('text'), '');
       fireEvent.change(getByTestId('select'), { target: { value: 'Paris' } });
       exerciseHTML(getByTestId('text'), '<p>Paris</p>');
       fireEvent.change(getByTestId('select'), { target: { value: 'Sofia' } });

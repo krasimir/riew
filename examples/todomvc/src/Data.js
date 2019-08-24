@@ -12,7 +12,7 @@ const saveTodosData = (todos) => {
 
 export const todos = state(JSON.parse(localStorage.getItem('todos') || initialValue));
 
-todos.onUpdate().pipe(saveTodosData);
+todos.stream.pipe(saveTodosData);
 
 export const toggle = todos.mutate((todos, payload) => {
   return todos.map((todo, i) => {

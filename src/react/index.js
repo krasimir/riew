@@ -43,7 +43,7 @@ export function createRoutineInstance(routineFunc) {
             }
             return new Promise(done => (onRendered = done));
           },
-          props: outerProps,
+          props: outerProps.stream,
           state(...args) {
             const s = state(...args);
 

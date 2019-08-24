@@ -26,8 +26,8 @@ const App = routine(function App({ render, state }) {
   const viewActive = filter.mutate(() => ACTIVE);
   const viewCompleted = filter.mutate(() => COMPLETED);
 
-  todos.onUpdate().mapToKey('todos').pipe(render);
-  filter.onUpdate().mapToKey('filter').pipe(render);
+  todos.stream.mapToKey('todos').pipe(render);
+  filter.stream.mapToKey('filter').pipe(render);
 
   render({
     viewAll,

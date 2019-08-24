@@ -177,7 +177,7 @@ export function createState(initialValue) {
     createdQueues = [];
     listeners = [];
   };
-  stateAPI.stream = {};
+  stateAPI.stream = () => stateAPI.__get();
 
   methods.forEach(methodName => {
     stateAPI[methodName] = (...func) => createQueue(methodName, func);

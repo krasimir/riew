@@ -83,7 +83,7 @@ describe('Given the `routine` function', () => {
         const propsSpy = jest.fn();
         const F = () => {};
         const c = createRoutineInstance(({ props }) => {
-          props.stream.pipe(propsSpy)();
+          props.pipe(propsSpy)();
         });
 
         c.in({ a: 'b' }, F, () => {});
@@ -126,8 +126,8 @@ describe('Given the `routine` function', () => {
         * fire the callback on every props change`, () => {
         const propsSpy = jest.fn();
         const I = routine(function ({ props }) {
-          props.stream.pipe(propsSpy)();
-          expect(props.get()).toStrictEqual({ foo: 'bar' });
+          props.pipe(propsSpy)();
+          expect(props()).toStrictEqual({ foo: 'bar' });
         });
 
         const { rerender } = render(<I foo='bar' />);

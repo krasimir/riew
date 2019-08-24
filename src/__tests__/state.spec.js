@@ -308,6 +308,9 @@ describe('Given the state', () => {
       expect(spyB).toBeCalledTimes(1);
       expect(spyB).toBeCalledWith(60);
     });
+    it('should just return the state value if we call the `stream` as a function', () => {
+      expect(state(10).stream()).toBe(10);
+    });
   });
 
   /* merge */

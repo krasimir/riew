@@ -128,7 +128,7 @@ function createRoutineInstance(routineFunc) {
           });
         },
 
-        props: outerProps,
+        props: outerProps.stream,
         state: function state() {
           var s = _state2.createState.apply(undefined, arguments);
 
@@ -466,7 +466,9 @@ function createState(initialValue) {
     createdQueues = [];
     listeners = [];
   };
-  stateAPI.stream = {};
+  stateAPI.stream = function () {
+    return stateAPI.__get();
+  };
 
   methods.forEach(function (methodName) {
     stateAPI[methodName] = function () {
