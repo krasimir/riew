@@ -6,3 +6,6 @@ export const getFuncName = (func) => {
 
   return result ? result[ 1 ] : 'unknown';
 };
+export const compose = (...funcs) => {
+  return (...payload) => funcs.forEach(f => f(...payload));
+};
