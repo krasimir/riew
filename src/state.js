@@ -3,15 +3,26 @@ import { isPromise } from './utils';
 
 var ids = 0;
 const getId = () => `@@s${ ++ids }`;
+const queueMethods = [
+  'pipe',
+  'map',
+  'mutate',
+  'filter',
+  'parallel',
+  'branch',
+  'cancel',
+  'mapToKey'
+];
 
-const Queue = function (setStateValue, getStateValue, predefinedItems = []) {
+const createQueue = function (setStateValue, getStateValue, predefinedItems = []) {
   let items = [ ...predefinedItems ];
 
-  return {
+  const q = {
+    items,
     add(type, func) {
       items.push({ type, func });
     },
-    process(payload) {
+    trigger(...payload) {
       let index = 0;
       let result = getStateValue();
 
@@ -99,10 +110,12 @@ const Queue = function (setStateValue, getStateValue, predefinedItems = []) {
             const conditionResult = func[0](result, ...payload);
             const runTruthy = (value) => {
               if (value) {
-                const r = func[1](result, ...payload);
+                index = items.length - 1;
+                const truthyResult = func[1](q.trigger);
 
-                index = items.length;
-                return isPromise(r) ? r.then(next) : next();
+                if (isPromise(truthyResult)) {
+                  return truthyResult.then(next);
+                }
               }
               return next();
             };
@@ -128,36 +141,49 @@ const Queue = function (setStateValue, getStateValue, predefinedItems = []) {
       items = [];
     },
     clone() {
-      return Queue(setStateValue, getStateValue, items);
+      return createQueue(setStateValue, getStateValue, items);
     }
   };
+
+  queueMethods.forEach(methodName => {
+    q.trigger[methodName] = (...func) => {
+      q.add(methodName, func);
+      return q.trigger;
+    };
+  });
+
+  q.trigger.fork = () => q.clone().trigger;
+  q.trigger.test = ({ value: mockValue, swap }) => {
+    // value = mockValue;
+    // return facade;
+  };
+  ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
+    q.trigger[stateMethod] = () => {
+      throw new Error(`"${ stateMethod }" is not a queue method but a method of the state object.`);
+    };
+  });
+
+  return q;
+};
+
+const enhanceToQueueInterface = function (obj, onCreated = () => {}) {
+  queueMethods.forEach(methodName => {
+    obj[methodName] = (...func) => {
+      const queue = createQueue(obj.__set, obj.__get);
+
+      queue.add(methodName, func);
+
+      onCreated(queue);
+      return queue.trigger;
+    };
+  });
 };
 
 export function createState(initialValue) {
   let value = initialValue;
-
-  const methods = [
-    'pipe', 'map', 'mutate', 'filter', 'parallel', 'branch', 'cancel', 'mapToKey'
-  ];
   const stateAPI = {};
   let createdQueues = [];
   let listeners = [];
-
-  const createQueue = function (typeOfFirstItem, func) {
-    const queue = Queue(stateAPI.__set, stateAPI.__get);
-    const api = (...payload) => queue.process(payload);
-
-    queue.add(typeOfFirstItem, func);
-    api.fork = () => createQueue(typeOfFirstItem, func);
-    methods.forEach(methodName => {
-      api[methodName] = (...func) => {
-        queue.add(methodName, func);
-        return api;
-      };
-    });
-    createdQueues.push(queue);
-    return api;
-  };
 
   stateAPI.__id = getId();
   stateAPI.__get = () => value;
@@ -172,21 +198,20 @@ export function createState(initialValue) {
   stateAPI.set = (newValue) => stateAPI.mutate()(newValue);
   stateAPI.get = () => stateAPI.map()();
   stateAPI.teardown = () => {
-    methods.forEach(methodName => (stateAPI[methodName] = () => {}));
     createdQueues.forEach(q => q.cancel());
     createdQueues = [];
     listeners = [];
   };
   stateAPI.stream = () => stateAPI.__get();
+  stateAPI.stream.__set = stateAPI.__set;
+  stateAPI.stream.__get = stateAPI.__get;
 
-  methods.forEach(methodName => {
-    stateAPI[methodName] = (...func) => createQueue(methodName, func);
-    stateAPI.stream[methodName] = (...func) => {
-      const q = createQueue(methodName, func);
-
-      listeners.push(q);
-      return q;
-    };
+  enhanceToQueueInterface(stateAPI, newQueue => {
+    createdQueues.push(newQueue);
+  });
+  enhanceToQueueInterface(stateAPI.stream, (newQueue) => {
+    createdQueues.push(newQueue);
+    listeners.push(newQueue.trigger);
   });
 
   return stateAPI;
@@ -199,7 +224,7 @@ export function mergeStates(statesMap) {
   }, {});
   const s = createState(fetchSourceValues());
 
-  s.__set = (newValue) => {
+  s.__set = s.stream.__set = (newValue) => {
     if (typeof newValue !== 'object') {
       throw new Error('Wrong merged state value. Must be key-value pairs.');
     }
@@ -207,7 +232,7 @@ export function mergeStates(statesMap) {
       statesMap[key].__set(newValue[key]);
     });
   };
-  s.__get = fetchSourceValues;
+  s.__get = s.stream.__get = fetchSourceValues;
 
   Object.keys(statesMap).forEach(key => {
     statesMap[key].stream.pipe(s.__triggerListeners);

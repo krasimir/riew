@@ -220,12 +220,16 @@ describe('Given the state', () => {
       const s = state('foo');
       const spyA = jest.fn();
       const spyB = jest.fn().mockImplementation(() => 'b');
-      const m = s.branch((value, payload) => value.toUpperCase() === payload, spyA).map(spyB);
+      const m = s.branch((value, payload) => {
+        return value.toUpperCase() === payload;
+      }, spyA).map(spyB);
 
       expect(m()).toBe('b');
       expect(m('FOO')).toBe('foo');
       expect(spyA).toBeCalledTimes(1);
-      expect(spyA).toBeCalledWith('foo', 'FOO');
+      expect(spyA).toBeCalledWith(expect.objectContaining({
+        pipe: expect.any(Function)
+      }));
       expect(spyB).toBeCalledTimes(1);
       expect(spyB).toBeCalledWith('foo');
     });
@@ -244,10 +248,35 @@ describe('Given the state', () => {
       expect(await m()).toBe('b');
       expect(await m('FOO')).toBe('foo');
       expect(spyA).toBeCalledTimes(1);
-      expect(spyA).toBeCalledWith('foo', 'FOO');
+      expect(spyA).toBeCalledWith(expect.objectContaining({
+        pipe: expect.any(Function)
+      }));
       expect(spyB).toBeCalledTimes(1);
       expect(spyB).toBeCalledWith('foo');
       expect(s.__get()).toBe('bar');
+    });
+    it('should continuing the queue in the truthy function', () => {
+      const s = state({ flag: true, index: 0 });
+      const increment = s.branch(
+        ({ flag }) => flag,
+        $ => $.mutate(({ index }) => ({ flag: true, index: index + 1 }))
+      );
+
+      expect(increment()).toStrictEqual({ flag: true, index: 1 });
+      expect(s.get()).toStrictEqual({ flag: true, index: 1 });
+    });
+    it('should respect the mutation in the truthy branch function (async)', async () => {
+      const s = state({ flag: true, index: 0 });
+      const increment = s.branch(
+        ({ flag }) => flag,
+        async $ => {
+          await delay(5);
+          return $.mutate(({ index }) => ({ flag: true, index: index + 1 }));
+        }
+      );
+
+      expect(await increment()).toStrictEqual({ flag: true, index: 1 });
+      expect(s.get()).toStrictEqual({ flag: true, index: 1 });
     });
   });
 
@@ -401,11 +430,11 @@ describe('Given the state', () => {
 
       expect(s.__queues()).toHaveLength(2);
 
-      const mapping = getFirst();
+      const first = getFirst();
 
       getUp();
 
-      expect(mapping).toBe('foo');
+      expect(first).toBe('foo');
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('foo');
     });
@@ -453,6 +482,36 @@ describe('Given the state', () => {
 
       expect(m1()).toBe('foo1');
       expect(m2()).toBe('FOO2');
+    });
+  });
+  describe('when we want to test', () => {
+    xit('should allow us to set a predefine value and swap queue items', () => {
+      const s = state({ flag: true, index: 0 });
+      const spy = jest.fn();
+      const increment = s.branch(
+        ({ flag }) => flag,
+        () => {
+          s.mutate(({ index }) => index + 1)();
+        }
+      ).pipe(() => {});
+
+      expect(increment()).toStrictEqual({ flag: false, index: 0 });
+      // expect(increment.test({
+      //   value: { flag: true, index: 11 },
+      //   swap: queue => {
+      //     queue[1] = spy;
+      //   }
+      // })()).toStrictEqual({ flag: true, index: 12 });
+      // expect(spy).toBeCalledTimes(1);
+    });
+  });
+
+  it('should throw errors if we try using the queue as a state', () => {
+    const s = state('foo');
+
+    ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
+      expect(() => s.pipe()[stateMethod]())
+        .toThrowError(`"${ stateMethod }" is not a queue method but a method of the state object.`);
     });
   });
 });
