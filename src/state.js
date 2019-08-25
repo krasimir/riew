@@ -255,8 +255,9 @@ export function mergeStates(statesMap) {
       throw new Error('Wrong merged state value. Must be key-value pairs.');
     }
     Object.keys(newValue).forEach(key => {
-      statesMap[key].__set(newValue[key]);
+      statesMap[key].__set(newValue[key], false);
     });
+    s.__triggerListeners();
   };
   s.__get = fetchSourceValues;
 

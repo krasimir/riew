@@ -514,13 +514,32 @@ describe('Given the state', () => {
       })()).toStrictEqual({ flag: false, index: 5000 });
     });
   });
-
   it('should throw errors if we try using the queue as a state', () => {
     const s = state('foo');
 
     ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
       expect(() => s.pipe()[stateMethod]())
         .toThrowError(`"${ stateMethod }" is not a queue method but a method of the state object.`);
+    });
+  });
+  describe('when we have a branching on a merged state', () => {
+    it('should run the branching logic only once', () => {
+      const s1 = state('1');
+      const s2 = state('a');
+      const m = merge({ s1, s2 });
+      const action = m.mutate(() => ({ s1: 2, s2: 'b' }));
+      const conditionSpy = jest.fn().mockImplementation(() => true);
+      const okLogic = jest.fn();
+
+      m.stream.branch(conditionSpy, okLogic);
+      action();
+
+      expect(conditionSpy).toBeCalledTimes(1);
+      expect(conditionSpy).toBeCalledWith({ s1: 2, s2: 'b' });
+      expect(okLogic).toBeCalledTimes(1);
+      expect(okLogic).toBeCalledWith(expect.objectContaining({
+        pipe: expect.any(Function)
+      }));
     });
   });
 });
