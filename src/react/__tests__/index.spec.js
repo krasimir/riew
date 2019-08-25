@@ -2,102 +2,10 @@
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import { delay, exerciseHTML } from '../../__helpers__';
-import routine, { createRoutineInstance } from '../index';
+import routine from '../index';
 
-describe('Given the `routine` function', () => {
-
-  // testing `routine`
-  describe('when we have a routine bridge component', () => {
-    it(`should
-      * create an instance on mount
-      * should call the "in" method on mount
-      * should call "update" when the props change (re-render)
-      * should call "rendered" when we render
-      * should call "out" when we unmount`, () => {
-      const instance = {
-        in: jest.fn().mockImplementation((x, y, setContent) => setContent(<p>Hello</p>)),
-        updated: jest.fn(),
-        rendered: jest.fn(),
-        out: jest.fn()
-      };
-      const createRoutineInstance = jest.fn().mockImplementation(() => instance);
-      const Component = jest.fn().mockImplementation(() => null);
-      const R = routine(() => {}, Component, { createRoutineInstance });
-      const { rerender, unmount } = render(<R foo='bar' />);
-
-      rerender(<R moo='zar' />);
-      unmount();
-
-      expect(createRoutineInstance).toBeCalledTimes(1);
-      expect(instance.in).toBeCalledTimes(1);
-      expect(instance.in).toBeCalledWith({ foo: 'bar' }, Component, expect.any(Function));
-      expect(instance.updated).toBeCalledTimes(1);
-      expect(instance.updated).toBeCalledWith({ moo: 'zar' });
-      expect(instance.rendered).toBeCalledTimes(1);
-      expect(instance.out).toBeCalledTimes(1);
-    });
-  });
-
-  // testing `createRoutineInstance`
-  describe('when we create a routine instance', () => {
-    describe('and we call the `in` method', () => {
-      it(`should
-        * set the instance to mounted
-        * run the routine function
-        * pass render function to the routine function
-        * pass util methods to the routine function (isMounted)`, () => {
-        const routineSpy = jest.fn().mockImplementation(({ render, isMounted }) => {
-          expect(isMounted()).toBe(true);
-          render({ foo: 'bar' });
-        });
-        const setContentSpy = jest.fn().mockImplementation((reactElement) => {
-          expect(React.isValidElement(reactElement)).toBe(true);
-          expect(reactElement.props).toStrictEqual({ foo: 'bar' });
-        });
-        const c = createRoutineInstance(routineSpy);
-
-        c.in({}, () => null, setContentSpy);
-      });
-      it('should allow us to wait till the render is done', (done) => {
-        const routine = async ({ render }) => {
-          await render(null);
-          done();
-        };
-        const c = createRoutineInstance(routine);
-
-        c.in({}, () => null, () => {});
-        c.rendered();
-      });
-      it('should allow us to pass directly a react element to the render', () => {
-        const c = createRoutineInstance(async ({ render }) => {
-          render(<p foo='bar'>Hello</p>);
-        });
-
-        c.in({}, () => null, (reactElement) => {
-          expect(React.isValidElement(reactElement)).toBe(true);
-        });
-      });
-    });
-    describe('when we call the update method', () => {
-      it('should fire any props callbacks', () => {
-        const propsSpy = jest.fn();
-        const F = () => {};
-        const c = createRoutineInstance(({ props }) => {
-          props.pipe(propsSpy)();
-        });
-
-        c.in({ a: 'b' }, F, () => {});
-        c.updated({ c: 'd' });
-
-        expect(propsSpy).toBeCalledTimes(2);
-        expect(propsSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
-        expect(propsSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
-      });
-    });
-  });
-
-  // integration tests
-  describe('when we use the routine bridge and the instance together', () => {
+describe('Given the React routine function', () => {
+  describe('when we use the routine Component', () => {
     describe('and we use a state', () => {
       it(`should
         * register the state teardown function
@@ -225,7 +133,7 @@ describe('Given the `routine` function', () => {
       });
     });
     describe('and we pass null to the render method', () => {
-      it('should convert that to "() => null" which means render nothing', () => {
+      it('should render nothing', () => {
         const C = routine(({ render }) => {
           render(null);
         });

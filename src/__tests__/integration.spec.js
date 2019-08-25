@@ -63,13 +63,13 @@ describe('Given the Rine library', () => {
       `);
     });
   });
-  describe('when we use the `isMounted` method', () => {
+  describe('when we use the `isActive` method', () => {
     it('should return the value of the `mounted` flag', async () => {
       const spy = jest.fn();
-      const A = routine(async ({ isMounted }) => {
-        spy(isMounted());
+      const A = routine(async ({ isActive }) => {
+        spy(isActive());
         await delay(10);
-        spy(isMounted());
+        spy(isActive());
       });
 
       const { unmount } = render(<A />);

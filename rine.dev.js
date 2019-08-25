@@ -23,13 +23,23 @@ var merge = exports.merge = _state.mergeStates;
 var compose = exports.compose = _utils.compose;
 var react = exports.react = { routine: _react2.default };
 
-},{"./react":2,"./state":3,"./utils":4}],2:[function(require,module,exports){
+},{"./react":2,"./state":4,"./utils":5}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
+};
 
 var _slicedToArray = function () {
   function sliceIterator(arr, i) {
@@ -55,19 +65,8 @@ var _slicedToArray = function () {
       throw new TypeError("Invalid attempt to destructure non-iterable instance");
     }
   };
-}();
+}(); /* eslint-disable no-return-assign */
 
-var _extends = Object.assign || function (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];for (var key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key];
-      }
-    }
-  }return target;
-}; /* eslint-disable no-return-assign */
-
-exports.createRoutineInstance = createRoutineInstance;
 exports.default = routine;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
@@ -76,94 +75,18 @@ var _react2 = _interopRequireDefault(_react);
 
 var _utils = require('../utils');
 
-var _state2 = require('../state');
+var _routine = require('../routine');
+
+var _routine2 = _interopRequireDefault(_routine);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-var ids = 0;
-var getId = function getId() {
-  return '@@r' + ++ids;
-};
-
-function createRoutineInstance(routineFunc) {
-  var id = getId();
-  var mounted = false;
-  var outerProps = (0, _state2.createState)();
-  var setOuterProps = outerProps.mutate();
-  var permanentProps = {};
-  var funcsToCallOnUnmount = [];
-  var onRendered = void 0;
-
-  function isMounted() {
-    return mounted;
-  }
-  function preserveProps(props) {
-    return permanentProps = _extends({}, permanentProps, props);
-  }
-
-  var instance = {
-    __rine: 'routine',
-    id: id,
-    name: (0, _utils.getFuncName)(routineFunc),
-    isMounted: isMounted,
-    in: function _in(initialProps, Component, setContent) {
-      mounted = true;
-      setOuterProps(initialProps);
-      routineFunc({
-        render: function render(props) {
-          if (!mounted) return Promise.resolve();
-          if (typeof props === 'string' || typeof props === 'number' || _react2.default.isValidElement(props)) {
-            setContent(props);
-          } else if (props === null) {
-            setContent(function () {
-              return null;
-            });
-          } else {
-            setContent(_react2.default.createElement(Component, preserveProps(props)));
-          }
-          return new Promise(function (done) {
-            return onRendered = done;
-          });
-        },
-
-        props: outerProps.stream,
-        state: function state() {
-          var s = _state2.createState.apply(undefined, arguments);
-
-          funcsToCallOnUnmount.push(s.teardown);
-          return s;
-        },
-
-        isMounted: isMounted
-      });
-    },
-    updated: function updated(newProps) {
-      setOuterProps(newProps);
-    },
-    rendered: function rendered() {
-      if (onRendered) onRendered();
-    },
-    out: function out() {
-      mounted = false;
-      funcsToCallOnUnmount.forEach(function (f) {
-        return f();
-      });
-      funcsToCallOnUnmount = [];
-    }
-  };
-
-  funcsToCallOnUnmount.push(outerProps.teardown);
-
-  return instance;
-}
-
-function routine(routineFunc) {
-  var Component = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {
+function routine(controller) {
+  var View = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {
     return null;
   };
-  var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : { createRoutineInstance: createRoutineInstance };
 
   var RoutineBridge = function RoutineBridge(outerProps) {
     var _useState = (0, _react.useState)(null),
@@ -171,44 +94,117 @@ function routine(routineFunc) {
         instance = _useState2[0],
         setInstance = _useState2[1];
 
-    var _useState3 = (0, _react.useState)(null),
+    var _useState3 = (0, _react.useState)({ content: null, done: function done() {} }),
         _useState4 = _slicedToArray(_useState3, 2),
         content = _useState4[0],
         setContent = _useState4[1];
 
+    var _useState5 = (0, _react.useState)({}),
+        _useState6 = _slicedToArray(_useState5, 2),
+        permanentProps = _useState6[0],
+        setPermanentProps = _useState6[1];
+
+    function preserveProps(props) {
+      permanentProps = _extends({}, permanentProps, props);
+      setPermanentProps(permanentProps);
+      return permanentProps;
+    }
+
     // updating props
-
-
     (0, _react.useEffect)(function () {
-      if (instance) instance.updated(outerProps);
+      if (instance) instance.set(outerProps);
     }, [outerProps]);
 
     // to support sync rendering (i.e. await render(...))
     (0, _react.useEffect)(function () {
-      if (instance) instance.rendered();
+      if (instance) content.done();
     }, [content]);
 
     // mounting
     (0, _react.useEffect)(function () {
-      setInstance(instance = options.createRoutineInstance(routineFunc));
+      instance = (0, _routine2.default)(controller, function (props, done) {
+        if (typeof props === 'string' || typeof props === 'number' || _react2.default.isValidElement(props)) {
+          setContent({ content: props, done: done });
+        } else if (props === null) {
+          setContent({ content: null, done: done });
+        } else {
+          setContent({ content: _react2.default.createElement(View, preserveProps(props)), done: done });
+        }
+      });
 
-      instance.in(outerProps, Component, setContent);
+      setInstance(instance);
+      instance.in(outerProps);
 
       return function () {
         instance.out();
       };
     }, []);
 
-    return content;
+    return content.content;
   };
 
-  RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(routineFunc) + ')';
+  RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(controller) + ')';
 
   return RoutineBridge;
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../state":3,"../utils":4}],3:[function(require,module,exports){
+},{"../routine":3,"../utils":5}],3:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = createRoutineInstance;
+
+var _state2 = require('./state');
+
+function createRoutineInstance(controllerFunc, viewFunc) {
+  var active = false;
+  var funcsToCallOnUnmount = [];
+
+  function isActive() {
+    return active;
+  }
+
+  var instance = (0, _state2.createState)({});
+
+  instance.isActive = isActive;
+  instance.in = function (initialProps) {
+    active = true;
+    instance.set(initialProps);
+    controllerFunc({
+      render: function render(props) {
+        if (!active) return Promise.resolve();
+        return new Promise(function (done) {
+          viewFunc(props, done);
+        });
+      },
+
+      props: instance.stream,
+      state: function state() {
+        var s = _state2.createState.apply(undefined, arguments);
+
+        funcsToCallOnUnmount.push(s.teardown);
+        return s;
+      },
+
+      isActive: isActive
+    });
+  };
+  instance.out = function () {
+    active = false;
+    funcsToCallOnUnmount.forEach(function (f) {
+      return f();
+    });
+    funcsToCallOnUnmount = [];
+    instance.teardown();
+  };
+
+  return instance;
+}
+
+},{"./state":4}],4:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -519,7 +515,7 @@ function mergeStates(statesMap) {
   return s;
 }
 
-},{"./utils":4}],4:[function(require,module,exports){
+},{"./utils":5}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
