@@ -246,7 +246,7 @@ var ids = 0;
 var getId = function getId() {
   return '@@s' + ++ids;
 };
-var queueMethods = ['pipe', 'map', 'mutate', 'filter', 'parallel', 'branch', 'cancel', 'mapToKey'];
+var queueMethods = ['pipe', 'map', 'mutate', 'filter', 'parallel', 'cancel', 'mapToKey'];
 
 function createQueue(setStateValue, getStateValue) {
   var predefinedItems = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
@@ -360,25 +360,6 @@ function createQueue(setStateValue, getStateValue) {
               });
             }
             return next();
-          /* -------------------------------------------------- branch */
-          case 'branch':
-            var conditionResult = func[0].apply(func, [result].concat(payload));
-            var runTruthy = function runTruthy(value) {
-              if (value) {
-                index = items.length - 1;
-                var truthyResult = func[1](q.trigger);
-
-                if ((0, _utils.isPromise)(truthyResult)) {
-                  return truthyResult.then(next);
-                }
-              }
-              return next();
-            };
-
-            if ((0, _utils.isPromise)(conditionResult)) {
-              return conditionResult.then(runTruthy);
-            }
-            return runTruthy(conditionResult);
           /* -------------------------------------------------- cancel */
           case 'cancel':
             index = -1;
@@ -485,7 +466,7 @@ function createState(initialValue) {
   };
 
   stateAPI.set = function (newValue) {
-    return stateAPI.mutate()(newValue);
+    return stateAPI.__set(newValue);
   };
   stateAPI.get = function () {
     return stateAPI.map()();
@@ -501,27 +482,35 @@ function createState(initialValue) {
     return stateAPI.__get();
   };
 
-  [{ obj: stateAPI, type: 'normal' }, { obj: stateAPI.stream, type: 'stream' }].forEach(function (_ref3) {
-    var obj = _ref3.obj,
-        type = _ref3.type;
+  queueMethods.forEach(function (methodName) {
+    stateAPI[methodName] = function () {
+      for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+        func[_key3] = arguments[_key3];
+      }
 
-    queueMethods.forEach(function (methodName) {
-      obj[methodName] = function () {
-        for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-          func[_key3] = arguments[_key3];
-        }
+      var queue = createQueue(stateAPI.__set, stateAPI.__get, [], function (q) {
+        createdQueues.push(q);
+      });
 
-        var queue = createQueue(stateAPI.__set, stateAPI.__get, [], function (q) {
-          createdQueues.push(q);
-          if (type === 'stream') {
-            listeners.push(q.trigger);
-          }
-        });
+      queue.add(methodName, func);
+      return queue.trigger;
+    };
+  });
 
-        queue.add(methodName, func);
-        return queue.trigger;
-      };
-    });
+  queueMethods.forEach(function (methodName) {
+    stateAPI.stream[methodName] = function () {
+      for (var _len4 = arguments.length, func = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+        func[_key4] = arguments[_key4];
+      }
+
+      var queue = createQueue(stateAPI.__set, stateAPI.__get, [], function (q) {
+        createdQueues.push(q);
+        listeners.push(q.trigger);
+      });
+
+      queue.add(methodName, func);
+      return queue.trigger;
+    };
   });
 
   return stateAPI;

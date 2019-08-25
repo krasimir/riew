@@ -9,7 +9,6 @@ const queueMethods = [
   'mutate',
   'filter',
   'parallel',
-  'branch',
   'cancel',
   'mapToKey'
 ];
@@ -105,25 +104,6 @@ function createQueue(setStateValue, getStateValue, predefinedItems = [], onCreat
               });
             }
             return next();
-          /* -------------------------------------------------- branch */
-          case 'branch':
-            const conditionResult = func[0](result, ...payload);
-            const runTruthy = (value) => {
-              if (value) {
-                index = items.length - 1;
-                const truthyResult = func[1](q.trigger);
-
-                if (isPromise(truthyResult)) {
-                  return truthyResult.then(next);
-                }
-              }
-              return next();
-            };
-
-            if (isPromise(conditionResult)) {
-              return conditionResult.then(runTruthy);
-            }
-            return runTruthy(conditionResult);
           /* -------------------------------------------------- cancel */
           case 'cancel':
             index = -1;
@@ -212,7 +192,7 @@ export function createState(initialValue) {
   stateAPI.__listeners = () => listeners;
   stateAPI.__queues = () => createdQueues;
 
-  stateAPI.set = (newValue) => stateAPI.mutate()(newValue);
+  stateAPI.set = (newValue) => stateAPI.__set(newValue);
   stateAPI.get = () => stateAPI.map()();
   stateAPI.teardown = () => {
     createdQueues.forEach(q => q.cancel());
@@ -221,23 +201,27 @@ export function createState(initialValue) {
   };
   stateAPI.stream = () => stateAPI.__get();
 
-  [
-    { obj: stateAPI, type: 'normal' },
-    { obj: stateAPI.stream, type: 'stream' }
-  ].forEach(({ obj, type }) => {
-    queueMethods.forEach(methodName => {
-      obj[methodName] = (...func) => {
-        const queue = createQueue(stateAPI.__set, stateAPI.__get, [], (q) => {
-          createdQueues.push(q);
-          if (type === 'stream') {
-            listeners.push(q.trigger);
-          }
-        });
+  queueMethods.forEach(methodName => {
+    stateAPI[methodName] = (...func) => {
+      const queue = createQueue(stateAPI.__set, stateAPI.__get, [], (q) => {
+        createdQueues.push(q);
+      });
 
-        queue.add(methodName, func);
-        return queue.trigger;
-      };
-    });
+      queue.add(methodName, func);
+      return queue.trigger;
+    };
+  });
+
+  queueMethods.forEach(methodName => {
+    stateAPI.stream[methodName] = (...func) => {
+      const queue = createQueue(stateAPI.__set, stateAPI.__get, [], (q) => {
+        createdQueues.push(q);
+        listeners.push(q.trigger);
+      });
+
+      queue.add(methodName, func);
+      return queue.trigger;
+    };
   });
 
   return stateAPI;
