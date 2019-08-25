@@ -14,17 +14,17 @@ const queueMethods = [
   'mapToKey'
 ];
 
-const createQueue = function (setStateValue, getStateValue, predefinedItems = []) {
-  let items = [ ...predefinedItems ];
-
+function createQueue(setStateValue, getStateValue, predefinedItems = [], onCreated = () => {}) {
   const q = {
-    items,
+    items: [ ...predefinedItems ],
     add(type, func) {
-      items.push({ type, func });
+      this.items.push({ type, func });
     },
     trigger(...payload) {
       let index = 0;
       let result = getStateValue();
+      var items = q.items;
+      const resetItems = () => (q.items = []);
 
       function next() {
         index++;
@@ -127,7 +127,7 @@ const createQueue = function (setStateValue, getStateValue, predefinedItems = []
           /* -------------------------------------------------- cancel */
           case 'cancel':
             index = -1;
-            items = [];
+            resetItems();
             return result;
 
         }
@@ -138,10 +138,15 @@ const createQueue = function (setStateValue, getStateValue, predefinedItems = []
       return items.length > 0 ? loop() : result;
     },
     cancel() {
-      items = [];
+      this.items = [];
     },
     clone() {
-      return createQueue(setStateValue, getStateValue, items);
+      return createQueue(
+        setStateValue,
+        getStateValue,
+        q.items.map(({ type, func }) => ({ type, func })),
+        onCreated
+      );
     }
   };
 
@@ -152,10 +157,33 @@ const createQueue = function (setStateValue, getStateValue, predefinedItems = []
     };
   });
 
-  q.trigger.fork = () => q.clone().trigger;
-  q.trigger.test = ({ value: mockValue, swap }) => {
-    // value = mockValue;
-    // return facade;
+  q.trigger.fork = function () {
+    return q.clone().trigger;
+  };
+  q.trigger.test = function (callback) {
+    const newQueue = q.clone();
+    const tools = {
+      setValue(newValue) {
+        newQueue.items = [ { type: 'map', func: [ () => newValue ] }, ...newQueue.items ];
+      },
+      swap(index, funcs, type) {
+        if (!Array.isArray(funcs)) funcs = [funcs];
+        newQueue.items[index].func = funcs;
+        if (type) {
+          newQueue.items[index].type = type;
+        }
+      },
+      swapFirst(funcs, type) {
+        tools.swap(0, funcs, type);
+      },
+      swapLast(funcs, type) {
+        tools.swap(newQueue.items.length - 1, funcs, type);
+      }
+    };
+
+    callback(tools);
+
+    return newQueue.trigger;
   };
   ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
     q.trigger[stateMethod] = () => {
@@ -163,21 +191,10 @@ const createQueue = function (setStateValue, getStateValue, predefinedItems = []
     };
   });
 
+  onCreated(q);
+
   return q;
-};
-
-const enhanceToQueueInterface = function (obj, onCreated = () => {}) {
-  queueMethods.forEach(methodName => {
-    obj[methodName] = (...func) => {
-      const queue = createQueue(obj.__set, obj.__get);
-
-      queue.add(methodName, func);
-
-      onCreated(queue);
-      return queue.trigger;
-    };
-  });
-};
+}
 
 export function createState(initialValue) {
   let value = initialValue;
@@ -187,9 +204,9 @@ export function createState(initialValue) {
 
   stateAPI.__id = getId();
   stateAPI.__get = () => value;
-  stateAPI.__set = (newValue) => {
+  stateAPI.__set = (newValue, callListeners = true) => {
     value = newValue;
-    stateAPI.__triggerListeners();
+    if (callListeners) stateAPI.__triggerListeners();
   };
   stateAPI.__triggerListeners = () => listeners.forEach(l => l());
   stateAPI.__listeners = () => listeners;
@@ -203,15 +220,24 @@ export function createState(initialValue) {
     listeners = [];
   };
   stateAPI.stream = () => stateAPI.__get();
-  stateAPI.stream.__set = stateAPI.__set;
-  stateAPI.stream.__get = stateAPI.__get;
 
-  enhanceToQueueInterface(stateAPI, newQueue => {
-    createdQueues.push(newQueue);
-  });
-  enhanceToQueueInterface(stateAPI.stream, (newQueue) => {
-    createdQueues.push(newQueue);
-    listeners.push(newQueue.trigger);
+  [
+    { obj: stateAPI, type: 'normal' },
+    { obj: stateAPI.stream, type: 'stream' }
+  ].forEach(({ obj, type }) => {
+    queueMethods.forEach(methodName => {
+      obj[methodName] = (...func) => {
+        const queue = createQueue(stateAPI.__set, stateAPI.__get, [], (q) => {
+          createdQueues.push(q);
+          if (type === 'stream') {
+            listeners.push(q.trigger);
+          }
+        });
+
+        queue.add(methodName, func);
+        return queue.trigger;
+      };
+    });
   });
 
   return stateAPI;
@@ -224,7 +250,7 @@ export function mergeStates(statesMap) {
   }, {});
   const s = createState(fetchSourceValues());
 
-  s.__set = s.stream.__set = (newValue) => {
+  s.__set = (newValue) => {
     if (typeof newValue !== 'object') {
       throw new Error('Wrong merged state value. Must be key-value pairs.');
     }
@@ -232,10 +258,12 @@ export function mergeStates(statesMap) {
       statesMap[key].__set(newValue[key]);
     });
   };
-  s.__get = s.stream.__get = fetchSourceValues;
+  s.__get = fetchSourceValues;
 
   Object.keys(statesMap).forEach(key => {
-    statesMap[key].stream.pipe(s.__triggerListeners);
+    statesMap[key].stream.pipe(() => {
+      s.__triggerListeners();
+    });
   });
 
   return s;

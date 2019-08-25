@@ -485,24 +485,33 @@ describe('Given the state', () => {
     });
   });
   describe('when we want to test', () => {
-    xit('should allow us to set a predefine value and swap queue items', () => {
-      const s = state({ flag: true, index: 0 });
+    it('should allow us to set a predefine value and swap queue items', () => {
+      const s = state({ flag: false, index: 0 });
       const spy = jest.fn();
       const increment = s.branch(
         ({ flag }) => flag,
-        () => {
-          s.mutate(({ index }) => index + 1)();
-        }
+        $ => $.mutate(({ index }) => ({ flag: true, index: index + 1 }))
       ).pipe(() => {});
 
-      expect(increment()).toStrictEqual({ flag: false, index: 0 });
-      // expect(increment.test({
-      //   value: { flag: true, index: 11 },
-      //   swap: queue => {
-      //     queue[1] = spy;
-      //   }
-      // })()).toStrictEqual({ flag: true, index: 12 });
-      // expect(spy).toBeCalledTimes(1);
+      expect(increment.test(({ setValue }) => {
+        setValue({ flag: true, index: 11 });
+      })()).toStrictEqual({ flag: true, index: 12 });
+
+      increment.test(({ setValue, swap }) => {
+        setValue({ flag: false, index: 100 });
+        swap(1, spy);
+      })();
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith({ flag: false, index: 100 });
+
+      expect(increment.test(({ swapFirst }) => {
+        swapFirst(() => 'banana', 'map');
+      })()).toBe('banana');
+
+      expect(increment.test(({ setValue, swapLast }) => {
+        setValue({ flag: false, index: 42 });
+        swapLast(({ flag }) => ({ flag, index: 5000 }), 'map');
+      })()).toStrictEqual({ flag: false, index: 5000 });
     });
   });
 
