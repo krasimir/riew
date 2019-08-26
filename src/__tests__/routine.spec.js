@@ -44,8 +44,8 @@ describe('Given the `routine` function', () => {
       it('should allow us to react on those changes', () => {
         const propsSpy = jest.fn();
         const c = routine(({ props }) => {
-          props.pipe(propsSpy);
-          propsSpy(props());
+          props.stream.pipe(propsSpy);
+          propsSpy(props.get());
         });
 
         c.in({ a: 'b' });

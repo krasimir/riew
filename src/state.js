@@ -199,7 +199,13 @@ export function createState(initialValue) {
     createdQueues = [];
     listeners = [];
   };
-  stateAPI.stream = () => stateAPI.__get();
+  stateAPI.stream = (...args) => {
+    if (args.length > 0) {
+      stateAPI.__set(args[0]);
+    } else {
+      stateAPI.__triggerListeners();
+    }
+  };
 
   queueMethods.forEach(methodName => {
     stateAPI[methodName] = (...func) => {
@@ -252,4 +258,8 @@ export function mergeStates(statesMap) {
   });
 
   return s;
+}
+
+export function createStream(initialValue) {
+  return createState(initialValue).stream;
 }

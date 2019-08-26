@@ -34,8 +34,8 @@ describe('Given the React routine function', () => {
         * fire the callback on every props change`, () => {
         const propsSpy = jest.fn();
         const I = routine(function ({ props }) {
-          props.pipe(propsSpy)();
-          expect(props()).toStrictEqual({ foo: 'bar' });
+          props.stream.pipe(propsSpy)();
+          expect(props.get()).toStrictEqual({ foo: 'bar' });
         });
 
         const { rerender } = render(<I foo='bar' />);

@@ -22,7 +22,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
             viewFunc(props, done);
           });
         },
-        props: instance.stream,
+        props: instance,
         state(...args) {
           const s = state(...args);
 

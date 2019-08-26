@@ -1,8 +1,9 @@
-import { createState, mergeStates } from '../state';
+import { createState, mergeStates, createStream } from '../state';
 import { delay } from '../__helpers__';
 
 const state = createState;
 const merge = mergeStates;
+const stream = createStream;
 
 describe('Given the state', () => {
 
@@ -271,8 +272,25 @@ describe('Given the state', () => {
       expect(spyB).toBeCalledTimes(1);
       expect(spyB).toBeCalledWith(60);
     });
-    it('should just return the state value if we call the `stream` as a function', () => {
-      expect(state(10).stream()).toBe(10);
+    it('should call the queue if we call the stream method', () => {
+      const s = state(10);
+      const spy = jest.fn();
+
+      s.stream.map(value => value * 3).pipe(spy);
+      s.stream();
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith(30);
+    });
+    it('should call set the value if we pass a parameter to stream method', () => {
+      const s = state(10);
+      const spy = jest.fn();
+
+      s.stream.map(value => value * 3).pipe(spy);
+      s.stream(120);
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith(360);
     });
   });
 
@@ -374,7 +392,26 @@ describe('Given the state', () => {
     });
   });
 
-  /* Integration tests */
+  /* stream */
+  describe('when we create a stream manually', () => {
+    it('should create a stream and return a function which if called triggers the stream queue', () => {
+      const st = stream();
+      const spy1 = jest.fn();
+      const spy2 = jest.fn();
+
+      st.pipe(spy1);
+      st.pipe(spy2);
+
+      st('foo');
+
+      expect(spy1).toBeCalledTimes(1);
+      expect(spy1).toBeCalledWith('foo');
+      expect(spy2).toBeCalledTimes(1);
+      expect(spy2).toBeCalledWith('foo');
+    });
+  });
+
+  /* Integration/general tests */
   describe('when we have a slightly more complicated code', () => {
     it('should work :)', async () => {
       const arr = [];
@@ -497,6 +534,14 @@ describe('Given the state', () => {
       expect(spyA.mock.calls[0]).toStrictEqual(['value is 1']);
       expect(spyB).toBeCalledTimes(1);
       expect(spyB.mock.calls[0]).toStrictEqual([5]);
+    });
+  });
+  describe('when the queue finishes', () => {
+    it.only('should remove it from the state created queues tracker array', () => {
+      const s = state(10);
+      const m = s.mutate(value => value * 5);
+
+      expect(s.__queues()).toHaveLength(1);
     });
   });
 });
