@@ -1,5 +1,6 @@
 /* eslint-disable no-use-before-define, no-return-assign */
-import { isPromise } from './utils';
+import { isPromise, getFuncName } from './utils';
+import system from './system';
 
 var ids = 0;
 const getId = (prefix) => `@@${ prefix }${ ++ids }`;
@@ -19,32 +20,34 @@ function createQueue(
   onDone = () => {}
 ) {
   const q = {
+    index: 0,
+    result: getStateValue(),
     id: getId('q'),
     items: [],
     add(type, func) {
-      this.items.push({ type, func });
+      this.items.push({ type, func, name: func.map(getFuncName) });
     },
     process(...payload) {
-      let index = 0;
-      let result = getStateValue();
       var items = q.items;
       const resetItems = () => (q.items = []);
 
+      q.index = 0;
+
       function next() {
-        index++;
-        if (index < items.length) {
+        q.index++;
+        if (q.index < items.length) {
           return loop();
         }
         onDone(q);
-        return result;
+        return q.result;
       };
       function loop() {
-        const { type, func } = items[index];
+        const { type, func } = items[q.index];
 
         switch (type) {
           /* -------------------------------------------------- pipe */
           case 'pipe':
-            let pipeResult = (func[0] || function () {})(result, ...payload);
+            let pipeResult = (func[0] || function () {})(q.result, ...payload);
 
             if (isPromise(pipeResult)) {
               return pipeResult.then(next);
@@ -52,10 +55,10 @@ function createQueue(
             return next();
           /* -------------------------------------------------- map */
           case 'map':
-            result = (func[0] || (value => value))(result, ...payload);
-            if (isPromise(result)) {
-              return result.then(asyncResult => {
-                result = asyncResult;
+            q.result = (func[0] || (value => value))(q.result, ...payload);
+            if (isPromise(q.result)) {
+              return q.result.then(asyncResult => {
+                q.result = asyncResult;
                 return next();
               });
             }
@@ -64,46 +67,46 @@ function createQueue(
           case 'mapToKey':
             const mappingFunc = (value) => ({ [func[0]]: value });
 
-            result = mappingFunc(result, ...payload);
+            q.result = mappingFunc(q.result, ...payload);
             return next();
           /* -------------------------------------------------- mutate */
           case 'mutate':
-              result = (func[0] || ((current, payload) => payload))(result, ...payload);
-              if (isPromise(result)) {
-                return result.then(asyncResult => {
-                  result = asyncResult;
-                  setStateValue(result);
+              q.result = (func[0] || ((current, payload) => payload))(q.result, ...payload);
+              if (isPromise(q.result)) {
+                return q.result.then(asyncResult => {
+                  q.result = asyncResult;
+                  setStateValue(q.result);
                   return next();
                 });
               }
-              setStateValue(result);
+              setStateValue(q.result);
               return next();
           /* -------------------------------------------------- filter */
           case 'filter':
-            let filterResult = func[0](result, ...payload);
+            let filterResult = func[0](q.result, ...payload);
 
             if (isPromise(filterResult)) {
               return filterResult.then(asyncResult => {
                 if (!asyncResult) {
-                  index = items.length;
+                  q.index = items.length;
                 }
                 return next();
               });
             }
             if (!filterResult) {
-              index = items.length;
+              q.index = items.length;
             }
             return next();
           /* -------------------------------------------------- parallel */
           case 'parallel':
-            result = func.map(f => f(result, ...payload));
-            const promises = result.filter(isPromise);
+            q.result = func.map(f => f(q.result, ...payload));
+            const promises = q.result.filter(isPromise);
 
             if (promises.length > 0) {
               return Promise.all(promises).then(() => {
-                result.forEach((r, index) => {
+                q.result.forEach((r, index) => {
                   if (isPromise(r)) {
-                    r.then(value => (result[index] = value));
+                    r.then(value => (q.result[index] = value));
                   }
                 });
                 return next();
@@ -112,16 +115,16 @@ function createQueue(
             return next();
           /* -------------------------------------------------- cancel */
           case 'cancel':
-            index = -1;
+            q.index = -1;
             resetItems();
-            return result;
+            return q.result;
 
         }
         /* -------------------------------------------------- error */
         throw new Error(`Unsupported method "${ type }".`);
       };
 
-      return items.length > 0 ? loop() : result;
+      return items.length > 0 ? loop() : q.result;
     },
     cancel() {
       this.items = [];
@@ -155,6 +158,7 @@ export function createState(initialValue) {
     createdQueues = [];
     listeners = [];
     active = false;
+    if (__DEV__) system.onStateTeardown(stateAPI);
   };
   stateAPI.stream = (...args) => {
     if (args.length > 0) {
@@ -242,6 +246,7 @@ export function createState(initialValue) {
 
   enhanceToQueueAPI(stateAPI);
   enhanceToQueueAPI(stateAPI.stream, true);
+  if (__DEV__) system.onStateCreated(stateAPI);
 
   return stateAPI;
 };

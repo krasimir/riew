@@ -23,7 +23,7 @@ var merge = exports.merge = _state.mergeStates;
 var compose = exports.compose = _utils.compose;
 var react = exports.react = { routine: _react2.default };
 
-},{"./react":2,"./state":4,"./utils":5}],2:[function(require,module,exports){
+},{"./react":2,"./state":4,"./utils":6}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -149,7 +149,7 @@ function routine(controller) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../routine":3,"../utils":5}],3:[function(require,module,exports){
+},{"../routine":3,"../utils":6}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -159,7 +159,12 @@ exports.default = createRoutineInstance;
 
 var _state2 = require('./state');
 
-function createRoutineInstance(controllerFunc, viewFunc) {
+var noop = function noop() {};
+
+function createRoutineInstance() {
+  var controllerFunc = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : noop;
+  var viewFunc = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : noop;
+
   var active = false;
   var funcsToCallOnUnmount = [];
 
@@ -173,6 +178,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   instance.in = function (initialProps) {
     active = true;
     instance.set(initialProps);
+    viewFunc(initialProps, noop);
     controllerFunc({
       render: function render(props) {
         if (!active) return Promise.resolve();
@@ -225,6 +231,14 @@ exports.createStream = createStream;
 
 var _utils = require('./utils');
 
+var _system = require('./system');
+
+var _system2 = _interopRequireDefault(_system);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
@@ -253,40 +267,42 @@ function createQueue(setStateValue, getStateValue) {
   var onDone = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
 
   var q = {
+    index: 0,
+    result: getStateValue(),
     id: getId('q'),
     items: [],
     add: function add(type, func) {
-      this.items.push({ type: type, func: func });
+      this.items.push({ type: type, func: func, name: func.map(_utils.getFuncName) });
     },
     process: function process() {
       for (var _len = arguments.length, payload = Array(_len), _key = 0; _key < _len; _key++) {
         payload[_key] = arguments[_key];
       }
 
-      var index = 0;
-      var result = getStateValue();
       var items = q.items;
       var resetItems = function resetItems() {
         return q.items = [];
       };
 
+      q.index = 0;
+
       function next() {
-        index++;
-        if (index < items.length) {
+        q.index++;
+        if (q.index < items.length) {
           return loop();
         }
         onDone(q);
-        return result;
+        return q.result;
       };
       function loop() {
-        var _items$index = items[index],
-            type = _items$index.type,
-            func = _items$index.func;
+        var _items$q$index = items[q.index],
+            type = _items$q$index.type,
+            func = _items$q$index.func;
 
         switch (type) {
           /* -------------------------------------------------- pipe */
           case 'pipe':
-            var pipeResult = (func[0] || function () {}).apply(undefined, [result].concat(payload));
+            var pipeResult = (func[0] || function () {}).apply(undefined, [q.result].concat(payload));
 
             if ((0, _utils.isPromise)(pipeResult)) {
               return pipeResult.then(next);
@@ -294,12 +310,12 @@ function createQueue(setStateValue, getStateValue) {
             return next();
           /* -------------------------------------------------- map */
           case 'map':
-            result = (func[0] || function (value) {
+            q.result = (func[0] || function (value) {
               return value;
-            }).apply(undefined, [result].concat(payload));
-            if ((0, _utils.isPromise)(result)) {
-              return result.then(function (asyncResult) {
-                result = asyncResult;
+            }).apply(undefined, [q.result].concat(payload));
+            if ((0, _utils.isPromise)(q.result)) {
+              return q.result.then(function (asyncResult) {
+                q.result = asyncResult;
                 return next();
               });
             }
@@ -310,51 +326,51 @@ function createQueue(setStateValue, getStateValue) {
               return _defineProperty({}, func[0], value);
             };
 
-            result = mappingFunc.apply(undefined, [result].concat(payload));
+            q.result = mappingFunc.apply(undefined, [q.result].concat(payload));
             return next();
           /* -------------------------------------------------- mutate */
           case 'mutate':
-            result = (func[0] || function (current, payload) {
+            q.result = (func[0] || function (current, payload) {
               return payload;
-            }).apply(undefined, [result].concat(payload));
-            if ((0, _utils.isPromise)(result)) {
-              return result.then(function (asyncResult) {
-                result = asyncResult;
-                setStateValue(result);
+            }).apply(undefined, [q.result].concat(payload));
+            if ((0, _utils.isPromise)(q.result)) {
+              return q.result.then(function (asyncResult) {
+                q.result = asyncResult;
+                setStateValue(q.result);
                 return next();
               });
             }
-            setStateValue(result);
+            setStateValue(q.result);
             return next();
           /* -------------------------------------------------- filter */
           case 'filter':
-            var filterResult = func[0].apply(func, [result].concat(payload));
+            var filterResult = func[0].apply(func, [q.result].concat(payload));
 
             if ((0, _utils.isPromise)(filterResult)) {
               return filterResult.then(function (asyncResult) {
                 if (!asyncResult) {
-                  index = items.length;
+                  q.index = items.length;
                 }
                 return next();
               });
             }
             if (!filterResult) {
-              index = items.length;
+              q.index = items.length;
             }
             return next();
           /* -------------------------------------------------- parallel */
           case 'parallel':
-            result = func.map(function (f) {
-              return f.apply(undefined, [result].concat(payload));
+            q.result = func.map(function (f) {
+              return f.apply(undefined, [q.result].concat(payload));
             });
-            var promises = result.filter(_utils.isPromise);
+            var promises = q.result.filter(_utils.isPromise);
 
             if (promises.length > 0) {
               return Promise.all(promises).then(function () {
-                result.forEach(function (r, index) {
+                q.result.forEach(function (r, index) {
                   if ((0, _utils.isPromise)(r)) {
                     r.then(function (value) {
-                      return result[index] = value;
+                      return q.result[index] = value;
                     });
                   }
                 });
@@ -364,16 +380,16 @@ function createQueue(setStateValue, getStateValue) {
             return next();
           /* -------------------------------------------------- cancel */
           case 'cancel':
-            index = -1;
+            q.index = -1;
             resetItems();
-            return result;
+            return q.result;
 
         }
         /* -------------------------------------------------- error */
         throw new Error('Unsupported method "' + type + '".');
       };
 
-      return items.length > 0 ? loop() : result;
+      return items.length > 0 ? loop() : q.result;
     },
     cancel: function cancel() {
       this.items = [];
@@ -425,6 +441,7 @@ function createState(initialValue) {
     createdQueues = [];
     listeners = [];
     active = false;
+    if (true) _system2.default.onStateTeardown(stateAPI);
   };
   stateAPI.stream = function () {
     if (arguments.length > 0) {
@@ -528,6 +545,7 @@ function createState(initialValue) {
 
   enhanceToQueueAPI(stateAPI);
   enhanceToQueueAPI(stateAPI.stream, true);
+  if (true) _system2.default.onStateCreated(stateAPI);
 
   return stateAPI;
 };
@@ -565,7 +583,48 @@ function createStream(initialValue) {
   return createState(initialValue).stream;
 }
 
-},{"./utils":5}],5:[function(require,module,exports){
+},{"./system":5,"./utils":6}],5:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+function normalizeState(state) {
+  var value = state.__get();
+  var queues = state.__queues().map(function (q) {
+    return {
+      index: q.index,
+      result: q.result,
+      items: q.items.map(function (_ref) {
+        var type = _ref.type,
+            name = _ref.name;
+        return name.join(',') + '(' + type + ')';
+      })
+    };
+  });
+
+  return { value: value, queues: queues };
+};
+
+var System = {
+  __states: [],
+  onStateCreated: function onStateCreated(state) {
+    this.__states.push(state);
+  },
+  onStateTeardown: function onStateTeardown(state) {
+    this.__states = this.__states.filter(function (_ref2) {
+      var id = _ref2.id;
+      return id === state.id;
+    });
+  },
+  snapshot: function snapshot() {
+    return this.__states.map(normalizeState);
+  }
+};
+
+exports.default = System;
+
+},{}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {

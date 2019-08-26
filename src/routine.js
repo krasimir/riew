@@ -1,6 +1,8 @@
 import { createState as state } from './state';
 
-export default function createRoutineInstance(controllerFunc, viewFunc) {
+const noop = () => {};
+
+export default function createRoutineInstance(controllerFunc = noop, viewFunc = noop) {
   let active = false;
   let funcsToCallOnUnmount = [];
 
@@ -14,6 +16,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   instance.in = (initialProps) => {
     active = true;
     instance.set(initialProps);
+    viewFunc(initialProps, noop);
     controllerFunc(
       {
         render(props) {

@@ -68,18 +68,18 @@ describe('Given the React routine function', () => {
         expect(compSpy.mock.calls[1]).toStrictEqual([ { foo: 'bar' }, {} ]);
       });
     });
-    it('should render nothing by default', () => {
+    it('should always render the view at least once', () => {
       const R = routine(() => {}, () => <p>Hello</p>);
       const { container } = render(<R />);
 
-      exerciseHTML(container, '');
+      exerciseHTML(container, '<p>Hello</p>');
     });
-    it('should render the component if we call the `render` function', () => {
+    it('should re-render the component if we call the `render` function', () => {
       const spy = jest.fn().mockImplementation(() => null);
       const R = routine(({ render }) => render({ c: 'd' }), spy);
 
       render(<R a='b'/>);
-      expect(spy).toBeCalledWith({ c: 'd' }, {});
+      expect(spy.mock.calls[0]).toStrictEqual([{ a: 'b', c: 'd' }, {}]);
     });
     it('should not re-render the Component if the bridge is re-rendered', () => {
       const spy = jest.fn().mockImplementation(() => null);
