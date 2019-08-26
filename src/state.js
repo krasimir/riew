@@ -24,7 +24,7 @@ function createQueue(
     add(type, func) {
       this.items.push({ type, func });
     },
-    trigger(...payload) {
+    process(...payload) {
       let index = 0;
       let result = getStateValue();
       var items = q.items;
@@ -175,9 +175,8 @@ export function createState(initialValue) {
         );
 
         createdQueues.push(queue);
-
         trigger.itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
-        return queue.trigger(...payload);
+        return queue.process(...payload);
       };
 
       trigger.itemsToCreate = [ ...items ];
@@ -198,7 +197,7 @@ export function createState(initialValue) {
       // other methods
       trigger.fork = () => createNewTrigger(trigger.itemsToCreate);
       trigger.test = function (callback) {
-        const testTrigger = createNewTrigger(trigger.itemsToCreate);
+        const testTrigger = trigger.fork();
         const tools = {
           setValue(newValue) {
             testTrigger.itemsToCreate = [
