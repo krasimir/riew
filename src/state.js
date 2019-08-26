@@ -2,7 +2,7 @@
 import { isPromise } from './utils';
 
 var ids = 0;
-const getId = () => `@@s${ ++ids }`;
+const getId = (prefix) => `@@${ prefix }${ ++ids }`;
 const queueMethods = [
   'pipe',
   'map',
@@ -13,9 +13,14 @@ const queueMethods = [
   'mapToKey'
 ];
 
-function createQueue(setStateValue, getStateValue, predefinedItems = [], onCreated = () => {}) {
+function createQueue(
+  setStateValue,
+  getStateValue,
+  onDone = () => {}
+) {
   const q = {
-    items: [ ...predefinedItems ],
+    id: getId('q'),
+    items: [],
     add(type, func) {
       this.items.push({ type, func });
     },
@@ -30,6 +35,7 @@ function createQueue(setStateValue, getStateValue, predefinedItems = [], onCreat
         if (index < items.length) {
           return loop();
         }
+        onDone(q);
         return result;
       };
       function loop() {
@@ -119,59 +125,8 @@ function createQueue(setStateValue, getStateValue, predefinedItems = [], onCreat
     },
     cancel() {
       this.items = [];
-    },
-    clone() {
-      return createQueue(
-        setStateValue,
-        getStateValue,
-        q.items.map(({ type, func }) => ({ type, func })),
-        onCreated
-      );
     }
   };
-
-  queueMethods.forEach(methodName => {
-    q.trigger[methodName] = (...func) => {
-      q.add(methodName, func);
-      return q.trigger;
-    };
-  });
-
-  q.trigger.fork = function () {
-    return q.clone().trigger;
-  };
-  q.trigger.test = function (callback) {
-    const newQueue = q.clone();
-    const tools = {
-      setValue(newValue) {
-        newQueue.items = [ { type: 'map', func: [ () => newValue ] }, ...newQueue.items ];
-      },
-      swap(index, funcs, type) {
-        if (!Array.isArray(funcs)) funcs = [funcs];
-        newQueue.items[index].func = funcs;
-        if (type) {
-          newQueue.items[index].type = type;
-        }
-      },
-      swapFirst(funcs, type) {
-        tools.swap(0, funcs, type);
-      },
-      swapLast(funcs, type) {
-        tools.swap(newQueue.items.length - 1, funcs, type);
-      }
-    };
-
-    callback(tools);
-
-    return newQueue.trigger;
-  };
-  ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
-    q.trigger[stateMethod] = () => {
-      throw new Error(`"${ stateMethod }" is not a queue method but a method of the state object.`);
-    };
-  });
-
-  onCreated(q);
 
   return q;
 }
@@ -181,8 +136,9 @@ export function createState(initialValue) {
   const stateAPI = {};
   let createdQueues = [];
   let listeners = [];
+  let active = true;
 
-  stateAPI.__id = getId();
+  stateAPI.id = getId('s');
   stateAPI.__get = () => value;
   stateAPI.__set = (newValue, callListeners = true) => {
     value = newValue;
@@ -198,6 +154,7 @@ export function createState(initialValue) {
     createdQueues.forEach(q => q.cancel());
     createdQueues = [];
     listeners = [];
+    active = false;
   };
   stateAPI.stream = (...args) => {
     if (args.length > 0) {
@@ -207,28 +164,85 @@ export function createState(initialValue) {
     }
   };
 
-  queueMethods.forEach(methodName => {
-    stateAPI[methodName] = (...func) => {
-      const queue = createQueue(stateAPI.__set, stateAPI.__get, [], (q) => {
-        createdQueues.push(q);
+  function enhanceToQueueAPI(obj, isStream) {
+    function createNewTrigger(items = []) {
+      const trigger = function (...payload) {
+        if (active === false) return stateAPI.__get();
+        const queue = createQueue(
+          stateAPI.__set,
+          stateAPI.__get,
+          (q) => createdQueues = createdQueues.filter(({ id }) => q.id !== id)
+        );
+
+        createdQueues.push(queue);
+
+        trigger.itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
+        return queue.trigger(...payload);
+      };
+
+      trigger.itemsToCreate = [ ...items ];
+
+      // queue methods
+      queueMethods.forEach(m => {
+        trigger[m] = (...func) => {
+          trigger.itemsToCreate.push({ type: m, func });
+          return trigger;
+        };
       });
-
-      queue.add(methodName, func);
-      return queue.trigger;
-    };
-  });
-
-  queueMethods.forEach(methodName => {
-    stateAPI.stream[methodName] = (...func) => {
-      const queue = createQueue(stateAPI.__set, stateAPI.__get, [], (q) => {
-        createdQueues.push(q);
-        listeners.push(q.trigger);
+      // not supported in queue methods
+      ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
+        trigger[stateMethod] = () => {
+          throw new Error(`"${ stateMethod }" is not a queue method but a method of the state object.`);
+        };
       });
+      // other methods
+      trigger.fork = () => createNewTrigger(trigger.itemsToCreate);
+      trigger.test = function (callback) {
+        const testTrigger = createNewTrigger(trigger.itemsToCreate);
+        const tools = {
+          setValue(newValue) {
+            testTrigger.itemsToCreate = [
+              { type: 'map', func: [ () => newValue ] },
+              ...testTrigger.itemsToCreate
+            ];
+          },
+          swap(index, funcs, type) {
+            if (!Array.isArray(funcs)) funcs = [funcs];
+            testTrigger.itemsToCreate[index].func = funcs;
+            if (type) {
+              testTrigger.itemsToCreate[index].type = type;
+            }
+          },
+          swapFirst(funcs, type) {
+            tools.swap(0, funcs, type);
+          },
+          swapLast(funcs, type) {
+            tools.swap(testTrigger.itemsToCreate.length - 1, funcs, type);
+          }
+        };
 
-      queue.add(methodName, func);
-      return queue.trigger;
-    };
-  });
+        callback(tools);
+
+        return testTrigger;
+      };
+
+      return trigger;
+    }
+
+    queueMethods.forEach(methodName => {
+      obj[methodName] = function (...func) {
+        const trigger = createNewTrigger([ { type: methodName, func } ]);
+
+        if (isStream) {
+          listeners.push(trigger);
+        }
+        return trigger;
+      };
+    });
+  };
+
+  enhanceToQueueAPI(stateAPI);
+  enhanceToQueueAPI(stateAPI.stream, true);
 
   return stateAPI;
 };

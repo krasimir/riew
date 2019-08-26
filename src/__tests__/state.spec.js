@@ -225,13 +225,13 @@ describe('Given the state', () => {
       const n = s.pipe(() => {}).pipe(spyB);
 
       expect(m()).toBe(11);
-      expect(m()).toBe(11);
-      expect(m()).toBe(11);
-      expect(n()).toBe(11);
-      expect(s.__get()).toBe(11);
+      expect(m()).toBe(12);
+      expect(m()).toBe(13);
+      expect(n()).toBe(13);
+      expect(s.__get()).toBe(13);
       expect(spyA).toBeCalledTimes(0);
       expect(spyB).toBeCalledTimes(1);
-      expect(spyB).toBeCalledWith(11);
+      expect(spyB).toBeCalledWith(13);
     });
   });
 
@@ -380,13 +380,9 @@ describe('Given the state', () => {
       const getFirst = s.map(value => value[0]);
       const getUp = getFirst.fork().pipe(spy);
 
-      expect(s.__queues()).toHaveLength(2);
-
-      const first = getFirst();
-
+      getFirst();
       getUp();
 
-      expect(first).toBe('foo');
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('foo');
     });
@@ -537,11 +533,19 @@ describe('Given the state', () => {
     });
   });
   describe('when the queue finishes', () => {
-    it.only('should remove it from the state created queues tracker array', () => {
+    it('should remove it from the state created queues tracker array', async () => {
       const s = state(10);
-      const m = s.mutate(value => value * 5);
+      const m = s.mutate(async (value) => {
+        await delay(5);
+        return value * 5;
+      }).map(value => value - 2);
 
+      expect(s.__queues()).toHaveLength(0);
+      m();
       expect(s.__queues()).toHaveLength(1);
+      await delay(7);
+      expect(s.__get()).toBe(50);
+      expect(s.__queues()).toHaveLength(0);
     });
   });
 });
