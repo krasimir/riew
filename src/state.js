@@ -141,18 +141,18 @@ export function createState(initialValue) {
   let listeners = [];
   let active = true;
 
+  stateAPI.__rine = true;
   stateAPI.id = getId('s');
-  stateAPI.__get = () => value;
-  stateAPI.__set = (newValue, callListeners = true) => {
-    value = newValue;
-    if (callListeners) stateAPI.__triggerListeners();
-  };
   stateAPI.__triggerListeners = () => listeners.forEach(l => l());
   stateAPI.__listeners = () => listeners;
   stateAPI.__queues = () => createdQueues;
 
-  stateAPI.set = (newValue) => stateAPI.__set(newValue);
-  stateAPI.get = () => stateAPI.map()();
+  stateAPI.active = () => active;
+  stateAPI.get = () => value;
+  stateAPI.set = (newValue, callListeners = true) => {
+    value = newValue;
+    if (callListeners) stateAPI.__triggerListeners();
+  };
   stateAPI.teardown = () => {
     createdQueues.forEach(q => q.cancel());
     createdQueues = [];
@@ -162,7 +162,7 @@ export function createState(initialValue) {
   };
   stateAPI.stream = (...args) => {
     if (args.length > 0) {
-      stateAPI.__set(args[0]);
+      stateAPI.set(args[0]);
     } else {
       stateAPI.__triggerListeners();
     }
@@ -171,10 +171,10 @@ export function createState(initialValue) {
   function enhanceToQueueAPI(obj, isStream) {
     function createNewTrigger(items = []) {
       const trigger = function (...payload) {
-        if (active === false) return stateAPI.__get();
+        if (active === false) return stateAPI.get();
         const queue = createQueue(
-          stateAPI.__set,
-          stateAPI.__get,
+          stateAPI.set,
+          stateAPI.get,
           (q) => createdQueues = createdQueues.filter(({ id }) => q.id !== id)
         );
 
@@ -253,21 +253,21 @@ export function createState(initialValue) {
 
 export function mergeStates(statesMap) {
   const fetchSourceValues = () => Object.keys(statesMap).reduce((result, key) => {
-    result[key] = statesMap[key].__get();
+    result[key] = statesMap[key].get();
     return result;
   }, {});
   const s = createState(fetchSourceValues());
 
-  s.__set = (newValue) => {
+  s.set = (newValue) => {
     if (typeof newValue !== 'object') {
       throw new Error('Wrong merged state value. Must be key-value pairs.');
     }
     Object.keys(newValue).forEach(key => {
-      statesMap[key].__set(newValue[key], false);
+      statesMap[key].set(newValue[key], false);
     });
     s.__triggerListeners();
   };
-  s.__get = fetchSourceValues;
+  s.get = fetchSourceValues;
 
   Object.keys(statesMap).forEach(key => {
     statesMap[key].stream.pipe(() => {
@@ -280,4 +280,8 @@ export function mergeStates(statesMap) {
 
 export function createStream(initialValue) {
   return createState(initialValue).stream;
+}
+
+export function isRineState(obj) {
+  return obj && obj.__rine === true;
 }

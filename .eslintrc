@@ -25,7 +25,8 @@
     "beforeEach": true,
     "afterEach": true,
     "rine": true,
-    "__DEV__": true
+    "__DEV__": true,
+    "xit": true
   },
 
   "parser": "babel-eslint",

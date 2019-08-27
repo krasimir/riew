@@ -17,7 +17,7 @@ export default function routine(controller, View = () => null) {
 
     // updating props
     useEffect(() => {
-      if (instance) instance.set(outerProps);
+      if (instance) instance.update(outerProps);
     }, [ outerProps ]);
 
     // to support sync rendering (i.e. await render(...))
