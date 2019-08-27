@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React from 'react';
 import ReactDOM from 'react-dom';
 import routine from 'rine/react';
@@ -20,23 +21,15 @@ import {
   COMPLETED
 } from './constants';
 
-const App = routine(function App({ render, state }) {
-  const filter = state(ALL);
-  const viewAll = filter.mutate(() => ALL);
-  const viewActive = filter.mutate(() => ACTIVE);
-  const viewCompleted = filter.mutate(() => COMPLETED);
-
-  todos.stream.mapToKey('todos').pipe(render);
-  filter.stream.mapToKey('filter').pipe(render);
-
+const controller = function App({ render, filter }) {
   render({
-    viewAll,
-    viewActive,
-    viewCompleted,
-    todos: todos.get(),
-    filter: filter.get()
+    viewAll: filter.mutate(() => ALL),
+    viewActive: filter.mutate(() => ACTIVE),
+    viewCompleted: filter.mutate(() => COMPLETED)
   });
-}, ({ todos, filter, viewAll, viewActive, viewCompleted }) => (
+};
+
+const View = ({ todos, filter, viewAll, viewActive, viewCompleted }) => (
   <React.Fragment>
     <section className='todoapp'>
       <header className='header'>
@@ -73,6 +66,8 @@ const App = routine(function App({ render, state }) {
           clearCompleted={ clearCompleted } />
     </section>
   </React.Fragment>
-));
+);
+
+const App = routine(controller, View).withState({ filter: ALL, todos });
 
 ReactDOM.render(<App />, document.querySelector('#container'));
