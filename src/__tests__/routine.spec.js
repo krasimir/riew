@@ -1,3 +1,4 @@
+/* eslint-disable quotes */
 import routine from '../routine';
 import { delay } from '../__helpers__';
 import { createState as state } from '../state';
@@ -20,9 +21,8 @@ describe('Given the `routine` function', () => {
       instance.in({ moo: 'noo' });
 
       expect(instance.isActive()).toBe(true);
-      expect(viewSpy).toBeCalledTimes(2);
-      expect(viewSpy.mock.calls[0]).toStrictEqual([{ moo: 'noo' }, expect.any(Function)]);
-      expect(viewSpy.mock.calls[1]).toStrictEqual([{ foo: 'bar' }, expect.any(Function)]);
+      expect(viewSpy).toBeCalledTimes(1);
+      expect(viewSpy.mock.calls[0]).toStrictEqual([{ foo: 'bar', moo: 'noo' }, expect.any(Function)]);
     });
     it('should allow us to wait till the render is done', (done) => {
       const controller = async ({ render }) => {
@@ -33,32 +33,17 @@ describe('Given the `routine` function', () => {
 
       c.in({});
     });
-    it('should be transparent about what we are passing to the view function', () => {
-      const spy = jest.fn();
-      const c = routine(async ({ render }) => {
-        render('banana');
-      }, spy);
-
-      c.in('lemon');
-
-      expect(spy).toBeCalledTimes(2);
-      expect(spy.mock.calls[0]).toStrictEqual(['lemon', expect.any(Function)]);
-      expect(spy.mock.calls[1]).toStrictEqual(['banana', expect.any(Function)]);
-    });
-    describe('when we update the routine from the outside', () => {
-      it('should allow us to react on those changes', () => {
-        const propsSpy = jest.fn();
-        const c = routine(({ props }) => {
-          props.stream.pipe(propsSpy);
-          propsSpy(props.get());
-        });
-
-        c.in({ a: 'b' });
-        c.set({ c: 'd' });
-
-        expect(propsSpy).toBeCalledTimes(2);
-        expect(propsSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
-        expect(propsSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
+    describe('and when we use non object as initial props or for render method', () => {
+      it('should throw an error', () => {
+        expect(() => routine(() => {}).in('foo')).toThrowError(
+          `The routine's "in" method must be called with an object. Instead string passed`
+        );
+        expect(() => routine(({ render }) => { render('foo') }).in()).toThrowError(
+          `The routine's "render" method must be called with an object. Instead string passed`
+        );
+        expect(() => routine(({ render }) => { render('foo') }).in()).toThrowError(
+          `The routine's "render" method must be called with an object. Instead string passed`
+        );
       });
     });
     describe('and when we call the out method', () => {
@@ -71,13 +56,28 @@ describe('Given the `routine` function', () => {
         expect(c.isActive()).toBe(false);
       });
     });
-    describe('and we use non object as initial props', () => {
-      xit('should throw an error', () => {
+  });
+  describe('when we use props', () => {
+    it('should allow us to react on props changes', () => {
+      const propsSpy = jest.fn();
+      const viewSpy = jest.fn();
+      const c = routine(({ props }) => {
+        expect(props.get()).toStrictEqual({ a: 'b' });
+        props.stream.pipe(propsSpy);
+      }, viewSpy);
 
-      });
+      c.in({ a: 'b' });
+      c.update({ c: 'd' });
+
+      expect(propsSpy).toBeCalledTimes(2);
+      expect(propsSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
+      expect(propsSpy.mock.calls[1]).toStrictEqual([{ a: 'b', 'c': 'd' }]);
+      expect(viewSpy).toBeCalledTimes(2);
+      expect(viewSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }, expect.any(Function)]);
+      expect(viewSpy.mock.calls[1]).toStrictEqual([{ a: 'b', c: 'd' }, expect.any(Function)]);
     });
   });
-  describe.only('when we use `withProps` method', () => {
+  describe('when we use `withState` method', () => {
     it(`should
       * create a states from the given object
       * render with the created states as props
@@ -90,7 +90,7 @@ describe('Given the `routine` function', () => {
           s2.set('noo');
         },
         spy
-      ).withProps({ s1: 'foo', s2: 'moo' });
+      ).withState({ s1: 'foo', s2: 'moo' });
 
       r.in({ a: 'b' });
 
@@ -117,7 +117,7 @@ describe('Given the `routine` function', () => {
             s2.set('noo');
           },
           spy
-        ).withProps({ s1: 'foo', s2: 'moo' }).in();
+        ).withState({ s1: 'foo', s2: 'moo' }).in();
 
         await delay(7);
 
@@ -136,7 +136,7 @@ describe('Given the `routine` function', () => {
         const r = routine(async ({ s }) => {
           await delay(5);
           s.set('bar');
-        }, spy).withProps({ s: alreadyCreated }).in();
+        }, spy).withState({ s: alreadyCreated }).in();
 
         expect(r.__states().s).toBe(alreadyCreated);
 

@@ -122,7 +122,7 @@ describe('Given the state', () => {
       const m = s.mutate(spy);
 
       expect(m('bar')).toBe('foobar');
-      expect(s.__get()).toBe('foobar');
+      expect(s.get()).toBe('foobar');
     });
     it('should support async mutations', async () => {
       const s = state('foo');
@@ -134,7 +134,7 @@ describe('Given the state', () => {
       const result = await m('bar');
 
       expect(result).toBe('foobar');
-      expect(s.__get()).toBe('foobar');
+      expect(s.get()).toBe('foobar');
     });
     it('should work with no function passed', async () => {
       const s = state('foo');
@@ -142,7 +142,7 @@ describe('Given the state', () => {
 
       m('bar');
 
-      expect(s.__get()).toBe('bar');
+      expect(s.get()).toBe('bar');
     });
   });
 
@@ -154,7 +154,7 @@ describe('Given the state', () => {
       const a = s.filter((value) => value === 'boo').map(() => 'moo').pipe(spy);
 
       expect(a()).toEqual('foo');
-      s.__set('boo');
+      s.set('boo');
       expect(a()).toEqual('moo');
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('moo');
@@ -168,7 +168,7 @@ describe('Given the state', () => {
       }).map(() => 'moo').pipe(spy);
 
       expect(await a()).toEqual('foo');
-      s.__set('boo');
+      s.set('boo');
       expect(await a()).toEqual('moo');
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('moo');
@@ -228,7 +228,7 @@ describe('Given the state', () => {
       expect(m()).toBe(12);
       expect(m()).toBe(13);
       expect(n()).toBe(13);
-      expect(s.__get()).toBe(13);
+      expect(s.get()).toBe(13);
       expect(spyA).toBeCalledTimes(0);
       expect(spyB).toBeCalledTimes(1);
       expect(spyB).toBeCalledWith(13);
@@ -249,7 +249,7 @@ describe('Given the state', () => {
       expect(m()).toBe(10);
       expect(m()).toBe(10);
       expect(n()).toBe(10);
-      expect(s.__get()).toBe(10);
+      expect(s.get()).toBe(10);
       expect(spyA).toBeCalledTimes(0);
       expect(spyB).toBeCalledTimes(0);
     });
@@ -301,18 +301,18 @@ describe('Given the state', () => {
       const s2 = state('a');
       const s = merge({ s1, s2 });
 
-      expect(s.__get()).toStrictEqual({ s1: 1, s2: 'a' });
+      expect(s.get()).toStrictEqual({ s1: 1, s2: 'a' });
     });
     it('should update the sources when we update the merged state', () => {
       const s1 = state(1);
       const s2 = state('a');
       const s = merge({ s1, s2 });
 
-      s.__set({ s1: 2 });
+      s.set({ s1: 2 });
 
-      expect(s.__get()).toStrictEqual({ s1: 2, s2: 'a' });
-      expect(s1.__get()).toBe(2);
-      expect(s2.__get()).toBe('a');
+      expect(s.get()).toStrictEqual({ s1: 2, s2: 'a' });
+      expect(s1.get()).toBe(2);
+      expect(s2.get()).toBe('a');
     });
     it('should get the right merged state when we update the source states', () => {
       const s1 = state(1);
@@ -320,12 +320,12 @@ describe('Given the state', () => {
       const s = merge({ s1, s2 });
       const getValue = s.map(({ s1, s2 }) => s1 + s2);
 
-      s1.__set(2);
-      s2.__set('b');
+      s1.set(2);
+      s2.set('b');
 
       expect(getValue()).toBe('2b');
-      expect(s1.__get()).toBe(2);
-      expect(s2.__get()).toBe('b');
+      expect(s1.get()).toBe(2);
+      expect(s2.get()).toBe('b');
     });
     it('should support the listening on the merge state', () => {
       const s1 = state(1);
@@ -335,8 +335,8 @@ describe('Given the state', () => {
 
       s.stream.pipe(spy);
 
-      s1.__set(2);
-      s2.__set('b');
+      s1.set(2);
+      s2.set('b');
 
       expect(spy).toBeCalledTimes(2);
       expect(spy.mock.calls[0]).toStrictEqual([{ s1: 2, s2: 'a' }]);
@@ -350,7 +350,7 @@ describe('Given the state', () => {
       const s = state('foo');
 
       s.set('bar');
-      expect(s.__get('bar'));
+      expect(s.get('bar'));
       expect(s.get()).toBe('bar');
     });
   });
@@ -362,7 +362,7 @@ describe('Given the state', () => {
       const s = state('foo');
 
       s.stream.mapToKey('myValue').pipe(spy);
-      s.__set('bar');
+      s.set('bar');
 
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith({ myValue: 'bar' });
@@ -435,7 +435,7 @@ describe('Given the state', () => {
       const result = await trigger('bar');
 
       expect(result).toBe('THE MESSAGE IS FOOBAR');
-      expect(s.__get()).toBe('The message is foobar');
+      expect(s.get()).toBe('The message is foobar');
       expect(arr).toStrictEqual([
         'pipe', 'map', 'pipe', 'mutate', 'pipe'
       ]);
@@ -544,7 +544,7 @@ describe('Given the state', () => {
       m();
       expect(s.__queues()).toHaveLength(1);
       await delay(7);
-      expect(s.__get()).toBe(50);
+      expect(s.get()).toBe(50);
       expect(s.__queues()).toHaveLength(0);
     });
   });

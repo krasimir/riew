@@ -6,36 +6,74 @@ import routine from '../index';
 
 describe('Given the React routine function', () => {
   describe('when we use the routine Component', () => {
+    it('should always render the view at least once', () => {
+      const R = routine(() => {}, () => <p>Hello</p>);
+      const { container } = render(<R />);
+
+      exerciseHTML(container, '<p>Hello</p>');
+    });
+    it(`should
+      * run the controller function
+      * render once by default
+      * render every time when we call the "render" method`, async () => {
+      const controller = jest.fn().mockImplementation(async ({ render }) => {
+        await delay(5);
+        act(() => { render({ foo: 'bar' }); });
+      });
+      const view = jest.fn().mockImplementation(() => null);
+      const R = routine(controller, view);
+
+      render(<R a='b' />);
+      await delay(7);
+
+      expect(view).toBeCalledTimes(2);
+      expect(view.mock.calls[0]).toStrictEqual([ { a: 'b' }, {}]);
+      expect(view.mock.calls[1]).toStrictEqual([ { a: 'b', foo: 'bar' }, {}]);
+    });
     describe('and we use a state', () => {
       it(`should
-        * register the state teardown function
-        * teardown the state when the component is unmounted`, () => {
-        let ss;
-        const R = routine(function ({ render, state }) {
-          const s = ss = state('foo');
-
-          s.stream.pipe(() => {});
-          render(<p>{ s.map()() }</p>);
-        });
+        * render with the given state data
+        * re-render with a new value when we update the state
+        * teardown the state when the component is unmounted`, async () => {
+        const R = routine(
+          async function ({ state }) {
+            await delay(5);
+            act(() => state.set('bar'));
+          },
+          ({ state }) => <p>{ state }</p>
+        ).withState({ state: 'foo' });
         const { container, unmount } = render(<R />);
 
-        exerciseHTML(container, `
-          <p>foo</p>
-        `);
-        expect(ss.__listeners()).toHaveLength(1);
-        expect(ss.map()()).toBe('foo');
+        exerciseHTML(container, '<p>foo</p>');
+        await delay(7);
+        exerciseHTML(container, '<p>bar</p>');
         unmount();
-        expect(ss.__listeners()).toHaveLength(0);
+      });
+      it('should allow us to render same routine multiple times', async () => {
+        const spy = jest.fn().mockImplementation(() => null);
+        const R = routine(
+          async function ({ state, props }) {
+            state.set({ a: state.get().a + props.get().b });
+          },
+          spy
+        ).withState({ state: { a: 10 } });
+
+        render(<R b={ 5 }/>);
+        render(<R b={ 10 }/>);
+
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ { b: 5, state: { a: 15 } }, {}]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { b: 10, state: { a: 20 } }, {}]);
       });
     });
     describe('and we use "props"', () => {
       it(`should
         * fire the callback at least once
-        * fire the callback on every props change`, () => {
+        * fire the callback on every re-render`, () => {
         const propsSpy = jest.fn();
         const I = routine(function ({ props }) {
-          props.stream.pipe(propsSpy)();
           expect(props.get()).toStrictEqual({ foo: 'bar' });
+          props.stream.pipe(propsSpy);
         });
 
         const { rerender } = render(<I foo='bar' />);
@@ -44,102 +82,7 @@ describe('Given the React routine function', () => {
 
         expect(propsSpy).toBeCalledTimes(2);
         expect(propsSpy.mock.calls[0]).toStrictEqual([ { foo: 'bar' } ]);
-        expect(propsSpy.mock.calls[1]).toStrictEqual([ { zoo: 'mar' } ]);
-      });
-    });
-    describe('and when we need permanent props', () => {
-      it('should preserve a prop for the next render', async () => {
-        const compSpy = jest.fn().mockImplementation(() => null);
-        const I = routine(async function ({ render }) {
-          act(() => {
-            render({ foo: 'bar' });
-          });
-          await delay(10);
-          act(() => {
-            render();
-          });
-        }, compSpy);
-
-        render(<I />);
-
-        await delay(11);
-        expect(compSpy).toBeCalledTimes(2);
-        expect(compSpy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, {} ]);
-        expect(compSpy.mock.calls[1]).toStrictEqual([ { foo: 'bar' }, {} ]);
-      });
-    });
-    it('should always render the view at least once', () => {
-      const R = routine(() => {}, () => <p>Hello</p>);
-      const { container } = render(<R />);
-
-      exerciseHTML(container, '<p>Hello</p>');
-    });
-    it('should re-render the component if we call the `render` function', () => {
-      const spy = jest.fn().mockImplementation(() => null);
-      const R = routine(({ render }) => render({ c: 'd' }), spy);
-
-      render(<R a='b'/>);
-      expect(spy.mock.calls[0]).toStrictEqual([{ a: 'b', c: 'd' }, {}]);
-    });
-    it('should not re-render the Component if the bridge is re-rendered', () => {
-      const spy = jest.fn().mockImplementation(() => null);
-      const R = routine(({ render }) => render(), spy);
-
-      const { rerender } = render(<R />);
-
-      rerender(<R />);
-      expect(spy).toBeCalledTimes(1);
-    });
-    describe('and we pass a React element to the render method', () => {
-      it(`should
-        * trigger a new rendering but with the passed element
-        * then later when called again with props should trigger
-          rendering of the original outer component`, async () => {
-        const Component = jest.fn().mockImplementation(({ answer }) => <div>{ answer }</div>);
-        const C = routine(async ({ render }) => {
-          render(<p>It works</p>);
-          await delay(10);
-          act(() => {
-            render({ answer: 42 });
-          });
-        }, Component);
-        const { container } = render(<C />);
-
-        exerciseHTML(container, '<p>It works</p>');
-        await delay(20);
-        exerciseHTML(container, '<div>42</div>');
-      });
-    });
-    describe('and we pass a string or a number', () => {
-      it(`should
-        * trigger a new rendering but with the passed value
-        * then later when called again with props should trigger
-          rendering of the original outer component`, async () => {
-        const Component = jest.fn().mockImplementation(({ answer }) => <div>{ answer }</div>);
-        const C = routine(async ({ render }) => {
-          render('Hello world');
-          await delay(10);
-          act(() => {
-            render({ answer: 42 });
-          });
-        }, Component);
-        const { container } = render(<C />);
-
-        exerciseHTML(container, 'Hello world');
-        await delay(20);
-        exerciseHTML(container, `
-          <div>42</div>
-        `);
-      });
-    });
-    describe('and we pass null to the render method', () => {
-      it('should render nothing', () => {
-        const C = routine(({ render }) => {
-          render(null);
-        });
-        const { container } = render(<C />);
-
-        exerciseHTML(container, '');
+        expect(propsSpy.mock.calls[1]).toStrictEqual([ { foo: 'bar', zoo: 'mar' } ]);
       });
     });
   });
