@@ -6,15 +6,16 @@ import { delay, exerciseHTML } from '../__helpers__';
 import { react } from '../index';
 
 const { routine } = react;
+const DummyComponent = ({ text }) => <p>{ text }</p>;
 
 describe('Given the Rine library', () => {
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
       const A = routine(async ({ render }) => {
-        act(() => { render('Hello'); });
+        act(() => { render({ text: 'Hello' }); });
         await delay(20);
-        act(() => { render('world'); });
-      });
+        act(() => { render({ text: 'world' }); });
+      }, DummyComponent);
 
       const { queryByText, getByText } = render(<A />);
 
@@ -27,8 +28,8 @@ describe('Given the Rine library', () => {
       const spy = jest.spyOn(console, 'error');
       const A = routine(async ({ render }) => {
         await delay(10);
-        act(() => { render('world'); });
-      });
+        act(() => { render({ text: 'world' }); });
+      }, DummyComponent);
 
       const { unmount } = render(<A/>);
 
@@ -81,7 +82,7 @@ describe('Given the Rine library', () => {
       expect(spy.mock.calls[1]).toStrictEqual([false]);
     });
   });
-  describe('when using routine routine with a hook', () => {
+  describe('when using routine with a hook', () => {
     it('should keep the hook working', async () => {
       const Input = function () {
         const [ text, setText ] = useState('');
@@ -93,13 +94,11 @@ describe('Given the Rine library', () => {
           </React.Fragment>
         );
       };
-      const Form = routine(function ({ render }) {
-        render(
-          <form>
-            <Input />
-          </form>
-        );
-      });
+      const Form = routine(function () {}, () => (
+        <form>
+          <Input />
+        </form>
+      ));
 
       const { getByTestId, getByText } = render(<Form />);
 
@@ -111,9 +110,9 @@ describe('Given the Rine library', () => {
     it('should get props stream callback fired every time when we update the state', async () => {
       const FetchTime = routine(async ({ render, props }) => {
         props.stream.pipe(async ({ city }) => {
-          render(<p>{ city }</p>);
+          render({ location: city });
         });
-      });
+      }, ({ location }) => location ? <p>{ location }</p> : null);
       const App = function () {
         const [ city, setCity ] = useState('');
 

@@ -4,13 +4,13 @@ import { delay } from '../__helpers__';
 import { createState as state } from '../state';
 
 describe('Given the `routine` function', () => {
-  describe('when we create a routine instance', () => {
+  describe('when we create a routine', () => {
     it(`should
       * set the instance to active
       * run the controller function
       * pass render function to the controller function
       * pass util methods to the controller function (isActive)
-      * call the view function at least once and on every render call`, () => {
+      * call the view function at least once and on every "render" call`, () => {
       const controllerSpy = jest.fn().mockImplementation(({ render, isActive }) => {
         expect(isActive()).toBe(true);
         render({ foo: 'bar' });
@@ -18,15 +18,15 @@ describe('Given the `routine` function', () => {
       const viewSpy = jest.fn();
       const instance = routine(controllerSpy, viewSpy);
 
-      instance.in({ moo: 'noo' });
+      instance.in({ not: 'used at all' });
 
       expect(instance.isActive()).toBe(true);
       expect(viewSpy).toBeCalledTimes(1);
-      expect(viewSpy.mock.calls[0]).toStrictEqual([{ foo: 'bar', moo: 'noo' }, expect.any(Function)]);
+      expect(viewSpy.mock.calls[0]).toStrictEqual([{ foo: 'bar' }, expect.any(Function)]);
     });
     it('should allow us to wait till the render is done', (done) => {
       const controller = async ({ render }) => {
-        await render(null);
+        await render({});
         done();
       };
       const c = routine(controller, (props, done) => done());
@@ -36,13 +36,13 @@ describe('Given the `routine` function', () => {
     describe('and when we use non object as initial props or for render method', () => {
       it('should throw an error', () => {
         expect(() => routine(() => {}).in('foo')).toThrowError(
-          `The routine's "in" method must be called with an object. Instead string passed`
+          `The routine's "in" method must be called with a key-value object. Instead "foo" passed`
         );
-        expect(() => routine(({ render }) => { render('foo') }).in()).toThrowError(
-          `The routine's "render" method must be called with an object. Instead string passed`
+        expect(() => routine(({ render }) => { render('foo'); }).in()).toThrowError(
+          `The routine's "render" method must be called with a key-value object. Instead "foo" passed`
         );
-        expect(() => routine(({ render }) => { render('foo') }).in()).toThrowError(
-          `The routine's "render" method must be called with an object. Instead string passed`
+        expect(() => routine(({ render }) => { render('foo'); }).in()).toThrowError(
+          `The routine's "render" method must be called with a key-value object. Instead "foo" passed`
         );
       });
     });
@@ -72,9 +72,33 @@ describe('Given the `routine` function', () => {
       expect(propsSpy).toBeCalledTimes(2);
       expect(propsSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
       expect(propsSpy.mock.calls[1]).toStrictEqual([{ a: 'b', 'c': 'd' }]);
-      expect(viewSpy).toBeCalledTimes(2);
-      expect(viewSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }, expect.any(Function)]);
-      expect(viewSpy.mock.calls[1]).toStrictEqual([{ a: 'b', c: 'd' }, expect.any(Function)]);
+      expect(viewSpy).toBeCalledTimes(1);
+      expect(viewSpy.mock.calls[0]).toStrictEqual([{}, expect.any(Function)]);
+    });
+    describe('and we subscribe for updates and call the render', () => {
+      it('should not end up in a endless loop', () => {
+        const spy = jest.fn();
+        const propsSpy = jest.fn();
+        const r = routine(
+          ({ props, render }) => {
+            props.stream.pipe(({ value }) => {
+              propsSpy(value);
+              render({ foo: value });
+            });
+          },
+          spy
+        );
+
+        r.in({ value: 'bar' });
+        r.update({ value: 'moo' });
+
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { foo: 'moo' }, expect.any(Function) ]);
+        expect(propsSpy).toBeCalledTimes(2);
+        expect(propsSpy.mock.calls[0]).toStrictEqual([ 'bar' ]);
+        expect(propsSpy.mock.calls[1]).toStrictEqual([ 'moo' ]);
+      });
     });
   });
   describe('when we use `withState` method', () => {
@@ -92,13 +116,13 @@ describe('Given the `routine` function', () => {
         spy
       ).withState({ s1: 'foo', s2: 'moo' });
 
-      r.in({ a: 'b' });
+      r.in({});
 
       let s1 = r.__states().s1;
       let s2 = r.__states().s2;
 
       expect(spy).toBeCalledTimes(1);
-      expect(spy.mock.calls[0]).toStrictEqual([ { a: 'b', s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
+      expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
       expect(s1.active()).toBe(true);
       expect(s2.active()).toBe(true);
       r.out();

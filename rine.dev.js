@@ -31,16 +31,6 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _extends = Object.assign || function (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];for (var key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key];
-      }
-    }
-  }return target;
-};
-
 var _slicedToArray = function () {
   function sliceIterator(arr, i) {
     var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
@@ -88,6 +78,7 @@ function routine(controller) {
     return null;
   };
 
+  var statesMap = null;
   var RoutineBridge = function RoutineBridge(outerProps) {
     var _useState = (0, _react.useState)(null),
         _useState2 = _slicedToArray(_useState, 2),
@@ -99,20 +90,11 @@ function routine(controller) {
         content = _useState4[0],
         setContent = _useState4[1];
 
-    var _useState5 = (0, _react.useState)({}),
-        _useState6 = _slicedToArray(_useState5, 2),
-        permanentProps = _useState6[0],
-        setPermanentProps = _useState6[1];
-
-    function preserveProps(props) {
-      permanentProps = _extends({}, permanentProps, props);
-      setPermanentProps(permanentProps);
-      return permanentProps;
-    }
-
     // updating props
+
+
     (0, _react.useEffect)(function () {
-      if (instance) instance.set(outerProps);
+      if (instance) instance.update(outerProps);
     }, [outerProps]);
 
     // to support sync rendering (i.e. await render(...))
@@ -123,15 +105,16 @@ function routine(controller) {
     // mounting
     (0, _react.useEffect)(function () {
       instance = (0, _routine2.default)(controller, function (props, done) {
-        if (typeof props === 'string' || typeof props === 'number' || _react2.default.isValidElement(props)) {
-          setContent({ content: props, done: done });
-        } else if (props === null) {
+        if (props === null) {
           setContent({ content: null, done: done });
         } else {
-          setContent({ content: _react2.default.createElement(View, preserveProps(props)), done: done });
+          setContent({ content: _react2.default.createElement(View, props), done: done });
         }
       });
 
+      if (statesMap !== null) {
+        instance.withState(statesMap);
+      }
       setInstance(instance);
       instance.in(outerProps);
 
@@ -144,6 +127,10 @@ function routine(controller) {
   };
 
   RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(controller) + ')';
+  RoutineBridge.withState = function (map) {
+    statesMap = map;
+    return RoutineBridge;
+  };
 
   return RoutineBridge;
 }
@@ -152,12 +139,39 @@ function routine(controller) {
 },{"../routine":3,"../utils":6}],3:[function(require,module,exports){
 'use strict';
 
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
+
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
+}; /* eslint-disable max-len */
+
 exports.default = createRoutineInstance;
 
-var _state2 = require('./state');
+var _state = require('./state');
+
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
 
 var noop = function noop() {};
 
@@ -165,46 +179,92 @@ function createRoutineInstance() {
   var controllerFunc = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : noop;
   var viewFunc = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : noop;
 
+  var instance = {};
   var active = false;
-  var funcsToCallOnUnmount = [];
+  var onOutCallbacks = [];
+  var statesMap = null;
+  var states = null;
+  var onRender = noop;
+  var viewProps = (0, _state.createState)({});
+  var updateViewProps = viewProps.mutate(function (current, newProps) {
+    return _extends({}, current, newProps);
+  });
+  var routineProps = (0, _state.createState)({});
+  var updateRoutineProps = routineProps.mutate(function (current, newProps) {
+    return _extends({}, current, newProps);
+  });
 
   function isActive() {
     return active;
   }
+  function callView() {
+    viewFunc(viewProps.get(), onRender);
+    onRender = noop;
+  }
+  function initializeStates() {
+    if (statesMap !== null) {
+      return Object.keys(statesMap).reduce(function (values, key) {
+        if (states === null) states = {};
+        var alreadyState = (0, _state.isRineState)(statesMap[key]);
+        var s = states[key] = alreadyState ? statesMap[key] : (0, _state.createState)(statesMap[key]);
 
-  var instance = (0, _state2.createState)({});
+        if (!alreadyState) onOutCallbacks.push(s.teardown);
+        s.stream.pipe(function (value) {
+          return updateViewProps(_defineProperty({}, key, value));
+        });
+        values[key] = s.get();
+        return values;
+      }, {});
+    }
+    return {};
+  }
+  function objectRequired(value, method) {
+    if (value === null || typeof value !== 'undefined' && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
+      throw new Error('The routine\'s "' + method + '" method must be called with a key-value object. Instead "' + value + '" passed.');
+    }
+  }
 
+  instance.__states = function () {
+    return states;
+  };
   instance.isActive = isActive;
   instance.in = function (initialProps) {
     active = true;
-    instance.set(initialProps);
-    viewFunc(initialProps, noop);
-    controllerFunc({
+    objectRequired(initialProps, 'in');
+    updateRoutineProps(initialProps);
+    updateViewProps(initializeStates());
+    controllerFunc(Object.assign({
       render: function render(props) {
+        objectRequired(props, 'render');
         if (!active) return Promise.resolve();
         return new Promise(function (done) {
-          viewFunc(props, done);
+          onRender = done;
+          updateViewProps(props);
         });
       },
 
-      props: instance,
-      state: function state() {
-        var s = _state2.createState.apply(undefined, arguments);
-
-        funcsToCallOnUnmount.push(s.teardown);
-        return s;
-      },
-
+      props: routineProps,
       isActive: isActive
-    });
+    }, states !== null ? _extends({}, states) : {}));
+    routineProps.stream();
+    viewProps.stream.pipe(callView);
+    callView();
+    return instance;
   };
+  instance.update = updateRoutineProps;
   instance.out = function () {
-    active = false;
-    funcsToCallOnUnmount.forEach(function (f) {
+    onOutCallbacks.forEach(function (f) {
       return f();
     });
-    funcsToCallOnUnmount = [];
-    instance.teardown();
+    onOutCallbacks = [];
+    viewProps.teardown();
+    states = null;
+    active = false;
+    return instance;
+  };
+  instance.withState = function (map) {
+    statesMap = map;
+    return instance;
   };
 
   return instance;
@@ -228,6 +288,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
 exports.createState = createState;
 exports.mergeStates = mergeStates;
 exports.createStream = createStream;
+exports.isRineState = isRineState;
 
 var _utils = require('./utils');
 
@@ -406,16 +467,8 @@ function createState(initialValue) {
   var listeners = [];
   var active = true;
 
+  stateAPI.__rine = true;
   stateAPI.id = getId('s');
-  stateAPI.__get = function () {
-    return value;
-  };
-  stateAPI.__set = function (newValue) {
-    var callListeners = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-
-    value = newValue;
-    if (callListeners) stateAPI.__triggerListeners();
-  };
   stateAPI.__triggerListeners = function () {
     return listeners.forEach(function (l) {
       return l();
@@ -428,11 +481,17 @@ function createState(initialValue) {
     return createdQueues;
   };
 
-  stateAPI.set = function (newValue) {
-    return stateAPI.__set(newValue);
+  stateAPI.active = function () {
+    return active;
   };
   stateAPI.get = function () {
-    return stateAPI.map()();
+    return value;
+  };
+  stateAPI.set = function (newValue) {
+    var callListeners = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+    value = newValue;
+    if (callListeners) stateAPI.__triggerListeners();
   };
   stateAPI.teardown = function () {
     createdQueues.forEach(function (q) {
@@ -445,7 +504,7 @@ function createState(initialValue) {
   };
   stateAPI.stream = function () {
     if (arguments.length > 0) {
-      stateAPI.__set(arguments.length <= 0 ? undefined : arguments[0]);
+      stateAPI.set(arguments.length <= 0 ? undefined : arguments[0]);
     } else {
       stateAPI.__triggerListeners();
     }
@@ -456,8 +515,8 @@ function createState(initialValue) {
       var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
 
       var trigger = function trigger() {
-        if (active === false) return stateAPI.__get();
-        var queue = createQueue(stateAPI.__set, stateAPI.__get, function (q) {
+        if (active === false) return stateAPI.get();
+        var queue = createQueue(stateAPI.set, stateAPI.get, function (q) {
           return createdQueues = createdQueues.filter(function (_ref2) {
             var id = _ref2.id;
             return q.id !== id;
@@ -553,22 +612,22 @@ function createState(initialValue) {
 function mergeStates(statesMap) {
   var fetchSourceValues = function fetchSourceValues() {
     return Object.keys(statesMap).reduce(function (result, key) {
-      result[key] = statesMap[key].__get();
+      result[key] = statesMap[key].get();
       return result;
     }, {});
   };
   var s = createState(fetchSourceValues());
 
-  s.__set = function (newValue) {
+  s.set = function (newValue) {
     if ((typeof newValue === 'undefined' ? 'undefined' : _typeof(newValue)) !== 'object') {
       throw new Error('Wrong merged state value. Must be key-value pairs.');
     }
     Object.keys(newValue).forEach(function (key) {
-      statesMap[key].__set(newValue[key], false);
+      statesMap[key].set(newValue[key], false);
     });
     s.__triggerListeners();
   };
-  s.__get = fetchSourceValues;
+  s.get = fetchSourceValues;
 
   Object.keys(statesMap).forEach(function (key) {
     statesMap[key].stream.pipe(function () {
@@ -581,6 +640,10 @@ function mergeStates(statesMap) {
 
 function createStream(initialValue) {
   return createState(initialValue).stream;
+}
+
+function isRineState(obj) {
+  return obj && obj.__rine === true;
 }
 
 },{"./system":5,"./utils":6}],5:[function(require,module,exports){

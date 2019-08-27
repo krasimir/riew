@@ -23,12 +23,12 @@ describe('Given the React routine function', () => {
       const view = jest.fn().mockImplementation(() => null);
       const R = routine(controller, view);
 
-      render(<R a='b' />);
+      render(<R />);
       await delay(7);
 
       expect(view).toBeCalledTimes(2);
-      expect(view.mock.calls[0]).toStrictEqual([ { a: 'b' }, {}]);
-      expect(view.mock.calls[1]).toStrictEqual([ { a: 'b', foo: 'bar' }, {}]);
+      expect(view.mock.calls[0]).toStrictEqual([ {}, {}]);
+      expect(view.mock.calls[1]).toStrictEqual([ { foo: 'bar' }, {}]);
     });
     describe('and we use a state', () => {
       it(`should
@@ -62,14 +62,14 @@ describe('Given the React routine function', () => {
         render(<R b={ 10 }/>);
 
         expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { b: 5, state: { a: 15 } }, {}]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { b: 10, state: { a: 20 } }, {}]);
+        expect(spy.mock.calls[0]).toStrictEqual([ { state: { a: 15 } }, {}]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { state: { a: 20 } }, {}]);
       });
     });
     describe('and we use "props"', () => {
       it(`should
-        * fire the callback at least once
-        * fire the callback on every re-render`, () => {
+        * have access to the props
+        * have be able to subscribe to props change`, () => {
         const propsSpy = jest.fn();
         const I = routine(function ({ props }) {
           expect(props.get()).toStrictEqual({ foo: 'bar' });

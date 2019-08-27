@@ -12,6 +12,8 @@ export default function createRoutineInstance(controllerFunc = noop, viewFunc = 
   let onRender = noop;
   const viewProps = state({});
   const updateViewProps = viewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
+  const routineProps = state({});
+  const updateRoutineProps = routineProps.mutate((current, newProps) => ({ ...current, ...newProps }));
 
   function isActive() {
     return active;
@@ -20,23 +22,22 @@ export default function createRoutineInstance(controllerFunc = noop, viewFunc = 
     viewFunc(viewProps.get(), onRender);
     onRender = noop;
   }
-  function applyAndHookStates() {
+  function initializeStates() {
     if (statesMap !== null) {
-      updateViewProps(
-        Object.keys(statesMap).reduce((values, key) => {
-          if (states === null) states = {};
-          let alreadyState = isRineState(statesMap[key]);
-          let s = states[key] = alreadyState ? statesMap[key] : state(statesMap[key]);
+      return Object.keys(statesMap).reduce((values, key) => {
+        if (states === null) states = {};
+        let alreadyState = isRineState(statesMap[key]);
+        let s = states[key] = alreadyState ? statesMap[key] : state(statesMap[key]);
 
-          if (!alreadyState) onOutCallbacks.push(s.teardown);
-          s.stream.pipe(value => updateViewProps({ [key]: value }));
-          values[key] = s.get();
-          return values;
-        }, {})
-      );
+        if (!alreadyState) onOutCallbacks.push(s.teardown);
+        s.stream.pipe(value => updateViewProps({ [key]: value }));
+        values[key] = s.get();
+        return values;
+      }, {});
     }
+    return {};
   }
-  function objectRequired(method, value) {
+  function objectRequired(value, method) {
     if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
       throw new Error(`The routine's "${ method }" method must be called with a key-value object. Instead "${ value }" passed.`);
     }
@@ -46,31 +47,32 @@ export default function createRoutineInstance(controllerFunc = noop, viewFunc = 
   instance.isActive = isActive;
   instance.in = (initialProps) => {
     active = true;
-    objectRequired('in', initialProps);
-    updateViewProps(initialProps);
-    applyAndHookStates();
+    objectRequired(initialProps, 'in');
+    updateRoutineProps(initialProps);
+    updateViewProps(initializeStates());
     controllerFunc(
       Object.assign(
         {
           render(props) {
-            objectRequired('render', props);
+            objectRequired(props, 'render');
             if (!active) return Promise.resolve();
             return new Promise(done => {
               onRender = done;
               updateViewProps(props);
             });
           },
-          props: viewProps,
+          props: routineProps,
           isActive
         },
         states !== null ? { ...states } : {}
       )
     );
+    routineProps.stream();
     viewProps.stream.pipe(callView);
-    viewProps.stream();
+    callView();
     return instance;
   };
-  instance.update = updateViewProps;
+  instance.update = updateRoutineProps;
   instance.out = () => {
     onOutCallbacks.forEach(f => f());
     onOutCallbacks = [];
