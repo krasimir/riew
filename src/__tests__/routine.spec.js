@@ -38,10 +38,10 @@ describe('Given the `routine` function', () => {
         expect(() => routine(() => {}).in('foo')).toThrowError(
           `The routine's "in" method must be called with a key-value object. Instead "foo" passed`
         );
-        expect(() => routine(({ render }) => { render('foo'); }).in()).toThrowError(
+        expect(() => routine(({ render }) => { render('foo'); }, () => {}).in()).toThrowError(
           `The routine's "render" method must be called with a key-value object. Instead "foo" passed`
         );
-        expect(() => routine(({ render }) => { render('foo'); }).in()).toThrowError(
+        expect(() => routine(({ render }) => { render('foo'); }, () => {}).in()).toThrowError(
           `The routine's "render" method must be called with a key-value object. Instead "foo" passed`
         );
       });
@@ -173,6 +173,30 @@ describe('Given the `routine` function', () => {
         expect(alreadyCreated.active()).toBe(true);
         expect(r.__states()).toBe(null);
       });
+    });
+    describe('and when we pass a queue function', () => {
+      it.only(`should
+        * run the function
+        * figure out the state and subscribe to it`, () => {
+        const s = state({ firstName: 'Jon', lastName: 'Doe' });
+        const getFirstName = s.map(({ firstName }) => firstName);
+        const spy = jest.fn();
+        const view = jest.fn();
+        const r = routine(({ firstName }) => {
+          spy(firstName());
+        }, view);
+      });
+    });
+  });
+  describe('when we call the routine with just one argument', () => {
+    it('should assume that this argument is the view function', () => {
+      const spy = jest.fn();
+      const r = routine(spy).withState({ foo: 'bar' });
+
+      r.in({});
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
     });
   });
 });

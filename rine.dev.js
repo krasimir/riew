@@ -175,10 +175,11 @@ function _defineProperty(obj, key, value) {
 
 var noop = function noop() {};
 
-function createRoutineInstance() {
-  var controllerFunc = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : noop;
-  var viewFunc = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : noop;
-
+function createRoutineInstance(controllerFunc, viewFunc) {
+  if (typeof viewFunc === 'undefined') {
+    viewFunc = controllerFunc;
+    controllerFunc = noop;
+  }
   var instance = {};
   var active = false;
   var onOutCallbacks = [];

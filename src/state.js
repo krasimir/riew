@@ -168,8 +168,12 @@ export function createState(initialValue) {
     }
   };
 
+  function removeListener({ id: toRemove }) {
+    listeners = listeners.filter(({ id }) => id !== toRemove);
+  }
+
   function enhanceToQueueAPI(obj, isStream) {
-    function createNewTrigger(items = []) {
+    function createNewTrigger(items = [], isStream, previousTrigger = null) {
       const trigger = function (...payload) {
         if (active === false) return stateAPI.get();
         const queue = createQueue(
@@ -179,18 +183,21 @@ export function createState(initialValue) {
         );
 
         createdQueues.push(queue);
-        trigger.itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
+        trigger.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
         return queue.process(...payload);
       };
 
-      trigger.itemsToCreate = [ ...items ];
+      trigger.id = getId('t');
+      trigger.__rineTrigger = true;
+      trigger.__itemsToCreate = [ ...items ];
 
       // queue methods
       queueMethods.forEach(m => {
-        trigger[m] = (...func) => {
-          trigger.itemsToCreate.push({ type: m, func });
-          return trigger;
-        };
+        trigger[m] = (...func) => createNewTrigger(
+          [ ...items, { type: m, func } ],
+          isStream,
+          trigger
+        );
       });
       // not supported in queue methods
       ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
@@ -199,28 +206,27 @@ export function createState(initialValue) {
         };
       });
       // other methods
-      trigger.fork = () => createNewTrigger(trigger.itemsToCreate);
       trigger.test = function (callback) {
-        const testTrigger = trigger.fork();
+        const testTrigger = createNewTrigger([ ...items ], isStream, trigger);
         const tools = {
           setValue(newValue) {
-            testTrigger.itemsToCreate = [
+            testTrigger.__itemsToCreate = [
               { type: 'map', func: [ () => newValue ] },
-              ...testTrigger.itemsToCreate
+              ...testTrigger.__itemsToCreate
             ];
           },
           swap(index, funcs, type) {
             if (!Array.isArray(funcs)) funcs = [funcs];
-            testTrigger.itemsToCreate[index].func = funcs;
+            testTrigger.__itemsToCreate[index].func = funcs;
             if (type) {
-              testTrigger.itemsToCreate[index].type = type;
+              testTrigger.__itemsToCreate[index].type = type;
             }
           },
           swapFirst(funcs, type) {
             tools.swap(0, funcs, type);
           },
           swapLast(funcs, type) {
-            tools.swap(testTrigger.itemsToCreate.length - 1, funcs, type);
+            tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
           }
         };
 
@@ -229,18 +235,16 @@ export function createState(initialValue) {
         return testTrigger;
       };
 
+      if (isStream) {
+        listeners.push(trigger);
+        if (previousTrigger) removeListener(previousTrigger);
+      }
+
       return trigger;
     }
 
     queueMethods.forEach(methodName => {
-      obj[methodName] = function (...func) {
-        const trigger = createNewTrigger([ { type: methodName, func } ]);
-
-        if (isStream) {
-          listeners.push(trigger);
-        }
-        return trigger;
-      };
+      obj[methodName] = (...func) => createNewTrigger([ { type: methodName, func } ], isStream);
     });
   };
 
@@ -284,4 +288,8 @@ export function createStream(initialValue) {
 
 export function isRineState(obj) {
   return obj && obj.__rine === true;
+}
+
+export function isRineQueueTrigger(func) {
+  return func && func.__rineTrigger === true;
 }

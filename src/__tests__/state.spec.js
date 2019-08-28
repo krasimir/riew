@@ -372,13 +372,13 @@ describe('Given the state', () => {
     });
   });
 
-  /* fork */
-  describe('when we use the `fork` method', () => {
+  /* forking */
+  describe('when we use wanna fork method', () => {
     it('should fork the queue', () => {
       const spy = jest.fn();
       const s = state([ 'foo', 'bar' ]);
       const getFirst = s.map(value => value[0]);
-      const getUp = getFirst.fork().pipe(spy);
+      const getUp = getFirst.pipe(spy);
 
       getFirst();
       getUp();
@@ -519,6 +519,9 @@ describe('Given the state', () => {
         .map(value => `value is ${ value }`)
         .pipe(spyA);
 
+      expect(s.__listeners().length).toBe(1);
+      expect(s.__listeners()[0].__itemsToCreate.map(({ type }) => type)).toStrictEqual([ 'filter', 'map', 'pipe' ]);
+
       s.stream
         .filter((value) => value >= 2)
         .pipe(spyB);
@@ -546,6 +549,24 @@ describe('Given the state', () => {
       await delay(7);
       expect(s.get()).toBe(50);
       expect(s.__queues()).toHaveLength(0);
+    });
+  });
+  describe('when we use a trigger as a beginning of new queue', () => {
+    it('should not mess the already existing queue', () => {
+      const spy1 = jest.fn();
+      const spy2 = jest.fn();
+      const s = state([ 'foo', 'bar' ]);
+      const getFirst = s.map(value => value[0]).pipe(spy1);
+      const getUp = getFirst.map(value => value.toUpperCase()).pipe(spy2);
+
+      expect(getUp()).toBe('FOO');
+      expect(getFirst()).toBe('foo');
+
+      expect(spy1).toBeCalledTimes(2);
+      expect(spy1.mock.calls[0]).toStrictEqual([ 'foo' ]);
+      expect(spy1.mock.calls[1]).toStrictEqual([ 'foo' ]);
+      expect(spy2).toBeCalledTimes(1);
+      expect(spy2.mock.calls[0]).toStrictEqual([ 'FOO' ]);
     });
   });
 });

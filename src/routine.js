@@ -3,7 +3,11 @@ import { createState as state, isRineState } from './state';
 
 const noop = function noop() {};
 
-export default function createRoutineInstance(controllerFunc = noop, viewFunc = noop) {
+export default function createRoutineInstance(controllerFunc, viewFunc) {
+  if (typeof viewFunc === 'undefined') {
+    viewFunc = controllerFunc;
+    controllerFunc = noop;
+  }
   const instance = {};
   let active = false;
   let onOutCallbacks = [];
