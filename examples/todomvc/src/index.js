@@ -5,31 +5,71 @@ import routine from 'rine/react';
 
 import List from './List';
 import Footer from './Footer';
-import {
+import { todos, ToDo } from './Data';
+import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
+
+const controller = function App({ render, filter, todos }) {
+  render({
+    viewAll: filter.mutate(() => ALL),
+    viewActive: filter.mutate(() => ACTIVE),
+    viewCompleted: filter.mutate(() => COMPLETED),
+    toggle: todos.mutate((todos, payload) => {
+      return todos.map((todo, i) => {
+        if (i === payload) {
+          return {
+            ...todo,
+            completed: !todo.completed
+          };
+        }
+        return todo;
+      });
+    }),
+    newTodo: todos.mutate((todos, payload) => [ ...todos, ToDo(payload) ]),
+    deleteTodo: todos.mutate((todos, payload) => todos.filter((todo, i) => i !== payload)),
+    editingTodo: todos.mutate((todos, payload) => {
+      return todos.map((todo, i) => {
+        if (i === payload.index) {
+          return {
+            ...todo,
+            editing: payload.value
+          };
+        }
+        return todo;
+      });
+    }),
+    updateTodo: todos.mutate((todos, payload) => {
+      return todos.map((todo, i) => {
+        if (i === payload.index) {
+          return {
+            ...todo,
+            label: payload.label,
+            editing: false
+          };
+        }
+        return todo;
+      });
+    }),
+    clearCompleted: todos.mutate((todos) => {
+      return todos.filter(todo => {
+        return !todo.completed;
+      });
+    })
+  });
+};
+
+const View = ({
+  todos,
+  filter,
+  viewAll,
+  viewActive,
+  viewCompleted,
   toggle,
   newTodo,
   editingTodo,
   updateTodo,
   deleteTodo,
-  clearCompleted,
-  todos
-} from './Data';
-import {
-  ENTER,
-  ALL,
-  ACTIVE,
-  COMPLETED
-} from './constants';
-
-const controller = function App({ render, filter }) {
-  render({
-    viewAll: filter.mutate(() => ALL),
-    viewActive: filter.mutate(() => ACTIVE),
-    viewCompleted: filter.mutate(() => COMPLETED)
-  });
-};
-
-const View = ({ todos, filter, viewAll, viewActive, viewCompleted }) => (
+  clearCompleted
+}) => (
   <React.Fragment>
     <section className='todoapp'>
       <header className='header'>
