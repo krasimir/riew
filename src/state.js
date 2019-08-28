@@ -190,6 +190,7 @@ export function createState(initialValue) {
       trigger.id = getId('t');
       trigger.__rineTrigger = true;
       trigger.__itemsToCreate = [ ...items ];
+      trigger.__state = stateAPI;
 
       // queue methods
       queueMethods.forEach(m => {

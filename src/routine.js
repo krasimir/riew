@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import { createState as state, isRineState } from './state';
+import { createState as state, isRineState, isRineQueueTrigger } from './state';
 
 const noop = function noop() {};
 
@@ -13,6 +13,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   let onOutCallbacks = [];
   let statesMap = null;
   let states = null;
+  let triggers = null;
   let onRender = noop;
   const viewProps = state({});
   const updateViewProps = viewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
@@ -28,18 +29,37 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   }
   function initializeStates() {
     if (statesMap !== null) {
-      return Object.keys(statesMap).reduce((values, key) => {
+      Object.keys(statesMap).forEach(key => {
         if (states === null) states = {};
-        let alreadyState = isRineState(statesMap[key]);
-        let s = states[key] = alreadyState ? statesMap[key] : state(statesMap[key]);
+        if (triggers === null) triggers = {};
+        let isState = isRineState(statesMap[key]);
+        let isTrigger = isRineQueueTrigger(statesMap[key]);
+        let s;
 
-        if (!alreadyState) onOutCallbacks.push(s.teardown);
-        s.stream.pipe(value => updateViewProps({ [key]: value }));
-        values[key] = s.get();
-        return values;
-      }, {});
+        // passing a state
+        if (isState) {
+          s = statesMap[key];
+          updateViewProps({ [key]: s.get() });
+          s.stream.pipe(value => updateViewProps({ [key]: value }));
+
+        // passing a trigger
+        } else if (isTrigger) {
+          s = statesMap[key].__state;
+          triggers[key] = statesMap[key];
+          updateViewProps({ [key]: statesMap[key]() });
+          s.stream.pipe(() => updateViewProps({ [key]: statesMap[key]() }));
+
+        // raw data that is converted to a state
+        } else {
+          s = state(statesMap[key]);
+          onOutCallbacks.push(s.teardown);
+          updateViewProps({ [key]: s.get() });
+          s.stream.pipe(value => updateViewProps({ [key]: value }));
+        }
+
+        states[key] = s;
+      });
     }
-    return {};
   }
   function objectRequired(value, method) {
     if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
@@ -48,12 +68,13 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   }
 
   instance.__states = () => states;
+  instance.__triggers = () => triggers;
   instance.isActive = isActive;
   instance.in = (initialProps) => {
     active = true;
     objectRequired(initialProps, 'in');
     updateRoutineProps(initialProps);
-    updateViewProps(initializeStates());
+    initializeStates();
     controllerFunc(
       Object.assign(
         {
@@ -68,7 +89,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
           props: routineProps,
           isActive
         },
-        states !== null ? { ...states } : {}
+        states !== null ? { ...states, ...triggers } : {}
       )
     );
     routineProps.stream();

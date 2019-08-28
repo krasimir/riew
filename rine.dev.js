@@ -185,6 +185,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   var onOutCallbacks = [];
   var statesMap = null;
   var states = null;
+  var triggers = null;
   var onRender = noop;
   var viewProps = (0, _state.createState)({});
   var updateViewProps = viewProps.mutate(function (current, newProps) {
@@ -204,20 +205,43 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   }
   function initializeStates() {
     if (statesMap !== null) {
-      return Object.keys(statesMap).reduce(function (values, key) {
+      Object.keys(statesMap).forEach(function (key) {
         if (states === null) states = {};
-        var alreadyState = (0, _state.isRineState)(statesMap[key]);
-        var s = states[key] = alreadyState ? statesMap[key] : (0, _state.createState)(statesMap[key]);
+        if (triggers === null) triggers = {};
+        var isState = (0, _state.isRineState)(statesMap[key]);
+        var isTrigger = (0, _state.isRineQueueTrigger)(statesMap[key]);
+        var s = void 0;
 
-        if (!alreadyState) onOutCallbacks.push(s.teardown);
-        s.stream.pipe(function (value) {
-          return updateViewProps(_defineProperty({}, key, value));
-        });
-        values[key] = s.get();
-        return values;
-      }, {});
+        // passing a state
+        if (isState) {
+          s = statesMap[key];
+          updateViewProps(_defineProperty({}, key, s.get()));
+          s.stream.pipe(function (value) {
+            return updateViewProps(_defineProperty({}, key, value));
+          });
+
+          // passing a trigger
+        } else if (isTrigger) {
+          s = statesMap[key].__state;
+          triggers[key] = statesMap[key];
+          updateViewProps(_defineProperty({}, key, statesMap[key]()));
+          s.stream.pipe(function () {
+            return updateViewProps(_defineProperty({}, key, statesMap[key]()));
+          });
+
+          // raw data that is converted to a state
+        } else {
+          s = (0, _state.createState)(statesMap[key]);
+          onOutCallbacks.push(s.teardown);
+          updateViewProps(_defineProperty({}, key, s.get()));
+          s.stream.pipe(function (value) {
+            return updateViewProps(_defineProperty({}, key, value));
+          });
+        }
+
+        states[key] = s;
+      });
     }
-    return {};
   }
   function objectRequired(value, method) {
     if (value === null || typeof value !== 'undefined' && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
@@ -228,12 +252,15 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   instance.__states = function () {
     return states;
   };
+  instance.__triggers = function () {
+    return triggers;
+  };
   instance.isActive = isActive;
   instance.in = function (initialProps) {
     active = true;
     objectRequired(initialProps, 'in');
     updateRoutineProps(initialProps);
-    updateViewProps(initializeStates());
+    initializeStates();
     controllerFunc(Object.assign({
       render: function render(props) {
         objectRequired(props, 'render');
@@ -246,7 +273,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
 
       props: routineProps,
       isActive: isActive
-    }, states !== null ? _extends({}, states) : {}));
+    }, states !== null ? _extends({}, states, triggers) : {}));
     routineProps.stream();
     viewProps.stream.pipe(callView);
     callView();
@@ -290,6 +317,7 @@ exports.createState = createState;
 exports.mergeStates = mergeStates;
 exports.createStream = createStream;
 exports.isRineState = isRineState;
+exports.isRineQueueTrigger = isRineQueueTrigger;
 
 var _utils = require('./utils');
 
@@ -511,29 +539,43 @@ function createState(initialValue) {
     }
   };
 
+  function removeListener(_ref2) {
+    var toRemove = _ref2.id;
+
+    listeners = listeners.filter(function (_ref3) {
+      var id = _ref3.id;
+      return id !== toRemove;
+    });
+  }
+
   function enhanceToQueueAPI(obj, isStream) {
     function createNewTrigger() {
       var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+      var isStream = arguments[1];
+      var previousTrigger = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
       var trigger = function trigger() {
         if (active === false) return stateAPI.get();
         var queue = createQueue(stateAPI.set, stateAPI.get, function (q) {
-          return createdQueues = createdQueues.filter(function (_ref2) {
-            var id = _ref2.id;
+          return createdQueues = createdQueues.filter(function (_ref4) {
+            var id = _ref4.id;
             return q.id !== id;
           });
         });
 
         createdQueues.push(queue);
-        trigger.itemsToCreate.forEach(function (_ref3) {
-          var type = _ref3.type,
-              func = _ref3.func;
+        trigger.__itemsToCreate.forEach(function (_ref5) {
+          var type = _ref5.type,
+              func = _ref5.func;
           return queue.add(type, func);
         });
         return queue.process.apply(queue, arguments);
       };
 
-      trigger.itemsToCreate = [].concat(_toConsumableArray(items));
+      trigger.id = getId('t');
+      trigger.__rineTrigger = true;
+      trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
+      trigger.__state = stateAPI;
 
       // queue methods
       queueMethods.forEach(function (m) {
@@ -542,8 +584,7 @@ function createState(initialValue) {
             func[_key2] = arguments[_key2];
           }
 
-          trigger.itemsToCreate.push({ type: m, func: func });
-          return trigger;
+          return createNewTrigger([].concat(_toConsumableArray(items), [{ type: m, func: func }]), isStream, trigger);
         };
       });
       // not supported in queue methods
@@ -553,29 +594,26 @@ function createState(initialValue) {
         };
       });
       // other methods
-      trigger.fork = function () {
-        return createNewTrigger(trigger.itemsToCreate);
-      };
       trigger.test = function (callback) {
-        var testTrigger = trigger.fork();
+        var testTrigger = createNewTrigger([].concat(_toConsumableArray(items)), isStream, trigger);
         var tools = {
           setValue: function setValue(newValue) {
-            testTrigger.itemsToCreate = [{ type: 'map', func: [function () {
+            testTrigger.__itemsToCreate = [{ type: 'map', func: [function () {
                 return newValue;
-              }] }].concat(_toConsumableArray(testTrigger.itemsToCreate));
+              }] }].concat(_toConsumableArray(testTrigger.__itemsToCreate));
           },
           swap: function swap(index, funcs, type) {
             if (!Array.isArray(funcs)) funcs = [funcs];
-            testTrigger.itemsToCreate[index].func = funcs;
+            testTrigger.__itemsToCreate[index].func = funcs;
             if (type) {
-              testTrigger.itemsToCreate[index].type = type;
+              testTrigger.__itemsToCreate[index].type = type;
             }
           },
           swapFirst: function swapFirst(funcs, type) {
             tools.swap(0, funcs, type);
           },
           swapLast: function swapLast(funcs, type) {
-            tools.swap(testTrigger.itemsToCreate.length - 1, funcs, type);
+            tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
           }
         };
 
@@ -583,6 +621,11 @@ function createState(initialValue) {
 
         return testTrigger;
       };
+
+      if (isStream) {
+        listeners.push(trigger);
+        if (previousTrigger) removeListener(previousTrigger);
+      }
 
       return trigger;
     }
@@ -593,12 +636,7 @@ function createState(initialValue) {
           func[_key3] = arguments[_key3];
         }
 
-        var trigger = createNewTrigger([{ type: methodName, func: func }]);
-
-        if (isStream) {
-          listeners.push(trigger);
-        }
-        return trigger;
+        return createNewTrigger([{ type: methodName, func: func }], isStream);
       };
     });
   };
@@ -645,6 +683,10 @@ function createStream(initialValue) {
 
 function isRineState(obj) {
   return obj && obj.__rine === true;
+}
+
+function isRineQueueTrigger(func) {
+  return func && func.__rineTrigger === true;
 }
 
 },{"./system":5,"./utils":6}],5:[function(require,module,exports){
@@ -694,9 +736,6 @@ exports.default = System;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var isGenerator = exports.isGenerator = function isGenerator(obj) {
-  return obj && typeof obj['next'] === 'function';
-};
 var isPromise = exports.isPromise = function isPromise(obj) {
   return obj && typeof obj['then'] === 'function';
 };

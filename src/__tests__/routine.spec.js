@@ -175,16 +175,25 @@ describe('Given the `routine` function', () => {
       });
     });
     describe('and when we pass a queue function', () => {
-      it.only(`should
+      it(`should
         * run the function
         * figure out the state and subscribe to it`, () => {
-        const s = state({ firstName: 'Jon', lastName: 'Doe' });
+        const s = state({ firstName: 'John', lastName: 'Doe' });
         const getFirstName = s.map(({ firstName }) => firstName);
         const spy = jest.fn();
         const view = jest.fn();
         const r = routine(({ firstName }) => {
-          spy(firstName());
-        }, view);
+          spy(firstName.map(value => value.toUpperCase())());
+        }, view).withState({ firstName: getFirstName });
+
+        r.in({});
+        s.set({ firstName: 'Steve', lastName: 'Martin' });
+
+        expect(spy).toBeCalledTimes(1);
+        expect(spy.mock.calls[0]).toStrictEqual([ 'JOHN' ]);
+        expect(view).toBeCalledTimes(2);
+        expect(view.mock.calls[0]).toStrictEqual([{ firstName: 'John' }, expect.any(Function) ]);
+        expect(view.mock.calls[1]).toStrictEqual([{ firstName: 'Steve' }, expect.any(Function) ]);
       });
     });
   });
