@@ -8,53 +8,53 @@ export default function routine(controller, View) {
     View = controller;
     controller = () => {};
   }
-  let statesMap = null;
-  const RoutineBridge = function (outerProps) {
-    let [ instance, setInstance ] = useState(null);
-    let [ content, setContent ] = useState({ content: null, done: () => {}});
+  const createBridge = function (statesMap = {}) {
+    const comp = function (outerProps) {
+      let [ instance, setInstance ] = useState(null);
+      let [ content, setContent ] = useState({ content: null, done: () => {}});
 
-    // updating props
-    useEffect(() => {
-      if (instance) instance.update(outerProps);
-    }, [ outerProps ]);
+      // updating props
+      useEffect(() => {
+        if (instance) instance.update(outerProps);
+      }, [ outerProps ]);
 
-    // to support sync rendering (i.e. await render(...))
-    useEffect(() => {
-      if (instance) content.done();
-    }, [ content ]);
+      // to support sync rendering (i.e. await render(...))
+      useEffect(() => {
+        if (instance) content.done();
+      }, [ content ]);
 
-    // mounting
-    useEffect(() => {
-      instance = createRoutineInstance(
-        controller,
-        (props, done) => {
-          if (props === null) {
-            setContent({ content: null, done });
-          } else {
-            setContent({ content: <View {...props}/>, done });
+      // mounting
+      useEffect(() => {
+        instance = createRoutineInstance(
+          controller,
+          (props, done) => {
+            if (props === null) {
+              setContent({ content: null, done });
+            } else {
+              setContent({ content: <View {...props}/>, done });
+            }
           }
+        );
+
+        if (statesMap !== null) {
+          instance.withState(statesMap);
         }
-      );
+        setInstance(instance);
+        instance.in(outerProps);
 
-      if (statesMap !== null) {
-        instance.withState(statesMap);
-      }
-      setInstance(instance);
-      instance.in(outerProps);
+        return function () {
+          instance.out();
+        };
+      }, []);
 
-      return function () {
-        instance.out();
-      };
-    }, []);
+      return content.content;
+    };
 
-    return content.content;
+    comp.displayName = `Routine(${ getFuncName(controller) })`;
+    comp.withState = (map) => createBridge(map);
+
+    return comp;
   };
 
-  RoutineBridge.displayName = `Routine(${ getFuncName(controller) })`;
-  RoutineBridge.withState = (map) => {
-    statesMap = map;
-    return RoutineBridge;
-  };
-
-  return RoutineBridge;
+  return createBridge();
 }

@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import { createState as state, isRineState, isRineQueueTrigger } from './state';
+import { createState as state, isRineState, isRineQueueTrigger, MUTABLE } from './state';
 
 const noop = function noop() {};
 
@@ -13,7 +13,6 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   let onOutCallbacks = [];
   let statesMap = null;
   let states = null;
-  let triggers = null;
   let onRender = noop;
   const viewProps = state({});
   const updateViewProps = viewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
@@ -31,7 +30,6 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
     if (statesMap !== null) {
       Object.keys(statesMap).forEach(key => {
         if (states === null) states = {};
-        if (triggers === null) triggers = {};
         let isState = isRineState(statesMap[key]);
         let isTrigger = isRineQueueTrigger(statesMap[key]);
         let s;
@@ -45,9 +43,15 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
 
         // passing a trigger
         } else if (isTrigger) {
-          triggers[key] = statesMap[key];
-          statesMap[key].__state.stream.filter(isActive).pipe(callView);
-          updateViewProps({ [key]: triggers[key] });
+          let trigger = statesMap[key];
+
+          if (trigger.__activity() === MUTABLE) {
+            throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
+          }
+
+          statesMap[key].__state.stream
+            .filter(isActive)
+            .pipe(() => updateViewProps({ [key]: trigger() }))();
 
         // raw data that is converted to a state
         } else {
@@ -67,7 +71,6 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   }
 
   instance.__states = () => states;
-  instance.__triggers = () => triggers;
   instance.isActive = isActive;
   instance.in = (initialProps) => {
     active = true;
@@ -89,7 +92,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
           props: routineProps,
           isActive
         },
-        states !== null ? { ...states, ...triggers } : {}
+        states !== null ? { ...states } : {}
       )
     );
 
@@ -116,6 +119,9 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   instance.withState = (map) => {
     statesMap = map;
     return instance;
+  };
+  instance.test = (map) => {
+    return createRoutineInstance(controllerFunc, viewFunc).withState(map);
   };
 
   return instance;

@@ -1,4 +1,4 @@
-/* eslint-disable quotes */
+/* eslint-disable quotes, max-len */
 import routine from '../routine';
 import { delay } from '../__helpers__';
 import { createState as state } from '../state';
@@ -183,33 +183,28 @@ describe('Given the `routine` function', () => {
         expect(r.__states()).toBe(null);
       });
     });
-    describe('and when we pass a queue function', () => {
+    describe('and when we pass a trigger', () => {
       it(`should
-        * pass down the function
-        * figure out the state and subscribe to it`, () => {
+          * run the trigger and pass down the value to the view
+          * subscribe to the state and trigger the view on update`, () => {
         const s = state({ firstName: 'John', lastName: 'Doe' });
         const getFirstName = s.map(({ firstName }) => firstName);
         const spy = jest.fn();
-        const spy2 = jest.fn();
         const r = routine(
           ({ firstName }) => {
-            spy(firstName.map(value => value.toUpperCase())());
+            expect(firstName).not.toBeDefined();
           },
-          ({ firstName }) => {
-            spy2(firstName());
-          }
+          spy
         ).withState({ firstName: getFirstName });
 
         r.in({});
         s.set({ firstName: 'Steve', lastName: 'Martin' });
 
-        expect(spy).toBeCalledTimes(1);
-        expect(spy.mock.calls[0]).toStrictEqual([ 'JOHN' ]);
-        expect(spy2).toBeCalledTimes(2);
-        expect(spy2.mock.calls[0]).toStrictEqual([ 'John' ]);
-        expect(spy2.mock.calls[1]).toStrictEqual([ 'Steve' ]);
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ { firstName: 'John' }, expect.any(Function) ]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { firstName: 'Steve' }, expect.any(Function) ]);
       });
-      it('should not trigger the view if the routine is not active', () => {
+      it('should not call the view if the routine is not active', () => {
         const s = state({ firstName: 'John', lastName: 'Doe' });
         const getFirstName = s.map(({ firstName }) => firstName);
         const spy = jest.fn();
@@ -220,7 +215,14 @@ describe('Given the `routine` function', () => {
         s.set({ firstName: 'Steve', lastName: 'Martin' });
 
         expect(spy).toBeCalledTimes(1);
-        expect(spy.mock.calls[0]).toStrictEqual([ { getFirstName: expect.any(Function) }, expect.any(Function) ]);
+        expect(spy.mock.calls[0]).toStrictEqual([ { getFirstName: 'John' }, expect.any(Function) ]);
+      });
+      it('should throw an error if we try passing a trigger that mutates the state', () => {
+        const s = state({ firstName: 'John', lastName: 'Doe' });
+        const changeFirstName = s.mutate((name, newName) => ({ firstName: newName, lastName: name.lastName }));
+        const r = routine(() => {}).withState({ changeFirstName });
+
+        expect(() => r.in({})).toThrowError('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
       });
     });
   });
@@ -233,6 +235,33 @@ describe('Given the `routine` function', () => {
 
       expect(spy).toBeCalledTimes(1);
       expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
+    });
+  });
+  describe('when we want to test the routine', () => {
+    it('should allow us to pass custom one-shot statesMap and keep the old routine working', () => {
+      const s = state('foo');
+      const spy = jest.fn();
+      const controller = jest.fn().mockImplementation(({ s }) => spy(s.get()));
+      const view = jest.fn();
+      const r = routine(controller, view).withState({ s });
+      const rTest = r.test({ s: state('bar') });
+
+      r.in({});
+      rTest.in({});
+
+      expect(controller).toBeCalledTimes(2);
+      expect(controller.mock.calls[0]).toStrictEqual([
+        expect.objectContaining({ s: expect.objectContaining({ __rine: true }) })
+      ]);
+      expect(controller.mock.calls[1]).toStrictEqual([
+        expect.objectContaining({ s: expect.objectContaining({ __rine: true }) })
+      ]);
+      expect(spy).toBeCalledTimes(2);
+      expect(spy.mock.calls[0]).toStrictEqual([ 'foo' ]);
+      expect(spy.mock.calls[1]).toStrictEqual([ 'bar' ]);
+      expect(view).toBeCalledTimes(2);
+      expect(view.mock.calls[0]).toStrictEqual([ { s: 'foo' }, expect.any(Function) ]);
+      expect(view.mock.calls[1]).toStrictEqual([ { s: 'bar' }, expect.any(Function) ]);
     });
   });
 });

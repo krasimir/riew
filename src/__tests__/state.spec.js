@@ -1,4 +1,4 @@
-import { createState, mergeStates, createStream } from '../state';
+import { createState, mergeStates, createStream, IMMUTABLE, MUTABLE } from '../state';
 import { delay } from '../__helpers__';
 
 const state = createState;
@@ -420,7 +420,21 @@ describe('Given the state', () => {
     });
   });
 
-  /* Integration/general tests */
+  /* trigger activity */
+  describe('when we define a trigger', () => {
+    it('should set its activity based on the item types', () => {
+      const s = state('foo');
+      const noop = () => {};
+      const t = s.pipe(noop).filter(noop);
+
+      expect(t.__activity()).toBe(IMMUTABLE);
+      expect(s.filter(noop).map(noop).__activity()).toBe(IMMUTABLE);
+      expect(s.filter(noop).mutate(noop).__activity()).toBe(MUTABLE);
+      expect(t.map(noop).mutate(noop).filter(noop).__activity()).toBe(MUTABLE);
+    });
+  });
+
+  /* Integration/general */
   describe('when we have a slightly more complicated code', () => {
     it('should work :)', async () => {
       const arr = [];
@@ -462,36 +476,6 @@ describe('Given the state', () => {
 
       expect(m1()).toBe('foo1');
       expect(m2()).toBe('FOO2');
-    });
-  });
-  describe('when we want to test', () => {
-    it('should allow us to set a predefine value and swap queue items', () => {
-      const s = state({ flag: false, index: 0 });
-      const spy = jest.fn();
-      const increment = s
-        .filter(({ flag }) => flag)
-        .mutate(({ index }) => ({ flag: true, index: index + 1 }))
-        .pipe(() => {});
-
-      expect(increment.test(({ setValue }) => {
-        setValue({ flag: true, index: 11 });
-      })()).toStrictEqual({ flag: true, index: 12 });
-
-      increment.test(({ setValue, swap }) => {
-        setValue({ flag: false, index: 100 });
-        swap(1, spy);
-      })();
-      expect(spy).toBeCalledTimes(1);
-      expect(spy).toBeCalledWith({ flag: false, index: 100 });
-
-      expect(increment.test(({ swapFirst }) => {
-        swapFirst(() => ({ flag: true, index: -10}), 'map');
-      })()).toStrictEqual({ flag: true, index: -9 });
-
-      expect(increment.test(({ setValue, swapLast }) => {
-        setValue({ flag: true, index: 42 });
-        swapLast(({ flag }) => ({ flag, index: 5000 }), 'map');
-      })()).toStrictEqual({ flag: true, index: 5000 });
     });
   });
   it('should throw errors if we try using the queue as a state', () => {
@@ -582,6 +566,36 @@ describe('Given the state', () => {
       expect(spy1.mock.calls[1]).toStrictEqual([ 'foo' ]);
       expect(spy2).toBeCalledTimes(1);
       expect(spy2.mock.calls[0]).toStrictEqual([ 'FOO' ]);
+    });
+  });
+  describe('when we want to test a trigger', () => {
+    it('should allow us to set a predefine value and swap queue items', () => {
+      const s = state({ flag: false, index: 0 });
+      const spy = jest.fn();
+      const increment = s
+        .filter(({ flag }) => flag)
+        .mutate(({ index }) => ({ flag: true, index: index + 1 }))
+        .pipe(() => {});
+
+      expect(increment.test(({ setValue }) => {
+        setValue({ flag: true, index: 11 });
+      })()).toStrictEqual({ flag: true, index: 12 });
+
+      increment.test(({ setValue, swap }) => {
+        setValue({ flag: false, index: 100 });
+        swap(1, spy);
+      })();
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith({ flag: false, index: 100 });
+
+      expect(increment.test(({ swapFirst }) => {
+        swapFirst(() => ({ flag: true, index: -10}), 'map');
+      })()).toStrictEqual({ flag: true, index: -9 });
+
+      expect(increment.test(({ setValue, swapLast }) => {
+        setValue({ flag: true, index: 42 });
+        swapLast(({ flag }) => ({ flag, index: 5000 }), 'map');
+      })()).toStrictEqual({ flag: true, index: 5000 });
     });
   });
 });

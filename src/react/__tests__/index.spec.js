@@ -65,6 +65,23 @@ describe('Given the React routine function', () => {
         expect(spy.mock.calls[0]).toStrictEqual([ { state: { a: 15 } }, {}]);
         expect(spy.mock.calls[1]).toStrictEqual([ { state: { a: 20 } }, {}]);
       });
+      it('should allow us to use different statesMap', () => {
+        const spy = jest.fn().mockImplementation(() => null);
+        const R = routine(
+          () => {},
+          spy
+        );
+        const RA = R.withState({ state: { foo: 'a' } });
+        const RB = R.withState({ state: { foo: 'b' } });
+
+        render(<RA />);
+        render(<RB />);
+
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ { state: { foo: 'a' } }, {}]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { state: { foo: 'b' } }, {}]);
+        expect('withState' in RA).toBe(true);
+      });
     });
     describe('and we use "props"', () => {
       it(`should

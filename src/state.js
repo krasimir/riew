@@ -2,6 +2,9 @@
 import { isPromise, getFuncName } from './utils';
 import system from './system';
 
+export const IMMUTABLE = 'IMMUTABLE';
+export const MUTABLE = 'MUTABLE';
+
 var ids = 0;
 const getId = (prefix) => `@@${ prefix }${ ++ids }`;
 const queueMethods = [
@@ -13,6 +16,12 @@ const queueMethods = [
   'cancel',
   'mapToKey'
 ];
+const getTriggerActivity = items => {
+  for (let item of items) {
+    if (item.type === 'mutate') return MUTABLE;
+  }
+  return IMMUTABLE;
+};
 
 function createQueue(
   setStateValue,
@@ -195,6 +204,7 @@ export function createState(initialValue) {
       trigger.__rineTrigger = true;
       trigger.__itemsToCreate = [ ...items ];
       trigger.__state = stateAPI;
+      trigger.__activity = () => getTriggerActivity(trigger.__itemsToCreate);
 
       // queue methods
       queueMethods.forEach(m => {
