@@ -71,7 +71,7 @@ describe('Given the Rine library', () => {
         spy(isActive());
         await delay(10);
         spy(isActive());
-      });
+      }, () => null);
 
       const { unmount } = render(<A />);
 

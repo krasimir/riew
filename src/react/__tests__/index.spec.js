@@ -74,7 +74,7 @@ describe('Given the React routine function', () => {
         const I = routine(function ({ props }) {
           expect(props.get()).toStrictEqual({ foo: 'bar' });
           props.stream.pipe(propsSpy);
-        });
+        }, () => null);
 
         const { rerender } = render(<I foo='bar' />);
 

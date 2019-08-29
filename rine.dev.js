@@ -73,11 +73,11 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function routine(controller) {
-  var View = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {
-    return null;
-  };
-
+function routine(controller, View) {
+  if (typeof View === 'undefined') {
+    View = controller;
+    controller = function controller() {};
+  }
   var statesMap = null;
   var RoutineBridge = function RoutineBridge(outerProps) {
     var _useState = (0, _react.useState)(null),

@@ -3,7 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
 import createRoutineInstance from '../routine';
 
-export default function routine(controller, View = () => null) {
+export default function routine(controller, View) {
+  if (typeof View === 'undefined') {
+    View = controller;
+    controller = () => {};
+  }
   let statesMap = null;
   const RoutineBridge = function (outerProps) {
     let [ instance, setInstance ] = useState(null);
