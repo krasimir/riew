@@ -405,6 +405,19 @@ describe('Given the state', () => {
       expect(spy2).toBeCalledTimes(1);
       expect(spy2).toBeCalledWith('foo');
     });
+    it('should allow us to stream on a trigger', () => {
+      const s = state('foo');
+      const spy = jest.fn();
+      const up = s.map(value => value.toUpperCase());
+
+      expect(up()).toBe('FOO');
+
+      up.stream.map(value => value + 'BAR').pipe(spy);
+      s.set('moo');
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy.mock.calls[0]).toStrictEqual([ 'MOOBAR' ]);
+    });
   });
 
   /* Integration/general tests */
@@ -484,7 +497,7 @@ describe('Given the state', () => {
   it('should throw errors if we try using the queue as a state', () => {
     const s = state('foo');
 
-    ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
+    ['set', 'get', 'teardown'].forEach(stateMethod => {
       expect(() => s.pipe()[stateMethod]())
         .toThrowError(`"${ stateMethod }" is not a queue method but a method of the state object.`);
     });
@@ -523,7 +536,9 @@ describe('Given the state', () => {
       expect(s.__listeners()[0].__itemsToCreate.map(({ type }) => type)).toStrictEqual([ 'filter', 'map', 'pipe' ]);
 
       s.stream
-        .filter((value) => value >= 2)
+        .filter((value) => {
+          return value >= 2;
+        })
         .pipe(spyB);
 
       s.set(1);

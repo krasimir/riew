@@ -219,15 +219,13 @@ function createRoutineInstance(controllerFunc, viewFunc) {
           s.stream.pipe(function (value) {
             return updateViewProps(_defineProperty({}, key, value));
           });
+          states[key] = s;
 
           // passing a trigger
         } else if (isTrigger) {
-          s = statesMap[key].__state;
           triggers[key] = statesMap[key];
-          updateViewProps(_defineProperty({}, key, statesMap[key]()));
-          s.stream.pipe(function () {
-            return updateViewProps(_defineProperty({}, key, statesMap[key]()));
-          });
+          statesMap[key].__state.stream.pipe(callView);
+          updateViewProps(_defineProperty({}, key, triggers[key]));
 
           // raw data that is converted to a state
         } else {
@@ -237,9 +235,8 @@ function createRoutineInstance(controllerFunc, viewFunc) {
           s.stream.pipe(function (value) {
             return updateViewProps(_defineProperty({}, key, value));
           });
+          states[key] = s;
         }
-
-        states[key] = s;
       });
     }
   }
@@ -531,14 +528,17 @@ function createState(initialValue) {
     active = false;
     if (true) _system2.default.onStateTeardown(stateAPI);
   };
-  stateAPI.stream = function () {
-    if (arguments.length > 0) {
-      stateAPI.set(arguments.length <= 0 ? undefined : arguments[0]);
-    } else {
-      stateAPI.__triggerListeners();
-    }
-  };
+  stateAPI.stream = createStreamObj();
 
+  function createStreamObj() {
+    return function () {
+      if (arguments.length > 0) {
+        stateAPI.set(arguments.length <= 0 ? undefined : arguments[0]);
+      } else {
+        stateAPI.__triggerListeners();
+      }
+    };
+  }
   function removeListener(_ref2) {
     var toRemove = _ref2.id;
 
@@ -573,6 +573,7 @@ function createState(initialValue) {
       };
 
       trigger.id = getId('t');
+      trigger.stream = createStreamObj();
       trigger.__rineTrigger = true;
       trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
       trigger.__state = stateAPI;
@@ -586,9 +587,16 @@ function createState(initialValue) {
 
           return createNewTrigger([].concat(_toConsumableArray(items), [{ type: m, func: func }]), isStream, trigger);
         };
+        trigger.stream[m] = function () {
+          for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+            func[_key3] = arguments[_key3];
+          }
+
+          return createNewTrigger([].concat(_toConsumableArray(items), [{ type: m, func: func }]), true, trigger);
+        };
       });
       // not supported in queue methods
-      ['set', 'get', 'teardown', 'stream'].forEach(function (stateMethod) {
+      ['set', 'get', 'teardown'].forEach(function (stateMethod) {
         trigger[stateMethod] = function () {
           throw new Error('"' + stateMethod + '" is not a queue method but a method of the state object.');
         };
@@ -632,8 +640,8 @@ function createState(initialValue) {
 
     queueMethods.forEach(function (methodName) {
       obj[methodName] = function () {
-        for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-          func[_key3] = arguments[_key3];
+        for (var _len4 = arguments.length, func = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+          func[_key4] = arguments[_key4];
         }
 
         return createNewTrigger([{ type: methodName, func: func }], isStream);

@@ -160,14 +160,17 @@ export function createState(initialValue) {
     active = false;
     if (__DEV__) system.onStateTeardown(stateAPI);
   };
-  stateAPI.stream = (...args) => {
-    if (args.length > 0) {
-      stateAPI.set(args[0]);
-    } else {
-      stateAPI.__triggerListeners();
-    }
-  };
+  stateAPI.stream = createStreamObj();
 
+  function createStreamObj() {
+    return (...args) => {
+      if (args.length > 0) {
+        stateAPI.set(args[0]);
+      } else {
+        stateAPI.__triggerListeners();
+      }
+    };
+  }
   function removeListener({ id: toRemove }) {
     listeners = listeners.filter(({ id }) => id !== toRemove);
   }
@@ -188,6 +191,7 @@ export function createState(initialValue) {
       };
 
       trigger.id = getId('t');
+      trigger.stream = createStreamObj();
       trigger.__rineTrigger = true;
       trigger.__itemsToCreate = [ ...items ];
       trigger.__state = stateAPI;
@@ -199,9 +203,14 @@ export function createState(initialValue) {
           isStream,
           trigger
         );
+        trigger.stream[m] = (...func) => createNewTrigger(
+          [ ...items, { type: m, func } ],
+          true,
+          trigger
+        );
       });
       // not supported in queue methods
-      ['set', 'get', 'teardown', 'stream'].forEach(stateMethod => {
+      ['set', 'get', 'teardown'].forEach(stateMethod => {
         trigger[stateMethod] = () => {
           throw new Error(`"${ stateMethod }" is not a queue method but a method of the state object.`);
         };

@@ -41,13 +41,13 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
           s = statesMap[key];
           updateViewProps({ [key]: s.get() });
           s.stream.pipe(value => updateViewProps({ [key]: value }));
+          states[key] = s;
 
         // passing a trigger
         } else if (isTrigger) {
-          s = statesMap[key].__state;
           triggers[key] = statesMap[key];
-          updateViewProps({ [key]: statesMap[key]() });
-          s.stream.pipe(() => updateViewProps({ [key]: statesMap[key]() }));
+          statesMap[key].__state.stream.pipe(callView);
+          updateViewProps({ [key]: triggers[key] });
 
         // raw data that is converted to a state
         } else {
@@ -55,9 +55,8 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
           onOutCallbacks.push(s.teardown);
           updateViewProps({ [key]: s.get() });
           s.stream.pipe(value => updateViewProps({ [key]: value }));
+          states[key] = s;
         }
-
-        states[key] = s;
       });
     }
   }
