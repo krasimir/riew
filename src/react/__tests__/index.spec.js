@@ -41,7 +41,7 @@ describe('Given the React routine function', () => {
             act(() => state.set('bar'));
           },
           ({ state }) => <p>{ state }</p>
-        ).withState({ state: 'foo' });
+        ).with({ state: 'foo' });
         const { container, unmount } = render(<R />);
 
         exerciseHTML(container, '<p>foo</p>');
@@ -56,7 +56,7 @@ describe('Given the React routine function', () => {
             state.set({ a: state.get().a + props.get().b });
           },
           spy
-        ).withState({ state: { a: 10 } });
+        ).with({ state: { a: 10 } });
 
         render(<R b={ 5 }/>);
         render(<R b={ 10 }/>);
@@ -71,8 +71,8 @@ describe('Given the React routine function', () => {
           () => {},
           spy
         );
-        const RA = R.withState({ state: { foo: 'a' } });
-        const RB = R.withState({ state: { foo: 'b' } });
+        const RA = R.with({ state: { foo: 'a' } });
+        const RB = R.with({ state: { foo: 'b' } });
 
         render(<RA />);
         render(<RB />);
@@ -80,7 +80,7 @@ describe('Given the React routine function', () => {
         expect(spy).toBeCalledTimes(2);
         expect(spy.mock.calls[0]).toStrictEqual([ { state: { foo: 'a' } }, {}]);
         expect(spy.mock.calls[1]).toStrictEqual([ { state: { foo: 'b' } }, {}]);
-        expect('withState' in RA).toBe(true);
+        expect('with' in RA).toBe(true);
       });
     });
     describe('and we use "props"', () => {

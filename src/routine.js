@@ -1,7 +1,12 @@
 /* eslint-disable max-len */
 import { createState as state, isRineState, isRineQueueTrigger, MUTABLE } from './state';
 
-const noop = function noop() {};
+function noop() {};
+function objectRequired(value, method) {
+  if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
+    throw new Error(`The routine's "${ method }" method must be called with a key-value object. Instead "${ value }" passed.`);
+  }
+}
 
 export default function createRoutineInstance(controllerFunc, viewFunc) {
   if (typeof viewFunc === 'undefined') {
@@ -12,16 +17,26 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   let active = false;
   let onOutCallbacks = [];
   let statesMap = null;
-  let states = null;
   let onRender = noop;
-  const viewProps = state({});
-  const updateViewProps = viewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
+  const isActive = () => active;
   const routineProps = state({});
   const updateRoutineProps = routineProps.mutate((current, newProps) => ({ ...current, ...newProps }));
+  const viewProps = state({});
+  const updateViewProps = viewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
+  const controllerProps = state({
+    render(props) {
+      objectRequired(props, 'render');
+      if (!active) return Promise.resolve();
+      return new Promise(done => {
+        onRender = done;
+        updateViewProps(props);
+      });
+    },
+    props: routineProps,
+    isActive
+  });
+  const updateControllerProps = controllerProps.mutate((current, newProps) => ({ ...current, ...newProps }));
 
-  function isActive() {
-    return active;
-  }
   function callView() {
     viewFunc(viewProps.get(), onRender);
     onRender = noop;
@@ -29,7 +44,6 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   function initializeStates() {
     if (statesMap !== null) {
       Object.keys(statesMap).forEach(key => {
-        if (states === null) states = {};
         let isState = isRineState(statesMap[key]);
         let isTrigger = isRineQueueTrigger(statesMap[key]);
         let s;
@@ -37,9 +51,9 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
         // passing a state
         if (isState) {
           s = statesMap[key];
+          updateControllerProps({ [key]: s });
           updateViewProps({ [key]: s.get() });
           s.stream.pipe(value => updateViewProps({ [key]: value }));
-          states[key] = s;
 
         // passing a trigger
         } else if (isTrigger) {
@@ -49,28 +63,20 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
             throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
           }
 
-          statesMap[key].__state.stream
-            .filter(isActive)
-            .pipe(() => updateViewProps({ [key]: trigger() }))();
+          trigger.__state.stream.filter(isActive).pipe(() => updateViewProps({ [key]: trigger() }))();
 
         // raw data that is converted to a state
         } else {
           s = state(statesMap[key]);
           onOutCallbacks.push(s.teardown);
+          updateControllerProps({ [key]: s });
           updateViewProps({ [key]: s.get() });
           s.stream.filter(isActive).pipe(value => updateViewProps({ [key]: value }));
-          states[key] = s;
         }
       });
     }
   }
-  function objectRequired(value, method) {
-    if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
-      throw new Error(`The routine's "${ method }" method must be called with a key-value object. Instead "${ value }" passed.`);
-    }
-  }
 
-  instance.__states = () => states;
   instance.isActive = isActive;
   instance.in = (initialProps) => {
     active = true;
@@ -78,23 +84,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
     updateRoutineProps(initialProps);
     initializeStates();
 
-    let controllerResult = controllerFunc(
-      Object.assign(
-        {
-          render(props) {
-            objectRequired(props, 'render');
-            if (!active) return Promise.resolve();
-            return new Promise(done => {
-              onRender = done;
-              updateViewProps(props);
-            });
-          },
-          props: routineProps,
-          isActive
-        },
-        states !== null ? { ...states } : {}
-      )
-    );
+    let controllerResult = controllerFunc(controllerProps.get());
 
     if (controllerResult) {
       if (typeof controllerResult !== 'object') {
@@ -112,16 +102,16 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
     onOutCallbacks.forEach(f => f());
     onOutCallbacks = [];
     viewProps.teardown();
-    states = null;
+    controllerProps.teardown();
     active = false;
     return instance;
   };
-  instance.withState = (map) => {
+  instance.with = (map) => {
     statesMap = map;
     return instance;
   };
   instance.test = (map) => {
-    return createRoutineInstance(controllerFunc, viewFunc).withState(map);
+    return createRoutineInstance(controllerFunc, viewFunc).with(map);
   };
 
   return instance;

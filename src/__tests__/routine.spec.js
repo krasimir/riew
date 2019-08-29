@@ -110,32 +110,29 @@ describe('Given the `routine` function', () => {
       });
     });
   });
-  describe('when we use `withState` method', () => {
+  describe('when we use `with` method', () => {
     it(`should
       * create a states from the given object
       * render with the created states as props
       * re-render if we update the states
       * teardown the created states when we call "out" method`, () => {
       const spy = jest.fn();
-      const r = routine(
-        ({ s1, s2 }) => {
-          s1.set('bar');
-          s2.set('noo');
-        },
-        spy
-      ).withState({ s1: 'foo', s2: 'moo' });
+      const controller = jest.fn().mockImplementation(({ s1, s2 }) => {
+        s1.set('bar');
+        s2.set('noo');
+      });
+      const r = routine(controller, spy).with({ s1: 'foo', s2: 'moo' });
 
       r.in({});
 
-      let s1 = r.__states().s1;
-      let s2 = r.__states().s2;
+      let s1 = controller.mock.calls[0][0].s1;
+      let s2 = controller.mock.calls[0][0].s2;
 
       expect(spy).toBeCalledTimes(1);
       expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
       expect(s1.active()).toBe(true);
       expect(s2.active()).toBe(true);
       r.out();
-      expect(r.__states()).toBe(null);
       expect(s1.active()).toBe(false);
       expect(s2.active()).toBe(false);
     });
@@ -150,7 +147,7 @@ describe('Given the `routine` function', () => {
             s2.set('noo');
           },
           spy
-        ).withState({ s1: 'foo', s2: 'moo' }).in();
+        ).with({ s1: 'foo', s2: 'moo' }).in();
 
         await delay(7);
 
@@ -165,13 +162,14 @@ describe('Given the `routine` function', () => {
         * use the already created one
         * should NOT teardown the already created one`, async () => {
         const spy = jest.fn();
-        const alreadyCreated = state('foo');
-        const r = routine(async ({ s }) => {
+        const controller = jest.fn().mockImplementation(async ({ s }) => {
           await delay(5);
           s.set('bar');
-        }, spy).withState({ s: alreadyCreated }).in();
+        });
+        const alreadyCreated = state('foo');
+        const r = routine(controller, spy).with({ s: alreadyCreated }).in();
 
-        expect(r.__states().s).toBe(alreadyCreated);
+        expect(controller.mock.calls[0][0].s).toBe(alreadyCreated);
 
         await delay(7);
         r.out();
@@ -180,7 +178,6 @@ describe('Given the `routine` function', () => {
         expect(spy.mock.calls[0]).toStrictEqual([ { s: 'foo' }, expect.any(Function) ]);
         expect(spy.mock.calls[1]).toStrictEqual([ { s: 'bar' }, expect.any(Function) ]);
         expect(alreadyCreated.active()).toBe(true);
-        expect(r.__states()).toBe(null);
       });
     });
     describe('and when we pass a trigger', () => {
@@ -195,7 +192,7 @@ describe('Given the `routine` function', () => {
             expect(firstName).not.toBeDefined();
           },
           spy
-        ).withState({ firstName: getFirstName });
+        ).with({ firstName: getFirstName });
 
         r.in({});
         s.set({ firstName: 'Steve', lastName: 'Martin' });
@@ -208,7 +205,7 @@ describe('Given the `routine` function', () => {
         const s = state({ firstName: 'John', lastName: 'Doe' });
         const getFirstName = s.map(({ firstName }) => firstName);
         const spy = jest.fn();
-        const r = routine(spy).withState({ getFirstName });
+        const r = routine(spy).with({ getFirstName });
 
         r.in({});
         r.out();
@@ -220,7 +217,7 @@ describe('Given the `routine` function', () => {
       it('should throw an error if we try passing a trigger that mutates the state', () => {
         const s = state({ firstName: 'John', lastName: 'Doe' });
         const changeFirstName = s.mutate((name, newName) => ({ firstName: newName, lastName: name.lastName }));
-        const r = routine(() => {}).withState({ changeFirstName });
+        const r = routine(() => {}).with({ changeFirstName });
 
         expect(() => r.in({})).toThrowError('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
       });
@@ -229,7 +226,7 @@ describe('Given the `routine` function', () => {
   describe('when we call the routine with just one argument', () => {
     it('should assume that this argument is the view function', () => {
       const spy = jest.fn();
-      const r = routine(spy).withState({ foo: 'bar' });
+      const r = routine(spy).with({ foo: 'bar' });
 
       r.in({});
 
@@ -243,7 +240,7 @@ describe('Given the `routine` function', () => {
       const spy = jest.fn();
       const controller = jest.fn().mockImplementation(({ s }) => spy(s.get()));
       const view = jest.fn();
-      const r = routine(controller, view).withState({ s });
+      const r = routine(controller, view).with({ s });
       const rTest = r.test({ s: state('bar') });
 
       r.in({});

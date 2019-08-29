@@ -37,7 +37,7 @@ export default function routine(controller, View) {
         );
 
         if (statesMap !== null) {
-          instance.withState(statesMap);
+          instance.with(statesMap);
         }
         setInstance(instance);
         instance.in(outerProps);
@@ -51,7 +51,7 @@ export default function routine(controller, View) {
     };
 
     comp.displayName = `Routine(${ getFuncName(controller) })`;
-    comp.withState = (map) => createBridge(map);
+    comp.with = (map) => createBridge(map);
 
     return comp;
   };

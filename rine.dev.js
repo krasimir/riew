@@ -78,61 +78,65 @@ function routine(controller, View) {
     View = controller;
     controller = function controller() {};
   }
-  var statesMap = null;
-  var RoutineBridge = function RoutineBridge(outerProps) {
-    var _useState = (0, _react.useState)(null),
-        _useState2 = _slicedToArray(_useState, 2),
-        instance = _useState2[0],
-        setInstance = _useState2[1];
+  var createBridge = function createBridge() {
+    var statesMap = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
-    var _useState3 = (0, _react.useState)({ content: null, done: function done() {} }),
-        _useState4 = _slicedToArray(_useState3, 2),
-        content = _useState4[0],
-        setContent = _useState4[1];
+    var comp = function comp(outerProps) {
+      var _useState = (0, _react.useState)(null),
+          _useState2 = _slicedToArray(_useState, 2),
+          instance = _useState2[0],
+          setInstance = _useState2[1];
 
-    // updating props
+      var _useState3 = (0, _react.useState)({ content: null, done: function done() {} }),
+          _useState4 = _slicedToArray(_useState3, 2),
+          content = _useState4[0],
+          setContent = _useState4[1];
+
+      // updating props
 
 
-    (0, _react.useEffect)(function () {
-      if (instance) instance.update(outerProps);
-    }, [outerProps]);
+      (0, _react.useEffect)(function () {
+        if (instance) instance.update(outerProps);
+      }, [outerProps]);
 
-    // to support sync rendering (i.e. await render(...))
-    (0, _react.useEffect)(function () {
-      if (instance) content.done();
-    }, [content]);
+      // to support sync rendering (i.e. await render(...))
+      (0, _react.useEffect)(function () {
+        if (instance) content.done();
+      }, [content]);
 
-    // mounting
-    (0, _react.useEffect)(function () {
-      instance = (0, _routine2.default)(controller, function (props, done) {
-        if (props === null) {
-          setContent({ content: null, done: done });
-        } else {
-          setContent({ content: _react2.default.createElement(View, props), done: done });
+      // mounting
+      (0, _react.useEffect)(function () {
+        instance = (0, _routine2.default)(controller, function (props, done) {
+          if (props === null) {
+            setContent({ content: null, done: done });
+          } else {
+            setContent({ content: _react2.default.createElement(View, props), done: done });
+          }
+        });
+
+        if (statesMap !== null) {
+          instance.with(statesMap);
         }
-      });
+        setInstance(instance);
+        instance.in(outerProps);
 
-      if (statesMap !== null) {
-        instance.withState(statesMap);
-      }
-      setInstance(instance);
-      instance.in(outerProps);
+        return function () {
+          instance.out();
+        };
+      }, []);
 
-      return function () {
-        instance.out();
-      };
-    }, []);
+      return content.content;
+    };
 
-    return content.content;
+    comp.displayName = 'Routine(' + (0, _utils.getFuncName)(controller) + ')';
+    comp.with = function (map) {
+      return createBridge(map);
+    };
+
+    return comp;
   };
 
-  RoutineBridge.displayName = 'Routine(' + (0, _utils.getFuncName)(controller) + ')';
-  RoutineBridge.withState = function (map) {
-    statesMap = map;
-    return RoutineBridge;
-  };
-
-  return RoutineBridge;
+  return createBridge();
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
@@ -145,12 +149,6 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
-
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
     var source = arguments[i];for (var key in source) {
@@ -159,6 +157,12 @@ var _extends = Object.assign || function (target) {
       }
     }
   }return target;
+};
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 }; /* eslint-disable max-len */
 
 exports.default = createRoutineInstance;
@@ -173,7 +177,12 @@ function _defineProperty(obj, key, value) {
   }return obj;
 }
 
-var noop = function noop() {};
+function noop() {};
+function objectRequired(value, method) {
+  if (value === null || typeof value !== 'undefined' && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
+    throw new Error('The routine\'s "' + method + '" method must be called with a key-value object. Instead "' + value + '" passed.');
+  }
+}
 
 function createRoutineInstance(controllerFunc, viewFunc) {
   if (typeof viewFunc === 'undefined') {
@@ -184,21 +193,35 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   var active = false;
   var onOutCallbacks = [];
   var statesMap = null;
-  var states = null;
-  var triggers = null;
   var onRender = noop;
-  var viewProps = (0, _state.createState)({});
-  var updateViewProps = viewProps.mutate(function (current, newProps) {
-    return _extends({}, current, newProps);
-  });
+  var isActive = function isActive() {
+    return active;
+  };
   var routineProps = (0, _state.createState)({});
   var updateRoutineProps = routineProps.mutate(function (current, newProps) {
     return _extends({}, current, newProps);
   });
+  var viewProps = (0, _state.createState)({});
+  var updateViewProps = viewProps.mutate(function (current, newProps) {
+    return _extends({}, current, newProps);
+  });
+  var controllerProps = (0, _state.createState)({
+    render: function render(props) {
+      objectRequired(props, 'render');
+      if (!active) return Promise.resolve();
+      return new Promise(function (done) {
+        onRender = done;
+        updateViewProps(props);
+      });
+    },
 
-  function isActive() {
-    return active;
-  }
+    props: routineProps,
+    isActive: isActive
+  });
+  var updateControllerProps = controllerProps.mutate(function (current, newProps) {
+    return _extends({}, current, newProps);
+  });
+
   function callView() {
     viewFunc(viewProps.get(), onRender);
     onRender = noop;
@@ -206,8 +229,6 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   function initializeStates() {
     if (statesMap !== null) {
       Object.keys(statesMap).forEach(function (key) {
-        if (states === null) states = {};
-        if (triggers === null) triggers = {};
         var isState = (0, _state.isRineState)(statesMap[key]);
         var isTrigger = (0, _state.isRineQueueTrigger)(statesMap[key]);
         var s = void 0;
@@ -215,43 +236,38 @@ function createRoutineInstance(controllerFunc, viewFunc) {
         // passing a state
         if (isState) {
           s = statesMap[key];
+          updateControllerProps(_defineProperty({}, key, s));
           updateViewProps(_defineProperty({}, key, s.get()));
           s.stream.pipe(function (value) {
             return updateViewProps(_defineProperty({}, key, value));
           });
-          states[key] = s;
 
           // passing a trigger
         } else if (isTrigger) {
-          triggers[key] = statesMap[key];
-          statesMap[key].__state.stream.filter(isActive).pipe(callView);
-          updateViewProps(_defineProperty({}, key, triggers[key]));
+          var trigger = statesMap[key];
+
+          if (trigger.__activity() === _state.MUTABLE) {
+            throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
+          }
+
+          trigger.__state.stream.filter(isActive).pipe(function () {
+            return updateViewProps(_defineProperty({}, key, trigger()));
+          })();
 
           // raw data that is converted to a state
         } else {
           s = (0, _state.createState)(statesMap[key]);
           onOutCallbacks.push(s.teardown);
+          updateControllerProps(_defineProperty({}, key, s));
           updateViewProps(_defineProperty({}, key, s.get()));
           s.stream.filter(isActive).pipe(function (value) {
             return updateViewProps(_defineProperty({}, key, value));
           });
-          states[key] = s;
         }
       });
     }
   }
-  function objectRequired(value, method) {
-    if (value === null || typeof value !== 'undefined' && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
-      throw new Error('The routine\'s "' + method + '" method must be called with a key-value object. Instead "' + value + '" passed.');
-    }
-  }
 
-  instance.__states = function () {
-    return states;
-  };
-  instance.__triggers = function () {
-    return triggers;
-  };
   instance.isActive = isActive;
   instance.in = function (initialProps) {
     active = true;
@@ -259,19 +275,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
     updateRoutineProps(initialProps);
     initializeStates();
 
-    var controllerResult = controllerFunc(Object.assign({
-      render: function render(props) {
-        objectRequired(props, 'render');
-        if (!active) return Promise.resolve();
-        return new Promise(function (done) {
-          onRender = done;
-          updateViewProps(props);
-        });
-      },
-
-      props: routineProps,
-      isActive: isActive
-    }, states !== null ? _extends({}, states, triggers) : {}));
+    var controllerResult = controllerFunc(controllerProps.get());
 
     if (controllerResult) {
       if ((typeof controllerResult === 'undefined' ? 'undefined' : _typeof(controllerResult)) !== 'object') {
@@ -291,13 +295,16 @@ function createRoutineInstance(controllerFunc, viewFunc) {
     });
     onOutCallbacks = [];
     viewProps.teardown();
-    states = null;
+    controllerProps.teardown();
     active = false;
     return instance;
   };
-  instance.withState = function (map) {
+  instance.with = function (map) {
     statesMap = map;
     return instance;
+  };
+  instance.test = function (map) {
+    return createRoutineInstance(controllerFunc, viewFunc).with(map);
   };
 
   return instance;
@@ -311,6 +318,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.MUTABLE = exports.IMMUTABLE = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -352,11 +360,42 @@ function _defineProperty(obj, key, value) {
   }return obj;
 } /* eslint-disable no-use-before-define, no-return-assign */
 
+var IMMUTABLE = exports.IMMUTABLE = 'IMMUTABLE';
+var MUTABLE = exports.MUTABLE = 'MUTABLE';
+
 var ids = 0;
 var getId = function getId(prefix) {
   return '@@' + prefix + ++ids;
 };
 var queueMethods = ['pipe', 'map', 'mutate', 'filter', 'parallel', 'cancel', 'mapToKey'];
+var getTriggerActivity = function getTriggerActivity(items) {
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
+
+  try {
+    for (var _iterator = items[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      var item = _step.value;
+
+      if (item.type === 'mutate') return MUTABLE;
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator.return) {
+        _iterator.return();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
+    }
+  }
+
+  return IMMUTABLE;
+};
 
 function createQueue(setStateValue, getStateValue) {
   var onDone = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
@@ -585,6 +624,9 @@ function createState(initialValue) {
       trigger.__rineTrigger = true;
       trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
       trigger.__state = stateAPI;
+      trigger.__activity = function () {
+        return getTriggerActivity(trigger.__itemsToCreate);
+      };
 
       // queue methods
       queueMethods.forEach(function (m) {
