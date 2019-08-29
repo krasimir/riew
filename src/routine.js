@@ -74,7 +74,8 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
     objectRequired(initialProps, 'in');
     updateRoutineProps(initialProps);
     initializeStates();
-    controllerFunc(
+
+    let controllerResult = controllerFunc(
       Object.assign(
         {
           render(props) {
@@ -91,6 +92,13 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
         states !== null ? { ...states, ...triggers } : {}
       )
     );
+
+    if (controllerResult) {
+      if (typeof controllerResult !== 'object') {
+        throw new Error('You must return a key-value object from your controller.');
+      }
+      updateViewProps(controllerResult);
+    }
     routineProps.stream();
     viewProps.stream.pipe(callView);
     callView();

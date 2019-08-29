@@ -56,6 +56,15 @@ describe('Given the `routine` function', () => {
         expect(c.isActive()).toBe(false);
       });
     });
+    it('should update view props if we return something from the controller', () => {
+      const controller = () => ({ foo: 'bar' });
+      const view = jest.fn();
+      const r = routine(controller, view);
+
+      r.in({});
+      expect(view).toBeCalledTimes(1);
+      expect(view.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
+    });
   });
   describe('when we use props', () => {
     it('should allow us to react on props changes', () => {
