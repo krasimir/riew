@@ -200,6 +200,19 @@ describe('Given the `routine` function', () => {
         expect(spy2.mock.calls[0]).toStrictEqual([ 'John' ]);
         expect(spy2.mock.calls[1]).toStrictEqual([ 'Steve' ]);
       });
+      it('should not trigger the view if the routine is not active', () => {
+        const s = state({ firstName: 'John', lastName: 'Doe' });
+        const getFirstName = s.map(({ firstName }) => firstName);
+        const spy = jest.fn();
+        const r = routine(spy).withState({ getFirstName });
+
+        r.in({});
+        r.out();
+        s.set({ firstName: 'Steve', lastName: 'Martin' });
+
+        expect(spy).toBeCalledTimes(1);
+        expect(spy.mock.calls[0]).toStrictEqual([ { getFirstName: expect.any(Function) }, expect.any(Function) ]);
+      });
     });
   });
   describe('when we call the routine with just one argument', () => {

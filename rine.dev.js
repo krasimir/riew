@@ -224,7 +224,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
           // passing a trigger
         } else if (isTrigger) {
           triggers[key] = statesMap[key];
-          statesMap[key].__state.stream.pipe(callView);
+          statesMap[key].__state.stream.filter(isActive).pipe(callView);
           updateViewProps(_defineProperty({}, key, triggers[key]));
 
           // raw data that is converted to a state
@@ -232,7 +232,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
           s = (0, _state.createState)(statesMap[key]);
           onOutCallbacks.push(s.teardown);
           updateViewProps(_defineProperty({}, key, s.get()));
-          s.stream.pipe(function (value) {
+          s.stream.filter(isActive).pipe(function (value) {
             return updateViewProps(_defineProperty({}, key, value));
           });
           states[key] = s;
