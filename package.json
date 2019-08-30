@@ -1,7 +1,7 @@
 {
-  "name": "rine",
+  "name": "riew",
   "version": "0.59.1",
-  "description": "Procedure programming for React components",
+  "description": "Reactive controller-view architecture",
   "main": "./lib",
   "scripts": {
     "build-dev": "cp ./rine.js ./rine.dev.js && node ./scripts/replaceInFile.js ./rine.dev.js __DEV__ true",
