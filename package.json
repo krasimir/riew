@@ -1,7 +1,7 @@
 {
   "name": "riew",
-  "version": "0.59.2",
-  "description": "Reactive controller-view architecture",
+  "version": "0.59.3",
+  "description": "Reactive view-controller architecture",
   "main": "./lib",
   "scripts": {
     "build-dev": "cp ./rine.js ./rine.dev.js && node ./scripts/replaceInFile.js ./rine.dev.js __DEV__ true",
@@ -18,10 +18,12 @@
     "url": "git+https://github.com/krasimir/riew.git"
   },
   "keywords": [
-    "rine",
+    "riew",
+    "reactive",
+    "view",
+    "controller",
     "react",
-    "procedure",
-    "routine"
+    "side effects"
   ],
   "author": "Krasimir Tsonev",
   "license": "MIT",
