@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
-import createRoutineInstance from '../routine';
+import createRawRiew from '../riew';
 
-export default function routine(controller, View) {
+export default function riew(controller, View) {
   if (typeof View === 'undefined') {
     View = controller;
     controller = () => {};
@@ -24,15 +24,15 @@ export default function routine(controller, View) {
 
       // mounting
       useEffect(() => {
-        instance = createRoutineInstance(
-          controller,
+        instance = createRawRiew(
           (props, done) => {
             if (props === null) {
               setContent({ content: null, done });
             } else {
               setContent({ content: <View {...props}/>, done });
             }
-          }
+          },
+          controller
         );
 
         if (map !== null) {
@@ -52,7 +52,7 @@ export default function routine(controller, View) {
       return content.content;
     };
 
-    comp.displayName = `Routine(${ getFuncName(controller) })`;
+    comp.displayName = `Riew(${ getFuncName(controller) })`;
     comp.with = (map) => createBridge(map);
     comp.withState = (map) => createBridge(null, map);
 

@@ -3,22 +3,18 @@ import { createState as state, isRineState, isRineQueueTrigger, MUTABLE } from '
 function noop() {};
 function objectRequired(value, method) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
-    throw new Error(`The routine's "${ method }" method must be called with a key-value object. Instead "${ value }" passed.`);
+    throw new Error(`The riew's "${ method }" method must be called with a key-value object. Instead "${ value }" passed.`);
   }
 }
 
-export default function createRoutineInstance(controllerFunc, viewFunc, externals = {}) {
-  if (typeof viewFunc === 'undefined') {
-    viewFunc = controllerFunc;
-    controllerFunc = noop;
-  }
+export default function createRiew(viewFunc, controllerFunc = noop, externals = {}) {
   const instance = {};
   let active = false;
-  const isActive = () => active;
   let onOutCallbacks = [];
   let onRender = noop;
-  const routineProps = state({});
-  const updateRoutineProps = routineProps.mutate((current, newProps) => ({ ...current, ...newProps }));
+  const isActive = () => active;
+  const riewProps = state({});
+  const updateRiewProps = riewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
   const viewProps = state({});
   const updateViewProps = viewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
   const controllerProps = state({
@@ -30,7 +26,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc, external
         updateViewProps(props);
       });
     },
-    props: routineProps,
+    props: riewProps,
     isActive
   });
   const updateControllerProps = controllerProps.mutate((current, newProps) => ({ ...current, ...newProps }));
@@ -57,7 +53,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc, external
         let trigger = externals[key];
 
         if (trigger.__activity() === MUTABLE) {
-          throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
+          throw new Error('Triggers that mutate state can not be sent to the riew. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
         }
 
         trigger.__state.stream.filter(isActive).pipe(() => updateViewProps({ [key]: trigger() }))();
@@ -84,7 +80,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc, external
   instance.in = (initialProps = {}) => {
     active = true;
     objectRequired(initialProps, 'in');
-    updateRoutineProps(initialProps);
+    updateRiewProps(initialProps);
     processExternals();
 
     let controllerResult = controllerFunc(controllerProps.get());
@@ -95,27 +91,27 @@ export default function createRoutineInstance(controllerFunc, viewFunc, external
       }
       updateViewProps(controllerResult);
     }
-    routineProps.stream();
+    riewProps.stream();
     viewProps.stream.pipe(callView)();
     return instance;
   };
-  instance.update = updateRoutineProps;
+  instance.update = updateRiewProps;
   instance.out = () => {
     onOutCallbacks.forEach(f => f());
     onOutCallbacks = [];
-    routineProps.teardown();
+    riewProps.teardown();
     viewProps.teardown();
     controllerProps.teardown();
     active = false;
     return instance;
   };
-  instance.with = (map) => createRoutineInstance(controllerFunc, viewFunc, { ...externals, ...map });
-  instance.withState = (map) => createRoutineInstance(
-    controllerFunc,
+  instance.with = (map) => createRiew(viewFunc, controllerFunc, { ...externals, ...map });
+  instance.withState = (map) => createRiew(
     viewFunc,
+    controllerFunc,
     Object.keys(map).reduce((obj, key) => (obj['$' + key] = map[key], obj), externals)
   );
-  instance.test = (map) => createRoutineInstance(controllerFunc, viewFunc, { ...externals, ...map });
+  instance.test = (map) => createRiew(viewFunc, controllerFunc, { ...externals, ...map });
 
   return instance;
 }

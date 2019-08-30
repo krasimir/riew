@@ -2,12 +2,12 @@
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import { delay, exerciseHTML } from '../../__helpers__';
-import routine from '../index';
+import riew from '../index';
 
-describe('Given the React routine function', () => {
-  describe('when we use the routine Component', () => {
+describe('Given the React riew function', () => {
+  describe('when we use the riew Component', () => {
     it('should always render the view at least once', () => {
-      const R = routine(() => {}, () => <p>Hello</p>);
+      const R = riew(() => {}, () => <p>Hello</p>);
       const { container } = render(<R />);
 
       exerciseHTML(container, '<p>Hello</p>');
@@ -21,7 +21,7 @@ describe('Given the React routine function', () => {
         act(() => { render({ foo: 'bar' }); });
       });
       const view = jest.fn().mockImplementation(() => null);
-      const R = routine(controller, view);
+      const R = riew(controller, view);
 
       render(<R />);
       await delay(7);
@@ -35,7 +35,7 @@ describe('Given the React routine function', () => {
         * render with the given state data
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, async () => {
-        const R = routine(
+        const R = riew(
           async function ({ state }) {
             await delay(5);
             act(() => state.set('bar'));
@@ -49,9 +49,9 @@ describe('Given the React routine function', () => {
         exerciseHTML(container, '<p>bar</p>');
         unmount();
       });
-      it('should allow us to render same routine multiple times', async () => {
+      it('should allow us to render same riew multiple times', async () => {
         const spy = jest.fn().mockImplementation(() => null);
-        const R = routine(
+        const R = riew(
           async function ({ state, props }) {
             state.set({ a: state.get().a + props.get().b });
           },
@@ -67,7 +67,7 @@ describe('Given the React routine function', () => {
       });
       it('should allow us to use different statesMap', () => {
         const spy = jest.fn().mockImplementation(() => null);
-        const R = routine(
+        const R = riew(
           () => {},
           spy
         );
@@ -88,7 +88,7 @@ describe('Given the React routine function', () => {
         * have access to the props
         * have be able to subscribe to props change`, () => {
         const propsSpy = jest.fn();
-        const I = routine(function ({ props }) {
+        const I = riew(function ({ props }) {
           expect(props.get()).toStrictEqual({ foo: 'bar' });
           props.stream.pipe(propsSpy);
         }, () => null);

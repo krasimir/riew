@@ -1,8 +1,8 @@
 import { createState, mergeStates } from './state';
-import rawRoutine from './routine';
-import reactRoutine from './react';
+import rawRiew from './riew';
+import reactRiew from './react';
 
 export const state = createState;
 export const merge = mergeStates;
-export const routine = rawRoutine;
-export const react = { routine: reactRoutine };
+export const riew = rawRiew;
+export const react = { riew: reactRiew };

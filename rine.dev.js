@@ -4,13 +4,13 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.react = exports.routine = exports.merge = exports.state = undefined;
+exports.react = exports.riew = exports.merge = exports.state = undefined;
 
 var _state = require('./state');
 
-var _routine = require('./routine');
+var _riew = require('./riew');
 
-var _routine2 = _interopRequireDefault(_routine);
+var _riew2 = _interopRequireDefault(_riew);
 
 var _react = require('./react');
 
@@ -22,10 +22,10 @@ function _interopRequireDefault(obj) {
 
 var state = exports.state = _state.createState;
 var merge = exports.merge = _state.mergeStates;
-var routine = exports.routine = _routine2.default;
-var react = exports.react = { routine: _react2.default };
+var riew = exports.riew = _riew2.default;
+var react = exports.react = { riew: _react2.default };
 
-},{"./react":2,"./routine":3,"./state":4}],2:[function(require,module,exports){
+},{"./react":2,"./riew":3,"./state":4}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -59,7 +59,7 @@ var _slicedToArray = function () {
   };
 }();
 
-exports.default = routine;
+exports.default = riew;
 
 var _react = (typeof window !== "undefined" ? window['React'] : typeof global !== "undefined" ? global['React'] : null);
 
@@ -67,15 +67,15 @@ var _react2 = _interopRequireDefault(_react);
 
 var _utils = require('../utils');
 
-var _routine = require('../routine');
+var _riew = require('../riew');
 
-var _routine2 = _interopRequireDefault(_routine);
+var _riew2 = _interopRequireDefault(_riew);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function routine(controller, View) {
+function riew(controller, View) {
   if (typeof View === 'undefined') {
     View = controller;
     controller = function controller() {};
@@ -109,13 +109,13 @@ function routine(controller, View) {
 
       // mounting
       (0, _react.useEffect)(function () {
-        instance = (0, _routine2.default)(controller, function (props, done) {
+        instance = (0, _riew2.default)(function (props, done) {
           if (props === null) {
             setContent({ content: null, done: done });
           } else {
             setContent({ content: _react2.default.createElement(View, props), done: done });
           }
-        });
+        }, controller);
 
         if (map !== null) {
           instance = instance.with(map);
@@ -134,7 +134,7 @@ function routine(controller, View) {
       return content.content;
     };
 
-    comp.displayName = 'Routine(' + (0, _utils.getFuncName)(controller) + ')';
+    comp.displayName = 'Riew(' + (0, _utils.getFuncName)(controller) + ')';
     comp.with = function (map) {
       return createBridge(map);
     };
@@ -149,7 +149,7 @@ function routine(controller, View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../routine":3,"../utils":5}],3:[function(require,module,exports){
+},{"../riew":3,"../utils":5}],3:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -174,7 +174,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 };
 
-exports.default = createRoutineInstance;
+exports.default = createRiew;
 
 var _state = require('./state');
 
@@ -189,26 +189,23 @@ function _defineProperty(obj, key, value) {
 function noop() {};
 function objectRequired(value, method) {
   if (value === null || typeof value !== 'undefined' && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
-    throw new Error('The routine\'s "' + method + '" method must be called with a key-value object. Instead "' + value + '" passed.');
+    throw new Error('The riew\'s "' + method + '" method must be called with a key-value object. Instead "' + value + '" passed.');
   }
 }
 
-function createRoutineInstance(controllerFunc, viewFunc) {
+function createRiew(viewFunc) {
+  var controllerFunc = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : noop;
   var externals = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
-  if (typeof viewFunc === 'undefined') {
-    viewFunc = controllerFunc;
-    controllerFunc = noop;
-  }
   var instance = {};
   var active = false;
+  var onOutCallbacks = [];
+  var onRender = noop;
   var isActive = function isActive() {
     return active;
   };
-  var onOutCallbacks = [];
-  var onRender = noop;
-  var routineProps = (0, _state.createState)({});
-  var updateRoutineProps = routineProps.mutate(function (current, newProps) {
+  var riewProps = (0, _state.createState)({});
+  var updateRiewProps = riewProps.mutate(function (current, newProps) {
     return _extends({}, current, newProps);
   });
   var viewProps = (0, _state.createState)({});
@@ -225,7 +222,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
       });
     },
 
-    props: routineProps,
+    props: riewProps,
     isActive: isActive
   });
   var updateControllerProps = controllerProps.mutate(function (current, newProps) {
@@ -256,7 +253,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
         var trigger = externals[key];
 
         if (trigger.__activity() === _state.MUTABLE) {
-          throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
+          throw new Error('Triggers that mutate state can not be sent to the riew. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
         }
 
         trigger.__state.stream.filter(isActive).pipe(function () {
@@ -289,7 +286,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
 
     active = true;
     objectRequired(initialProps, 'in');
-    updateRoutineProps(initialProps);
+    updateRiewProps(initialProps);
     processExternals();
 
     var controllerResult = controllerFunc(controllerProps.get());
@@ -300,32 +297,32 @@ function createRoutineInstance(controllerFunc, viewFunc) {
       }
       updateViewProps(controllerResult);
     }
-    routineProps.stream();
+    riewProps.stream();
     viewProps.stream.pipe(callView)();
     return instance;
   };
-  instance.update = updateRoutineProps;
+  instance.update = updateRiewProps;
   instance.out = function () {
     onOutCallbacks.forEach(function (f) {
       return f();
     });
     onOutCallbacks = [];
-    routineProps.teardown();
+    riewProps.teardown();
     viewProps.teardown();
     controllerProps.teardown();
     active = false;
     return instance;
   };
   instance.with = function (map) {
-    return createRoutineInstance(controllerFunc, viewFunc, _extends({}, externals, map));
+    return createRiew(viewFunc, controllerFunc, _extends({}, externals, map));
   };
   instance.withState = function (map) {
-    return createRoutineInstance(controllerFunc, viewFunc, Object.keys(map).reduce(function (obj, key) {
+    return createRiew(viewFunc, controllerFunc, Object.keys(map).reduce(function (obj, key) {
       return obj['$' + key] = map[key], obj;
     }, externals));
   };
   instance.test = function (map) {
-    return createRoutineInstance(controllerFunc, viewFunc, _extends({}, externals, map));
+    return createRiew(viewFunc, controllerFunc, _extends({}, externals, map));
   };
 
   return instance;

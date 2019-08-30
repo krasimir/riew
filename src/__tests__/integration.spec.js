@@ -5,13 +5,13 @@ import { delay, exerciseHTML } from '../__helpers__';
 
 import { react } from '../index';
 
-const { routine } = react;
+const { riew } = react;
 const DummyComponent = ({ text }) => <p>{ text }</p>;
 
 describe('Given the Rine library', () => {
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
-      const A = routine(async ({ render }) => {
+      const A = riew(async ({ render }) => {
         act(() => { render({ text: 'Hello' }); });
         await delay(20);
         act(() => { render({ text: 'world' }); });
@@ -26,7 +26,7 @@ describe('Given the Rine library', () => {
     });
     it('should not try to re-render if the bridge is unmounted', async () => {
       const spy = jest.spyOn(console, 'error');
-      const A = routine(async ({ render }) => {
+      const A = riew(async ({ render }) => {
         await delay(10);
         act(() => { render({ text: 'world' }); });
       }, DummyComponent);
@@ -39,9 +39,9 @@ describe('Given the Rine library', () => {
       spy.mockRestore();
     });
   });
-  describe('when reusing the same routine', () => {
+  describe('when reusing the same riew', () => {
     it('should create a separate instance', () => {
-      const R = routine(function ({ render, props }) {
+      const R = riew(function ({ render, props }) {
         props.stream.pipe(render);
         render(props.get());
       }, props => <p>{ props.answer }</p>);
@@ -67,7 +67,7 @@ describe('Given the Rine library', () => {
   describe('when we use the `isActive` method', () => {
     it('should return the value of the `mounted` flag', async () => {
       const spy = jest.fn();
-      const A = routine(async ({ isActive }) => {
+      const A = riew(async ({ isActive }) => {
         spy(isActive());
         await delay(10);
         spy(isActive());
@@ -82,7 +82,7 @@ describe('Given the Rine library', () => {
       expect(spy.mock.calls[1]).toStrictEqual([false]);
     });
   });
-  describe('when using routine with a hook', () => {
+  describe('when using riew with a hook', () => {
     it('should keep the hook working', async () => {
       const Input = function () {
         const [ text, setText ] = useState('');
@@ -94,7 +94,7 @@ describe('Given the Rine library', () => {
           </React.Fragment>
         );
       };
-      const Form = routine(function () {}, () => (
+      const Form = riew(function () {}, () => (
         <form>
           <Input />
         </form>
@@ -108,7 +108,7 @@ describe('Given the Rine library', () => {
   });
   describe('when we use useState hook together with props streaming', () => {
     it('should get props stream callback fired every time when we update the state', async () => {
-      const FetchTime = routine(async ({ render, props }) => {
+      const FetchTime = riew(async ({ render, props }) => {
         props.stream.pipe(async ({ city }) => {
           render({ location: city });
         });
