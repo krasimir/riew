@@ -75,11 +75,12 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function riew(controller, View) {
-  if (typeof View === 'undefined') {
-    View = controller;
-    controller = function controller() {};
-  }
+var noop = function noop() {};
+
+function riew(View) {
+  var controller = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : noop;
+  var map = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
   var createBridge = function createBridge() {
     var map = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
     var stateMap = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
@@ -145,7 +146,7 @@ function riew(controller, View) {
     return comp;
   };
 
-  return createBridge();
+  return createBridge(map);
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})

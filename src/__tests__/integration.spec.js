@@ -11,11 +11,11 @@ const DummyComponent = ({ text }) => <p>{ text }</p>;
 describe('Given the Rine library', () => {
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
-      const A = riew(async ({ render }) => {
+      const A = riew(DummyComponent, async ({ render }) => {
         act(() => { render({ text: 'Hello' }); });
         await delay(20);
         act(() => { render({ text: 'world' }); });
-      }, DummyComponent);
+      });
 
       const { queryByText, getByText } = render(<A />);
 
@@ -26,10 +26,10 @@ describe('Given the Rine library', () => {
     });
     it('should not try to re-render if the bridge is unmounted', async () => {
       const spy = jest.spyOn(console, 'error');
-      const A = riew(async ({ render }) => {
+      const A = riew(DummyComponent, async ({ render }) => {
         await delay(10);
         act(() => { render({ text: 'world' }); });
-      }, DummyComponent);
+      });
 
       const { unmount } = render(<A/>);
 
@@ -41,10 +41,10 @@ describe('Given the Rine library', () => {
   });
   describe('when reusing the same riew', () => {
     it('should create a separate instance', () => {
-      const R = riew(function ({ render, props }) {
+      const R = riew(props => <p>{ props.answer }</p>, function ({ render, props }) {
         props.stream.pipe(render);
         render(props.get());
-      }, props => <p>{ props.answer }</p>);
+      });
 
       const { container } = render(<R answer='foo' />);
       const { container: container2, rerender: rerender2 } = render(<R answer='bar' />);
@@ -67,11 +67,11 @@ describe('Given the Rine library', () => {
   describe('when we use the `isActive` method', () => {
     it('should return the value of the `mounted` flag', async () => {
       const spy = jest.fn();
-      const A = riew(async ({ isActive }) => {
+      const A = riew(() => null, async ({ isActive }) => {
         spy(isActive());
         await delay(10);
         spy(isActive());
-      }, () => null);
+      });
 
       const { unmount } = render(<A />);
 
@@ -94,7 +94,7 @@ describe('Given the Rine library', () => {
           </React.Fragment>
         );
       };
-      const Form = riew(function () {}, () => (
+      const Form = riew(() => (
         <form>
           <Input />
         </form>
@@ -108,11 +108,14 @@ describe('Given the Rine library', () => {
   });
   describe('when we use useState hook together with props streaming', () => {
     it('should get props stream callback fired every time when we update the state', async () => {
-      const FetchTime = riew(async ({ render, props }) => {
-        props.stream.pipe(async ({ city }) => {
-          render({ location: city });
-        });
-      }, ({ location }) => location ? <p>{ location }</p> : null);
+      const FetchTime = riew(
+        ({ location }) => location ? <p>{ location }</p> : null,
+        async ({ render, props }) => {
+          props.stream.pipe(async ({ city }) => {
+            render({ location: city });
+          });
+        }
+      );
       const App = function () {
         const [ city, setCity ] = useState('');
 

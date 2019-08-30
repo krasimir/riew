@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
 import createRawRiew from '../riew';
 
-export default function riew(controller, View) {
-  if (typeof View === 'undefined') {
-    View = controller;
-    controller = () => {};
-  }
+const noop = () => {};
+
+export default function riew(View, controller = noop, map = {}) {
   const createBridge = function (map = null, stateMap = null) {
     const comp = function (outerProps) {
       let [ instance, setInstance ] = useState(null);
@@ -59,5 +57,5 @@ export default function riew(controller, View) {
     return comp;
   };
 
-  return createBridge();
+  return createBridge(map);
 }

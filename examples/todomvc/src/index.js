@@ -1,14 +1,15 @@
 /* eslint-disable react/prop-types */
 import React from 'react';
 import ReactDOM from 'react-dom';
-import routine from 'rine/react';
+import riew from 'riew/react';
 
 import List from './List';
 import Footer from './Footer';
 import { todos, ToDo } from './Data';
 import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
 
-const controller = function App({ render, filter, todos }) {
+const controller = function ({ render, filter, todos }) {
+  console.log(filter);
   render({
     viewAll: filter.mutate(() => ALL),
     viewActive: filter.mutate(() => ACTIVE),
@@ -108,6 +109,6 @@ const View = ({
   </React.Fragment>
 );
 
-const App = routine(controller, View).withState({ filter: ALL, todos });
+const App = riew(View, controller).with({ $filter: ALL, todos });
 
 ReactDOM.render(<App />, document.querySelector('#container'));

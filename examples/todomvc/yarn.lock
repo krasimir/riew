@@ -3979,19 +3979,19 @@ ret@~0.1.10:
   resolved "https://registry.yarnpkg.com/ret/-/ret-0.1.15.tgz#b8a4825d5bdb1fc3f6f53c2bc33f81388681c7bc"
   integrity sha512-TTlYpa+OL+vMMNG24xSlQGEJ3B/RzEfUlLct7b5G/ytav+wPrplCpVMFuwzXbkecJrb6IYo1iFb0S9v37754mg==
 
+riew@0.60.0:
+  version "0.60.0"
+  resolved "https://registry.yarnpkg.com/riew/-/riew-0.60.0.tgz#ba16986ae102dc17d62c5c141e102b8a58f816fe"
+  integrity sha512-fZ8e6QCusxI0GtNuDBG8KmHR/ACbN0yDTMKwFhUVGXu6gftIwC5kfL1ver8qo9tNtrX9UmlA9jDNFnYvzaDJUw==
+  dependencies:
+    fast-deep-equal "2.0.1"
+
 rimraf@^2.2.8, rimraf@^2.5.4, rimraf@^2.6.1, rimraf@^2.6.2, rimraf@^2.6.3:
   version "2.6.3"
   resolved "https://registry.yarnpkg.com/rimraf/-/rimraf-2.6.3.tgz#b2d104fe0d8fb27cf9e0a1cda8262dd3833c6cab"
   integrity sha512-mwqeW5XsA2qAejG46gYdENaxXjx9onRNCfn7L0duuP4hCuTIi/QO7PDK07KJfp1d+izWPrzEJDcSqBa0OZQriA==
   dependencies:
     glob "^7.1.3"
-
-rine@0.55.0:
-  version "0.55.0"
-  resolved "https://registry.yarnpkg.com/rine/-/rine-0.55.0.tgz#b4f670f10d16ac6fd8721286b4ce68fd0939422c"
-  integrity sha512-EcsW0NB9oGTZdZYA+TQRGq5Y5qza2eaXU9eYhM1oKFkVwLsqxB6qZXLNYCxqsfWgex74Qc9fpyIniYTiOuFXOA==
-  dependencies:
-    fast-deep-equal "2.0.1"
 
 ripemd160@^2.0.0, ripemd160@^2.0.1:
   version "2.0.2"

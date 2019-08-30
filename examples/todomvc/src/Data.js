@@ -1,10 +1,10 @@
-import { state } from 'rine';
+import { state } from 'riew';
 
 export const ToDo = (label) => ({ label, completed: false, editing: false });
 
 const initialValue = JSON.stringify([
-  ToDo('Rine helps you handle side effects'),
-  ToDo('Rine comes from "Routine"')
+  ToDo('Riew helps you handle side effects'),
+  ToDo('Riew comes from "Routine"')
 ]);
 const saveTodosData = (todos) => {
   localStorage.setItem('todos', JSON.stringify(todos));
