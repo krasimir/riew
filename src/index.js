@@ -1,8 +1,8 @@
 import { createState, mergeStates } from './state';
-import routine from './react';
-import { compose as c } from './utils';
+import rawRoutine from './routine';
+import reactRoutine from './react';
 
 export const state = createState;
 export const merge = mergeStates;
-export const compose = c;
-export const react = { routine };
+export const routine = rawRoutine;
+export const react = { routine: reactRoutine };

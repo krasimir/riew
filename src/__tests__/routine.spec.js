@@ -249,7 +249,7 @@ describe('Given the `routine` function', () => {
         const changeFirstName = s.mutate((name, newName) => ({ firstName: newName, lastName: name.lastName }));
         const r = routine(() => {}).with({ changeFirstName });
 
-        expect(() => r.in({})).toThrowError('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
+        expect(() => r.in({})).toThrowError('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
       });
     });
   });

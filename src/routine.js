@@ -14,9 +14,9 @@ export default function createRoutineInstance(controllerFunc, viewFunc, external
   }
   const instance = {};
   let active = false;
+  const isActive = () => active;
   let onOutCallbacks = [];
   let onRender = noop;
-  const isActive = () => active;
   const routineProps = state({});
   const updateRoutineProps = routineProps.mutate((current, newProps) => ({ ...current, ...newProps }));
   const viewProps = state({});
@@ -57,7 +57,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc, external
         let trigger = externals[key];
 
         if (trigger.__activity() === MUTABLE) {
-          throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
+          throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
         }
 
         trigger.__state.stream.filter(isActive).pipe(() => updateViewProps({ [key]: trigger() }))();
@@ -81,7 +81,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc, external
   }
 
   instance.isActive = isActive;
-  instance.in = (initialProps) => {
+  instance.in = (initialProps = {}) => {
     active = true;
     objectRequired(initialProps, 'in');
     updateRoutineProps(initialProps);
@@ -96,32 +96,26 @@ export default function createRoutineInstance(controllerFunc, viewFunc, external
       updateViewProps(controllerResult);
     }
     routineProps.stream();
-    viewProps.stream.pipe(callView);
-    callView();
+    viewProps.stream.pipe(callView)();
     return instance;
   };
   instance.update = updateRoutineProps;
   instance.out = () => {
     onOutCallbacks.forEach(f => f());
     onOutCallbacks = [];
+    routineProps.teardown();
     viewProps.teardown();
     controllerProps.teardown();
     active = false;
     return instance;
   };
-  instance.with = (map) => {
-    return createRoutineInstance(controllerFunc, viewFunc, { ...externals, ...map });
-  };
-  instance.withState = (map) => {
-    return createRoutineInstance(
-      controllerFunc,
-      viewFunc,
-      Object.keys(map).reduce((obj, key) => (obj['$' + key] = map[key], obj), externals)
-    );
-  };
-  instance.test = (map) => {
-    return createRoutineInstance(controllerFunc, viewFunc, { ...externals, ...map });
-  };
+  instance.with = (map) => createRoutineInstance(controllerFunc, viewFunc, { ...externals, ...map });
+  instance.withState = (map) => createRoutineInstance(
+    controllerFunc,
+    viewFunc,
+    Object.keys(map).reduce((obj, key) => (obj['$' + key] = map[key], obj), externals)
+  );
+  instance.test = (map) => createRoutineInstance(controllerFunc, viewFunc, { ...externals, ...map });
 
   return instance;
 }

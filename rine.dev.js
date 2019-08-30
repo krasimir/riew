@@ -4,15 +4,17 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.react = exports.compose = exports.merge = exports.state = undefined;
+exports.react = exports.routine = exports.merge = exports.state = undefined;
 
 var _state = require('./state');
+
+var _routine = require('./routine');
+
+var _routine2 = _interopRequireDefault(_routine);
 
 var _react = require('./react');
 
 var _react2 = _interopRequireDefault(_react);
-
-var _utils = require('./utils');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -20,10 +22,10 @@ function _interopRequireDefault(obj) {
 
 var state = exports.state = _state.createState;
 var merge = exports.merge = _state.mergeStates;
-var compose = exports.compose = _utils.compose;
+var routine = exports.routine = _routine2.default;
 var react = exports.react = { routine: _react2.default };
 
-},{"./react":2,"./state":4,"./utils":6}],2:[function(require,module,exports){
+},{"./react":2,"./routine":3,"./state":4}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -147,7 +149,7 @@ function routine(controller, View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../routine":3,"../utils":6}],3:[function(require,module,exports){
+},{"../routine":3,"../utils":5}],3:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -200,11 +202,11 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   }
   var instance = {};
   var active = false;
-  var onOutCallbacks = [];
-  var onRender = noop;
   var isActive = function isActive() {
     return active;
   };
+  var onOutCallbacks = [];
+  var onRender = noop;
   var routineProps = (0, _state.createState)({});
   var updateRoutineProps = routineProps.mutate(function (current, newProps) {
     return _extends({}, current, newProps);
@@ -254,7 +256,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
         var trigger = externals[key];
 
         if (trigger.__activity() === _state.MUTABLE) {
-          throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
+          throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
         }
 
         trigger.__state.stream.filter(isActive).pipe(function () {
@@ -282,7 +284,9 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   }
 
   instance.isActive = isActive;
-  instance.in = function (initialProps) {
+  instance.in = function () {
+    var initialProps = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
     active = true;
     objectRequired(initialProps, 'in');
     updateRoutineProps(initialProps);
@@ -297,8 +301,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
       updateViewProps(controllerResult);
     }
     routineProps.stream();
-    viewProps.stream.pipe(callView);
-    callView();
+    viewProps.stream.pipe(callView)();
     return instance;
   };
   instance.update = updateRoutineProps;
@@ -307,6 +310,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
       return f();
     });
     onOutCallbacks = [];
+    routineProps.teardown();
     viewProps.teardown();
     controllerProps.teardown();
     active = false;
@@ -350,14 +354,6 @@ exports.isRineState = isRineState;
 exports.isRineQueueTrigger = isRineQueueTrigger;
 
 var _utils = require('./utils');
-
-var _system = require('./system');
-
-var _system2 = _interopRequireDefault(_system);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -557,8 +553,8 @@ function createState(initialValue) {
   var listeners = [];
   var active = true;
 
-  stateAPI.__rine = true;
   stateAPI.id = getId('s');
+  stateAPI.__rine = true;
   stateAPI.__triggerListeners = function () {
     return listeners.forEach(function (l) {
       return l();
@@ -590,7 +586,6 @@ function createState(initialValue) {
     createdQueues = [];
     listeners = [];
     active = false;
-    if (true) _system2.default.onStateTeardown(stateAPI);
   };
   stateAPI.stream = createStreamObj();
 
@@ -611,104 +606,101 @@ function createState(initialValue) {
       return id !== toRemove;
     });
   }
+  function createNewTrigger() {
+    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var isStream = arguments[1];
+    var previousTrigger = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-  function enhanceToQueueAPI(obj, isStream) {
-    function createNewTrigger() {
-      var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-      var isStream = arguments[1];
-      var previousTrigger = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-
-      var trigger = function trigger() {
-        if (active === false) return stateAPI.get();
-        var queue = createQueue(stateAPI.set, stateAPI.get, function (q) {
-          return createdQueues = createdQueues.filter(function (_ref4) {
-            var id = _ref4.id;
-            return q.id !== id;
-          });
+    var trigger = function trigger() {
+      if (active === false) return stateAPI.get();
+      var queue = createQueue(stateAPI.set, stateAPI.get, function (q) {
+        return createdQueues = createdQueues.filter(function (_ref4) {
+          var id = _ref4.id;
+          return q.id !== id;
         });
+      });
 
-        createdQueues.push(queue);
-        trigger.__itemsToCreate.forEach(function (_ref5) {
-          var type = _ref5.type,
-              func = _ref5.func;
-          return queue.add(type, func);
-        });
-        return queue.process.apply(queue, arguments);
-      };
-
-      trigger.id = getId('t');
-      trigger.stream = createStreamObj();
-      trigger.__rineTrigger = true;
-      trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
-      trigger.__state = stateAPI;
-      trigger.__activity = function () {
-        return getTriggerActivity(trigger.__itemsToCreate);
-      };
-
-      // queue methods
+      createdQueues.push(queue);
+      trigger.__itemsToCreate.forEach(function (_ref5) {
+        var type = _ref5.type,
+            func = _ref5.func;
+        return queue.add(type, func);
+      });
+      return queue.process.apply(queue, arguments);
+    };
+    var addQueueMethods = function addQueueMethods(newTrigger, currentTrigger, isStream) {
       queueMethods.forEach(function (m) {
-        trigger[m] = function () {
+        newTrigger[m] = function () {
           for (var _len2 = arguments.length, func = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
             func[_key2] = arguments[_key2];
           }
 
-          return createNewTrigger([].concat(_toConsumableArray(items), [{ type: m, func: func }]), isStream, trigger);
-        };
-        trigger.stream[m] = function () {
-          for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-            func[_key3] = arguments[_key3];
-          }
-
-          return createNewTrigger([].concat(_toConsumableArray(items), [{ type: m, func: func }]), true, trigger);
+          return createNewTrigger([].concat(_toConsumableArray(items), [{ type: m, func: func }]), isStream, currentTrigger);
         };
       });
-      // not supported in queue methods
-      ['set', 'get', 'teardown'].forEach(function (stateMethod) {
-        trigger[stateMethod] = function () {
-          throw new Error('"' + stateMethod + '" is not a queue method but a method of the state object.');
-        };
-      });
-      // other methods
-      trigger.test = function (callback) {
-        var testTrigger = createNewTrigger([].concat(_toConsumableArray(items)), isStream, trigger);
-        var tools = {
-          setValue: function setValue(newValue) {
-            testTrigger.__itemsToCreate = [{ type: 'map', func: [function () {
-                return newValue;
-              }] }].concat(_toConsumableArray(testTrigger.__itemsToCreate));
-          },
-          swap: function swap(index, funcs, type) {
-            if (!Array.isArray(funcs)) funcs = [funcs];
-            testTrigger.__itemsToCreate[index].func = funcs;
-            if (type) {
-              testTrigger.__itemsToCreate[index].type = type;
-            }
-          },
-          swapFirst: function swapFirst(funcs, type) {
-            tools.swap(0, funcs, type);
-          },
-          swapLast: function swapLast(funcs, type) {
-            tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
+    };
+
+    trigger.id = getId('t');
+    trigger.stream = createStreamObj();
+    trigger.__rineTrigger = true;
+    trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
+    trigger.__state = stateAPI;
+    trigger.__activity = function () {
+      return getTriggerActivity(trigger.__itemsToCreate);
+    };
+
+    // queue methods
+    addQueueMethods(trigger, trigger, isStream);
+    addQueueMethods(trigger.stream, trigger, true);
+
+    // not supported in queue methods
+    ['set', 'get', 'teardown'].forEach(function (stateMethod) {
+      trigger[stateMethod] = function () {
+        throw new Error('"' + stateMethod + '" is not a queue method but a method of the state object.');
+      };
+    });
+
+    // other methods
+    trigger.test = function (callback) {
+      var testTrigger = createNewTrigger([].concat(_toConsumableArray(items)), isStream, trigger);
+      var tools = {
+        setValue: function setValue(newValue) {
+          testTrigger.__itemsToCreate = [{ type: 'map', func: [function () {
+              return newValue;
+            }] }].concat(_toConsumableArray(testTrigger.__itemsToCreate));
+        },
+        swap: function swap(index, funcs, type) {
+          if (!Array.isArray(funcs)) funcs = [funcs];
+          testTrigger.__itemsToCreate[index].func = funcs;
+          if (type) {
+            testTrigger.__itemsToCreate[index].type = type;
           }
-        };
-
-        callback(tools);
-
-        return testTrigger;
+        },
+        swapFirst: function swapFirst(funcs, type) {
+          tools.swap(0, funcs, type);
+        },
+        swapLast: function swapLast(funcs, type) {
+          tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
+        }
       };
 
-      if (isStream) {
-        listeners.push(trigger);
-        if (previousTrigger) removeListener(previousTrigger);
-      }
+      callback(tools);
 
-      return trigger;
+      return testTrigger;
+    };
+
+    if (isStream) {
+      listeners.push(trigger);
+      if (previousTrigger) removeListener(previousTrigger);
     }
 
+    return trigger;
+  }
+  function enhanceToQueueAPI(obj, isStream) {
     queueMethods.forEach(function (methodName) {
       obj[methodName] = function () {
-        for (var _len4 = arguments.length, func = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-          func[_key4] = arguments[_key4];
+        for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+          func[_key3] = arguments[_key3];
         }
 
         return createNewTrigger([{ type: methodName, func: func }], isStream);
@@ -718,7 +710,6 @@ function createState(initialValue) {
 
   enhanceToQueueAPI(stateAPI);
   enhanceToQueueAPI(stateAPI.stream, true);
-  if (true) _system2.default.onStateCreated(stateAPI);
 
   return stateAPI;
 };
@@ -764,48 +755,7 @@ function isRineQueueTrigger(func) {
   return func && func.__rineTrigger === true;
 }
 
-},{"./system":5,"./utils":6}],5:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-function normalizeState(state) {
-  var value = state.__get();
-  var queues = state.__queues().map(function (q) {
-    return {
-      index: q.index,
-      result: q.result,
-      items: q.items.map(function (_ref) {
-        var type = _ref.type,
-            name = _ref.name;
-        return name.join(',') + '(' + type + ')';
-      })
-    };
-  });
-
-  return { value: value, queues: queues };
-};
-
-var System = {
-  __states: [],
-  onStateCreated: function onStateCreated(state) {
-    this.__states.push(state);
-  },
-  onStateTeardown: function onStateTeardown(state) {
-    this.__states = this.__states.filter(function (_ref2) {
-      var id = _ref2.id;
-      return id === state.id;
-    });
-  },
-  snapshot: function snapshot() {
-    return this.__states.map(normalizeState);
-  }
-};
-
-exports.default = System;
-
-},{}],6:[function(require,module,exports){
+},{"./utils":5}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -819,21 +769,6 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
 
   return result ? result[1] : 'unknown';
-};
-var compose = exports.compose = function compose() {
-  for (var _len = arguments.length, funcs = Array(_len), _key = 0; _key < _len; _key++) {
-    funcs[_key] = arguments[_key];
-  }
-
-  return function () {
-    for (var _len2 = arguments.length, payload = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      payload[_key2] = arguments[_key2];
-    }
-
-    return funcs.forEach(function (f) {
-      return f.apply(undefined, payload);
-    });
-  };
 };
 
 },{}]},{},[1])(1)

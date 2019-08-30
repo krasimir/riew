@@ -1,5 +1,4 @@
 import { isPromise, getFuncName } from './utils';
-import system from './system';
 
 export const IMMUTABLE = 'IMMUTABLE';
 export const MUTABLE = 'MUTABLE';
@@ -22,11 +21,7 @@ const getTriggerActivity = items => {
   return IMMUTABLE;
 };
 
-function createQueue(
-  setStateValue,
-  getStateValue,
-  onDone = () => {}
-) {
+function createQueue(setStateValue, getStateValue, onDone = () => {}) {
   const q = {
     index: 0,
     result: getStateValue(),
@@ -149,8 +144,8 @@ export function createState(initialValue) {
   let listeners = [];
   let active = true;
 
-  stateAPI.__rine = true;
   stateAPI.id = getId('s');
+  stateAPI.__rine = true;
   stateAPI.__triggerListeners = () => listeners.forEach(l => l());
   stateAPI.__listeners = () => listeners;
   stateAPI.__queues = () => createdQueues;
@@ -166,7 +161,6 @@ export function createState(initialValue) {
     createdQueues = [];
     listeners = [];
     active = false;
-    if (__DEV__) system.onStateTeardown(stateAPI);
   };
   stateAPI.stream = createStreamObj();
 
@@ -182,86 +176,85 @@ export function createState(initialValue) {
   function removeListener({ id: toRemove }) {
     listeners = listeners.filter(({ id }) => id !== toRemove);
   }
+  function createNewTrigger(items = [], isStream, previousTrigger = null) {
+    const trigger = function (...payload) {
+      if (active === false) return stateAPI.get();
+      const queue = createQueue(
+        stateAPI.set,
+        stateAPI.get,
+        (q) => createdQueues = createdQueues.filter(({ id }) => q.id !== id)
+      );
 
-  function enhanceToQueueAPI(obj, isStream) {
-    function createNewTrigger(items = [], isStream, previousTrigger = null) {
-      const trigger = function (...payload) {
-        if (active === false) return stateAPI.get();
-        const queue = createQueue(
-          stateAPI.set,
-          stateAPI.get,
-          (q) => createdQueues = createdQueues.filter(({ id }) => q.id !== id)
-        );
-
-        createdQueues.push(queue);
-        trigger.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
-        return queue.process(...payload);
-      };
-
-      trigger.id = getId('t');
-      trigger.stream = createStreamObj();
-      trigger.__rineTrigger = true;
-      trigger.__itemsToCreate = [ ...items ];
-      trigger.__state = stateAPI;
-      trigger.__activity = () => getTriggerActivity(trigger.__itemsToCreate);
-
-      // queue methods
+      createdQueues.push(queue);
+      trigger.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
+      return queue.process(...payload);
+    };
+    const addQueueMethods = function (newTrigger, currentTrigger, isStream) {
       queueMethods.forEach(m => {
-        trigger[m] = (...func) => createNewTrigger(
+        newTrigger[m] = (...func) => createNewTrigger(
           [ ...items, { type: m, func } ],
           isStream,
-          trigger
-        );
-        trigger.stream[m] = (...func) => createNewTrigger(
-          [ ...items, { type: m, func } ],
-          true,
-          trigger
+          currentTrigger
         );
       });
-      // not supported in queue methods
-      ['set', 'get', 'teardown'].forEach(stateMethod => {
-        trigger[stateMethod] = () => {
-          throw new Error(`"${ stateMethod }" is not a queue method but a method of the state object.`);
-        };
-      });
-      // other methods
-      trigger.test = function (callback) {
-        const testTrigger = createNewTrigger([ ...items ], isStream, trigger);
-        const tools = {
-          setValue(newValue) {
-            testTrigger.__itemsToCreate = [
-              { type: 'map', func: [ () => newValue ] },
-              ...testTrigger.__itemsToCreate
-            ];
-          },
-          swap(index, funcs, type) {
-            if (!Array.isArray(funcs)) funcs = [funcs];
-            testTrigger.__itemsToCreate[index].func = funcs;
-            if (type) {
-              testTrigger.__itemsToCreate[index].type = type;
-            }
-          },
-          swapFirst(funcs, type) {
-            tools.swap(0, funcs, type);
-          },
-          swapLast(funcs, type) {
-            tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
+    };
+
+    trigger.id = getId('t');
+    trigger.stream = createStreamObj();
+    trigger.__rineTrigger = true;
+    trigger.__itemsToCreate = [ ...items ];
+    trigger.__state = stateAPI;
+    trigger.__activity = () => getTriggerActivity(trigger.__itemsToCreate);
+
+    // queue methods
+    addQueueMethods(trigger, trigger, isStream);
+    addQueueMethods(trigger.stream, trigger, true);
+
+    // not supported in queue methods
+    ['set', 'get', 'teardown'].forEach(stateMethod => {
+      trigger[stateMethod] = () => {
+        throw new Error(`"${ stateMethod }" is not a queue method but a method of the state object.`);
+      };
+    });
+
+    // other methods
+    trigger.test = function (callback) {
+      const testTrigger = createNewTrigger([ ...items ], isStream, trigger);
+      const tools = {
+        setValue(newValue) {
+          testTrigger.__itemsToCreate = [
+            { type: 'map', func: [ () => newValue ] },
+            ...testTrigger.__itemsToCreate
+          ];
+        },
+        swap(index, funcs, type) {
+          if (!Array.isArray(funcs)) funcs = [funcs];
+          testTrigger.__itemsToCreate[index].func = funcs;
+          if (type) {
+            testTrigger.__itemsToCreate[index].type = type;
           }
-        };
-
-        callback(tools);
-
-        return testTrigger;
+        },
+        swapFirst(funcs, type) {
+          tools.swap(0, funcs, type);
+        },
+        swapLast(funcs, type) {
+          tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
+        }
       };
 
-      if (isStream) {
-        listeners.push(trigger);
-        if (previousTrigger) removeListener(previousTrigger);
-      }
+      callback(tools);
 
-      return trigger;
+      return testTrigger;
+    };
+
+    if (isStream) {
+      listeners.push(trigger);
+      if (previousTrigger) removeListener(previousTrigger);
     }
 
+    return trigger;
+  }
+  function enhanceToQueueAPI(obj, isStream) {
     queueMethods.forEach(methodName => {
       obj[methodName] = (...func) => createNewTrigger([ { type: methodName, func } ], isStream);
     });
@@ -269,7 +262,6 @@ export function createState(initialValue) {
 
   enhanceToQueueAPI(stateAPI);
   enhanceToQueueAPI(stateAPI.stream, true);
-  if (__DEV__) system.onStateCreated(stateAPI);
 
   return stateAPI;
 };
