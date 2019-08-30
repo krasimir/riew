@@ -1,4 +1,3 @@
-/* eslint-disable no-use-before-define, no-return-assign */
 import { isPromise, getFuncName } from './utils';
 import system from './system';
 

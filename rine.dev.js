@@ -55,7 +55,7 @@ var _slicedToArray = function () {
       throw new TypeError("Invalid attempt to destructure non-iterable instance");
     }
   };
-}(); /* eslint-disable no-return-assign */
+}();
 
 exports.default = routine;
 
@@ -79,7 +79,8 @@ function routine(controller, View) {
     controller = function controller() {};
   }
   var createBridge = function createBridge() {
-    var statesMap = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var map = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+    var stateMap = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
     var comp = function comp(outerProps) {
       var _useState = (0, _react.useState)(null),
@@ -114,8 +115,11 @@ function routine(controller, View) {
           }
         });
 
-        if (statesMap !== null) {
-          instance.with(statesMap);
+        if (map !== null) {
+          instance = instance.with(map);
+        }
+        if (stateMap !== null) {
+          instance = instance.withState(stateMap);
         }
         setInstance(instance);
         instance.in(outerProps);
@@ -131,6 +135,9 @@ function routine(controller, View) {
     comp.displayName = 'Routine(' + (0, _utils.getFuncName)(controller) + ')';
     comp.with = function (map) {
       return createBridge(map);
+    };
+    comp.withState = function (map) {
+      return createBridge(null, map);
     };
 
     return comp;
@@ -163,7 +170,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 } : function (obj) {
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-}; /* eslint-disable max-len */
+};
 
 exports.default = createRoutineInstance;
 
@@ -185,6 +192,8 @@ function objectRequired(value, method) {
 }
 
 function createRoutineInstance(controllerFunc, viewFunc) {
+  var externals = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
   if (typeof viewFunc === 'undefined') {
     viewFunc = controllerFunc;
     controllerFunc = noop;
@@ -192,7 +201,6 @@ function createRoutineInstance(controllerFunc, viewFunc) {
   var instance = {};
   var active = false;
   var onOutCallbacks = [];
-  var statesMap = null;
   var onRender = noop;
   var isActive = function isActive() {
     return active;
@@ -226,46 +234,51 @@ function createRoutineInstance(controllerFunc, viewFunc) {
     viewFunc(viewProps.get(), onRender);
     onRender = noop;
   }
-  function initializeStates() {
-    if (statesMap !== null) {
-      Object.keys(statesMap).forEach(function (key) {
-        var isState = (0, _state.isRineState)(statesMap[key]);
-        var isTrigger = (0, _state.isRineQueueTrigger)(statesMap[key]);
-        var s = void 0;
+  function processExternals() {
+    Object.keys(externals).forEach(function (key) {
+      var isState = (0, _state.isRineState)(externals[key]);
+      var isTrigger = (0, _state.isRineQueueTrigger)(externals[key]);
+      var s = void 0;
 
-        // passing a state
-        if (isState) {
-          s = statesMap[key];
-          updateControllerProps(_defineProperty({}, key, s));
-          updateViewProps(_defineProperty({}, key, s.get()));
-          s.stream.pipe(function (value) {
-            return updateViewProps(_defineProperty({}, key, value));
-          });
+      // passing a state
+      if (isState) {
+        s = externals[key];
+        updateControllerProps(_defineProperty({}, key, s));
+        updateViewProps(_defineProperty({}, key, s.get()));
+        s.stream.pipe(function (value) {
+          return updateViewProps(_defineProperty({}, key, value));
+        });
 
-          // passing a trigger
-        } else if (isTrigger) {
-          var trigger = statesMap[key];
+        // passing a trigger
+      } else if (isTrigger) {
+        var trigger = externals[key];
 
-          if (trigger.__activity() === _state.MUTABLE) {
-            throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
-          }
-
-          trigger.__state.stream.filter(isActive).pipe(function () {
-            return updateViewProps(_defineProperty({}, key, trigger()));
-          })();
-
-          // raw data that is converted to a state
-        } else {
-          s = (0, _state.createState)(statesMap[key]);
-          onOutCallbacks.push(s.teardown);
-          updateControllerProps(_defineProperty({}, key, s));
-          updateViewProps(_defineProperty({}, key, s.get()));
-          s.stream.filter(isActive).pipe(function (value) {
-            return updateViewProps(_defineProperty({}, key, value));
-          });
+        if (trigger.__activity() === _state.MUTABLE) {
+          throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
         }
-      });
-    }
+
+        trigger.__state.stream.filter(isActive).pipe(function () {
+          return updateViewProps(_defineProperty({}, key, trigger()));
+        })();
+
+        // raw data that is converted to a state
+      } else if (key.charAt(0) === '$') {
+        var k = key.substr(1, key.length);
+
+        s = (0, _state.createState)(externals[key]);
+        onOutCallbacks.push(s.teardown);
+        updateControllerProps(_defineProperty({}, k, s));
+        updateViewProps(_defineProperty({}, k, s.get()));
+        s.stream.filter(isActive).pipe(function (value) {
+          return updateViewProps(_defineProperty({}, k, value));
+        });
+
+        // proxy the rest
+      } else {
+        updateControllerProps(_defineProperty({}, key, externals[key]));
+        updateViewProps(_defineProperty({}, key, externals[key]));
+      }
+    });
   }
 
   instance.isActive = isActive;
@@ -273,7 +286,7 @@ function createRoutineInstance(controllerFunc, viewFunc) {
     active = true;
     objectRequired(initialProps, 'in');
     updateRoutineProps(initialProps);
-    initializeStates();
+    processExternals();
 
     var controllerResult = controllerFunc(controllerProps.get());
 
@@ -300,11 +313,15 @@ function createRoutineInstance(controllerFunc, viewFunc) {
     return instance;
   };
   instance.with = function (map) {
-    statesMap = map;
-    return instance;
+    return createRoutineInstance(controllerFunc, viewFunc, _extends({}, externals, map));
+  };
+  instance.withState = function (map) {
+    return createRoutineInstance(controllerFunc, viewFunc, Object.keys(map).reduce(function (obj, key) {
+      return obj['$' + key] = map[key], obj;
+    }, externals));
   };
   instance.test = function (map) {
-    return createRoutineInstance(controllerFunc, viewFunc).with(map);
+    return createRoutineInstance(controllerFunc, viewFunc, _extends({}, externals, map));
   };
 
   return instance;
@@ -358,7 +375,7 @@ function _defineProperty(obj, key, value) {
   } else {
     obj[key] = value;
   }return obj;
-} /* eslint-disable no-use-before-define, no-return-assign */
+}
 
 var IMMUTABLE = exports.IMMUTABLE = 'IMMUTABLE';
 var MUTABLE = exports.MUTABLE = 'MUTABLE';

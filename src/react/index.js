@@ -1,4 +1,3 @@
-/* eslint-disable no-return-assign */
 import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
 import createRoutineInstance from '../routine';
@@ -8,7 +7,7 @@ export default function routine(controller, View) {
     View = controller;
     controller = () => {};
   }
-  const createBridge = function (statesMap = {}) {
+  const createBridge = function (map = null, stateMap = null) {
     const comp = function (outerProps) {
       let [ instance, setInstance ] = useState(null);
       let [ content, setContent ] = useState({ content: null, done: () => {}});
@@ -36,8 +35,11 @@ export default function routine(controller, View) {
           }
         );
 
-        if (statesMap !== null) {
-          instance.with(statesMap);
+        if (map !== null) {
+          instance = instance.with(map);
+        }
+        if (stateMap !== null) {
+          instance = instance.withState(stateMap);
         }
         setInstance(instance);
         instance.in(outerProps);
@@ -52,6 +54,7 @@ export default function routine(controller, View) {
 
     comp.displayName = `Routine(${ getFuncName(controller) })`;
     comp.with = (map) => createBridge(map);
+    comp.withState = (map) => createBridge(null, map);
 
     return comp;
   };

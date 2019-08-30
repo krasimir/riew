@@ -41,7 +41,7 @@ describe('Given the React routine function', () => {
             act(() => state.set('bar'));
           },
           ({ state }) => <p>{ state }</p>
-        ).with({ state: 'foo' });
+        ).withState({ state: 'foo' });
         const { container, unmount } = render(<R />);
 
         exerciseHTML(container, '<p>foo</p>');
@@ -56,7 +56,7 @@ describe('Given the React routine function', () => {
             state.set({ a: state.get().a + props.get().b });
           },
           spy
-        ).with({ state: { a: 10 } });
+        ).withState({ state: { a: 10 } });
 
         render(<R b={ 5 }/>);
         render(<R b={ 10 }/>);

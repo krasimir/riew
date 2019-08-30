@@ -1,4 +1,3 @@
-/* eslint-disable max-len */
 import { createState as state, isRineState, isRineQueueTrigger, MUTABLE } from './state';
 
 function noop() {};
@@ -8,7 +7,7 @@ function objectRequired(value, method) {
   }
 }
 
-export default function createRoutineInstance(controllerFunc, viewFunc) {
+export default function createRoutineInstance(controllerFunc, viewFunc, externals = {}) {
   if (typeof viewFunc === 'undefined') {
     viewFunc = controllerFunc;
     controllerFunc = noop;
@@ -16,7 +15,6 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
   const instance = {};
   let active = false;
   let onOutCallbacks = [];
-  let statesMap = null;
   let onRender = noop;
   const isActive = () => active;
   const routineProps = state({});
@@ -41,40 +39,45 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
     viewFunc(viewProps.get(), onRender);
     onRender = noop;
   }
-  function initializeStates() {
-    if (statesMap !== null) {
-      Object.keys(statesMap).forEach(key => {
-        let isState = isRineState(statesMap[key]);
-        let isTrigger = isRineQueueTrigger(statesMap[key]);
-        let s;
+  function processExternals() {
+    Object.keys(externals).forEach(key => {
+      let isState = isRineState(externals[key]);
+      let isTrigger = isRineQueueTrigger(externals[key]);
+      let s;
 
-        // passing a state
-        if (isState) {
-          s = statesMap[key];
-          updateControllerProps({ [key]: s });
-          updateViewProps({ [key]: s.get() });
-          s.stream.pipe(value => updateViewProps({ [key]: value }));
+      // passing a state
+      if (isState) {
+        s = externals[key];
+        updateControllerProps({ [key]: s });
+        updateViewProps({ [key]: s.get() });
+        s.stream.pipe(value => updateViewProps({ [key]: value }));
 
-        // passing a trigger
-        } else if (isTrigger) {
-          let trigger = statesMap[key];
+      // passing a trigger
+      } else if (isTrigger) {
+        let trigger = externals[key];
 
-          if (trigger.__activity() === MUTABLE) {
-            throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
-          }
-
-          trigger.__state.stream.filter(isActive).pipe(() => updateViewProps({ [key]: trigger() }))();
-
-        // raw data that is converted to a state
-        } else {
-          s = state(statesMap[key]);
-          onOutCallbacks.push(s.teardown);
-          updateControllerProps({ [key]: s });
-          updateViewProps({ [key]: s.get() });
-          s.stream.filter(isActive).pipe(value => updateViewProps({ [key]: value }));
+        if (trigger.__activity() === MUTABLE) {
+          throw new Error('Triggers that mutate state can not be sent to the routine. This area is meant only for triggers that fetch data. If you need pass such triggers use the controller for that.');
         }
-      });
-    }
+
+        trigger.__state.stream.filter(isActive).pipe(() => updateViewProps({ [key]: trigger() }))();
+
+      // raw data that is converted to a state
+      } else if (key.charAt(0) === '$') {
+        const k = key.substr(1, key.length);
+
+        s = state(externals[key]);
+        onOutCallbacks.push(s.teardown);
+        updateControllerProps({ [k]: s });
+        updateViewProps({ [k]: s.get() });
+        s.stream.filter(isActive).pipe(value => updateViewProps({ [k]: value }));
+
+      // proxy the rest
+      } else {
+        updateControllerProps({ [key]: externals[key] });
+        updateViewProps({ [key]: externals[key] });
+      }
+    });
   }
 
   instance.isActive = isActive;
@@ -82,7 +85,7 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
     active = true;
     objectRequired(initialProps, 'in');
     updateRoutineProps(initialProps);
-    initializeStates();
+    processExternals();
 
     let controllerResult = controllerFunc(controllerProps.get());
 
@@ -107,11 +110,17 @@ export default function createRoutineInstance(controllerFunc, viewFunc) {
     return instance;
   };
   instance.with = (map) => {
-    statesMap = map;
-    return instance;
+    return createRoutineInstance(controllerFunc, viewFunc, { ...externals, ...map });
+  };
+  instance.withState = (map) => {
+    return createRoutineInstance(
+      controllerFunc,
+      viewFunc,
+      Object.keys(map).reduce((obj, key) => (obj['$' + key] = map[key], obj), externals)
+    );
   };
   instance.test = (map) => {
-    return createRoutineInstance(controllerFunc, viewFunc).with(map);
+    return createRoutineInstance(controllerFunc, viewFunc, { ...externals, ...map });
   };
 
   return instance;

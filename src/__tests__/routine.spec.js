@@ -112,7 +112,7 @@ describe('Given the `routine` function', () => {
   });
   describe('when we use `with` method', () => {
     it(`should
-      * create a states from the given object
+      * create a states from the given object if the keys start with $
       * render with the created states as props
       * re-render if we update the states
       * teardown the created states when we call "out" method`, () => {
@@ -121,7 +121,7 @@ describe('Given the `routine` function', () => {
         s1.set('bar');
         s2.set('noo');
       });
-      const r = routine(controller, spy).with({ s1: 'foo', s2: 'moo' });
+      const r = routine(controller, spy).with({ $s1: 'foo', $s2: 'moo' });
 
       r.in({});
 
@@ -136,6 +136,36 @@ describe('Given the `routine` function', () => {
       expect(s1.active()).toBe(false);
       expect(s2.active()).toBe(false);
     });
+    describe('and when we pass primitive values', () => {
+      it('should just proxy them to the controller and view', () => {
+        const spy = jest.fn();
+        const r = routine(
+          ({ foo, bar }) => foo(bar),
+          ({ foo, bar }) => foo(bar + 10)
+        ).with({ foo: spy, bar: 10 });
+
+        r.in({});
+
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ 10 ]);
+        expect(spy.mock.calls[1]).toStrictEqual([ 20 ]);
+      });
+    });
+    describe('and when we use same instance with different externals', () => {
+      it('should keep the externals and instances different', () => {
+        const spy = jest.fn();
+        const r = routine(spy);
+        const ra = r.with({ foo: 'bar' });
+        const rb = r.with({ moo: 'noo' });
+
+        ra.in({});
+        rb.in({});
+
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { moo: 'noo' }, expect.any(Function) ]);
+      });
+    });
     describe('and when we update the created states async', () => {
       it('should trigger re-render', async () => {
         const spy = jest.fn();
@@ -147,7 +177,7 @@ describe('Given the `routine` function', () => {
             s2.set('noo');
           },
           spy
-        ).with({ s1: 'foo', s2: 'moo' }).in();
+        ).with({ $s1: 'foo', $s2: 'moo' }).in();
 
         await delay(7);
 
@@ -223,10 +253,25 @@ describe('Given the `routine` function', () => {
       });
     });
   });
+  describe('when we use `withState` method', () => {
+    it('should proxy to `with` method and create the states', () => {
+      const spy = jest.fn();
+      const controller = jest.fn().mockImplementation(({ s1, s2 }) => {
+        s1.set('bar');
+        s2.set('noo');
+      });
+      const r = routine(controller, spy).withState({ s1: 'foo', s2: 'moo' });
+
+      r.in({});
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
+    });
+  });
   describe('when we call the routine with just one argument', () => {
     it('should assume that this argument is the view function', () => {
       const spy = jest.fn();
-      const r = routine(spy).with({ foo: 'bar' });
+      const r = routine(spy).with({ $foo: 'bar' });
 
       r.in({});
 
