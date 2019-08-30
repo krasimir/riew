@@ -1,6 +1,6 @@
 {
   "name": "riew",
-  "version": "0.59.1",
+  "version": "0.59.2",
   "description": "Reactive controller-view architecture",
   "main": "./lib",
   "scripts": {
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/krasimir/rine.git"
+    "url": "git+https://github.com/krasimir/riew.git"
   },
   "keywords": [
     "rine",
@@ -26,9 +26,9 @@
   "author": "Krasimir Tsonev",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/krasimir/rine/issues"
+    "url": "https://github.com/krasimir/riew/issues"
   },
-  "homepage": "https://github.com/krasimir/rine#readme",
+  "homepage": "https://github.com/krasimir/riew#readme",
   "devDependencies": {
     "@testing-library/react": "8.0.6",
     "babel-cli": "6.26.0",
