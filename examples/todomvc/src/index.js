@@ -9,7 +9,6 @@ import { todos, ToDo } from './Data';
 import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
 
 const controller = function ({ render, filter, todos }) {
-  console.log(filter);
   render({
     viewAll: filter.mutate(() => ALL),
     viewActive: filter.mutate(() => ACTIVE),

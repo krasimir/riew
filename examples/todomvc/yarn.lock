@@ -3979,10 +3979,10 @@ ret@~0.1.10:
   resolved "https://registry.yarnpkg.com/ret/-/ret-0.1.15.tgz#b8a4825d5bdb1fc3f6f53c2bc33f81388681c7bc"
   integrity sha512-TTlYpa+OL+vMMNG24xSlQGEJ3B/RzEfUlLct7b5G/ytav+wPrplCpVMFuwzXbkecJrb6IYo1iFb0S9v37754mg==
 
-riew@0.60.0:
-  version "0.60.0"
-  resolved "https://registry.yarnpkg.com/riew/-/riew-0.60.0.tgz#ba16986ae102dc17d62c5c141e102b8a58f816fe"
-  integrity sha512-fZ8e6QCusxI0GtNuDBG8KmHR/ACbN0yDTMKwFhUVGXu6gftIwC5kfL1ver8qo9tNtrX9UmlA9jDNFnYvzaDJUw==
+riew@0.61.0:
+  version "0.61.0"
+  resolved "https://registry.yarnpkg.com/riew/-/riew-0.61.0.tgz#09f304ffdaba62839a39312243b4f9969dd4927c"
+  integrity sha512-V6fSgBlI6fVkE6jVChVRtVkKfnmEGvl20/hOoTl9Eroj+RfDqAqq0BOhiUxCf9tg5B+cftYykb8neNX62nbbuw==
   dependencies:
     fast-deep-equal "2.0.1"
 
