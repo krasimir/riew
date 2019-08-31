@@ -10,4 +10,19 @@ describe('Given the registry', () => {
       expect(() => registry.get('something')).toThrowError('"something" is missing in the registry.');
     });
   });
+  describe('when we set custom resolver and dissolver', () => {
+    it('should call those custom functions with the given key', () => {
+      const resolver = jest.fn();
+      const dissolver = jest.fn();
+
+      registry.custom({ resolver, dissolver });
+      registry.get('foo');
+      registry.free('foo');
+
+      expect(resolver).toBeCalledTimes(1);
+      expect(resolver.mock.calls[0]).toStrictEqual([ 'foo' ]);
+      expect(dissolver).toBeCalledTimes(1);
+      expect(dissolver.mock.calls[0]).toStrictEqual([ 'foo' ]);
+    });
+  });
 });

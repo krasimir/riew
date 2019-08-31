@@ -3,13 +3,13 @@ import { state } from 'riew';
 export const ToDo = (label) => ({ label, completed: false, editing: false });
 
 const initialValue = JSON.stringify([
-  ToDo('Riew helps you handle side effects'),
-  ToDo('Riew comes from "Routine"')
+  ToDo('Riew is reactive view-controller architecture'),
+  ToDo('Riew plays well with React')
 ]);
 const saveTodosData = (todos) => {
   localStorage.setItem('todos', JSON.stringify(todos));
 };
 
-export const todos = state(JSON.parse(localStorage.getItem('todos') || initialValue));
+export const todos = state(JSON.parse(localStorage.getItem('todos') || initialValue)).export('todos');
 
 todos.stream.pipe(saveTodosData);

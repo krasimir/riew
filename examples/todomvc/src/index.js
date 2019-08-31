@@ -5,7 +5,7 @@ import riew from 'riew/react';
 
 import List from './List';
 import Footer from './Footer';
-import { todos, ToDo } from './Data';
+import { ToDo } from './Data';
 import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
 
 const controller = function ({ render, filter, todos }) {
@@ -108,6 +108,6 @@ const View = ({
   </React.Fragment>
 );
 
-const App = riew(View, controller).with({ $filter: ALL, todos });
+const App = riew(View, controller).withState({ filter: ALL }, 'todos');
 
 ReactDOM.render(<App />, document.querySelector('#container'));
