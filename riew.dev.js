@@ -4,7 +4,16 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.react = exports.riew = exports.merge = exports.state = undefined;
+exports.react = exports.riew = exports.merge = exports.state = exports.compose = undefined;
+
+var _utils = require('./utils');
+
+Object.defineProperty(exports, 'compose', {
+  enumerable: true,
+  get: function get() {
+    return _utils.compose;
+  }
+});
 
 var _state = require('./state');
 
@@ -25,7 +34,7 @@ var merge = exports.merge = _state.mergeStates;
 var riew = exports.riew = _riew2.default;
 var react = exports.react = { riew: _react2.default };
 
-},{"./react":2,"./riew":4,"./state":5}],2:[function(require,module,exports){
+},{"./react":2,"./riew":4,"./state":5,"./utils":6}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -878,6 +887,41 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
 
   return result ? result[1] : 'unknown';
+};
+var compose = exports.compose = function compose() {
+  for (var _len = arguments.length, funcs = Array(_len), _key = 0; _key < _len; _key++) {
+    funcs[_key] = arguments[_key];
+  }
+
+  var isAsync = false;
+  var lastResult = void 0;
+  var done = function done() {};
+
+  (function loop() {
+    if (funcs.length === 0) {
+      done(lastResult);return;
+    }
+    var f = funcs.shift();
+    var result = f(lastResult);
+
+    if (isPromise(result)) {
+      isAsync = true;
+      result.then(function (r) {
+        lastResult = r;
+        loop();
+      });
+    } else {
+      lastResult = result;
+      loop();
+    }
+  })();
+
+  if (isAsync) {
+    return new Promise(function (d) {
+      return done = d;
+    });
+  }
+  return lastResult;
 };
 
 },{}]},{},[1])(1)
