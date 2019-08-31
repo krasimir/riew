@@ -4,7 +4,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.react = exports.riew = exports.merge = exports.state = exports.compose = undefined;
+exports.parallel = exports.serial = exports.compose = exports.react = exports.riew = exports.merge = exports.state = undefined;
 
 var _utils = require('./utils');
 
@@ -12,6 +12,18 @@ Object.defineProperty(exports, 'compose', {
   enumerable: true,
   get: function get() {
     return _utils.compose;
+  }
+});
+Object.defineProperty(exports, 'serial', {
+  enumerable: true,
+  get: function get() {
+    return _utils.serial;
+  }
+});
+Object.defineProperty(exports, 'parallel', {
+  enumerable: true,
+  get: function get() {
+    return _utils.parallel;
   }
 });
 
@@ -893,35 +905,103 @@ var compose = exports.compose = function compose() {
     funcs[_key] = arguments[_key];
   }
 
-  var isAsync = false;
-  var lastResult = void 0;
-  var done = function done() {};
+  return function (lastResult) {
+    var isAsync = false;
+    var done = function done() {};
 
-  (function loop() {
-    if (funcs.length === 0) {
-      done(lastResult);return;
-    }
-    var f = funcs.shift();
-    var result = f(lastResult);
+    (function loop() {
+      if (funcs.length === 0) {
+        done(lastResult);return;
+      }
+      var f = funcs.shift();
+      var result = f(lastResult);
 
-    if (isPromise(result)) {
-      isAsync = true;
-      result.then(function (r) {
-        lastResult = r;
+      if (isPromise(result)) {
+        isAsync = true;
+        result.then(function (r) {
+          lastResult = r;
+          loop();
+        });
+      } else {
+        lastResult = result;
         loop();
-      });
-    } else {
-      lastResult = result;
-      loop();
-    }
-  })();
+      }
+    })();
 
-  if (isAsync) {
-    return new Promise(function (d) {
-      return done = d;
-    });
+    if (isAsync) {
+      return new Promise(function (d) {
+        return done = d;
+      });
+    }
+    return lastResult;
+  };
+};
+var serial = exports.serial = function serial() {
+  for (var _len2 = arguments.length, funcs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    funcs[_key2] = arguments[_key2];
   }
-  return lastResult;
+
+  return function (arg) {
+    var isAsync = false;
+    var done = function done() {};
+    var results = [];
+
+    (function loop() {
+      if (funcs.length === 0) {
+        done(results);return;
+      }
+      var f = funcs.shift();
+      var result = f(arg);
+
+      if (isPromise(result)) {
+        isAsync = true;
+        result.then(function (r) {
+          results.push(r);
+          loop();
+        });
+      } else {
+        results.push(result);
+        loop();
+      }
+    })();
+
+    if (isAsync) {
+      return new Promise(function (d) {
+        return done = d;
+      });
+    }
+    return results;
+  };
+};
+var parallel = exports.parallel = function parallel() {
+  for (var _len3 = arguments.length, funcs = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+    funcs[_key3] = arguments[_key3];
+  }
+
+  return function (arg) {
+    var isAsync = false;
+    var results = [];
+
+    (function loop() {
+      if (funcs.length === 0) {
+        return;
+      }
+      var f = funcs.shift();
+      var result = f(arg);
+
+      if (isPromise(result)) isAsync = true;
+      results.push(result);
+      loop();
+    })();
+
+    if (isAsync) {
+      return Promise.all(results.map(function (r) {
+        if (isPromise(r)) return r;
+        return Promise.resolve(r);
+      }));
+    }
+    return results;
+  };
 };
 
 },{}]},{},[1])(1)

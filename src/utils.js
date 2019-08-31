@@ -5,9 +5,8 @@ export const getFuncName = (func) => {
 
   return result ? result[ 1 ] : 'unknown';
 };
-export const compose = (...funcs) => {
+export const compose = (...funcs) => (lastResult) => {
   let isAsync = false;
-  let lastResult;
   let done = () => {};
 
   (function loop() {
@@ -33,4 +32,57 @@ export const compose = (...funcs) => {
     return new Promise(d => (done = d));
   }
   return lastResult;
+};
+export const serial = (...funcs) => (arg) => {
+  let isAsync = false;
+  let done = () => {};
+  let results = [];
+
+  (function loop() {
+    if (funcs.length === 0) {
+      done(results);return;
+    }
+    const f = funcs.shift();
+    const result = f(arg);
+
+    if (isPromise(result)) {
+      isAsync = true;
+      result.then(r => {
+        results.push(r);
+        loop();
+      });
+    } else {
+      results.push(result);
+      loop();
+    }
+  })();
+
+  if (isAsync) {
+    return new Promise(d => (done = d));
+  }
+  return results;
+};
+export const parallel = (...funcs) => (arg) => {
+  let isAsync = false;
+  let results = [];
+
+  (function loop() {
+    if (funcs.length === 0) {
+      return;
+    }
+    const f = funcs.shift();
+    const result = f(arg);
+
+    if (isPromise(result)) isAsync = true;
+    results.push(result);
+    loop();
+  })();
+
+  if (isAsync) {
+    return Promise.all(results.map(r => {
+      if (isPromise(r)) return r;
+      return Promise.resolve(r);
+    }));
+  }
+  return results;
 };
