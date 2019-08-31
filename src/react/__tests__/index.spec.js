@@ -3,6 +3,7 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { delay, exerciseHTML } from '../../__helpers__';
 import riew from '../index';
+import { createState as state } from '../../state';
 
 describe('Given the React riew function', () => {
   describe('when we use the riew Component', () => {
@@ -48,6 +49,17 @@ describe('Given the React riew function', () => {
         await delay(7);
         exerciseHTML(container, '<p>bar</p>');
         unmount();
+      });
+      describe('and we use a state that is exported into the registry', () => {
+        it('should receive the state value and subscribe for changes', async () => {
+          const s = state(42).export('hello');
+          const R = riew(({ state, hello }) => <p>{ state + hello }</p>).withState({ state: 'foo' }, 'hello');
+          const { container } = render(<R />);
+
+          exerciseHTML(container, '<p>foo42</p>');
+          act(() => s.set('200'));
+          exerciseHTML(container, '<p>foo200</p>');
+        });
       });
       it('should allow us to render same riew multiple times', async () => {
         const spy = jest.fn().mockImplementation(() => null);

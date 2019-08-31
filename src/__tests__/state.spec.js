@@ -1,4 +1,5 @@
 import { createState, mergeStates, createStream, IMMUTABLE, MUTABLE } from '../state';
+import registry from '../registry';
 import { delay } from '../__helpers__';
 
 const state = createState;
@@ -596,6 +597,23 @@ describe('Given the state', () => {
         setValue({ flag: true, index: 42 });
         swapLast(({ flag }) => ({ flag, index: 5000 }), 'map');
       })()).toStrictEqual({ flag: true, index: 5000 });
+    });
+  });
+
+  /* registry */
+  describe('when we register the state into the registry', () => {
+    it('should allow us to use it from there', () => {
+      const s = state(0).export('my state');
+
+      expect(registry.get('my state').get(10));
+      s.mutate(() => 200)();
+      expect(registry.get('my state').get(200));
+    });
+    it('should free the resource in the registry if we teardown the state', () => {
+      const s = state(0).export('my state');
+
+      s.teardown();
+      expect(() => registry.get('my state')).toThrowError('"my state" is missing in the registry.');
     });
   });
 });

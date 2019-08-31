@@ -220,7 +220,7 @@ describe('Given the `riew` function', () => {
         const r = riew(
           spy,
           ({ firstName }) => {
-            expect(firstName).not.toBeDefined();
+            expect(firstName).toBeDefined();
           }
         ).with({ firstName: getFirstName });
 
@@ -244,12 +244,21 @@ describe('Given the `riew` function', () => {
         expect(spy).toBeCalledTimes(1);
         expect(spy.mock.calls[0]).toStrictEqual([ { getFirstName: 'John' }, expect.any(Function) ]);
       });
-      it('should throw an error if we try passing a trigger that mutates the state', () => {
+      it('should not subscribe for state changes if we pass a trigger that mutates the state', () => {
+        const view = jest.fn();
         const s = state({ firstName: 'John', lastName: 'Doe' });
         const changeFirstName = s.mutate((name, newName) => ({ firstName: newName, lastName: name.lastName }));
-        const r = riew(() => {}).with({ changeFirstName });
+        const r = riew(view).with({ changeFirstName });
+        const warn = jest.spyOn(global.console, 'warn').mockImplementation(() => {});
 
-        expect(() => r.in({})).toThrowError('Triggers that mutate state can not be sent to the riew. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
+        r.in();
+        s.set({ firstName: 'Steve', lastName: 'Martin' });
+
+        expect(view).toBeCalledTimes(1);
+        expect(view.mock.calls[0]).toStrictEqual([ {}, expect.any(Function) ]);
+        expect(warn).toBeCalledTimes(1);
+        expect(warn).toBeCalledWith(expect.any(String));
+        warn.mockRestore();
       });
     });
   });
@@ -304,6 +313,25 @@ describe('Given the `riew` function', () => {
       expect(view).toBeCalledTimes(2);
       expect(view.mock.calls[0]).toStrictEqual([ { s: 'foo' }, expect.any(Function) ]);
       expect(view.mock.calls[1]).toStrictEqual([ { s: 'bar' }, expect.any(Function) ]);
+    });
+  });
+  describe('when we want to use an exported into the registry state', () => {
+    it('should give us access to the state + subscribe to it', () => {
+      const s = state('world').export('hello');
+      const view = jest.fn();
+      const r = riew(view).withState({ foo: 'bar' }, 'hello');
+
+      r.in();
+      s.set('ZZZ');
+      expect(view).toBeCalledTimes(2);
+      expect(view.mock.calls[0]).toStrictEqual([
+        { foo: 'bar', hello: 'world' },
+        expect.any(Function)
+      ]);
+      expect(view.mock.calls[1]).toStrictEqual([
+        { foo: 'bar', hello: 'ZZZ' },
+        expect.any(Function)
+      ]);
     });
   });
 });

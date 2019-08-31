@@ -1,4 +1,5 @@
 import { isPromise, getFuncName } from './utils';
+import registry from './registry';
 
 export const IMMUTABLE = 'IMMUTABLE';
 export const MUTABLE = 'MUTABLE';
@@ -143,6 +144,7 @@ export function createState(initialValue) {
   let createdQueues = [];
   let listeners = [];
   let active = true;
+  let exportedAs;
 
   stateAPI.id = getId('s');
   stateAPI.__riew = true;
@@ -161,6 +163,13 @@ export function createState(initialValue) {
     createdQueues = [];
     listeners = [];
     active = false;
+    if (exportedAs) registry.free(exportedAs);
+  };
+  stateAPI.export = (key) => {
+    // if already exported with different key
+    if (exportedAs) registry.free(exportedAs);
+    registry.add(exportedAs = key, stateAPI);
+    return stateAPI;
   };
   stateAPI.stream = createStreamObj();
 

@@ -25,7 +25,7 @@ var merge = exports.merge = _state.mergeStates;
 var riew = exports.riew = _riew2.default;
 var react = exports.react = { riew: _react2.default };
 
-},{"./react":2,"./riew":3,"./state":4}],2:[function(require,module,exports){
+},{"./react":2,"./riew":4,"./state":5}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -75,6 +75,16 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
 var noop = function noop() {};
 
 function riew(View) {
@@ -122,7 +132,9 @@ function riew(View) {
           instance = instance.with(map);
         }
         if (stateMap !== null) {
-          instance = instance.withState(stateMap);
+          var _instance;
+
+          instance = (_instance = instance).withState.apply(_instance, _toConsumableArray(stateMap));
         }
         setInstance(instance);
         instance.in(outerProps);
@@ -139,7 +151,11 @@ function riew(View) {
     comp.with = function (map) {
       return createBridge(map);
     };
-    comp.withState = function (map) {
+    comp.withState = function () {
+      for (var _len = arguments.length, map = Array(_len), _key = 0; _key < _len; _key++) {
+        map[_key] = arguments[_key];
+      }
+
       return createBridge(null, map);
     };
 
@@ -150,7 +166,31 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../riew":3,"../utils":5}],3:[function(require,module,exports){
+},{"../riew":4,"../utils":6}],3:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var Registry = {
+  __resources: {},
+  add: function add(key, value) {
+    this.__resources[key] = value;
+  },
+  get: function get(key) {
+    if (this.__resources[key]) {
+      return this.__resources[key];
+    }
+    throw new Error("\"" + key + "\" is missing in the registry.");
+  },
+  free: function free(key) {
+    delete this.__resources[key];
+  }
+};
+
+exports.default = Registry;
+
+},{}],4:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -179,6 +219,14 @@ exports.default = createRiew;
 
 var _state = require('./state');
 
+var _registry = require('./registry');
+
+var _registry2 = _interopRequireDefault(_registry);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
 function _defineProperty(obj, key, value) {
   if (key in obj) {
     Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
@@ -192,6 +240,16 @@ function objectRequired(value, method) {
   if (value === null || typeof value !== 'undefined' && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
     throw new Error('The riew\'s "' + method + '" method must be called with a key-value object. Instead "' + value + '" passed.');
   }
+}
+function normalizeExternalsMap(arr) {
+  return arr.reduce(function (map, item) {
+    if (typeof item === 'string') {
+      map = _extends({}, map, _defineProperty({}, '@' + item, true));
+    } else {
+      map = _extends({}, map, item);
+    }
+    return map;
+  }, {});
 }
 
 function createRiew(viewFunc) {
@@ -253,24 +311,37 @@ function createRiew(viewFunc) {
       } else if (isTrigger) {
         var trigger = externals[key];
 
-        if (trigger.__activity() === _state.MUTABLE) {
-          throw new Error('Triggers that mutate state can not be sent to the riew. This area is meant only for triggers that fetch data. If you need to pass such triggers use the controller to do that.');
+        updateControllerProps(_defineProperty({}, key, trigger));
+        // subscribe only if the trigger is not mutating the state
+        if (trigger.__activity() === _state.IMMUTABLE) {
+          trigger.__state.stream.filter(isActive).pipe(function () {
+            return updateViewProps(_defineProperty({}, key, trigger()));
+          })();
+        } else {
+          console.warn('In the view you are not allowed to use directly a trigger that mutates the state. If you need that pass a prop from the controller to the view.');
         }
 
-        trigger.__state.stream.filter(isActive).pipe(function () {
-          return updateViewProps(_defineProperty({}, key, trigger()));
-        })();
+        // state in the registry
+      } else if (key.charAt(0) === '$' && key.charAt(1) === '@') {
+        var k = key.substr(2, key.length);
 
-        // raw data that is converted to a state
-      } else if (key.charAt(0) === '$') {
-        var k = key.substr(1, key.length);
-
-        s = (0, _state.createState)(externals[key]);
-        onOutCallbacks.push(s.teardown);
+        s = _registry2.default.get(k);
         updateControllerProps(_defineProperty({}, k, s));
         updateViewProps(_defineProperty({}, k, s.get()));
         s.stream.filter(isActive).pipe(function (value) {
           return updateViewProps(_defineProperty({}, k, value));
+        });
+
+        // raw data that is converted to a state
+      } else if (key.charAt(0) === '$') {
+        var _k = key.substr(1, key.length);
+
+        s = (0, _state.createState)(externals[key]);
+        onOutCallbacks.push(s.teardown);
+        updateControllerProps(_defineProperty({}, _k, s));
+        updateViewProps(_defineProperty({}, _k, s.get()));
+        s.stream.filter(isActive).pipe(function (value) {
+          return updateViewProps(_defineProperty({}, _k, value));
         });
 
         // proxy the rest
@@ -314,12 +385,22 @@ function createRiew(viewFunc) {
     active = false;
     return instance;
   };
-  instance.with = function (map) {
-    return createRiew(viewFunc, controllerFunc, _extends({}, externals, map));
+  instance.with = function () {
+    for (var _len = arguments.length, maps = Array(_len), _key = 0; _key < _len; _key++) {
+      maps[_key] = arguments[_key];
+    }
+
+    return createRiew(viewFunc, controllerFunc, _extends({}, externals, normalizeExternalsMap(maps)));
   };
-  instance.withState = function (map) {
-    return createRiew(viewFunc, controllerFunc, Object.keys(map).reduce(function (obj, key) {
-      return obj['$' + key] = map[key], obj;
+  instance.withState = function () {
+    for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      maps[_key2] = arguments[_key2];
+    }
+
+    var nmaps = normalizeExternalsMap(maps);
+
+    return createRiew(viewFunc, controllerFunc, Object.keys(nmaps).reduce(function (obj, key) {
+      return obj['$' + key] = nmaps[key], obj;
     }, externals));
   };
   instance.test = function (map) {
@@ -329,7 +410,7 @@ function createRiew(viewFunc) {
   return instance;
 }
 
-},{"./state":4}],4:[function(require,module,exports){
+},{"./registry":3,"./state":5}],5:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -352,6 +433,14 @@ exports.isRiewState = isRiewState;
 exports.isRiewQueueTrigger = isRiewQueueTrigger;
 
 var _utils = require('./utils');
+
+var _registry = require('./registry');
+
+var _registry2 = _interopRequireDefault(_registry);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -550,6 +639,7 @@ function createState(initialValue) {
   var createdQueues = [];
   var listeners = [];
   var active = true;
+  var exportedAs = void 0;
 
   stateAPI.id = getId('s');
   stateAPI.__riew = true;
@@ -584,6 +674,13 @@ function createState(initialValue) {
     createdQueues = [];
     listeners = [];
     active = false;
+    if (exportedAs) _registry2.default.free(exportedAs);
+  };
+  stateAPI.export = function (key) {
+    // if already exported with different key
+    if (exportedAs) _registry2.default.free(exportedAs);
+    _registry2.default.add(exportedAs = key, stateAPI);
+    return stateAPI;
   };
   stateAPI.stream = createStreamObj();
 
@@ -753,7 +850,7 @@ function isRiewQueueTrigger(func) {
   return func && func.__riewTrigger === true;
 }
 
-},{"./utils":5}],5:[function(require,module,exports){
+},{"./registry":3,"./utils":6}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {

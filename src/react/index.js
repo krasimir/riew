@@ -37,7 +37,7 @@ export default function riew(View, controller = noop, map = {}) {
           instance = instance.with(map);
         }
         if (stateMap !== null) {
-          instance = instance.withState(stateMap);
+          instance = instance.withState(...stateMap);
         }
         setInstance(instance);
         instance.in(outerProps);
@@ -52,7 +52,7 @@ export default function riew(View, controller = noop, map = {}) {
 
     comp.displayName = `Riew(${ getFuncName(controller) })`;
     comp.with = (map) => createBridge(map);
-    comp.withState = (map) => createBridge(null, map);
+    comp.withState = (...map) => createBridge(null, map);
 
     return comp;
   };
