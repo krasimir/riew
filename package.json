@@ -1,18 +1,18 @@
 {
   "name": "riew",
-  "version": "0.65.0",
+  "version": "0.66.0",
   "description": "Reactive view-controller architecture",
   "main": "./lib",
   "scripts": {
     "clean": "rm -rf ./lib/* && rm -f ./riew.dev.js && rm -f ./riew.production.js",
     "build-dev": "cp ./riew.js ./riew.dev.js && node ./scripts/replaceInFile.js ./riew.dev.js __DEV__ true",
-    "build-production": "cp ./riew.js ./riew.production.js && node ./scripts/replaceInFile.js ./riew.production.js __DEV__ false && uglifyjs ./riew.production.js -o ./riew.production.js --compress unused,dead_code --mangle",
-    "build": "browserify ./lib/index.js -o ./riew.js --standalone Riew --external react && yarn build-dev && yarn build-production && rm ./riew.js",
+    "build-production": "cp ./riew.js ./riew.production.js && node ./scripts/replaceInFile.js ./riew.production.js __DEV__ false && terser ./riew.production.js -o ./riew.production.js --compress --mangle",
+    "build": "browserify ./lib/index.js -o ./riew.js --standalone Riew --external react && yarn build-dev && yarn build-production && rm ./riew.js && ls -lh *.js",
     "test": "BABEL_ENV=development ./node_modules/.bin/jest \"(.*)\\.spec\\.js\"",
     "test-watch": "BABEL_ENV=development ./node_modules/.bin/jest \"(.*)\\.spec\\.js\" --watch --verbose false",
     "transpile": "rm -rf ./lib/* && ./node_modules/.bin/babel ./src --out-dir ./lib --ignore __tests__,__mocks__",
     "dev": "./node_modules/.bin/babel ./src --out-dir ./lib --ignore spec.js --watch",
-    "release": "yarn clean && yarn test && yarn transpile && yarn build && ls -lh *.js"
+    "release": "yarn clean && yarn test && yarn transpile && yarn build"
   },
   "repository": {
     "type": "git",
@@ -52,11 +52,11 @@
     "react": "16.8.6",
     "react-dom": "16.8.6",
     "redux": "4.0.0",
-    "regenerator-runtime": "0.12.1",
-    "uglify-js": "^3.0.28"
+    "regenerator-runtime": "0.12.1"
   },
   "dependencies": {
-    "fast-deep-equal": "2.0.1"
+    "fast-deep-equal": "2.0.1",
+    "terser": "4.2.1"
   },
   "browserify": {
     "transform": [
