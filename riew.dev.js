@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Rine = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Riew = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -236,8 +236,8 @@ function createRiew(viewFunc) {
   }
   function processExternals() {
     Object.keys(externals).forEach(function (key) {
-      var isState = (0, _state.isRineState)(externals[key]);
-      var isTrigger = (0, _state.isRineQueueTrigger)(externals[key]);
+      var isState = (0, _state.isRiewState)(externals[key]);
+      var isTrigger = (0, _state.isRiewQueueTrigger)(externals[key]);
       var s = void 0;
 
       // passing a state
@@ -348,8 +348,8 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
 exports.createState = createState;
 exports.mergeStates = mergeStates;
 exports.createStream = createStream;
-exports.isRineState = isRineState;
-exports.isRineQueueTrigger = isRineQueueTrigger;
+exports.isRiewState = isRiewState;
+exports.isRiewQueueTrigger = isRiewQueueTrigger;
 
 var _utils = require('./utils');
 
@@ -552,7 +552,7 @@ function createState(initialValue) {
   var active = true;
 
   stateAPI.id = getId('s');
-  stateAPI.__rine = true;
+  stateAPI.__riew = true;
   stateAPI.__triggerListeners = function () {
     return listeners.forEach(function (l) {
       return l();
@@ -640,7 +640,7 @@ function createState(initialValue) {
 
     trigger.id = getId('t');
     trigger.stream = createStreamObj();
-    trigger.__rineTrigger = true;
+    trigger.__riewTrigger = true;
     trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
     trigger.__state = stateAPI;
     trigger.__activity = function () {
@@ -745,12 +745,12 @@ function createStream(initialValue) {
   return createState(initialValue).stream;
 }
 
-function isRineState(obj) {
-  return obj && obj.__rine === true;
+function isRiewState(obj) {
+  return obj && obj.__riew === true;
 }
 
-function isRineQueueTrigger(func) {
-  return func && func.__rineTrigger === true;
+function isRiewQueueTrigger(func) {
+  return func && func.__riewTrigger === true;
 }
 
 },{"./utils":5}],5:[function(require,module,exports){

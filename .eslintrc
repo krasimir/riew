@@ -24,7 +24,7 @@
     "jest": true,
     "beforeEach": true,
     "afterEach": true,
-    "rine": true,
+    "riew": true,
     "__DEV__": true,
     "xit": true,
     "fit": true,

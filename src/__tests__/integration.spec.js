@@ -8,7 +8,7 @@ import { react } from '../index';
 const { riew } = react;
 const DummyComponent = ({ text }) => <p>{ text }</p>;
 
-describe('Given the Rine library', () => {
+describe('Given the Riew library', () => {
   describe('when we use an async function', () => {
     it('should allow us to render multiple times', async () => {
       const A = riew(DummyComponent, async ({ render }) => {

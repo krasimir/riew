@@ -1,5 +1,5 @@
 # Examples
 
-Simple apps developed with Rine.
+Simple apps developed with Riew.
 
 * [TODOMVC](./todomvc)

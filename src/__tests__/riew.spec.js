@@ -293,10 +293,10 @@ describe('Given the `riew` function', () => {
 
       expect(controller).toBeCalledTimes(2);
       expect(controller.mock.calls[0]).toStrictEqual([
-        expect.objectContaining({ s: expect.objectContaining({ __rine: true }) })
+        expect.objectContaining({ s: expect.objectContaining({ __riew: true }) })
       ]);
       expect(controller.mock.calls[1]).toStrictEqual([
-        expect.objectContaining({ s: expect.objectContaining({ __rine: true }) })
+        expect.objectContaining({ s: expect.objectContaining({ __riew: true }) })
       ]);
       expect(spy).toBeCalledTimes(2);
       expect(spy.mock.calls[0]).toStrictEqual([ 'foo' ]);

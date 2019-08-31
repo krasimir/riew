@@ -1,4 +1,4 @@
-![Rine logo](./assets/riew.jpg)
+![Riew logo](./assets/riew.jpg)
 
 ---
 

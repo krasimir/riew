@@ -145,7 +145,7 @@ export function createState(initialValue) {
   let active = true;
 
   stateAPI.id = getId('s');
-  stateAPI.__rine = true;
+  stateAPI.__riew = true;
   stateAPI.__triggerListeners = () => listeners.forEach(l => l());
   stateAPI.__listeners = () => listeners;
   stateAPI.__queues = () => createdQueues;
@@ -201,7 +201,7 @@ export function createState(initialValue) {
 
     trigger.id = getId('t');
     trigger.stream = createStreamObj();
-    trigger.__rineTrigger = true;
+    trigger.__riewTrigger = true;
     trigger.__itemsToCreate = [ ...items ];
     trigger.__state = stateAPI;
     trigger.__activity = () => getTriggerActivity(trigger.__itemsToCreate);
@@ -297,10 +297,10 @@ export function createStream(initialValue) {
   return createState(initialValue).stream;
 }
 
-export function isRineState(obj) {
-  return obj && obj.__rine === true;
+export function isRiewState(obj) {
+  return obj && obj.__riew === true;
 }
 
-export function isRineQueueTrigger(func) {
-  return func && func.__rineTrigger === true;
+export function isRiewQueueTrigger(func) {
+  return func && func.__riewTrigger === true;
 }

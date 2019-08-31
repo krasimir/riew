@@ -1,4 +1,4 @@
-import { createState as state, isRineState, isRineQueueTrigger, MUTABLE } from './state';
+import { createState as state, isRiewState, isRiewQueueTrigger, MUTABLE } from './state';
 
 function noop() {};
 function objectRequired(value, method) {
@@ -37,8 +37,8 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
   }
   function processExternals() {
     Object.keys(externals).forEach(key => {
-      let isState = isRineState(externals[key]);
-      let isTrigger = isRineQueueTrigger(externals[key]);
+      let isState = isRiewState(externals[key]);
+      let isTrigger = isRiewQueueTrigger(externals[key]);
       let s;
 
       // passing a state

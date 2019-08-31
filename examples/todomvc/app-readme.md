@@ -1,11 +1,9 @@
-# Rine • [TodoMVC](http://todomvc.com)
-
-> Rine is a library that allows you to use React's JSX syntax for writing business logic.
+# Riew • [TodoMVC](http://todomvc.com)
 
 ## Resources
 
-- [Website](https://github.com/krasimir/rine)
-- [Documentation](https://github.com/krasimir/rine)
+- [Website](https://github.com/krasimir/riew)
+- [Documentation](https://github.com/krasimir/riew)
 - [Used by]()
 - [Blog]()
 - [FAQ]()
