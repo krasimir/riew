@@ -89,8 +89,12 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
 
         s = registry.get(k);
         updateControllerProps({ [k]: s });
-        updateViewProps({ [k]: s.get() });
-        s.stream.filter(isActive).pipe(value => updateViewProps({ [k]: value }));
+        if (isRiewState(s)) {
+          updateViewProps({ [k]: s.get() });
+          s.stream.filter(isActive).pipe(value => updateViewProps({ [k]: value }));
+        } else {
+          updateViewProps({ [k]: s });
+        }
 
       // raw data that is converted to a state
       } else if (key.charAt(0) === '$') {

@@ -380,10 +380,14 @@ function createRiew(viewFunc) {
 
         s = _registry2.default.get(k);
         updateControllerProps(_defineProperty({}, k, s));
-        updateViewProps(_defineProperty({}, k, s.get()));
-        s.stream.filter(isActive).pipe(function (value) {
-          return updateViewProps(_defineProperty({}, k, value));
-        });
+        if ((0, _state.isRiewState)(s)) {
+          updateViewProps(_defineProperty({}, k, s.get()));
+          s.stream.filter(isActive).pipe(function (value) {
+            return updateViewProps(_defineProperty({}, k, value));
+          });
+        } else {
+          updateViewProps(_defineProperty({}, k, s));
+        }
 
         // raw data that is converted to a state
       } else if (key.charAt(0) === '$') {

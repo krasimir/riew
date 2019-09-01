@@ -2,6 +2,7 @@
 import riew from '../riew';
 import { delay } from '../__helpers__';
 import { createState as state } from '../state';
+import registry from '../registry';
 
 describe('Given the `riew` function', () => {
   describe('when we create a riew', () => {
@@ -372,6 +373,28 @@ describe('Given the `riew` function', () => {
         { foo: 'bar', hello: 'ZZZ' },
         expect.any(Function)
       ]);
+    });
+    describe('and when we have something else exported into the registry', () => {
+      it('should pass it down as it is to the view and to the controller', () => {
+        const something = { a: 'b' };
+
+        registry.add('something', something);
+
+        const view = jest.fn();
+        const controller = jest.fn();
+        const r = riew(view, controller).withState({ foo: 'bar' }, 'something');
+
+        r.in();
+        expect(view).toBeCalledTimes(1);
+        expect(view.mock.calls[0]).toStrictEqual([
+          { foo: 'bar', something: { a: 'b' } },
+          expect.any(Function)
+        ]);
+        expect(controller).toBeCalledTimes(1);
+        expect(controller.mock.calls[0]).toStrictEqual([
+          expect.objectContaining({ something: { a: 'b' } })
+        ]);
+      });
     });
   });
 });
