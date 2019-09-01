@@ -4,7 +4,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.parallel = exports.serial = exports.compose = exports.react = exports.riew = exports.merge = exports.state = undefined;
+exports.parallel = exports.serial = exports.compose = exports.registry = exports.react = exports.riew = exports.merge = exports.state = undefined;
 
 var _utils = require('./utils');
 
@@ -37,6 +37,10 @@ var _react = require('./react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _registry = require('./registry');
+
+var _registry2 = _interopRequireDefault(_registry);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -45,8 +49,9 @@ var state = exports.state = _state.createState;
 var merge = exports.merge = _state.mergeStates;
 var riew = exports.riew = _riew2.default;
 var react = exports.react = { riew: _react2.default };
+var registry = exports.registry = _registry2.default;
 
-},{"./react":2,"./riew":4,"./state":5,"./utils":6}],2:[function(require,module,exports){
+},{"./react":2,"./registry":3,"./riew":4,"./state":5,"./utils":6}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
