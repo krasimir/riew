@@ -18,7 +18,7 @@ describe('Given the `riew` function', () => {
       const viewSpy = jest.fn();
       const instance = riew(viewSpy, controllerSpy);
 
-      instance.in({ not: 'used at all' });
+      instance.in({});
 
       expect(instance.isActive()).toBe(true);
       expect(viewSpy).toBeCalledTimes(1);
@@ -56,7 +56,7 @@ describe('Given the `riew` function', () => {
         expect(c.isActive()).toBe(false);
       });
     });
-    it('should update view props if we return something from the controller', () => {
+    it('should set view props if we return something from the controller', () => {
       const controller = () => ({ foo: 'bar' });
       const view = jest.fn();
       const r = riew(view, controller);
@@ -65,14 +65,40 @@ describe('Given the `riew` function', () => {
       expect(view).toBeCalledTimes(1);
       expect(view.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
     });
+    it('should proxy riew props to the view and call the view every time when the riew is updated', () => {
+      const view = jest.fn();
+      const r = riew(view);
+
+      r.in({ a: 'b' });
+      r.update({ a: 'c' });
+
+      expect(view).toBeCalledTimes(2);
+      expect(view.mock.calls[0]).toStrictEqual([ { a: 'b' }, expect.any(Function) ]);
+      expect(view.mock.calls[1]).toStrictEqual([ { a: 'c' }, expect.any(Function) ]);
+    });
+    it('should allow us to overwrite props passed from the outside to the riew', () => {
+      const view = jest.fn();
+      const controller = ({ props }) => {
+        props((newProps) => {
+          return { a: newProps.a.toUpperCase() };
+        });
+      };
+      const r = riew(view, controller);
+
+      r.in({ a: 'b' });
+      r.update({ a: 'c' });
+
+      expect(view).toBeCalledTimes(2);
+      expect(view.mock.calls[0]).toStrictEqual([ { a: 'B' }, expect.any(Function) ]);
+      expect(view.mock.calls[1]).toStrictEqual([ { a: 'C' }, expect.any(Function) ]);
+    });
   });
   describe('when we use props', () => {
-    it('should allow us to react on props changes', () => {
-      const propsSpy = jest.fn();
+    it('should fire our props func initially once and on every update', () => {
+      const propsSpy = jest.fn().mockImplementation((props) => props);
       const viewSpy = jest.fn();
       const c = riew(viewSpy, ({ props }) => {
-        expect(props.get()).toStrictEqual({ a: 'b' });
-        props.stream.pipe(propsSpy);
+        props(propsSpy);
       });
 
       c.in({ a: 'b' });
@@ -80,34 +106,47 @@ describe('Given the `riew` function', () => {
 
       expect(propsSpy).toBeCalledTimes(2);
       expect(propsSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
-      expect(propsSpy.mock.calls[1]).toStrictEqual([{ a: 'b', 'c': 'd' }]);
-      expect(viewSpy).toBeCalledTimes(1);
-      expect(viewSpy.mock.calls[0]).toStrictEqual([{}, expect.any(Function)]);
+      expect(propsSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
+      expect(viewSpy).toBeCalledTimes(2);
+      expect(viewSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }, expect.any(Function)]);
+      expect(viewSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }, expect.any(Function)]);
     });
-    describe('and we subscribe for updates and call the render', () => {
-      it('should not end up in a endless loop', () => {
-        const spy = jest.fn();
-        const propsSpy = jest.fn();
+    describe('and we map the props to something else', () => {
+      it('should send proper values to the view', () => {
+        const view = jest.fn();
+        const propsSpy = jest.fn().mockImplementation((props) => ({ value: props.value * 2 }));
         const r = riew(
-          spy,
-          ({ props, render }) => {
-            props.stream.pipe(({ value }) => {
-              propsSpy(value);
-              render({ foo: value });
-            });
+          view,
+          ({ props }) => {
+            props(propsSpy);
           }
         );
 
-        r.in({ value: 'bar' });
-        r.update({ value: 'moo' });
+        r.in({ value: 10 });
+        r.update({ value: 3 });
 
-        expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { foo: 'moo' }, expect.any(Function) ]);
+        expect(view).toBeCalledTimes(2);
+        expect(view.mock.calls[0]).toStrictEqual([ { value: 20 }, expect.any(Function) ]);
+        expect(view.mock.calls[1]).toStrictEqual([ { value: 6 }, expect.any(Function) ]);
         expect(propsSpy).toBeCalledTimes(2);
-        expect(propsSpy.mock.calls[0]).toStrictEqual([ 'bar' ]);
-        expect(propsSpy.mock.calls[1]).toStrictEqual([ 'moo' ]);
+        expect(propsSpy.mock.calls[0]).toStrictEqual([ { value: 10 } ]);
+        expect(propsSpy.mock.calls[1]).toStrictEqual([ { value: 3 } ]);
       });
+    });
+    it('should proxy whatever props we receive if our callback returns non-object-literal', () => {
+      const propsSpy = jest.fn();
+      const viewSpy = jest.fn();
+      const c = riew(viewSpy, ({ props }) => props(propsSpy));
+
+      c.in({ a: 'b' });
+      c.update({ c: 'd' });
+
+      expect(propsSpy).toBeCalledTimes(2);
+      expect(propsSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }]);
+      expect(propsSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }]);
+      expect(viewSpy).toBeCalledTimes(2);
+      expect(viewSpy.mock.calls[0]).toStrictEqual([{ a: 'b' }, expect.any(Function)]);
+      expect(viewSpy.mock.calls[1]).toStrictEqual([{ c: 'd' }, expect.any(Function)]);
     });
   });
   describe('when we use `with` method', () => {
@@ -323,6 +362,7 @@ describe('Given the `riew` function', () => {
 
       r.in();
       s.set('ZZZ');
+
       expect(view).toBeCalledTimes(2);
       expect(view.mock.calls[0]).toStrictEqual([
         { foo: 'bar', hello: 'world' },

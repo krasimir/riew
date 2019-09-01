@@ -1,5 +1,6 @@
 import { createState as state, isRiewState, isRiewQueueTrigger, IMMUTABLE } from './state';
 import registry from './registry';
+import { isObjectLiteral } from './utils';
 
 function noop() {};
 function objectRequired(value, method) {
@@ -23,11 +24,20 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
   let active = false;
   let onOutCallbacks = [];
   let onRender = noop;
+  let onPropsCallback;
   const isActive = () => active;
-  const riewProps = state({});
-  const updateRiewProps = riewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
   const viewProps = state({});
   const updateViewProps = viewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
+  const riewProps = state({});
+  const updateRiewProps = (newProps) => {
+    const transformed = (onPropsCallback || ((p) => p))(newProps);
+
+    if (isObjectLiteral(transformed)) {
+      riewProps.set(transformed);
+    } else {
+      riewProps.set(newProps);
+    }
+  };
   const controllerProps = state({
     render(props) {
       objectRequired(props, 'render');
@@ -37,13 +47,15 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
         updateViewProps(props);
       });
     },
-    props: riewProps,
+    props(callback) {
+      onPropsCallback = callback;
+    },
     isActive
   });
   const updateControllerProps = controllerProps.mutate((current, newProps) => ({ ...current, ...newProps }));
 
   function callView() {
-    viewFunc(viewProps.get(), onRender);
+    viewFunc({ ...riewProps.get(), ...viewProps.get() }, onRender);
     onRender = noop;
   }
   function processExternals() {
@@ -102,19 +114,20 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
   instance.in = (initialProps = {}) => {
     active = true;
     objectRequired(initialProps, 'in');
-    updateRiewProps(initialProps);
     processExternals();
 
     let controllerResult = controllerFunc(controllerProps.get());
 
-    if (controllerResult) {
-      if (typeof controllerResult !== 'object') {
-        throw new Error('You must return a key-value object from your controller.');
-      }
-      updateViewProps(controllerResult);
+    updateRiewProps(initialProps);
+
+    riewProps.stream.filter(isActive).pipe(callView);
+    viewProps.stream.filter(isActive).pipe(callView);
+
+    if (isObjectLiteral(controllerResult)) {
+      updateViewProps(controllerResult); // <-- this triggers the first render
+    } else {
+      callView(); // <-- this triggers the first render
     }
-    riewProps.stream();
-    viewProps.stream.pipe(callView)();
     return instance;
   };
   instance.update = updateRiewProps;

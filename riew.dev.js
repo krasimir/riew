@@ -258,6 +258,8 @@ var _registry = require('./registry');
 
 var _registry2 = _interopRequireDefault(_registry);
 
+var _utils = require('./utils');
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -295,17 +297,26 @@ function createRiew(viewFunc) {
   var active = false;
   var onOutCallbacks = [];
   var onRender = noop;
+  var onPropsCallback = void 0;
   var isActive = function isActive() {
     return active;
   };
-  var riewProps = (0, _state.createState)({});
-  var updateRiewProps = riewProps.mutate(function (current, newProps) {
-    return _extends({}, current, newProps);
-  });
   var viewProps = (0, _state.createState)({});
   var updateViewProps = viewProps.mutate(function (current, newProps) {
     return _extends({}, current, newProps);
   });
+  var riewProps = (0, _state.createState)({});
+  var updateRiewProps = function updateRiewProps(newProps) {
+    var transformed = (onPropsCallback || function (p) {
+      return p;
+    })(newProps);
+
+    if ((0, _utils.isObjectLiteral)(transformed)) {
+      riewProps.set(transformed);
+    } else {
+      riewProps.set(newProps);
+    }
+  };
   var controllerProps = (0, _state.createState)({
     render: function render(props) {
       objectRequired(props, 'render');
@@ -315,8 +326,10 @@ function createRiew(viewFunc) {
         updateViewProps(props);
       });
     },
+    props: function props(callback) {
+      onPropsCallback = callback;
+    },
 
-    props: riewProps,
     isActive: isActive
   });
   var updateControllerProps = controllerProps.mutate(function (current, newProps) {
@@ -324,7 +337,7 @@ function createRiew(viewFunc) {
   });
 
   function callView() {
-    viewFunc(viewProps.get(), onRender);
+    viewFunc(_extends({}, riewProps.get(), viewProps.get()), onRender);
     onRender = noop;
   }
   function processExternals() {
@@ -393,19 +406,20 @@ function createRiew(viewFunc) {
 
     active = true;
     objectRequired(initialProps, 'in');
-    updateRiewProps(initialProps);
     processExternals();
 
     var controllerResult = controllerFunc(controllerProps.get());
 
-    if (controllerResult) {
-      if ((typeof controllerResult === 'undefined' ? 'undefined' : _typeof(controllerResult)) !== 'object') {
-        throw new Error('You must return a key-value object from your controller.');
-      }
-      updateViewProps(controllerResult);
+    updateRiewProps(initialProps);
+
+    riewProps.stream.filter(isActive).pipe(callView);
+    viewProps.stream.filter(isActive).pipe(callView);
+
+    if ((0, _utils.isObjectLiteral)(controllerResult)) {
+      updateViewProps(controllerResult); // <-- this triggers the first render
+    } else {
+      callView(); // <-- this triggers the first render
     }
-    riewProps.stream();
-    viewProps.stream.pipe(callView)();
     return instance;
   };
   instance.update = updateRiewProps;
@@ -445,7 +459,7 @@ function createRiew(viewFunc) {
   return instance;
 }
 
-},{"./registry":3,"./state":5}],5:[function(require,module,exports){
+},{"./registry":3,"./state":5,"./utils":6}],5:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -893,6 +907,9 @@ Object.defineProperty(exports, "__esModule", {
 });
 var isPromise = exports.isPromise = function isPromise(obj) {
   return obj && typeof obj['then'] === 'function';
+};
+var isObjectLiteral = exports.isObjectLiteral = function isObjectLiteral(obj) {
+  return obj ? obj.constructor === {}.constructor : false;
 };
 var getFuncName = exports.getFuncName = function getFuncName(func) {
   if (func.name) return func.name;

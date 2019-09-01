@@ -1,6 +1,6 @@
 {
   "name": "riew",
-  "version": "0.66.0",
+  "version": "0.68.0",
   "description": "Reactive view-controller architecture",
   "main": "./lib",
   "scripts": {

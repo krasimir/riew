@@ -66,7 +66,9 @@ describe('Given the React riew function', () => {
         const R = riew(
           spy,
           async function ({ state, props }) {
-            state.set({ a: state.get().a + props.get().b });
+            props(({ b }) => {
+              state.set({ a: state.get().a + b });
+            });
           }
         ).withState({ state: { a: 10 } });
 
@@ -74,8 +76,8 @@ describe('Given the React riew function', () => {
         render(<R b={ 10 }/>);
 
         expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { state: { a: 15 } }, {}]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { state: { a: 20 } }, {}]);
+        expect(spy.mock.calls[0]).toStrictEqual([ { b: 5, state: { a: 15 } }, {}]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { b: 10, state: { a: 20 } }, {}]);
       });
       it('should allow us to use different statesMap', () => {
         const spy = jest.fn().mockImplementation(() => null);
@@ -98,8 +100,7 @@ describe('Given the React riew function', () => {
         * have be able to subscribe to props change`, () => {
         const propsSpy = jest.fn();
         const I = riew(() => null, function ({ props }) {
-          expect(props.get()).toStrictEqual({ foo: 'bar' });
-          props.stream.pipe(propsSpy);
+          props(propsSpy);
         });
 
         const { rerender } = render(<I foo='bar' />);
@@ -108,8 +109,22 @@ describe('Given the React riew function', () => {
 
         expect(propsSpy).toBeCalledTimes(2);
         expect(propsSpy.mock.calls[0]).toStrictEqual([ { foo: 'bar' } ]);
-        expect(propsSpy.mock.calls[1]).toStrictEqual([ { foo: 'bar', zoo: 'mar' } ]);
+        expect(propsSpy.mock.calls[1]).toStrictEqual([ { zoo: 'mar' } ]);
       });
+    });
+  });
+  describe('when we want to use the React children prop', () => {
+    it('should work', () => {
+      const R = riew(({ children }) => children('John'));
+      const { container } = render(
+        <R>
+          {
+            (name) => `Hello ${ name }!`
+          }
+        </R>
+      );
+
+      exerciseHTML(container, 'Hello John!');
     });
   });
 });

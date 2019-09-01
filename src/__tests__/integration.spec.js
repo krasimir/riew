@@ -41,10 +41,7 @@ describe('Given the Riew library', () => {
   });
   describe('when reusing the same riew', () => {
     it('should create a separate instance', () => {
-      const R = riew(props => <p>{ props.answer }</p>, function ({ render, props }) {
-        props.stream.pipe(render);
-        render(props.get());
-      });
+      const R = riew(props => <p>{ props.answer }</p>);
 
       const { container } = render(<R answer='foo' />);
       const { container: container2, rerender: rerender2 } = render(<R answer='bar' />);
@@ -106,13 +103,13 @@ describe('Given the Riew library', () => {
       expect(getByText('foobar')).toBeDefined();
     });
   });
-  describe('when we use useState hook together with props streaming', () => {
-    it('should get props stream callback fired every time when we update the state', async () => {
+  describe('when we use useState hook together with props', () => {
+    it('should get props callback fired every time when we update the state', async () => {
       const FetchTime = riew(
         ({ location }) => location ? <p>{ location }</p> : null,
         async ({ render, props }) => {
-          props.stream.pipe(async ({ city }) => {
-            render({ location: city });
+          props(({ city }) => {
+            return { location: city };
           });
         }
       );
