@@ -119,7 +119,6 @@ function riew(View) {
 
   var createBridge = function createBridge() {
     var map = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
-    var stateMap = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
     var comp = function comp(outerProps) {
       var _useState = (0, _react.useState)(null),
@@ -155,12 +154,9 @@ function riew(View) {
         }, controller);
 
         if (map !== null) {
-          instance = instance.with(map);
-        }
-        if (stateMap !== null) {
           var _instance;
 
-          instance = (_instance = instance).withState.apply(_instance, _toConsumableArray(stateMap));
+          instance = (_instance = instance).with.apply(_instance, _toConsumableArray(map));
         }
         setInstance(instance);
         instance.in(outerProps);
@@ -174,15 +170,12 @@ function riew(View) {
     };
 
     comp.displayName = 'Riew(' + (0, _utils.getFuncName)(controller) + ')';
-    comp.with = function (map) {
-      return createBridge(map);
-    };
-    comp.withState = function () {
+    comp.with = function () {
       for (var _len = arguments.length, map = Array(_len), _key = 0; _key < _len; _key++) {
         map[_key] = arguments[_key];
       }
 
-      return createBridge(null, map);
+      return createBridge(map);
     };
 
     return comp;
@@ -225,6 +218,9 @@ var Registry = {
 
     this.__resolver = resolver;
     this.__dissolver = dissolver;
+  },
+  reset: function reset() {
+    this.__resources = {};
   }
 };
 
@@ -257,7 +253,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
 
 exports.default = createRiew;
 
-var _state = require('./state');
+var _state2 = require('./state');
 
 var _registry = require('./registry');
 
@@ -306,11 +302,11 @@ function createRiew(viewFunc) {
   var isActive = function isActive() {
     return active;
   };
-  var viewProps = (0, _state.createState)({});
+  var viewProps = (0, _state2.createState)({});
   var updateViewProps = viewProps.mutate(function (current, newProps) {
     return _extends({}, current, newProps);
   });
-  var riewProps = (0, _state.createState)({});
+  var riewProps = (0, _state2.createState)({});
   var updateRiewProps = function updateRiewProps(newProps) {
     var transformed = (onPropsCallback || function (p) {
       return p;
@@ -322,7 +318,7 @@ function createRiew(viewFunc) {
       riewProps.set(newProps);
     }
   };
-  var controllerProps = (0, _state.createState)({
+  var controllerProps = (0, _state2.createState)({
     render: function render(props) {
       objectRequired(props, 'render');
       if (!active) return Promise.resolve();
@@ -333,6 +329,12 @@ function createRiew(viewFunc) {
     },
     props: function props(callback) {
       onPropsCallback = callback;
+    },
+    state: function state() {
+      var s = _state2.createState.apply(undefined, arguments);
+
+      onOutCallbacks.push(s.teardown);
+      return s;
     },
 
     isActive: isActive
@@ -347,8 +349,8 @@ function createRiew(viewFunc) {
   }
   function processExternals() {
     Object.keys(externals).forEach(function (key) {
-      var isState = (0, _state.isRiewState)(externals[key]);
-      var isTrigger = (0, _state.isRiewQueueTrigger)(externals[key]);
+      var isState = (0, _state2.isRiewState)(externals[key]);
+      var isTrigger = (0, _state2.isRiewQueueTrigger)(externals[key]);
       var s = void 0;
 
       // passing a state
@@ -366,7 +368,7 @@ function createRiew(viewFunc) {
 
         updateControllerProps(_defineProperty({}, key, trigger));
         // subscribe only if the trigger is not mutating the state
-        if (trigger.__activity() === _state.IMMUTABLE) {
+        if (trigger.__activity() === _state2.IMMUTABLE) {
           trigger.__state.stream.filter(isActive).pipe(function () {
             return updateViewProps(_defineProperty({}, key, trigger()));
           })();
@@ -374,13 +376,13 @@ function createRiew(viewFunc) {
           console.warn('In the view you are not allowed to use directly a trigger that mutates the state. If you need that pass a prop from the controller to the view.');
         }
 
-        // state in the registry
-      } else if (key.charAt(0) === '$' && key.charAt(1) === '@') {
-        var k = key.substr(2, key.length);
+        // in the registry
+      } else if (key.charAt(0) === '@') {
+        var k = key.substr(1, key.length);
 
         s = _registry2.default.get(k);
         updateControllerProps(_defineProperty({}, k, s));
-        if ((0, _state.isRiewState)(s)) {
+        if ((0, _state2.isRiewState)(s)) {
           updateViewProps(_defineProperty({}, k, s.get()));
           s.stream.filter(isActive).pipe(function (value) {
             return updateViewProps(_defineProperty({}, k, value));
@@ -388,18 +390,6 @@ function createRiew(viewFunc) {
         } else {
           updateViewProps(_defineProperty({}, k, s));
         }
-
-        // raw data that is converted to a state
-      } else if (key.charAt(0) === '$') {
-        var _k = key.substr(1, key.length);
-
-        s = (0, _state.createState)(externals[key]);
-        onOutCallbacks.push(s.teardown);
-        updateControllerProps(_defineProperty({}, _k, s));
-        updateViewProps(_defineProperty({}, _k, s.get()));
-        s.stream.filter(isActive).pipe(function (value) {
-          return updateViewProps(_defineProperty({}, _k, value));
-        });
 
         // proxy the rest
       } else {
@@ -449,17 +439,6 @@ function createRiew(viewFunc) {
     }
 
     return createRiew(viewFunc, controllerFunc, _extends({}, externals, normalizeExternalsMap(maps)));
-  };
-  instance.withState = function () {
-    for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      maps[_key2] = arguments[_key2];
-    }
-
-    var nmaps = normalizeExternalsMap(maps);
-
-    return createRiew(viewFunc, controllerFunc, Object.keys(nmaps).reduce(function (obj, key) {
-      return obj['$' + key] = nmaps[key], obj;
-    }, externals));
   };
   instance.test = function (map) {
     return createRiew(viewFunc, controllerFunc, _extends({}, externals, map));
