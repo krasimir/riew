@@ -22,6 +22,9 @@ const Registry = {
   custom({ resolver, dissolver }) {
     this.__resolver = resolver;
     this.__dissolver = dissolver;
+  },
+  reset() {
+    this.__resources = {};
   }
 };
 

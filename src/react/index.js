@@ -5,7 +5,7 @@ import createRawRiew from '../riew';
 const noop = () => {};
 
 export default function riew(View, controller = noop, map = {}) {
-  const createBridge = function (map = null, stateMap = null) {
+  const createBridge = function (map = null) {
     const comp = function (outerProps) {
       let [ instance, setInstance ] = useState(null);
       let [ content, setContent ] = useState({ content: null, done: () => {}});
@@ -34,10 +34,7 @@ export default function riew(View, controller = noop, map = {}) {
         );
 
         if (map !== null) {
-          instance = instance.with(map);
-        }
-        if (stateMap !== null) {
-          instance = instance.withState(...stateMap);
+          instance = instance.with(...map);
         }
         setInstance(instance);
         instance.in(outerProps);
@@ -51,8 +48,7 @@ export default function riew(View, controller = noop, map = {}) {
     };
 
     comp.displayName = `Riew(${ getFuncName(controller) })`;
-    comp.with = (map) => createBridge(map);
-    comp.withState = (...map) => createBridge(null, map);
+    comp.with = (...map) => createBridge(map);
 
     return comp;
   };

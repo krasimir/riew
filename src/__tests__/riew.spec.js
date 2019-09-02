@@ -1,10 +1,10 @@
 /* eslint-disable quotes, max-len */
 import riew from '../riew';
-import { delay } from '../__helpers__';
 import { createState as state } from '../state';
 import registry from '../registry';
 
 describe('Given the `riew` function', () => {
+  beforeEach(() => registry.reset());
   describe('when we create a riew', () => {
     it(`should
       * set the instance to active
@@ -151,103 +151,25 @@ describe('Given the `riew` function', () => {
     });
   });
   describe('when we use `with` method', () => {
-    it(`should
-      * create a states from the given object if the keys start with $
-      * render with the created states as props
-      * re-render if we update the states
-      * teardown the created states when we call "out" method`, () => {
-      const spy = jest.fn();
-      const controller = jest.fn().mockImplementation(({ s1, s2 }) => {
-        s1.set('bar');
-        s2.set('noo');
-      });
-      const r = riew(spy, controller).with({ $s1: 'foo', $s2: 'moo' });
-
-      r.in({});
-
-      let s1 = controller.mock.calls[0][0].s1;
-      let s2 = controller.mock.calls[0][0].s2;
-
-      expect(spy).toBeCalledTimes(1);
-      expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
-      expect(s1.active()).toBe(true);
-      expect(s2.active()).toBe(true);
-      r.out();
-      expect(s1.active()).toBe(false);
-      expect(s2.active()).toBe(false);
-    });
-    describe('and when we pass primitive values', () => {
-      it('should just proxy them to the controller and view', () => {
+    describe('and we pass a state', () => {
+      it(`should
+        * send the state to the controller and its value to the view
+        * re-render if we update the states (if any)`, () => {
         const spy = jest.fn();
-        const r = riew(
-          ({ foo, bar }) => foo(bar + 10),
-          ({ foo, bar }) => foo(bar),
-        ).with({ foo: spy, bar: 10 });
+        const s1 = state('foo');
+        const s2 = state('moo');
+        const controller = jest.fn().mockImplementation(({ s1, s2 }) => {
+          s1.set('bar');
+          s2.set('noo');
+        });
+        const r = riew(spy, controller).with({ s1, s2 });
 
         r.in({});
+        s2.set('hoo');
 
         expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ 10 ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ 20 ]);
-      });
-    });
-    describe('and when we use same instance with different externals', () => {
-      it('should keep the externals and instances different', () => {
-        const spy = jest.fn();
-        const r = riew(spy);
-        const ra = r.with({ foo: 'bar' });
-        const rb = r.with({ moo: 'noo' });
-
-        ra.in({});
-        rb.in({});
-
-        expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { moo: 'noo' }, expect.any(Function) ]);
-      });
-    });
-    describe('and when we update the created states async', () => {
-      it('should trigger re-render', async () => {
-        const spy = jest.fn();
-
-        riew(
-          spy,
-          async ({ s1, s2 }) => {
-            await delay(5);
-            s1.set('bar');
-            s2.set('noo');
-          }
-        ).with({ $s1: 'foo', $s2: 'moo' }).in();
-
-        await delay(7);
-
-        expect(spy).toBeCalledTimes(3);
-        expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'foo', s2: 'moo' }, expect.any(Function) ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { s1: 'bar', s2: 'moo' }, expect.any(Function) ]);
-        expect(spy.mock.calls[2]).toStrictEqual([ { s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
-      });
-    });
-    describe('and when we pass an already created state', () => {
-      it(`should 
-        * use the already created one
-        * should NOT teardown the already created one`, async () => {
-        const spy = jest.fn();
-        const controller = jest.fn().mockImplementation(async ({ s }) => {
-          await delay(5);
-          s.set('bar');
-        });
-        const alreadyCreated = state('foo');
-        const r = riew(spy, controller).with({ s: alreadyCreated }).in();
-
-        expect(controller.mock.calls[0][0].s).toBe(alreadyCreated);
-
-        await delay(7);
-        r.out();
-
-        expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { s: 'foo' }, expect.any(Function) ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { s: 'bar' }, expect.any(Function) ]);
-        expect(alreadyCreated.active()).toBe(true);
+        expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
+        expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
       });
     });
     describe('and when we pass a trigger', () => {
@@ -301,28 +223,87 @@ describe('Given the `riew` function', () => {
         warn.mockRestore();
       });
     });
-  });
-  describe('when we use `withState` method', () => {
-    it('should proxy to `with` method and create the states', () => {
-      const spy = jest.fn();
-      const controller = jest.fn().mockImplementation(({ s1, s2 }) => {
-        s1.set('bar');
-        s2.set('noo');
+    describe('when we want to use an exported into the registry state', () => {
+      it('should recognize it and pass it down to the view and controller + subscribe to it', () => {
+        const s = state('foo');
+
+        registry.add('xxx', s);
+
+        const view = jest.fn();
+        const controller = jest.fn();
+        const r = riew(view, controller).with('xxx');
+
+        r.in();
+        s.set('bar');
+
+        expect(view).toBeCalledTimes(2);
+        expect(view.mock.calls[0]).toStrictEqual([ { xxx: 'foo' }, expect.any(Function) ]);
+        expect(view.mock.calls[1]).toStrictEqual([ { xxx: 'bar' }, expect.any(Function) ]);
+        expect(controller).toBeCalledTimes(1);
+        expect(controller.mock.calls[0]).toStrictEqual([ expect.objectContaining({
+          xxx: expect.objectContaining({ __riew: true })
+        }) ]);
       });
-      const r = riew(spy, controller).withState({ s1: 'foo', s2: 'moo' });
+      describe('and when we have something else exported into the registry', () => {
+        it('should pass it down as it is to the view and to the controller', () => {
+          const something = { a: 'b' };
 
-      r.in({});
+          registry.add('something', something);
 
-      expect(spy).toBeCalledTimes(1);
-      expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'bar', s2: 'noo' }, expect.any(Function) ]);
+          const view = jest.fn();
+          const controller = jest.fn();
+          const r = riew(view, controller).with('something');
+
+          r.in({ foo: 'bar' });
+          expect(view).toBeCalledTimes(1);
+          expect(view.mock.calls[0]).toStrictEqual([
+            { foo: 'bar', something: { a: 'b' } },
+            expect.any(Function)
+          ]);
+          expect(controller).toBeCalledTimes(1);
+          expect(controller.mock.calls[0]).toStrictEqual([
+            expect.objectContaining({ something: { a: 'b' } })
+          ]);
+        });
+      });
+    });
+    describe('and when we pass primitive values', () => {
+      it('should just proxy them to the controller and view', () => {
+        const spy = jest.fn();
+        const r = riew(
+          ({ foo, bar }) => foo(bar + 10),
+          ({ foo, bar }) => foo(bar),
+        ).with({ foo: spy, bar: 10 });
+
+        r.in({});
+
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ 10 ]);
+        expect(spy.mock.calls[1]).toStrictEqual([ 20 ]);
+      });
+    });
+    describe('and when we use same instance with different externals', () => {
+      it('should keep the externals and instances different', () => {
+        const spy = jest.fn();
+        const r = riew(spy);
+        const ra = r.with({ foo: 'bar' });
+        const rb = r.with({ moo: 'noo' });
+
+        ra.in({});
+        rb.in({});
+
+        expect(spy).toBeCalledTimes(2);
+        expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { moo: 'noo' }, expect.any(Function) ]);
+      });
     });
   });
   describe('when we call the riew with just one argument', () => {
-    it('should assume that this argument is the view function', () => {
+    it('should work just fine by providing a dummy controller', () => {
       const spy = jest.fn();
-      const r = riew(spy).with({ $foo: 'bar' });
+      const r = riew(spy);
 
-      r.in({});
+      r.in({ foo: 'bar' });
 
       expect(spy).toBeCalledTimes(1);
       expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, expect.any(Function) ]);
@@ -355,46 +336,25 @@ describe('Given the `riew` function', () => {
       expect(view.mock.calls[1]).toStrictEqual([ { s: 'bar' }, expect.any(Function) ]);
     });
   });
-  describe('when we want to use an exported into the registry state', () => {
-    it('should give us access to the state + subscribe to it', () => {
-      const s = state('world').export('hello');
+  describe('when we use the `state` method', () => {
+    it('should create a state which gets teardown when the view is unmounted', () => {
+      let ss;
       const view = jest.fn();
-      const r = riew(view).withState({ foo: 'bar' }, 'hello');
+      const r = riew(view, ({ state, render }) => {
+        const s = ss = state('foo');
+
+        return {
+          bar: s.get()
+        };
+      });
 
       r.in();
-      s.set('ZZZ');
+      expect(ss.active()).toBe(true);
+      r.out();
 
-      expect(view).toBeCalledTimes(2);
-      expect(view.mock.calls[0]).toStrictEqual([
-        { foo: 'bar', hello: 'world' },
-        expect.any(Function)
-      ]);
-      expect(view.mock.calls[1]).toStrictEqual([
-        { foo: 'bar', hello: 'ZZZ' },
-        expect.any(Function)
-      ]);
-    });
-    describe('and when we have something else exported into the registry', () => {
-      it('should pass it down as it is to the view and to the controller', () => {
-        const something = { a: 'b' };
-
-        registry.add('something', something);
-
-        const view = jest.fn();
-        const controller = jest.fn();
-        const r = riew(view, controller).withState({ foo: 'bar' }, 'something');
-
-        r.in();
-        expect(view).toBeCalledTimes(1);
-        expect(view.mock.calls[0]).toStrictEqual([
-          { foo: 'bar', something: { a: 'b' } },
-          expect.any(Function)
-        ]);
-        expect(controller).toBeCalledTimes(1);
-        expect(controller.mock.calls[0]).toStrictEqual([
-          expect.objectContaining({ something: { a: 'b' } })
-        ]);
-      });
+      expect(view).toBeCalledTimes(1);
+      expect(view.mock.calls[0]).toStrictEqual([ { bar: 'foo' }, expect.any(Function) ]);
+      expect(ss.active()).toBe(false);
     });
   });
 });

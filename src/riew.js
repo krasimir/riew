@@ -50,6 +50,12 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
     props(callback) {
       onPropsCallback = callback;
     },
+    state(...args) {
+      const s = state(...args);
+
+      onOutCallbacks.push(s.teardown);
+      return s;
+    },
     isActive
   });
   const updateControllerProps = controllerProps.mutate((current, newProps) => ({ ...current, ...newProps }));
@@ -83,9 +89,9 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
           console.warn('In the view you are not allowed to use directly a trigger that mutates the state. If you need that pass a prop from the controller to the view.');
         }
 
-      // state in the registry
-      } else if (key.charAt(0) === '$' && key.charAt(1) === '@') {
-        const k = key.substr(2, key.length);
+      // in the registry
+      } else if (key.charAt(0) === '@') {
+        const k = key.substr(1, key.length);
 
         s = registry.get(k);
         updateControllerProps({ [k]: s });
@@ -95,16 +101,6 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
         } else {
           updateViewProps({ [k]: s });
         }
-
-      // raw data that is converted to a state
-      } else if (key.charAt(0) === '$') {
-        const k = key.substr(1, key.length);
-
-        s = state(externals[key]);
-        onOutCallbacks.push(s.teardown);
-        updateControllerProps({ [k]: s });
-        updateViewProps({ [k]: s.get() });
-        s.stream.filter(isActive).pipe(value => updateViewProps({ [k]: value }));
 
       // proxy the rest
       } else {
@@ -145,15 +141,6 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
     return instance;
   };
   instance.with = (...maps) => createRiew(viewFunc, controllerFunc, { ...externals, ...normalizeExternalsMap(maps) });
-  instance.withState = (...maps) => {
-    const nmaps = normalizeExternalsMap(maps);
-
-    return createRiew(
-      viewFunc,
-      controllerFunc,
-      Object.keys(nmaps).reduce((obj, key) => (obj['$' + key] = nmaps[key], obj), externals)
-    );
-  };
   instance.test = (map) => createRiew(viewFunc, controllerFunc, { ...externals, ...map });
 
   return instance;

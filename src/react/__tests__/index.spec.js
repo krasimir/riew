@@ -42,7 +42,7 @@ describe('Given the React riew function', () => {
             await delay(5);
             act(() => state.set('bar'));
           }
-        ).withState({ state: 'foo' });
+        ).with({ state: state('foo') });
         const { container, unmount } = render(<R />);
 
         exerciseHTML(container, '<p>foo</p>');
@@ -53,7 +53,7 @@ describe('Given the React riew function', () => {
       describe('and we use a state that is exported into the registry', () => {
         it('should receive the state value and subscribe for changes', async () => {
           const s = state(42).export('hello');
-          const R = riew(({ state, hello }) => <p>{ state + hello }</p>).withState({ state: 'foo' }, 'hello');
+          const R = riew(({ state, hello }) => <p>{ state + hello }</p>).with({ state: state('foo') }, 'hello');
           const { container } = render(<R />);
 
           exerciseHTML(container, '<p>foo42</p>');
@@ -65,19 +65,21 @@ describe('Given the React riew function', () => {
         const spy = jest.fn().mockImplementation(() => null);
         const R = riew(
           spy,
-          async function ({ state, props }) {
+          async function ({ props, render }) {
+            const s = state({ a: 10 });
+
             props(({ b }) => {
-              state.set({ a: state.get().a + b });
+              render({ state: s.get().a + b });
             });
           }
-        ).withState({ state: { a: 10 } });
+        );
 
         render(<R b={ 5 }/>);
         render(<R b={ 10 }/>);
 
         expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { b: 5, state: { a: 15 } }, {}]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { b: 10, state: { a: 20 } }, {}]);
+        expect(spy.mock.calls[0]).toStrictEqual([ { b: 5, state: 15 }, {}]);
+        expect(spy.mock.calls[1]).toStrictEqual([ { b: 10, state: 20 }, {}]);
       });
       it('should allow us to use different statesMap', () => {
         const spy = jest.fn().mockImplementation(() => null);
