@@ -1,6 +1,6 @@
 import { createState as state, isRiewState, isRiewQueueTrigger, IMMUTABLE } from './state';
 import registry from './registry';
-import { isObjectLiteral } from './utils';
+import { isObjectLiteral, isPromise } from './utils';
 
 function noop() {};
 function objectRequired(value, method) {
@@ -22,12 +22,28 @@ function normalizeExternalsMap(arr) {
 export default function createRiew(viewFunc, controllerFunc = noop, externals = {}) {
   const instance = {};
   let active = false;
-  let onOutCallbacks = [];
-  let onRender = noop;
+  let subscribedStates = [];
   let onPropsCallback;
   const isActive = () => active;
   const viewProps = state({});
-  const updateViewProps = viewProps.mutate((current, newProps) => ({ ...current, ...newProps }));
+  const updateViewProps = viewProps.mutate((current, newProps) => {
+    const result = { ...current };
+
+    Object.keys(newProps).forEach(key => {
+      if (isRiewState(newProps[key])) {
+        let s = newProps[key];
+
+        result[key] = s.get();
+        if (!subscribedStates.find(({ id }) => id === s.id)) {
+          subscribedStates.push(s);
+          s.stream.filter(isActive).pipe(value => updateViewProps({ [key]: value }));
+        }
+      } else {
+        result[key] = newProps[key];
+      }
+    });
+    return result;
+  });
   const riewProps = state({});
   const updateRiewProps = (newProps) => {
     const transformed = (onPropsCallback || ((p) => p))(newProps);
@@ -40,45 +56,26 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
   };
   const controllerProps = state({
     render(props) {
+      if (!active) return;
       objectRequired(props, 'render');
-      if (!active) return Promise.resolve();
-      return new Promise(done => {
-        onRender = done;
-        updateViewProps(props);
-      });
+      updateViewProps(props);
     },
     props(callback) {
       onPropsCallback = callback;
-    },
-    state(...args) {
-      const s = state(...args);
-
-      onOutCallbacks.push(s.teardown);
-      return s;
     },
     isActive
   });
   const updateControllerProps = controllerProps.mutate((current, newProps) => ({ ...current, ...newProps }));
 
   function callView() {
-    viewFunc({ ...riewProps.get(), ...viewProps.get() }, onRender);
-    onRender = noop;
+    viewFunc({ ...riewProps.get(), ...viewProps.get() });
   }
   function processExternals() {
     Object.keys(externals).forEach(key => {
-      let isState = isRiewState(externals[key]);
       let isTrigger = isRiewQueueTrigger(externals[key]);
-      let s;
-
-      // passing a state
-      if (isState) {
-        s = externals[key];
-        updateControllerProps({ [key]: s });
-        updateViewProps({ [key]: s.get() });
-        s.stream.pipe(value => updateViewProps({ [key]: value }));
 
       // passing a trigger
-      } else if (isTrigger) {
+      if (isTrigger) {
         let trigger = externals[key];
 
         updateControllerProps({ [key]: trigger });
@@ -93,14 +90,8 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
       } else if (key.charAt(0) === '@') {
         const k = key.substr(1, key.length);
 
-        s = registry.get(k);
-        updateControllerProps({ [k]: s });
-        if (isRiewState(s)) {
-          updateViewProps({ [k]: s.get() });
-          s.stream.filter(isActive).pipe(value => updateViewProps({ [k]: value }));
-        } else {
-          updateViewProps({ [k]: s });
-        }
+        updateControllerProps({ [k]: registry.get(k) });
+        updateViewProps({ [k]: registry.get(k) });
 
       // proxy the rest
       } else {
@@ -117,23 +108,30 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
     processExternals();
 
     let controllerResult = controllerFunc(controllerProps.get());
+    let done = (result) => {
+      if (isObjectLiteral(result)) {
+        updateViewProps(result); // <-- this triggers the first render
+      } else {
+        callView(); // <-- this triggers the first render
+      }
+    };
 
     updateRiewProps(initialProps);
 
     riewProps.stream.filter(isActive).pipe(callView);
     viewProps.stream.filter(isActive).pipe(callView);
 
-    if (isObjectLiteral(controllerResult)) {
-      updateViewProps(controllerResult); // <-- this triggers the first render
+    if (isPromise(controllerResult)) {
+      controllerResult.then(done);
     } else {
-      callView(); // <-- this triggers the first render
+      done(controllerResult);
     }
     return instance;
   };
   instance.update = updateRiewProps;
   instance.out = () => {
-    onOutCallbacks.forEach(f => f());
-    onOutCallbacks = [];
+    subscribedStates.forEach(s => s.teardown());
+    subscribedStates = [];
     riewProps.teardown();
     viewProps.teardown();
     controllerProps.teardown();

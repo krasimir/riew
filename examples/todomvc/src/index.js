@@ -8,8 +8,11 @@ import Footer from './Footer';
 import { ToDo } from './Data';
 import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
 
-const controller = function ({ render, filter, todos }) {
+const controller = function ({ render, state, todos }) {
+  let filter = state(ALL);
+
   render({
+    filter,
     viewAll: filter.mutate(() => ALL),
     viewActive: filter.mutate(() => ACTIVE),
     viewCompleted: filter.mutate(() => COMPLETED),
@@ -108,6 +111,6 @@ const View = ({
   </React.Fragment>
 );
 
-const App = riew(View, controller).withState({ filter: ALL }, 'todos');
+const App = riew(View, controller).with('todos');
 
 ReactDOM.render(<App />, document.querySelector('#container'));
