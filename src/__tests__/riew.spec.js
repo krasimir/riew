@@ -6,16 +6,84 @@ import { delay } from '../__helpers__';
 
 describe('Given the `riew` function', () => {
   beforeEach(() => registry.reset());
+  describe('when we use a controller', () => {
+    it(`should
+      * not run the view by default
+      * run the controller once when the riew is mounted`, () => {
+      const view = jest.fn();
+      const controller = jest.fn();
+      const r = riew(view, controller);
+
+      r.mount();
+      r.update({});
+      r.update({});
+      r.update({});
+
+      expect(view).toBeCalledTimes(0);
+      expect(controller).toBeCalledTimes(1);
+    });
+    it(`should
+      * run the view every time when we call the render method
+      * accumulate the props to the view`, () => {
+      const view = jest.fn();
+      const controller = ({ render }) => {
+        render({ c: 'd' });
+        render({ e: 'f' });
+      };
+      const r = riew(view, controller);
+
+      r.mount({ a: 'b' });
+      r.update({ g: 'h' }); // ignored at this point
+
+      expect(view).toBeCalledTimes(2);
+      expect(view.mock.calls[0]).toStrictEqual([ { a: 'b', c: 'd' } ]);
+      expect(view.mock.calls[1]).toStrictEqual([ { a: 'b', c: 'd', e: 'f' } ]);
+    });
+    describe('and we want to handle the update of the riew', () => {
+      describe('and we use the `pipe` helper', () => {
+        it(`should subscribe for input changes`, () => {
+          const view = jest.fn();
+          const controller = ({ pipe, render }) => {
+            pipe(render);
+          };
+          const r = riew(view, controller);
+
+          r.mount({ x: 'y' });
+          r.update({ a: 'b' });
+          r.update({ c: 'd' });
+
+          expect(view).toBeCalledTimes(2);
+          expect(view.mock.calls[0]).toStrictEqual([ { a: 'b', x: 'y' } ]);
+          expect(view.mock.calls[1]).toStrictEqual([ { a: 'b', c: 'd', x: 'y' } ]);
+        });
+        fit(`should subscribe for input changes`, () => {
+          const view = jest.fn();
+          const controller = ({ pipe, render }) => {
+            pipe(render);
+          };
+          const r = riew(view, controller);
+
+          r.mount({ x: 'y' });
+          r.update({ a: 'b' });
+          r.update({ c: 'd' });
+
+          expect(view).toBeCalledTimes(2);
+          expect(view.mock.calls[0]).toStrictEqual([ { a: 'b', x: 'y' } ]);
+          expect(view.mock.calls[1]).toStrictEqual([ { a: 'b', c: 'd', x: 'y' } ]);
+        });
+      });
+    });
+  });
   describe('when we create a riew', () => {
     it(`should
       * set the instance to active
       * run the controller function
       * pass render function to the controller function
-      * pass util methods to the controller function (isActive)
-      * call the view function at least once and on every "render" call`, () => {
+      * pass util methods to the controller function (isActive)`, () => {
       const controllerSpy = jest.fn().mockImplementation(({ render, isActive }) => {
         expect(isActive()).toBe(true);
-        render({ foo: 'bar' });
+        expect(render).toEqual(expect.any(Function));
+        return { foo: 'bar' };
       });
       const viewSpy = jest.fn();
       const instance = riew(viewSpy, controllerSpy);
@@ -343,14 +411,15 @@ describe('Given the `riew` function', () => {
       * teardown the state when the riew is unmounted
       * subscribe for state changes and re-render the view`, async () => {
       let ss;
+      const externalState = state('boo');
       const view = jest.fn();
-      const r = riew(view, async () => {
+      const r = riew(view, async ({ state }) => {
         const s = ss = state('foo');
 
         setTimeout(() => {
           s.set('xxx');
         }, 5);
-        return { bar: s };
+        return { bar: s, boo: externalState };
       });
 
       r.in();
@@ -359,8 +428,8 @@ describe('Given the `riew` function', () => {
       r.out();
 
       expect(view).toBeCalledTimes(2);
-      expect(view.mock.calls[0]).toStrictEqual([ { bar: 'foo' } ]);
-      expect(view.mock.calls[1]).toStrictEqual([ { bar: 'xxx' } ]);
+      expect(view.mock.calls[0]).toStrictEqual([ { bar: 'foo', boo: 'boo' } ]);
+      expect(view.mock.calls[1]).toStrictEqual([ { bar: 'xxx', boo: 'boo' } ]);
       expect(ss.active()).toBe(false);
     });
   });

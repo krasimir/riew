@@ -1,12 +1,13 @@
 import { createState as state, isRiewState, isRiewQueueTrigger, IMMUTABLE } from './state';
 import registry from './registry';
-import { isObjectLiteral, isPromise } from './utils';
+import { isPromise } from './utils';
 
 function noop() {};
 function objectRequired(value, method) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
     throw new Error(`The riew's "${ method }" method must be called with a key-value object. Instead "${ value }" passed.`);
   }
+  return value;
 }
 function normalizeExternalsMap(arr) {
   return arr.reduce((map, item) => {
@@ -22,10 +23,20 @@ function normalizeExternalsMap(arr) {
 export default function createRiew(viewFunc, controllerFunc = noop, externals = {}) {
   const instance = {};
   let active = false;
+  let internalStates = [];
   let subscribedStates = [];
-  let onPropsCallback;
-  const isActive = () => active;
+  let onUnmountCallback;
+
+  const controllerProps = state({});
   const viewProps = state({});
+  const input = state({});
+
+  const isActive = () => active;
+  const callView = () => {
+    viewFunc(viewProps.get());
+  };
+
+  // mutations
   const updateViewProps = viewProps.mutate((current, newProps) => {
     const result = { ...current };
 
@@ -44,32 +55,29 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
     });
     return result;
   });
-  const riewProps = state({});
-  const updateRiewProps = (newProps) => {
-    const transformed = (onPropsCallback || ((p) => p))(newProps);
+  const updateControllerProps = controllerProps.mutate((current, newProps) => ({ ...current, ...newProps }));
+  const updateInput = input.mutate((current, newProps) => ({ ...current, ...newProps }));
 
-    if (isObjectLiteral(transformed)) {
-      riewProps.set(transformed);
-    } else {
-      riewProps.set(newProps);
-    }
-  };
-  const controllerProps = state({
+  // defining the controller api
+  updateControllerProps({
     render(props) {
       if (!active) return;
-      objectRequired(props, 'render');
-      updateViewProps(props);
+      updateViewProps(objectRequired(props, 'render'));
+      callView();
     },
-    props(callback) {
-      onPropsCallback = callback;
+    pipe(...funcs) {
+      input.stream.pipe(...funcs);
+    },
+    state(...args) {
+      const s = state(...args);
+
+      internalStates.push(s);
+      return s;
     },
     isActive
   });
-  const updateControllerProps = controllerProps.mutate((current, newProps) => ({ ...current, ...newProps }));
 
-  function callView() {
-    viewFunc({ ...riewProps.get(), ...viewProps.get() });
-  }
+  // helper functions
   function processExternals() {
     Object.keys(externals).forEach(key => {
       let isTrigger = isRiewQueueTrigger(externals[key]);
@@ -102,24 +110,15 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
   }
 
   instance.isActive = isActive;
-  instance.in = (initialProps = {}) => {
+  instance.mount = (initialProps = {}) => {
     active = true;
-    objectRequired(initialProps, 'in');
     processExternals();
+    updateViewProps(objectRequired(initialProps, 'in'));
 
     let controllerResult = controllerFunc(controllerProps.get());
     let done = (result) => {
-      if (isObjectLiteral(result)) {
-        updateViewProps(result); // <-- this triggers the first render
-      } else {
-        callView(); // <-- this triggers the first render
-      }
+      onUnmountCallback = result || (() => {});
     };
-
-    updateRiewProps(initialProps);
-
-    riewProps.stream.filter(isActive).pipe(callView);
-    viewProps.stream.filter(isActive).pipe(callView);
 
     if (isPromise(controllerResult)) {
       controllerResult.then(done);
@@ -128,14 +127,15 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
     }
     return instance;
   };
-  instance.update = updateRiewProps;
-  instance.out = () => {
-    subscribedStates.forEach(s => s.teardown());
+  instance.update = updateInput;
+  instance.unmount = () => {
+    internalStates.forEach(s => s.teardown());
+    internalStates = [];
     subscribedStates = [];
-    riewProps.teardown();
     viewProps.teardown();
     controllerProps.teardown();
     active = false;
+    onUnmountCallback();
     return instance;
   };
   instance.with = (...maps) => createRiew(viewFunc, controllerFunc, { ...externals, ...normalizeExternalsMap(maps) });

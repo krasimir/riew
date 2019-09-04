@@ -19,7 +19,7 @@ describe('Given the React riew function', () => {
       * render every time when we call the "render" method`, async () => {
       const controller = jest.fn().mockImplementation(async ({ render }) => {
         await delay(5);
-        act(() => { render({ foo: 'bar' }); });
+        render({ foo: 'bar' });
       });
       const view = jest.fn().mockImplementation(() => null);
       const R = riew(view, controller);
@@ -27,9 +27,8 @@ describe('Given the React riew function', () => {
       render(<R />);
       await delay(7);
 
-      expect(view).toBeCalledTimes(2);
-      expect(view.mock.calls[0]).toStrictEqual([ {}, {}]);
-      expect(view.mock.calls[1]).toStrictEqual([ { foo: 'bar' }, {}]);
+      expect(view).toBeCalledTimes(1);
+      expect(view.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, {}]);
     });
     describe('and we use a state', () => {
       it(`should
@@ -61,7 +60,7 @@ describe('Given the React riew function', () => {
           exerciseHTML(container, '<p>foo200</p>');
         });
       });
-      it('should allow us to render same riew multiple times', async () => {
+      fit('should allow us to render same riew multiple times', async () => {
         const spy = jest.fn().mockImplementation(() => null);
         const R = riew(
           spy,

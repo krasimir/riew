@@ -8,26 +8,21 @@ export default function riew(View, controller = noop, map = {}) {
   const createBridge = function (map = null) {
     const comp = function (outerProps) {
       let [ instance, setInstance ] = useState(null);
-      let [ content, setContent ] = useState({ content: null, done: () => {}});
+      let [ content, setContent ] = useState(null);
 
       // updating props
       useEffect(() => {
         if (instance) instance.update(outerProps);
       }, [ outerProps ]);
 
-      // to support sync rendering (i.e. await render(...))
-      useEffect(() => {
-        if (instance) content.done();
-      }, [ content ]);
-
       // mounting
       useEffect(() => {
         instance = createRawRiew(
-          (props, done) => {
+          (props) => {
             if (props === null) {
-              setContent({ content: null, done });
+              setContent(null);
             } else {
-              setContent({ content: <View {...props}/>, done });
+              setContent(<View {...props}/>);
             }
           },
           controller
@@ -44,7 +39,7 @@ export default function riew(View, controller = noop, map = {}) {
         };
       }, []);
 
-      return content.content;
+      return content;
     };
 
     comp.displayName = `Riew(${ getFuncName(controller) })`;
