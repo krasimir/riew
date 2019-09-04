@@ -6,7 +6,8 @@ export const MUTABLE = 'MUTABLE';
 
 var ids = 0;
 const getId = (prefix) => `@@${ prefix }${ ++ids }`;
-const queueMethods = [
+
+export const queueMethods = [
   'pipe',
   'map',
   'mutate',

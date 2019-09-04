@@ -1,8 +1,8 @@
-import { createState as state, isRiewState, isRiewQueueTrigger, IMMUTABLE } from './state';
+import { createState as state, isRiewState, queueMethods } from './state';
 import registry from './registry';
 import { isPromise } from './utils';
 
-function noop() {};
+function defaultController({ render }) { render(); };
 function objectRequired(value, method) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
     throw new Error(`The riew's "${ method }" method must be called with a key-value object. Instead "${ value }" passed.`);
@@ -19,13 +19,18 @@ function normalizeExternalsMap(arr) {
     return map;
   }, {});
 }
+function accumulate(current, newStuff) {
+  return { ...current, ...newStuff };
+}
+function onlyNewStuff(current, newStuff) {
+  return newStuff;
+}
 
-export default function createRiew(viewFunc, controllerFunc = noop, externals = {}) {
+export default function createRiew(viewFunc, controllerFunc = defaultController, externals = {}) {
   const instance = {};
   let active = false;
   let internalStates = [];
-  let subscribedStates = [];
-  let onUnmountCallback;
+  let onUnmountCallback = () => {};
 
   const controllerProps = state({});
   const viewProps = state({});
@@ -37,36 +42,24 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
   };
 
   // mutations
-  const updateViewProps = viewProps.mutate((current, newProps) => {
-    const result = { ...current };
-
-    Object.keys(newProps).forEach(key => {
-      if (isRiewState(newProps[key])) {
-        let s = newProps[key];
-
-        result[key] = s.get();
-        if (!subscribedStates.find(({ id }) => id === s.id)) {
-          subscribedStates.push(s);
-          s.stream.filter(isActive).pipe(value => updateViewProps({ [key]: value }));
-        }
-      } else {
-        result[key] = newProps[key];
-      }
-    });
-    return result;
+  const updateViewProps = viewProps.mutate(accumulate);
+  const updateControllerProps = controllerProps.mutate(accumulate);
+  const updateInput = input.mutate(onlyNewStuff);
+  const generateProxies = s => ({
+    ...queueMethods.reduce((methods, methodName) => {
+      methods[methodName] = (...args) => s.stream[methodName](...args);
+      return methods;
+    }, {}),
+    get: s.get,
+    teardown: s.teardown
   });
-  const updateControllerProps = controllerProps.mutate((current, newProps) => ({ ...current, ...newProps }));
-  const updateInput = input.mutate((current, newProps) => ({ ...current, ...newProps }));
 
   // defining the controller api
   updateControllerProps({
     render(props) {
       if (!active) return;
-      updateViewProps(objectRequired(props, 'render'));
+      if (props) updateViewProps(objectRequired(props, 'render'));
       callView();
-    },
-    pipe(...funcs) {
-      input.stream.pipe(...funcs);
     },
     state(...args) {
       const s = state(...args);
@@ -74,37 +67,27 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
       internalStates.push(s);
       return s;
     },
+    input: generateProxies(input),
     isActive
   });
 
   // helper functions
   function processExternals() {
     Object.keys(externals).forEach(key => {
-      let isTrigger = isRiewQueueTrigger(externals[key]);
+      let external;
 
-      // passing a trigger
-      if (isTrigger) {
-        let trigger = externals[key];
-
-        updateControllerProps({ [key]: trigger });
-        // subscribe only if the trigger is not mutating the state
-        if (trigger.__activity() === IMMUTABLE) {
-          trigger.__state.stream.filter(isActive).pipe(() => updateViewProps({ [key]: trigger() }))();
-        } else {
-          console.warn('In the view you are not allowed to use directly a trigger that mutates the state. If you need that pass a prop from the controller to the view.');
-        }
-
-      // in the registry
-      } else if (key.charAt(0) === '@') {
-        const k = key.substr(1, key.length);
-
-        updateControllerProps({ [k]: registry.get(k) });
-        updateViewProps({ [k]: registry.get(k) });
-
-      // proxy the rest
+      if (key.charAt(0) === '@') {
+        key = key.substr(1, key.length);
+        external = registry.get(key);
       } else {
-        updateControllerProps({ [key]: externals[key] });
-        updateViewProps({ [key]: externals[key] });
+        external = externals[key];
+      }
+
+      if (isRiewState(external)) {
+        updateControllerProps({ [key]: generateProxies(external) });
+      } else {
+        updateControllerProps({ [key]: external });
+        updateViewProps({ [key]: external });
       }
     });
   }
@@ -114,6 +97,7 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
     active = true;
     processExternals();
     updateViewProps(objectRequired(initialProps, 'in'));
+    updateInput(objectRequired(initialProps, 'in'));
 
     let controllerResult = controllerFunc(controllerProps.get());
     let done = (result) => {
@@ -131,7 +115,6 @@ export default function createRiew(viewFunc, controllerFunc = noop, externals = 
   instance.unmount = () => {
     internalStates.forEach(s => s.teardown());
     internalStates = [];
-    subscribedStates = [];
     viewProps.teardown();
     controllerProps.teardown();
     active = false;
