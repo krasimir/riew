@@ -4,61 +4,78 @@ import { createState as state } from '../state';
 import registry from '../registry';
 import { delay } from '../__helpers__';
 
-describe('Given the `riew` function', () => {
+describe('Given the `riew` factory function', () => {
+  describe('when we create a riew by giving a view and list of side effects', () => {
+    it(`should
+      * call the view`, () => {
+
+    });
+  });
+});
+
+xdescribe('Given the `riew` function', () => {
   beforeEach(() => registry.reset());
   describe('when we use a controller', () => {
-    fit(`should
-      * not run the view by default
+    it(`should
+      * run the view by default
       * run the controller once when the riew is mounted`, () => {
       const view = jest.fn();
       const controller = jest.fn();
       const r = riew(view, controller);
 
       r.mount();
-      r.update({});
-      r.update({});
-      r.update({});
 
-      expect(view).toBeCalledTimes(0);
+      expect(view).toBeCalledTimes(1);
       expect(controller).toBeCalledTimes(1);
     });
-    it(`should
-      * run the view every time when we call the render method
-      * accumulate the props to the view`, () => {
-      const view = jest.fn();
-      const controller = ({ render }) => {
-        render({ c: 'd' });
-        render({ e: 'f' });
-      };
-      const r = riew(view, controller);
-
-      r.mount({ a: 'b' });
-      r.update({ g: 'h' }); // ignored at this point
-
-      expect(view).toBeCalledTimes(2);
-      expect(view.mock.calls[0]).toStrictEqual([ { a: 'b', c: 'd' } ]);
-      expect(view.mock.calls[1]).toStrictEqual([ { a: 'b', c: 'd', e: 'f' } ]);
-    });
-    describe('and we want to handle the update of the riew (via the `input` prop)', () => {
-      it(`should allow us to use all the riew state methods`, () => {
+    describe('and we use an async controller', () => {
+      it('should run the view by default', async () => {
         const view = jest.fn();
-        const controller = ({ input, render }) => {
-          expect(input.get()).toStrictEqual({ x: 'y' });
-          input.filter(props => 'stop' in props).pipe(input.teardown);
-          input.filter(props => 'a' in props).map(({ a }) => ({ a: a.toUpperCase() })).pipe(render);
-          input.filter(props => !('a' in props)).pipe(render);
+        const controller = async function () {};
+        const r = riew(view, controller);
+
+        r.mount();
+        await delay(1);
+
+        expect(view).toBeCalledTimes(1);
+      });
+    });
+    describe('and when we use the `render` method', () => {
+      it(`should 
+        * accumulate the props to the view
+        * call the view after the riew is active`, async () => {
+        const view = jest.fn();
+        const controller = async ({ render }) => {
+          render({ c: 'd' });
+          render({ e: 'f' });
+          setTimeout(() => {
+            render({ m: 'n' });
+          }, 4);
         };
         const r = riew(view, controller);
 
-        r.mount({ x: 'y' });
-        r.update({ a: 'b' });
-        r.update({ c: 'd' });
-        r.update({ stop: true });
-        r.update({ not: 'reachable' });
+        r.mount({ a: 'b' });
+        await delay(6);
 
         expect(view).toBeCalledTimes(2);
-        expect(view.mock.calls[0]).toStrictEqual([ { a: 'B', x: 'y' } ]);
-        expect(view.mock.calls[1]).toStrictEqual([ { a: 'B', c: 'd', x: 'y' } ]);
+        expect(view.mock.calls[0]).toStrictEqual([ { a: 'b', c: 'd', e: 'f' } ]);
+        expect(view.mock.calls[1]).toStrictEqual([ { a: 'b', c: 'd', e: 'f', m: 'n' } ]);
+      });
+    });
+    describe('and when we use the `input`', () => {
+      it(`should allow us access the riew props`, async () => {
+        const view = jest.fn();
+        const controller = async ({ render, input }) => {
+
+        };
+        const r = riew(view, controller);
+
+        r.mount({ a: 'b' });
+        r.update({ c: 'd' });
+
+        await delay(1);
+        console.log(view.mock.calls);
+        expect(view).toBeCalledTimes(1);
       });
     });
     describe('and we want to run a clean up logic', () => {

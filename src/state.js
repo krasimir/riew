@@ -201,14 +201,20 @@ export function createState(initialValue) {
 
     // trigger direct methods
     trigger.subscribe = (initialCall = false) => {
+      if (trigger.__itemsToCreate.find(({ type }) => type === 'mutate')) {
+        throw new Error('You should not subscribe a trigger that mutates the state. This will lead to endless recursion.');
+      }
       if (initialCall) trigger();
       addListener(trigger);
       return trigger;
     };
     trigger.cancel = () => {
-      removeListener(trigger);
       trigger.__itemsToCreate = [];
       queueMethods.forEach(m => trigger[m] = () => trigger);
+      return trigger;
+    };
+    trigger.unsubscribe = () => {
+      removeListener(trigger);
       return trigger;
     };
     trigger.test = function (callback) {

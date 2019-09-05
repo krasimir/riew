@@ -304,20 +304,27 @@ describe('Given the state', () => {
       expect(spyC).toBeCalledTimes(1);
       expect(spyC).toBeCalledWith('200C');
     });
-    it('should allow us to cancel the stream', () => {
+    it('should allow us to unsubscribe from the stream', () => {
       const s = state(10);
       const spy = jest.fn();
       const subscription = s.map(value => value * 3).pipe(spy).subscribe(true);
 
-      subscription.cancel();
+      subscription.unsubscribe();
 
       subscription();
       subscription();
       s.set(200);
       s.set(300);
+      subscription();
 
-      expect(spy).toBeCalledTimes(1);
-      expect(spy).toBeCalledWith(30);
+      expect(spy).toBeCalledTimes(4);
+      expect(spy.mock.calls[0]).toStrictEqual([ 30 ]);
+      expect(spy.mock.calls[1]).toStrictEqual([ 30 ]);
+      expect(spy.mock.calls[2]).toStrictEqual([ 30 ]);
+      expect(spy.mock.calls[3]).toStrictEqual([ 900 ]);
+    });
+    it('should throw an error if we subscribe for mutating trigger', () => {
+      expect(() => state(10).mutate(value => value + 1).subscribe()).toThrowError('');
     });
   });
 
