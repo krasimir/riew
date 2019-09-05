@@ -1,9 +1,6 @@
 import { isPromise, getFuncName } from './utils';
 import registry from './registry';
 
-export const IMMUTABLE = 'IMMUTABLE';
-export const MUTABLE = 'MUTABLE';
-
 var ids = 0;
 const getId = (prefix) => `@@${ prefix }${ ++ids }`;
 
@@ -13,15 +10,8 @@ export const queueMethods = [
   'mutate',
   'filter',
   'parallel',
-  'cancel',
   'mapToKey'
 ];
-const getTriggerActivity = items => {
-  for (let item of items) {
-    if (item.type === 'mutate') return MUTABLE;
-  }
-  return IMMUTABLE;
-};
 
 function createQueue(setStateValue, getStateValue, onDone = () => {}) {
   const q = {
@@ -34,7 +24,6 @@ function createQueue(setStateValue, getStateValue, onDone = () => {}) {
     },
     process(...payload) {
       var items = q.items;
-      const resetItems = () => (q.items = []);
 
       q.index = 0;
 
@@ -118,11 +107,6 @@ function createQueue(setStateValue, getStateValue, onDone = () => {}) {
               });
             }
             return next();
-          /* -------------------------------------------------- cancel */
-          case 'cancel':
-            q.index = -1;
-            resetItems();
-            return q.result;
 
         }
         /* -------------------------------------------------- error */
@@ -131,7 +115,7 @@ function createQueue(setStateValue, getStateValue, onDone = () => {}) {
 
       return items.length > 0 ? loop() : q.result;
     },
-    cancel() {
+    teardown() {
       this.items = [];
     }
   };
@@ -160,7 +144,7 @@ export function createState(initialValue) {
     if (callListeners) stateAPI.__triggerListeners();
   };
   stateAPI.teardown = () => {
-    createdQueues.forEach(q => q.cancel());
+    createdQueues.forEach(q => q.teardown());
     createdQueues = [];
     listeners = [];
     active = false;
@@ -172,53 +156,41 @@ export function createState(initialValue) {
     registry.add(exportedAs = key, stateAPI);
     return stateAPI;
   };
-  stateAPI.stream = createStreamObj();
 
-  function createStreamObj() {
-    return (...args) => {
-      if (args.length > 0) {
-        stateAPI.set(args[0]);
-      } else {
-        stateAPI.__triggerListeners();
-      }
-    };
+  function addListener(trigger) {
+    trigger.__isStream = true;
+    listeners.push(trigger);
   }
-  function removeListener({ id: toRemove }) {
-    listeners = listeners.filter(({ id }) => id !== toRemove);
+  function removeListener(trigger) {
+    trigger.__isStream = false;
+    listeners = listeners.filter(({ id }) => id !== trigger.id);
   }
-  function createNewTrigger(items = [], isStream, previousTrigger = null) {
+  function addQueue(q) {
+    createdQueues.push(q);
+  }
+  function removeQueue(q) {
+    createdQueues = createdQueues.filter(({ id }) => q.id !== id);
+  }
+  function createNewTrigger(items = []) {
     const trigger = function (...payload) {
-      if (active === false) return stateAPI.get();
-      const queue = createQueue(
-        stateAPI.set,
-        stateAPI.get,
-        (q) => createdQueues = createdQueues.filter(({ id }) => q.id !== id)
-      );
+      if (active === false || trigger.__itemsToCreate.length === 0) return stateAPI.get();
+      const queue = createQueue(stateAPI.set, stateAPI.get, removeQueue);
 
-      createdQueues.push(queue);
+      addQueue(queue);
       trigger.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
       return queue.process(...payload);
     };
-    const addQueueMethods = function (newTrigger, currentTrigger, isStream) {
-      queueMethods.forEach(m => {
-        newTrigger[m] = (...func) => createNewTrigger(
-          [ ...items, { type: m, func } ],
-          isStream,
-          currentTrigger
-        );
-      });
-    };
 
     trigger.id = getId('t');
-    trigger.stream = createStreamObj();
+    trigger.__isStream = false;
     trigger.__riewTrigger = true;
     trigger.__itemsToCreate = [ ...items ];
     trigger.__state = stateAPI;
-    trigger.__activity = () => getTriggerActivity(trigger.__itemsToCreate);
 
     // queue methods
-    addQueueMethods(trigger, trigger, isStream);
-    addQueueMethods(trigger.stream, trigger, true);
+    queueMethods.forEach(m => {
+      trigger[m] = (...func) => createNewTrigger([ ...trigger.__itemsToCreate, { type: m, func } ]);
+    });
 
     // not supported in queue methods
     ['set', 'get', 'teardown'].forEach(stateMethod => {
@@ -227,9 +199,20 @@ export function createState(initialValue) {
       };
     });
 
-    // other methods
+    // trigger direct methods
+    trigger.subscribe = (initialCall = false) => {
+      if (initialCall) trigger();
+      addListener(trigger);
+      return trigger;
+    };
+    trigger.cancel = () => {
+      removeListener(trigger);
+      trigger.__itemsToCreate = [];
+      queueMethods.forEach(m => trigger[m] = () => trigger);
+      return trigger;
+    };
     trigger.test = function (callback) {
-      const testTrigger = createNewTrigger([ ...items ], isStream, trigger);
+      const testTrigger = createNewTrigger([ ...trigger.__itemsToCreate ]);
       const tools = {
         setValue(newValue) {
           testTrigger.__itemsToCreate = [
@@ -257,21 +240,12 @@ export function createState(initialValue) {
       return testTrigger;
     };
 
-    if (isStream) {
-      listeners.push(trigger);
-      if (previousTrigger) removeListener(previousTrigger);
-    }
-
     return trigger;
   }
-  function enhanceToQueueAPI(obj, isStream) {
-    queueMethods.forEach(methodName => {
-      obj[methodName] = (...func) => createNewTrigger([ { type: methodName, func } ], isStream);
-    });
-  };
 
-  enhanceToQueueAPI(stateAPI);
-  enhanceToQueueAPI(stateAPI.stream, true);
+  queueMethods.forEach(methodName => {
+    stateAPI[methodName] = (...func) => createNewTrigger([ { type: methodName, func } ]);
+  });
 
   return stateAPI;
 };
@@ -295,16 +269,12 @@ export function mergeStates(statesMap) {
   s.get = fetchSourceValues;
 
   Object.keys(statesMap).forEach(key => {
-    statesMap[key].stream.pipe(() => {
+    statesMap[key].pipe(() => {
       s.__triggerListeners();
-    });
+    }).subscribe();
   });
 
   return s;
-}
-
-export function createStream(initialValue) {
-  return createState(initialValue).stream;
 }
 
 export function isRiewState(obj) {

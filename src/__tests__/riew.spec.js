@@ -7,7 +7,7 @@ import { delay } from '../__helpers__';
 describe('Given the `riew` function', () => {
   beforeEach(() => registry.reset());
   describe('when we use a controller', () => {
-    it(`should
+    fit(`should
       * not run the view by default
       * run the controller once when the riew is mounted`, () => {
       const view = jest.fn();

@@ -1,10 +1,9 @@
-import { createState, mergeStates, createStream, IMMUTABLE, MUTABLE } from '../state';
+import { createState, mergeStates } from '../state';
 import registry from '../registry';
 import { delay } from '../__helpers__';
 
 const state = createState;
 const merge = mergeStates;
-const stream = createStream;
 
 describe('Given the state', () => {
 
@@ -225,14 +224,14 @@ describe('Given the state', () => {
       const m = s.mutate((value) => value + 1).cancel().pipe(spyA);
       const n = s.pipe(() => {}).pipe(spyB);
 
-      expect(m()).toBe(11);
-      expect(m()).toBe(12);
-      expect(m()).toBe(13);
-      expect(n()).toBe(13);
-      expect(s.get()).toBe(13);
+      expect(m()).toBe(10);
+      expect(m()).toBe(10);
+      expect(m()).toBe(10);
+      expect(n()).toBe(10);
+      expect(s.get()).toBe(10);
       expect(spyA).toBeCalledTimes(0);
       expect(spyB).toBeCalledTimes(1);
-      expect(spyB).toBeCalledWith(13);
+      expect(spyB).toBeCalledWith(10);
     });
   });
 
@@ -256,16 +255,16 @@ describe('Given the state', () => {
     });
   });
 
-  /* stream */
-  describe('when we use the `stream` method', () => {
+  /* subscribe */
+  describe('when we use the `subscribe` method', () => {
     it('should trigger the queue on a state change', () => {
       const s = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
       const m = s.mutate(value => value + 5);
 
-      s.stream.map(value => value * 2).pipe(spyA);
-      s.stream.map(value => value * 4).pipe(spyB);
+      s.map(value => value * 2).pipe(spyA).subscribe();
+      s.map(value => value * 4).pipe(spyB).subscribe();
       m();
 
       expect(spyA).toBeCalledTimes(1);
@@ -273,25 +272,52 @@ describe('Given the state', () => {
       expect(spyB).toBeCalledTimes(1);
       expect(spyB).toBeCalledWith(60);
     });
-    it('should call the queue if we call the stream method', () => {
+    it('should trigger the queue initially once if we pass `true` as param', () => {
       const s = state(10);
       const spy = jest.fn();
 
-      s.stream.map(value => value * 3).pipe(spy);
-      s.stream();
+      s.map(value => value * 3).pipe(spy).subscribe(true);
 
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith(30);
     });
-    it('should call set the value if we pass a parameter to stream method', () => {
+    it('should allow us to fork streams', () => {
+      const s = state(10);
+      const spyA = jest.fn();
+      const spyB = jest.fn();
+      const spyC = jest.fn();
+
+      const subscription = s.map(value => value * 2).pipe(function A(...args) { spyA(...args); }).subscribe();
+
+      const t1 = subscription.map(value => value + 'B').pipe(function B(...args) { spyB(...args); }).subscribe();
+      const t2 = subscription.map(value => value + 'C').pipe(function C(...args) { spyC(...args); }).subscribe();
+
+      s.set(100);
+
+      expect(s.__listeners().map(({ id }) => id)).toStrictEqual([ subscription.id, t1.id, t2.id ]);
+      expect(spyA).toBeCalledTimes(3);
+      expect(spyA.mock.calls[0]).toStrictEqual([ 200 ]);
+      expect(spyA.mock.calls[1]).toStrictEqual([ 200 ]);
+      expect(spyA.mock.calls[2]).toStrictEqual([ 200 ]);
+      expect(spyB).toBeCalledTimes(1);
+      expect(spyB).toBeCalledWith('200B');
+      expect(spyC).toBeCalledTimes(1);
+      expect(spyC).toBeCalledWith('200C');
+    });
+    it('should allow us to cancel the stream', () => {
       const s = state(10);
       const spy = jest.fn();
+      const subscription = s.map(value => value * 3).pipe(spy).subscribe(true);
 
-      s.stream.map(value => value * 3).pipe(spy);
-      s.stream(120);
+      subscription.cancel();
+
+      subscription();
+      subscription();
+      s.set(200);
+      s.set(300);
 
       expect(spy).toBeCalledTimes(1);
-      expect(spy).toBeCalledWith(360);
+      expect(spy).toBeCalledWith(30);
     });
   });
 
@@ -334,7 +360,7 @@ describe('Given the state', () => {
       const s = merge({ s1, s2 });
       const spy = jest.fn();
 
-      s.stream.pipe(spy);
+      s.pipe(spy).subscribe();
 
       s1.set(2);
       s2.set('b');
@@ -362,7 +388,7 @@ describe('Given the state', () => {
       const spy = jest.fn();
       const s = state('foo');
 
-      s.stream.mapToKey('myValue').pipe(spy);
+      s.mapToKey('myValue').pipe(spy).subscribe();
       s.set('bar');
 
       expect(spy).toBeCalledTimes(1);
@@ -386,52 +412,6 @@ describe('Given the state', () => {
 
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('foo');
-    });
-  });
-
-  /* stream */
-  describe('when we create a stream manually', () => {
-    it('should create a stream and return a function which if called triggers the stream queue', () => {
-      const st = stream();
-      const spy1 = jest.fn();
-      const spy2 = jest.fn();
-
-      st.pipe(spy1);
-      st.pipe(spy2);
-
-      st('foo');
-
-      expect(spy1).toBeCalledTimes(1);
-      expect(spy1).toBeCalledWith('foo');
-      expect(spy2).toBeCalledTimes(1);
-      expect(spy2).toBeCalledWith('foo');
-    });
-    it('should allow us to stream on a trigger', () => {
-      const s = state('foo');
-      const spy = jest.fn();
-      const up = s.map(value => value.toUpperCase());
-
-      expect(up()).toBe('FOO');
-
-      up.stream.map(value => value + 'BAR').pipe(spy);
-      s.set('moo');
-
-      expect(spy).toBeCalledTimes(1);
-      expect(spy.mock.calls[0]).toStrictEqual([ 'MOOBAR' ]);
-    });
-  });
-
-  /* trigger activity */
-  describe('when we define a trigger', () => {
-    it('should set its activity based on the item types', () => {
-      const s = state('foo');
-      const noop = () => {};
-      const t = s.pipe(noop).filter(noop);
-
-      expect(t.__activity()).toBe(IMMUTABLE);
-      expect(s.filter(noop).map(noop).__activity()).toBe(IMMUTABLE);
-      expect(s.filter(noop).mutate(noop).__activity()).toBe(MUTABLE);
-      expect(t.map(noop).mutate(noop).filter(noop).__activity()).toBe(MUTABLE);
     });
   });
 
@@ -496,7 +476,7 @@ describe('Given the state', () => {
       const conditionSpy = jest.fn().mockImplementation(() => true);
       const okLogic = jest.fn();
 
-      m.stream.filter(conditionSpy).pipe(okLogic);
+      m.filter(conditionSpy).pipe(okLogic).subscribe();
 
       action();
 
@@ -512,19 +492,21 @@ describe('Given the state', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      s.stream
+      s
         .filter((value) => value < 2)
         .map(value => `value is ${ value }`)
-        .pipe(spyA);
+        .pipe(spyA)
+        .subscribe();
 
       expect(s.__listeners().length).toBe(1);
       expect(s.__listeners()[0].__itemsToCreate.map(({ type }) => type)).toStrictEqual([ 'filter', 'map', 'pipe' ]);
 
-      s.stream
+      s
         .filter((value) => {
           return value >= 2;
         })
-        .pipe(spyB);
+        .pipe(spyB)
+        .subscribe();
 
       s.set(1);
       s.set(5);

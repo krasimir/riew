@@ -1,4 +1,4 @@
-import { createState as state, isRiewState, queueMethods } from './state';
+import { createState as state, isRiewState } from './state';
 import registry from './registry';
 import { isPromise } from './utils';
 
@@ -30,6 +30,7 @@ export default function createRiew(viewFunc, controllerFunc = defaultController,
   const instance = {};
   let active = false;
   let internalStates = [];
+  let subscriptions = [];
   let onUnmountCallback = () => {};
 
   const controllerProps = state({});
@@ -37,22 +38,12 @@ export default function createRiew(viewFunc, controllerFunc = defaultController,
   const input = state({});
 
   const isActive = () => active;
-  const callView = () => {
-    viewFunc(viewProps.get());
-  };
+  const callView = () => viewFunc(viewProps.get());
 
   // mutations
   const updateViewProps = viewProps.mutate(accumulate);
   const updateControllerProps = controllerProps.mutate(accumulate);
   const updateInput = input.mutate(onlyNewStuff);
-  const generateProxies = s => ({
-    ...queueMethods.reduce((methods, methodName) => {
-      methods[methodName] = (...args) => s.stream[methodName](...args);
-      return methods;
-    }, {}),
-    get: s.get,
-    teardown: s.teardown
-  });
 
   // defining the controller api
   updateControllerProps({
@@ -67,12 +58,21 @@ export default function createRiew(viewFunc, controllerFunc = defaultController,
       internalStates.push(s);
       return s;
     },
-    input: generateProxies(input),
+    input,
     isActive
   });
 
-  // helper functions
-  function processExternals() {
+  function stateToView(key, state) {
+    updateViewProps({ [key]: state.get() });
+    subscriptions.push(
+      state.stream.filter(isActive).map(value => ({ [key]: value })).pipe(updateViewProps)
+    );
+  }
+
+  instance.isActive = isActive;
+  instance.mount = (initialProps = {}) => {
+    active = true;
+
     Object.keys(externals).forEach(key => {
       let external;
 
@@ -84,18 +84,13 @@ export default function createRiew(viewFunc, controllerFunc = defaultController,
       }
 
       if (isRiewState(external)) {
-        updateControllerProps({ [key]: generateProxies(external) });
+        stateToView(key, external);
       } else {
-        updateControllerProps({ [key]: external });
         updateViewProps({ [key]: external });
       }
+      updateControllerProps({ [key]: external });
     });
-  }
 
-  instance.isActive = isActive;
-  instance.mount = (initialProps = {}) => {
-    active = true;
-    processExternals();
     updateViewProps(objectRequired(initialProps, 'in'));
     updateInput(objectRequired(initialProps, 'in'));
 
