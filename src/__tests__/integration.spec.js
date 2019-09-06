@@ -9,7 +9,7 @@ const { riew } = react;
 const DummyComponent = ({ text }) => <p>{ text }</p>;
 
 describe('Given the Riew library', () => {
-  describe('when we use an async function', () => {
+  describe('when we use an async effect', () => {
     it('should allow us to render multiple times', async () => {
       const A = riew(DummyComponent, async ({ render }) => {
         act(() => { render({ text: 'Hello' }); });
@@ -62,21 +62,25 @@ describe('Given the Riew library', () => {
     });
   });
   describe('when we use the `isActive` method', () => {
-    it('should return the value of the `mounted` flag', async () => {
+    it('should say if the view is mounted or not', async () => {
       const spy = jest.fn();
       const A = riew(() => null, async ({ isActive }) => {
-        spy(isActive());
         await delay(10);
+        spy(isActive());
+        await delay(30);
         spy(isActive());
       });
 
       const { unmount } = render(<A />);
 
+      await delay(12);
       unmount();
-      await delay(11);
-      expect(spy).toHaveBeenCalledTimes(2);
-      expect(spy.mock.calls[0]).toStrictEqual([true]);
-      expect(spy.mock.calls[1]).toStrictEqual([false]);
+      await delay(40);
+
+      expect(spy).toBeCalledWithArgs(
+        [true],
+        [false]
+      );
     });
   });
   describe('when using riew with a hook', () => {
@@ -108,9 +112,7 @@ describe('Given the Riew library', () => {
       const FetchTime = riew(
         ({ location }) => location ? <p>{ location }</p> : null,
         async ({ render, props }) => {
-          props(({ city }) => {
-            return { location: city };
-          });
+          props.map(({ city }) => ({ location: city })).pipe(render).subscribe(true);
         }
       );
       const App = function () {

@@ -111,14 +111,13 @@ function _toConsumableArray(arr) {
   }
 }
 
-var noop = function noop() {};
-
 function riew(View) {
-  var controller = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : noop;
-  var map = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+  for (var _len = arguments.length, effects = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    effects[_key - 1] = arguments[_key];
+  }
 
   var createBridge = function createBridge() {
-    var map = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+    var externals = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
 
     var comp = function comp(outerProps) {
       var _useState = (0, _react.useState)(null),
@@ -140,43 +139,44 @@ function riew(View) {
 
       // mounting
       (0, _react.useEffect)(function () {
-        instance = (0, _riew2.default)(function (props) {
+        instance = _riew2.default.apply(undefined, [function (props) {
           if (props === null) {
             setContent(null);
           } else {
             setContent(_react2.default.createElement(View, props));
           }
-        }, controller);
+        }].concat(effects));
 
-        if (map !== null) {
+        if (externals && externals.length > 0) {
           var _instance;
 
-          instance = (_instance = instance).with.apply(_instance, _toConsumableArray(map));
+          instance = (_instance = instance).with.apply(_instance, _toConsumableArray(externals));
         }
+
         setInstance(instance);
-        instance.in(outerProps);
+        instance.mount(outerProps);
 
         return function () {
-          instance.out();
+          instance.unmount();
         };
       }, []);
 
       return content;
     };
 
-    comp.displayName = 'Riew(' + (0, _utils.getFuncName)(controller) + ')';
+    comp.displayName = 'Riew(' + (0, _utils.getFuncName)(View) + ')';
     comp.with = function () {
-      for (var _len = arguments.length, map = Array(_len), _key = 0; _key < _len; _key++) {
-        map[_key] = arguments[_key];
+      for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        maps[_key2] = arguments[_key2];
       }
 
-      return createBridge(map);
+      return createBridge(maps);
     };
 
     return comp;
   };
 
-  return createBridge(map);
+  return createBridge();
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
@@ -270,7 +270,7 @@ function _defineProperty(obj, key, value) {
 
 function ensureObject(value, context) {
   if (value === null || typeof value !== 'undefined' && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
-    throw new Error('"' + context + '" must be called with a key-value object. Instead "' + value + '" passed.');
+    throw new Error(context + ' must be called with a key-value object. Instead "' + value + '" passed.');
   }
   return value;
 }
@@ -284,6 +284,9 @@ function normalizeExternalsMap(arr) {
     return map;
   }, {});
 }
+var accumulate = function accumulate(current, newStuff) {
+  return _extends({}, current, newStuff);
+};
 
 function createRiew(viewFunc) {
   for (var _len = arguments.length, effects = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
@@ -297,30 +300,38 @@ function createRiew(viewFunc) {
   var onUnmountCallbacks = [];
   var externals = {};
 
-  var effectsProps = (0, _state2.createState)({});
-  var viewProps = (0, _state2.createState)({});
-  var riewProps = (0, _state2.createState)({});
+  var input = (0, _state2.createState)({});
+  var output = (0, _state2.createState)({});
+  var api = (0, _state2.createState)({});
 
   var isActive = function isActive() {
     return active;
   };
 
   // triggers
-  var updateViewProps = viewProps.mutate(function (current, newStuff) {
+  var updateOutput = output.mutate(function (current, newStuff) {
     var result = _extends({}, current);
 
     if (newStuff) {
       Object.keys(newStuff).forEach(function (key) {
         if ((0, _state2.isRiewState)(newStuff[key])) {
           result[key] = newStuff[key].get();
-          subscriptions.push(newStuff[key].pipe(function (value) {
-            return render(_defineProperty({}, key, value));
-          }).subscribe());
+          if (!subscriptions.find(function (trigger) {
+            return trigger.__state.id === newStuff[key].id;
+          })) {
+            subscriptions.push(newStuff[key].pipe(function (value) {
+              return _render3(_defineProperty({}, key, value));
+            }).subscribe());
+          }
         } else if ((0, _state2.isRiewQueueTrigger)(newStuff[key]) && !newStuff[key].isMutating()) {
           result[key] = newStuff[key]();
-          subscriptions.push(newStuff[key].pipe(function () {
-            return render(_defineProperty({}, key, newStuff[key]()));
-          }).subscribe());
+          if (!subscriptions.find(function (trigger) {
+            return trigger.__state.id === newStuff[key].__state.id;
+          })) {
+            subscriptions.push(newStuff[key].pipe(function () {
+              return _render3(_defineProperty({}, key, newStuff[key]()));
+            }).subscribe());
+          }
         } else {
           result[key] = newStuff[key];
         }
@@ -328,28 +339,27 @@ function createRiew(viewFunc) {
     }
     return result;
   });
-  var render = updateViewProps.filter(isActive).pipe(function (value) {
+  var _render3 = updateOutput.filter(isActive).pipe(function (value) {
     return viewFunc(value);
   });
-  var updateEffectsProps = effectsProps.mutate(function (current, newStuff) {
-    return _extends({}, current, newStuff);
-  });
-  var updateRiewProps = riewProps.mutate(function (current, newStuff) {
-    return newStuff;
-  }).pipe(render);
+  var updateAPI = api.mutate(accumulate);
+  var updateInput = input.mutate(accumulate);
 
   // defining the effect api
-  updateEffectsProps({
+  updateAPI({
     state: function state() {
       var s = _state2.createState.apply(undefined, arguments);
 
       internalStates.push(s);
       return s;
     },
+    render: function render(newProps) {
+      ensureObject(newProps, 'The `render` method');
+      return _render3(newProps);
+    },
 
-    render: render,
     isActive: isActive,
-    props: viewProps.get()
+    props: input
   });
 
   function processExternals() {
@@ -363,27 +373,21 @@ function createRiew(viewFunc) {
         external = externals[key];
       }
 
-      if ((0, _state2.isRiewState)(external)) {
-        subscriptions.push(_state2.createState.filter(isActive).map(function (value) {
-          return _defineProperty({}, key, value);
-        }).pipe(render).subscribe(true));
-      } else {
-        updateViewProps(_defineProperty({}, key, external));
-      }
-      updateEffectsProps(_defineProperty({}, key, external));
+      updateOutput(_defineProperty({}, key, external));
+      updateAPI(_defineProperty({}, key, external));
     });
   }
 
-  instance.active = isActive;
+  instance.isActive = isActive;
   instance.mount = function () {
     var initialProps = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     ensureObject(initialProps, 'The `mount` method');
+    updateInput(initialProps);
+    updateOutput(initialProps);
     processExternals();
-    updateViewProps(initialProps);
-    updateRiewProps(initialProps);
 
-    var effectsResult = _utils.parallel.apply(undefined, effects)(effectsProps.get());
+    var effectsResult = _utils.parallel.apply(undefined, effects)(api.get());
     var done = function done(result) {
       return onUnmountCallbacks = result || [];
     };
@@ -395,15 +399,17 @@ function createRiew(viewFunc) {
     }
 
     active = true;
-    render();
+    _render3();
     return instance;
   };
-  instance.update = updateRiewProps;
+  instance.update = function (newProps) {
+    _render3(newProps);
+    updateInput(newProps);
+  };
   instance.unmount = function () {
     active = false;
-    viewProps.teardown();
-    effectsProps.teardown();
-    updateRiewProps.teardown();
+    output.teardown();
+    api.teardown();
     internalStates.forEach(function (s) {
       return s.teardown();
     });
@@ -420,15 +426,25 @@ function createRiew(viewFunc) {
     subscriptions = [];
     return instance;
   };
+  instance.__setExternals = function (maps) {
+    externals = _extends({}, externals, normalizeExternalsMap(maps));
+  };
+
   instance.with = function () {
     for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
       maps[_key2] = arguments[_key2];
     }
 
-    return createRiew(viewFunc, controllerFunc, _extends({}, externals, normalizeExternalsMap(maps)));
+    var newInstance = createRiew.apply(undefined, [viewFunc].concat(effects));
+
+    newInstance.__setExternals(maps);
+    return newInstance;
   };
   instance.test = function (map) {
-    return createRiew(viewFunc, controllerFunc, _extends({}, externals, map));
+    var newInstance = createRiew.apply(undefined, [viewFunc].concat(effects));
+
+    newInstance.__setExternals([map]);
+    return newInstance;
   };
 
   return instance;
@@ -654,8 +670,10 @@ function createState(initialValue) {
   stateAPI.set = function (newValue) {
     var callListeners = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
+    var isEqual = (0, _fastDeepEqual2.default)(value, newValue);
+
     value = newValue;
-    if (callListeners) stateAPI.__triggerListeners();
+    if (callListeners && !isEqual) stateAPI.__triggerListeners();
   };
   stateAPI.teardown = function () {
     createdQueues.forEach(function (q) {

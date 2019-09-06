@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
-import createRawRiew from '../riew';
+import createRiew from '../riew';
 
-const noop = () => {};
-
-export default function riew(View, controller = noop, map = {}) {
-  const createBridge = function (map = null) {
+export default function riew(View, ...effects) {
+  const createBridge = function (externals = []) {
     const comp = function (outerProps) {
       let [ instance, setInstance ] = useState(null);
       let [ content, setContent ] = useState(null);
@@ -17,7 +15,7 @@ export default function riew(View, controller = noop, map = {}) {
 
       // mounting
       useEffect(() => {
-        instance = createRawRiew(
+        instance = createRiew(
           (props) => {
             if (props === null) {
               setContent(null);
@@ -25,28 +23,31 @@ export default function riew(View, controller = noop, map = {}) {
               setContent(<View {...props}/>);
             }
           },
-          controller
+          ...effects
         );
 
-        if (map !== null) {
-          instance = instance.with(...map);
+        if (externals && externals.length > 0) {
+          instance = instance.with(...externals);
         }
+
         setInstance(instance);
-        instance.in(outerProps);
+        instance.mount(outerProps);
 
         return function () {
-          instance.out();
+          instance.unmount();
         };
       }, []);
 
       return content;
     };
 
-    comp.displayName = `Riew(${ getFuncName(controller) })`;
-    comp.with = (...map) => createBridge(map);
+    comp.displayName = `Riew(${ getFuncName(View) })`;
+    comp.with = (...maps) => {
+      return createBridge(maps);
+    };
 
     return comp;
   };
 
-  return createBridge(map);
+  return createBridge();
 }

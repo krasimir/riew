@@ -14,40 +14,45 @@ describe('Given the React riew function', () => {
       exerciseHTML(container, '<p>Hello</p>');
     });
     it(`should
-      * run the controller function
+      * run the effect function
       * render once by default
       * render every time when we call the "render" method`, async () => {
-      const controller = jest.fn().mockImplementation(async ({ render }) => {
+      const effect = jest.fn().mockImplementation(async ({ render }) => {
         await delay(5);
-        render({ foo: 'bar' });
+        act(() => { render({ foo: 'bar' }); });
       });
       const view = jest.fn().mockImplementation(() => null);
-      const R = riew(view, controller);
+      const R = riew(view, effect);
 
       render(<R />);
       await delay(7);
 
-      expect(view).toBeCalledTimes(1);
-      expect(view.mock.calls[0]).toStrictEqual([ { foo: 'bar' }, {}]);
+      expect(view).toBeCalledWithArgs(
+        [ {}, {}],
+        [ { foo: 'bar' }, {}]
+      );
     });
     describe('and we use a state', () => {
       it(`should
         * render with the given state data
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, async () => {
+        const s = state('foo');
         const R = riew(
           ({ state }) => <p>{ state }</p>,
           async function ({ state }) {
             await delay(5);
             act(() => state.set('bar'));
           }
-        ).with({ state: state('foo') });
+        ).with({ state: s });
         const { container, unmount } = render(<R />);
 
+        expect(s.__listeners()).toHaveLength(1);
         exerciseHTML(container, '<p>foo</p>');
         await delay(7);
         exerciseHTML(container, '<p>bar</p>');
         unmount();
+        expect(s.__listeners()).toHaveLength(0);
       });
       describe('and we use a state that is exported into the registry', () => {
         it('should receive the state value and subscribe for changes', async () => {
@@ -60,26 +65,6 @@ describe('Given the React riew function', () => {
           exerciseHTML(container, '<p>foo200</p>');
         });
       });
-      fit('should allow us to render same riew multiple times', async () => {
-        const spy = jest.fn().mockImplementation(() => null);
-        const R = riew(
-          spy,
-          async function ({ props, render }) {
-            const s = state({ a: 10 });
-
-            props(({ b }) => {
-              render({ state: s.get().a + b });
-            });
-          }
-        );
-
-        render(<R b={ 5 }/>);
-        render(<R b={ 10 }/>);
-
-        expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { b: 5, state: 15 }, {}]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { b: 10, state: 20 }, {}]);
-      });
       it('should allow us to use different statesMap', () => {
         const spy = jest.fn().mockImplementation(() => null);
         const R = riew(spy);
@@ -89,9 +74,10 @@ describe('Given the React riew function', () => {
         render(<RA />);
         render(<RB />);
 
-        expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { state: { foo: 'a' } }, {}]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { state: { foo: 'b' } }, {}]);
+        expect(spy).toBeCalledWithArgs(
+          [ { state: { foo: 'a' } }, {}],
+          [ { state: { foo: 'b' } }, {}]
+        );
         expect('with' in RA).toBe(true);
       });
     });
@@ -101,16 +87,17 @@ describe('Given the React riew function', () => {
         * have be able to subscribe to props change`, () => {
         const propsSpy = jest.fn();
         const I = riew(() => null, function ({ props }) {
-          props(propsSpy);
+          props.pipe(propsSpy).subscribe(true);
         });
 
         const { rerender } = render(<I foo='bar' />);
 
         rerender(<I zoo='mar' />);
 
-        expect(propsSpy).toBeCalledTimes(2);
-        expect(propsSpy.mock.calls[0]).toStrictEqual([ { foo: 'bar' } ]);
-        expect(propsSpy.mock.calls[1]).toStrictEqual([ { zoo: 'mar' } ]);
+        expect(propsSpy).toBeCalledWithArgs(
+          [ { foo: 'bar' } ],
+          [ { foo: 'bar', zoo: 'mar' } ]
+        );
       });
     });
   });

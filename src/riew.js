@@ -136,8 +136,6 @@ export default function createRiew(viewFunc, ...effects) {
   instance.__setExternals = (maps) => {
     externals = { ...externals, ...normalizeExternalsMap(maps) };
   };
-  // instance.with = (...maps) => createRiew(viewFunc, controllerFunc, { ...externals, ...normalizeExternalsMap(maps) });
-  // instance.test = (map) => createRiew(viewFunc, controllerFunc, { ...externals, ...map });
 
   instance.with = (...maps) => {
     const newInstance = createRiew(viewFunc, ...effects);
