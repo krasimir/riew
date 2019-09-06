@@ -1,7 +1,7 @@
 ![Riew logo](./assets/riew.jpg)
 
 ---
-
-<p align="center">Reactive view-controller architecture for handling side-effects.</p>
+<h3>Reactive View</h3>
+<p align="center">A library for handling side-effects.</p>
 
 ---
