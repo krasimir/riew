@@ -12,4 +12,4 @@ const saveTodosData = (todos) => {
 
 export const todos = state(JSON.parse(localStorage.getItem('todos') || initialValue)).export('todos');
 
-todos.stream.pipe(saveTodosData);
+todos.pipe(saveTodosData).subscribe();
