@@ -6,9 +6,10 @@ export const getFuncName = (func) => {
 
   return result ? result[ 1 ] : 'unknown';
 };
-export const compose = (...funcs) => (lastResult) => {
+export const compose = (...args) => (lastResult) => {
   let isAsync = false;
   let done = () => {};
+  let funcs = [...args];
 
   (function loop() {
     if (funcs.length === 0) {
@@ -34,10 +35,11 @@ export const compose = (...funcs) => (lastResult) => {
   }
   return lastResult;
 };
-export const serial = (...funcs) => (arg) => {
+export const serial = (...args) => (arg) => {
   let isAsync = false;
   let done = () => {};
   let results = [];
+  let funcs = [...args];
 
   (function loop() {
     if (funcs.length === 0) {
@@ -63,9 +65,10 @@ export const serial = (...funcs) => (arg) => {
   }
   return results;
 };
-export const parallel = (...funcs) => (arg) => {
+export const parallel = (...args) => (arg) => {
   let isAsync = false;
   let results = [];
+  let funcs = [...args];
 
   (function loop() {
     if (funcs.length === 0) {

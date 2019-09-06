@@ -29,6 +29,16 @@ describe('Given the compose function', () => {
 
     expect(compose(A, B, C)('f')).toStrictEqual({ ops: 'FOO' });
   });
+  it('should be possible to execute the composition multiple times', () => {
+    const A = jest.fn().mockImplementation((arg) => arg + 'oo');
+    const B = jest.fn().mockImplementation((arg) => arg.toUpperCase());
+    const C = jest.fn().mockImplementation((arg) => ({ ops: arg }));
+    const composed = compose(A, B, C);
+
+    expect(composed('f')).toStrictEqual({ ops: 'FOO' });
+    expect(composed('f')).toStrictEqual({ ops: 'FOO' });
+    expect(composed('f')).toStrictEqual({ ops: 'FOO' });
+  });
 });
 describe('Given the serial function', () => {
   it(`should
@@ -66,6 +76,16 @@ describe('Given the serial function', () => {
     expect(C).toBeCalledTimes(1);
     expect(C.mock.calls[0]).toStrictEqual([ 'f' ]);
   });
+  it('should be possible to execute the composition multiple times', () => {
+    const A = jest.fn().mockImplementation((a) => a + 1);
+    const B = jest.fn().mockImplementation((a) => a * 2);
+    const C = jest.fn().mockImplementation((a) => a * 3);
+    const composed = serial(A, B, C);
+
+    expect(composed(4)).toStrictEqual([5, 8, 12]);
+    expect(composed(10)).toStrictEqual([11, 20, 30]);
+    expect(composed(1)).toStrictEqual([ 2, 2, 3 ]);
+  });
 });
 describe('Given the parallel function', () => {
   it(`should
@@ -102,5 +122,15 @@ describe('Given the parallel function', () => {
     expect(B.mock.calls[0]).toStrictEqual([ 'f' ]);
     expect(C).toBeCalledTimes(1);
     expect(C.mock.calls[0]).toStrictEqual([ 'f' ]);
+  });
+  it('should be possible to execute the composition multiple times', () => {
+    const A = jest.fn().mockImplementation((a) => a + 1);
+    const B = jest.fn().mockImplementation((a) => a * 2);
+    const C = jest.fn().mockImplementation((a) => a * 3);
+    const composed = parallel(A, B, C);
+
+    expect(composed(4)).toStrictEqual([5, 8, 12]);
+    expect(composed(10)).toStrictEqual([11, 20, 30]);
+    expect(composed(1)).toStrictEqual([ 2, 2, 3 ]);
   });
 });
