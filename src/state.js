@@ -1,3 +1,4 @@
+import equal from 'fast-deep-equal';
 import { isPromise, getFuncName } from './utils';
 import registry from './registry';
 
@@ -133,15 +134,20 @@ export function createState(initialValue) {
 
   stateAPI.id = getId('s');
   stateAPI.__riew = true;
-  stateAPI.__triggerListeners = () => listeners.forEach(l => l());
+  stateAPI.__triggerListeners = () => {
+    equal('a', 'b');
+    listeners.forEach(l => l());
+  };
   stateAPI.__listeners = () => listeners;
   stateAPI.__queues = () => createdQueues;
 
   stateAPI.active = () => active;
   stateAPI.get = () => value;
   stateAPI.set = (newValue, callListeners = true) => {
+    let isEqual = equal(value, newValue);
+
     value = newValue;
-    if (callListeners) stateAPI.__triggerListeners();
+    if (callListeners && !isEqual) stateAPI.__triggerListeners();
   };
   stateAPI.teardown = () => {
     createdQueues.forEach(q => q.teardown());
@@ -200,21 +206,24 @@ export function createState(initialValue) {
     });
 
     // trigger direct methods
+    trigger.isMutating = () => {
+      return !!trigger.__itemsToCreate.find(({ type }) => type === 'mutate');
+    };
     trigger.subscribe = (initialCall = false) => {
-      if (trigger.__itemsToCreate.find(({ type }) => type === 'mutate')) {
+      if (trigger.isMutating()) {
         throw new Error('You should not subscribe a trigger that mutates the state. This will lead to endless recursion.');
       }
       if (initialCall) trigger();
       addListener(trigger);
       return trigger;
     };
+    trigger.unsubscribe = () => {
+      removeListener(trigger);
+      return trigger;
+    };
     trigger.cancel = () => {
       trigger.__itemsToCreate = [];
       queueMethods.forEach(m => trigger[m] = () => trigger);
-      return trigger;
-    };
-    trigger.unsubscribe = () => {
-      removeListener(trigger);
       return trigger;
     };
     trigger.test = function (callback) {

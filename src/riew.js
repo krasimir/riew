@@ -1,10 +1,10 @@
-import { createState as state, isRiewState } from './state';
+import { createState as state, isRiewState, isRiewQueueTrigger } from './state';
 import registry from './registry';
 import { isPromise, parallel } from './utils';
 
 function ensureObject(value, context) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
-    throw new Error(`"${ context }" must be called with a key-value object. Instead "${ value }" passed.`);
+    throw new Error(`${ context } must be called with a key-value object. Instead "${ value }" passed.`);
   }
   return value;
 }
@@ -18,9 +18,7 @@ function normalizeExternalsMap(arr) {
     return map;
   }, {});
 }
-function accumulate(current, newStuff) {
-  return { ...current, ...newStuff };
-}
+const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
 
 export default function createRiew(viewFunc, ...effects) {
   const instance = {};
@@ -30,26 +28,57 @@ export default function createRiew(viewFunc, ...effects) {
   let onUnmountCallbacks = [];
   let externals = {};
 
-  const effectsProps = state({});
-  const viewProps = state({});
+  const input = state({});
+  const output = state({});
+  const api = state({});
 
   const isActive = () => active;
 
   // triggers
-  const updateViewProps = viewProps.mutate(accumulate);
-  const render = updateViewProps.filter(isActive).pipe(value => viewFunc(value));
-  const updateEffectsProps = effectsProps.mutate(accumulate);
+  const updateOutput = output.mutate((current, newStuff) => {
+    const result = { ...current };
+
+    if (newStuff) {
+      Object.keys(newStuff).forEach(key => {
+        if (isRiewState(newStuff[key])) {
+          result[key] = newStuff[key].get();
+          if (!subscriptions.find(trigger => trigger.__state.id === newStuff[key].id)) {
+            subscriptions.push(
+              newStuff[key].pipe(value => render({ [key]: value })).subscribe()
+            );
+          }
+        } else if (isRiewQueueTrigger(newStuff[key]) && !newStuff[key].isMutating()) {
+          result[key] = newStuff[key]();
+          if (!subscriptions.find(trigger => trigger.__state.id === newStuff[key].__state.id)) {
+            subscriptions.push(
+              newStuff[key].pipe(() => render({ [key]: newStuff[key]() })).subscribe()
+            );
+          }
+        } else {
+          result[key] = newStuff[key];
+        }
+      });
+    }
+    return result;
+  });
+  const render = updateOutput.filter(isActive).pipe(value => viewFunc(value));
+  const updateAPI = api.mutate(accumulate);
+  const updateInput = input.mutate(accumulate);
 
   // defining the effect api
-  updateEffectsProps({
+  updateAPI({
     state(...args) {
       const s = state(...args);
 
       internalStates.push(s);
       return s;
     },
-    render,
-    isActive
+    render(newProps) {
+      ensureObject(newProps, 'The `render` method');
+      return render(newProps);
+    },
+    isActive,
+    props: input
   });
 
   function processExternals() {
@@ -63,23 +92,19 @@ export default function createRiew(viewFunc, ...effects) {
         external = externals[key];
       }
 
-      if (isRiewState(external)) {
-        subscriptions.push(
-          state.filter(isActive).map(value => ({ [key]: value })).pipe(render).subscribe(true)
-        );
-      } else {
-        updateViewProps({ [key]: external });
-      }
-      updateEffectsProps({ [key]: external });
+      updateOutput({ [key]: external });
+      updateAPI({ [key]: external });
     });
   }
 
   instance.isActive = isActive;
   instance.mount = (initialProps = {}) => {
     ensureObject(initialProps, 'The `mount` method');
+    updateInput(initialProps);
+    updateOutput(initialProps);
     processExternals();
 
-    let effectsResult = parallel(...effects)(effectsProps.get());
+    let effectsResult = parallel(...effects)(api.get());
     let done = (result) => (onUnmountCallbacks = result || []);
 
     if (isPromise(effectsResult)) {
@@ -89,21 +114,44 @@ export default function createRiew(viewFunc, ...effects) {
     }
 
     active = true;
-    render(initialProps);
+    render();
     return instance;
   };
-  instance.update = updateViewProps;
+  instance.update = (newProps) => {
+    render(newProps);
+    updateInput(newProps);
+  };
   instance.unmount = () => {
+    active = false;
+    output.teardown();
+    api.teardown();
     internalStates.forEach(s => s.teardown());
     internalStates = [];
-    viewProps.teardown();
-    effectsProps.teardown();
-    active = false;
-    onUnmountCallbacks.forEach(f => f());
+    onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
+    onUnmountCallbacks = [];
+    subscriptions.forEach(s => s.unsubscribe());
+    subscriptions = [];
     return instance;
   };
-  instance.with = (...maps) => createRiew(viewFunc, controllerFunc, { ...externals, ...normalizeExternalsMap(maps) });
-  instance.test = (map) => createRiew(viewFunc, controllerFunc, { ...externals, ...map });
+  instance.__setExternals = (maps) => {
+    externals = { ...externals, ...normalizeExternalsMap(maps) };
+  };
+  // instance.with = (...maps) => createRiew(viewFunc, controllerFunc, { ...externals, ...normalizeExternalsMap(maps) });
+  // instance.test = (map) => createRiew(viewFunc, controllerFunc, { ...externals, ...map });
+
+  instance.with = (...maps) => {
+    const newInstance = createRiew(viewFunc, ...effects);
+
+    newInstance.__setExternals(maps);
+    return newInstance;
+  };
+  instance.test = (map) => {
+    const newInstance = createRiew(viewFunc, ...effects);
+
+    newInstance.__setExternals([ map ]);
+    return newInstance;
+  };
 
   return instance;
 }
+

@@ -29,11 +29,20 @@ function sanitize(something, showErrorInConsole = false) {
   return result;
 }
 
+const special = ['zeroth', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth', 'fourteenth', 'fifteenth', 'sixteenth', 'seventeenth', 'eighteenth', 'nineteenth'];
+
+function stringifyNumber(n) {
+  if (special[n]) {
+    return special[n];
+  }
+  return n;
+}
+
 expect.extend({
   toBeCalledWithArgs(func, ...called) {
     if (func.mock.calls.length !== called.length) {
       return {
-        message: () => `Wrong number of calls:\n\nExpected: ${ called.length }\nActual:   ${ func.mock.calls.length }`,
+        message: () => `Wrong number of calls:\n\nExpected: ${ called.length }\nActual:   ${ func.mock.calls.length }\n\nCalls:\n${ JSON.stringify(sanitize(func.mock.calls), null, 2) }`,
         pass: false
       };
     }
@@ -45,7 +54,7 @@ expect.extend({
         let actualStr = JSON.stringify(sanitize(func.mock.calls[index]), null, 2);
 
         return {
-          message: () => `Call #${ index } happened with different arguments:\n\nExpected:\n${ expectedStr }\n\nActual:\n${ actualStr }`,
+          message: () => `The ${ stringifyNumber(index + 1) } call happened with different arguments:\n\nExpected:\n${ expectedStr }\n\nActual:\n${ actualStr }`,
           pass: false
         };
       }

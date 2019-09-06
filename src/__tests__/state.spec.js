@@ -1,4 +1,4 @@
-import { createState, mergeStates } from '../state';
+import { createState, mergeStates, queueMethods } from '../state';
 import registry from '../registry';
 import { delay } from '../__helpers__';
 
@@ -272,6 +272,17 @@ describe('Given the state', () => {
       expect(spyB).toBeCalledTimes(1);
       expect(spyB).toBeCalledWith(60);
     });
+    it('should not trigger the queue if the value is the same', () => {
+      const s = state(10);
+      const spy = jest.fn();
+
+      s.map(value => value * 2).pipe(spy).subscribe();
+      s.set(20);
+      s.set(20);
+      s.set(20);
+
+      expect(spy).toBeCalledWithArgs([ 40 ]);
+    });
     it('should trigger the queue initially once if we pass `true` as param', () => {
       const s = state(10);
       const spy = jest.fn();
@@ -324,7 +335,7 @@ describe('Given the state', () => {
       expect(spy.mock.calls[3]).toStrictEqual([ 900 ]);
     });
     it('should throw an error if we subscribe for mutating trigger', () => {
-      expect(() => state(10).mutate(value => value + 1).subscribe()).toThrowError('');
+      expect(() => state(10).mutate(value => value + 1).subscribe()).toThrowError();
     });
   });
 
@@ -407,8 +418,8 @@ describe('Given the state', () => {
   });
 
   /* forking */
-  describe('when we use wanna fork method', () => {
-    it('should fork the queue', () => {
+  describe('when we use want to fork a trigger', () => {
+    it('should fork it', () => {
       const spy = jest.fn();
       const s = state([ 'foo', 'bar' ]);
       const getFirst = s.map(value => value[0]);
@@ -493,7 +504,7 @@ describe('Given the state', () => {
       expect(okLogic).toBeCalledWith({ s1: 2, s2: 'b' });
     });
   });
-  describe('when we have a branching after stream', () => {
+  describe('when we have two triggers that are subscribed', () => {
     it('should run a fresh queue every time', () => {
       const s = state(0);
       const spyA = jest.fn();
@@ -603,6 +614,15 @@ describe('Given the state', () => {
 
       s.teardown();
       expect(() => registry.get('my state')).toThrowError('"my state" is missing in the registry.');
+    });
+  });
+
+  /* isMutating */
+  describe('when we use the `isMutating` method', () => {
+    queueMethods.forEach(method => {
+      it(`should return "true" for the ones that mutate the state (${ method })`, () => {
+        expect(state('foo')[method](() => {}).isMutating()).toBe(method === 'mutate');
+      });
     });
   });
 });

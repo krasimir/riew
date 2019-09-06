@@ -5,6 +5,7 @@ import registry from '../registry';
 import { delay } from '../__helpers__';
 
 describe('Given the `riew` factory function', () => {
+  beforeEach(() => registry.reset());
   describe('when we create and mount riew with a given view and list of side effects', () => {
     it(`should
       * call the view with the initial props
@@ -33,13 +34,13 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we have an async side effect', () => {
-    fit('should render the view without waiting the side effect to finish', async () => {
+    it('should render the view without waiting the side effect to finish', async () => {
       const view = jest.fn();
-      const se1 = async function ({ render }) {
+      const se = async function ({ render }) {
         await delay(3);
         render({ hello: 'there' });
       };
-      const r = riew(view, se1);
+      const r = riew(view, se);
 
       r.mount({ a: 'b' });
 
@@ -50,192 +51,235 @@ describe('Given the `riew` factory function', () => {
       );
     });
   });
-});
-
-xdescribe('Given the `riew` function', () => {
-  beforeEach(() => registry.reset());
-  describe('when we use a controller', () => {
-    it(`should
-      * run the view by default
-      * run the controller once when the riew is mounted`, () => {
+  describe('when we create a state in the side effect', () => {
+    it('should teardown the effect if the riew is unmounted', () => {
+      let ss;
       const view = jest.fn();
-      const controller = jest.fn();
-      const r = riew(view, controller);
+      const se = function ({ state, render }) {
+        const s = ss = state('foo');
+
+        render({ s });
+      };
+      const r = riew(view, se);
 
       r.mount();
-
-      expect(view).toBeCalledTimes(1);
-      expect(controller).toBeCalledTimes(1);
+      expect(view).toBeCalledWithArgs([ expect.any(Object) ]);
+      expect(ss.active()).toBe(true);
+      r.unmount();
+      expect(ss.active()).toBe(false);
     });
-    describe('and we use an async controller', () => {
-      it('should run the view by default', async () => {
-        const view = jest.fn();
-        const controller = async function () {};
-        const r = riew(view, controller);
+    it('should send the state value to the view', () => {
+      const view = jest.fn();
+      const se = function ({ state, render }) {
+        render({ s: state('foo') });
+      };
+      const r = riew(view, se);
 
-        r.mount();
-        await delay(1);
-
-        expect(view).toBeCalledTimes(1);
-      });
+      r.mount();
+      expect(view).toBeCalledWithArgs([ { s: 'foo' } ]);
     });
-    describe('and when we use the `render` method', () => {
-      it(`should 
-        * accumulate the props to the view
-        * call the view after the riew is active`, async () => {
-        const view = jest.fn();
-        const controller = async ({ render }) => {
-          render({ c: 'd' });
-          render({ e: 'f' });
-          setTimeout(() => {
-            render({ m: 'n' });
-          }, 4);
-        };
-        const r = riew(view, controller);
+    it('should subscribe (only once) for the changes in the state and re-render the view', async () => {
+      const view = jest.fn();
+      const se = async function ({ state, render }) {
+        const s = state('foo');
 
-        r.mount({ a: 'b' });
-        await delay(6);
+        render({ s });
+        render({ s });
+        render({ s });
+        await delay(3);
+        s.set('bar');
+      };
+      const r = riew(view, se);
 
-        expect(view).toBeCalledTimes(2);
-        expect(view.mock.calls[0]).toStrictEqual([ { a: 'b', c: 'd', e: 'f' } ]);
-        expect(view.mock.calls[1]).toStrictEqual([ { a: 'b', c: 'd', e: 'f', m: 'n' } ]);
-      });
+      r.mount();
+      await delay(4);
+      expect(view).toBeCalledWithArgs(
+        [ { s: 'foo' } ],
+        [ { s: 'bar' } ]
+      );
     });
-    describe('and when we use the `input`', () => {
-      it(`should allow us access the riew props`, async () => {
-        const view = jest.fn();
-        const controller = async ({ render, input }) => {
+  });
+  describe('when we send an external state to the view and the view is unmounted', () => {
+    it('should initially subscribe and then unsubscribe', () => {
+      const s = state('foo');
+      const view = jest.fn();
+      const se = function ({ render }) {
+        render({ s });
+      };
+      const r = riew(view, se);
 
-        };
-        const r = riew(view, controller);
-
-        r.mount({ a: 'b' });
-        r.update({ c: 'd' });
-
-        await delay(1);
-        console.log(view.mock.calls);
-        expect(view).toBeCalledTimes(1);
-      });
+      r.mount();
+      s.set('baz');
+      expect(s.__listeners()).toHaveLength(1);
+      r.unmount();
+      expect(s.__listeners()).toHaveLength(0);
+      expect(view).toBeCalledWithArgs(
+        [ { s: 'foo' } ],
+        [ { s: 'baz' } ]
+      );
     });
-    describe('and we want to run a clean up logic', () => {
-      it('should run the result of the controller', () => {
-        const cleanup = jest.fn();
-        const controller = () => {
-          return cleanup;
-        };
-        const r = riew(() => {}, controller);
-
-        r.mount();
-        r.unmount();
-
-        expect(cleanup).toBeCalledTimes(1);
+  });
+  describe('when we send a trigger to the view', () => {
+    it(`should
+      * run the trigger and pass the value if the trigger is not mutating
+      * subscribe to state changes if the trigger is not mutating`, () => {
+      const view = jest.fn().mockImplementation(({ s, change }) => {
+        if (s !== 'BAR') {
+          change();
+        }
       });
-      it('should run the result of the async controller', async () => {
-        const cleanup = jest.fn();
-        const controller = async () => {
-          return cleanup;
-        };
-        const r = riew(() => {}, controller);
+      const se = function ({ render, state }) {
+        const s = state('foo');
+        const up = s.map(value => value.toUpperCase());
+        const change = s.mutate(() => 'bar');
 
-        r.mount();
-        await delay(1);
-        r.unmount();
+        render({ s: up, change });
+        render({ s: up, change });
+        render({ s: up, change });
+      };
+      const r = riew(view, se);
 
-        expect(cleanup).toBeCalledTimes(1);
-      });
+      r.mount();
+      expect(view).toBeCalledWithArgs(
+        [ { s: 'FOO', change: expect.any(Function) } ],
+        [ { s: 'BAR', change: expect.any(Function) } ]
+      );
+    });
+  });
+  describe('when we update the riew', () => {
+    it('should render the view with accumulated props', () => {
+      const view = jest.fn();
+      const r = riew(view);
+
+      r.mount({ foo: 'bar' });
+      r.update({ baz: 'moo' });
+      r.update({ x: 'y' });
+
+      expect(view).toBeCalledWithArgs(
+        [{ foo: 'bar' }],
+        [{ foo: 'bar', baz: 'moo' }],
+        [{ foo: 'bar', baz: 'moo', x: 'y' }]
+      );
+    });
+    it('should deliver the riew input to the side effects', () => {
+      const spy = jest.fn();
+      const se = function ({ props }) {
+        props.pipe(spy).subscribe(true);
+      };
+      const r = riew(() => {}, se);
+
+      r.mount({ foo: 'bar' });
+      r.update({ baz: 'moo' });
+      expect(spy).toBeCalledWithArgs(
+        [{ foo: 'bar' }],
+        [{ foo: 'bar', baz: 'moo' }]
+      );
     });
   });
   describe('when we depend on the status of the riew', () => {
     it('should provide us with `isActive` function so we know what is the status', async () => {
-      const controller = async ({ isActive }) => {
+      const effect = async ({ isActive }) => {
+        expect(isActive()).toBe(false);
+        await delay(1);
         expect(isActive()).toBe(true);
-        await delay(5);
+        await delay(10);
         expect(isActive()).toBe(false);
       };
-      const r = riew(() => {}, controller);
+      const r = riew(() => {}, effect);
 
       r.mount();
       expect(r.isActive()).toBe(true);
+      await delay(5);
       r.unmount();
-      await delay(7);
+      await delay(20);
       expect(r.isActive()).toBe(false);
     });
   });
   describe('and when we use non object as initial props or for render method', () => {
     it('should throw an error', () => {
       expect(() => riew(() => {}).mount('foo')).toThrowError(
-        `The riew's "in" method must be called with a key-value object. Instead "foo" passed`
+        'The `mount` method must be called with a key-value object. Instead "foo" passed'
       );
       expect(() => riew(() => {}, ({ render }) => { render('foo'); }, () => {}).mount()).toThrowError(
-        `The riew's "render" method must be called with a key-value object. Instead "foo" passed`
-      );
-      expect(() => riew(() => {}, ({ render }) => { render('foo'); }, () => {}).mount()).toThrowError(
-        `The riew's "render" method must be called with a key-value object. Instead "foo" passed`
+        'The `render` method must be called with a key-value object. Instead "foo" passed'
       );
     });
   });
   describe('when we use `with` method', () => {
     describe('and we pass a state', () => {
       it(`should send the state to the controller`, () => {
-        const spy = jest.fn();
+        const view = jest.fn();
         const s1 = state('a');
         const s2 = state('b');
-        const controller = jest.fn().mockImplementation(({ s1, s2, render }) => {
-          s1.mapToKey('s1').pipe(render);
-          s2.mapToKey('s2').pipe(render);
-          render({ s1: s1.get(), s2: s2.get() });
-        });
-        const r = riew(spy, controller).with({ s1, s2 });
+        const effect = jest.fn();
+        const r = riew(view, effect).with({ s1, s2 });
 
         r.mount();
         s1.set('foo');
         s2.set('bar');
 
-        expect(spy).toBeCalledTimes(3);
-        expect(spy.mock.calls[0]).toStrictEqual([ { s1: 'a', s2: 'b' } ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { s1: 'foo', s2: 'b' } ]);
-        expect(spy.mock.calls[2]).toStrictEqual([ { s1: 'foo', s2: 'bar' } ]);
+        expect(view).toBeCalledWithArgs(
+          [ { s1: 'a', s2: 'b' } ],
+          [ { s1: 'foo', s2: 'b' } ],
+          [ { s1: 'foo', s2: 'bar' } ]
+        );
+        expect(effect).toBeCalledWithArgs(
+          [ expect.objectContaining({
+            render: expect.any(Function)
+          }) ]
+        );
       });
     });
     describe('and when we pass something else', () => {
-      it(`should pass the thing to the controller and view`, () => {
+      it(`should pass the thing to the effect and view`, () => {
         const s = state({ firstName: 'John', lastName: 'Doe' });
         const getFirstName = s.map(({ firstName }) => firstName);
+        const view = jest.fn();
         const spy = jest.fn();
         const r = riew(
-          spy,
-          ({ getFirstName, render }) => {
-            expect(getFirstName()).toBe('John');
-            render();
+          view,
+          ({ firstName }) => {
+            firstName.pipe(spy).subscribe(true);
           }
-        ).with({ getFirstName });
+        ).with({ firstName: getFirstName });
 
         r.mount();
+        s.set({ firstName: 'Jon', lastName: 'Snow' });
 
-        expect(spy).toBeCalledTimes(1);
-        expect(spy.mock.calls[0]).toStrictEqual([ { getFirstName: expect.any(Function) } ]);
+        expect(view).toBeCalledWithArgs(
+          [ { firstName: 'John' } ],
+          [ { firstName: 'Jon' } ]
+        );
+        expect(spy).toBeCalledWithArgs(
+          [ 'John' ],
+          [ 'Jon' ]
+        );
       });
     });
-    describe('when we want to use an exported into the registry state', () => {
+    describe('when we want to use exported into the registry state', () => {
       it('should recognize it and pass it down to the controller', () => {
         const s = state('foo');
 
         registry.add('xxx', s);
 
         const view = jest.fn();
-        const controller = jest.fn().mockImplementation(({ render, xxx }) => {
-          render({ value: xxx.get() });
-        });
-        const r = riew(view, controller).with('xxx');
+        const effect = jest.fn();
+        const r = riew(view, effect).with('xxx');
 
         r.mount();
+        s.set('bar');
 
-        expect(view).toBeCalledTimes(1);
-        expect(view.mock.calls[0]).toStrictEqual([ { value: 'foo' } ]);
-        expect(controller).toBeCalledTimes(1);
-        expect(controller.mock.calls[0]).toStrictEqual([ expect.objectContaining({
-          xxx: expect.objectContaining({ get: expect.any(Function) })
-        }) ]);
+        expect(view).toBeCalledWithArgs(
+          [{ xxx: 'foo' }],
+          [{ xxx: 'bar' }]
+        );
+        expect(effect).toBeCalledWithArgs(
+          [
+            expect.objectContaining({
+              xxx: expect.objectContaining({ id: expect.any(String) })
+            })
+          ]
+        );
       });
       describe('and when we have something else exported into the registry', () => {
         it('should pass it down as it is to the view and to the controller', () => {
@@ -244,16 +288,17 @@ xdescribe('Given the `riew` function', () => {
           registry.add('something', something);
 
           const view = jest.fn();
-          const controller = jest.fn().mockImplementation(({ render }) => render());
-          const r = riew(view, controller).with('something');
+          const effect = jest.fn();
+          const r = riew(view, effect).with('something');
 
           r.mount();
-          expect(view).toBeCalledTimes(1);
-          expect(view.mock.calls[0]).toStrictEqual([ { something: { a: 'b' } } ]);
-          expect(controller).toBeCalledTimes(1);
-          expect(controller.mock.calls[0]).toStrictEqual([
-            expect.objectContaining({ something: { a: 'b' } })
-          ]);
+
+          expect(view).toBeCalledWithArgs(
+            [{ something: { a: 'b' } }]
+          );
+          expect(effect).toBeCalledWithArgs(
+            [ expect.objectContaining({ something: { a: 'b' } })]
+          );
         });
       });
     });
@@ -267,9 +312,7 @@ xdescribe('Given the `riew` function', () => {
 
         r.mount({});
 
-        expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ 10 ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ 20 ]);
+        expect(spy).toBeCalledWithArgs([ 10 ], [ 20 ]);
       });
     });
     describe('and when we use same instance with different externals', () => {
@@ -288,70 +331,30 @@ xdescribe('Given the `riew` function', () => {
       });
     });
   });
-  describe('when we call the riew with just one argument', () => {
-    it('should work just fine by providing a dummy controller', () => {
-      const spy = jest.fn();
-      const r = riew(spy);
-
-      r.mount({ foo: 'bar' });
-
-      expect(spy).toBeCalledTimes(1);
-      expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' } ]);
-    });
-  });
   describe('when we want to test the riew', () => {
-    it('should allow us to pass custom one-shot statesMap and keep the old riew working', () => {
+    it('should allow us to pass custom one-shot externals and keep the old riew working', () => {
       const s = state('foo');
       const spy = jest.fn();
-      const controller = jest.fn().mockImplementation(({ s, render }) => (spy(s.get()), render({ s: s.get() })));
+      const effect = jest.fn().mockImplementation(({ s, render }) => (spy(s.get()), render({ s: s.get() })));
       const view = jest.fn();
-      const r = riew(view, controller).with({ s });
+      const r = riew(view, effect).with({ s });
       const rTest = r.test({ s: state('bar') });
 
       r.mount();
       rTest.mount();
 
-      expect(controller).toBeCalledTimes(2);
-      expect(controller.mock.calls[0]).toStrictEqual([
-        expect.objectContaining({ s: expect.objectContaining({ get: expect.any(Function) }) })
-      ]);
-      expect(controller.mock.calls[1]).toStrictEqual([
-        expect.objectContaining({ s: expect.objectContaining({ get: expect.any(Function) }) })
-      ]);
-      expect(spy).toBeCalledTimes(2);
-      expect(spy.mock.calls[0]).toStrictEqual([ 'foo' ]);
-      expect(spy.mock.calls[1]).toStrictEqual([ 'bar' ]);
-      expect(view).toBeCalledTimes(2);
-      expect(view.mock.calls[0]).toStrictEqual([ { s: 'foo' } ]);
-      expect(view.mock.calls[1]).toStrictEqual([ { s: 'bar' } ]);
-    });
-  });
-  describe('when we use the `state` method', () => {
-    it(`should
-      * teardown the state when the riew is unmounted
-      * subscribe for state changes and re-render the view`, async () => {
-      let ss;
-      const externalState = state('boo');
-      const view = jest.fn();
-      const r = riew(view, async ({ state, render }) => {
-        const s = ss = state('foo');
-
-        s.stream.map(value => ({ bar: value })).pipe(render);
-        setTimeout(() => {
-          s.set('xxx');
-        }, 5);
-        render({ bar: s, boo: externalState });
-      });
-
-      r.mount();
-      expect(ss.active()).toBe(true);
-      await delay(7);
-      r.unmount();
-
-      expect(view).toBeCalledTimes(2);
-      expect(view.mock.calls[0]).toStrictEqual([ { bar: 'foo', boo: 'boo' } ]);
-      expect(view.mock.calls[1]).toStrictEqual([ { bar: 'xxx', boo: 'boo' } ]);
-      expect(ss.active()).toBe(false);
+      expect(effect).toBeCalledWithArgs(
+        [ expect.objectContaining({ s: expect.objectContaining({ get: expect.any(Function) }) }) ],
+        [ expect.objectContaining({ s: expect.objectContaining({ get: expect.any(Function) }) }) ]
+      );
+      expect(spy).toBeCalledWithArgs(
+        [ 'foo' ],
+        [ 'bar' ]
+      );
+      expect(view).toBeCalledWithArgs(
+        [ { s: 'foo' } ],
+        [ { s: 'bar' } ]
+      );
     });
   });
 });
