@@ -5,10 +5,49 @@ import registry from '../registry';
 import { delay } from '../__helpers__';
 
 describe('Given the `riew` factory function', () => {
-  describe('when we create a riew by giving a view and list of side effects', () => {
+  describe('when we create and mount riew with a given view and list of side effects', () => {
     it(`should
-      * call the view`, () => {
+      * call the view with the initial props
+      * call each of the side effects
+      * run the clean-up functions of each side effect`, () => {
+      const view = jest.fn();
+      const se1Cleanup = jest.fn();
+      const se1 = jest.fn().mockImplementation(() => se1Cleanup);
+      const se2Cleanup = jest.fn();
+      const se2 = jest.fn().mockImplementation(() => se2Cleanup);
 
+      const r = riew(view, se1, se2);
+
+      r.mount({ foo: 'bar' });
+      r.unmount();
+
+      expect(view).toBeCalledWithArgs(
+        [ { foo: 'bar' } ]
+      );
+      expect(se1).toBeCalledWithArgs(
+        [ expect.objectContaining({ render: expect.any(Function) }) ]
+      );
+      expect(se2).toBeCalledWithArgs(
+        [ expect.objectContaining({ render: expect.any(Function) }) ]
+      );
+    });
+  });
+  describe('when we have an async side effect', () => {
+    fit('should render the view without waiting the side effect to finish', async () => {
+      const view = jest.fn();
+      const se1 = async function ({ render }) {
+        await delay(3);
+        render({ hello: 'there' });
+      };
+      const r = riew(view, se1);
+
+      r.mount({ a: 'b' });
+
+      await delay(4);
+      expect(view).toBeCalledWithArgs(
+        [ { a: 'b' } ],
+        [ { a: 'b', hello: 'there' } ]
+      );
     });
   });
 });
