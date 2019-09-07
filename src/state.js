@@ -166,7 +166,10 @@ export function createState(initialValue) {
     registry.add(exportedAs = key, stateAPI);
     return stateAPI;
   };
-  stateAPI.define = defineQueueMethod;
+  stateAPI.define = (...args) => {
+    defineQueueMethod(...args);
+    return stateAPI;
+  };
 
   defineQueueMethod('pipe', pipe);
   defineQueueMethod('map', map);
@@ -230,6 +233,13 @@ export function createState(initialValue) {
     });
 
     // trigger direct methods
+    trigger.define = (methodName, func) => {
+      defineQueueMethod(methodName, func);
+      trigger[methodName] = (...methodArgs) => {
+        return createNewTrigger([ ...trigger.__itemsToCreate, { type: methodName, func: methodArgs } ]);
+      };
+      return trigger;
+    };
     trigger.isMutating = () => {
       return !!trigger.__itemsToCreate.find(({ type }) => type === 'mutate');
     };

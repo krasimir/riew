@@ -608,13 +608,13 @@ describe('Given the state', () => {
   });
 
   /* custom methods */
-  xdescribe('when we define a custom method', () => {
+  describe('when we define a custom method', () => {
     it('should be able to use it as a normal queue method', () => {
       const s = state(2);
       const y = state({ hello: 'world' });
       const spy3 = jest.fn();
-      const spy2 = jest.fn().mockImplementation((value, arg1, arg2) => {
-        return value + arg1 + arg2;
+      const spy2 = jest.fn().mockImplementation((value, arg1) => {
+        return value + arg1.reduce((v, n) => v + n, 0);
       });
       const spy = jest.fn().mockImplementation(() => {
         return spy2;
@@ -630,8 +630,12 @@ describe('Given the state', () => {
 
       s.set(10);
 
-      expect(spy).toBeCalledWithArgs([ ['a', 'b'] ], [ ['a', 'b'] ], [ ['a', 'b'] ]);
-      expect(spy2).toBeCalledWithArgs([ 4 ], [ 4, 8, 2 ], [ 20 ]);
+      expect(spy).toBeCalledWithArgs([ 'a', 'b' ], [ 'a', 'b'], [ 'a', 'b' ]);
+      expect(spy2).toBeCalledWithArgs(
+        [ 4, [], expect.any(Function), expect.any(Object) ],
+        [ 4, [8, 2], expect.any(Function), expect.any(Object) ],
+        [ 20, [], expect.any(Function), expect.any(Object) ]
+      );
       expect(s.get()).toBe(10);
       expect(y.get()).toStrictEqual({ hello: 'world' });
     });
@@ -640,17 +644,21 @@ describe('Given the state', () => {
         const s = state();
         const spy = jest.fn();
         const spy2 = jest.fn();
+        const m = s.mutate((current, payload) => payload.toUpperCase());
 
-        s.define('gamble', (args) => {
-          return async (word, ...payload) => {
-            spy2(args, word, payload);
+        m.define('gamble', (args) => {
+          return async (word, payload) => {
+            spy2(word, payload);
             await delay(5);
             if (word === 'BAR') return 'JACKPOT';
             return 'Nope';
           };
         });
 
-        const play = s.mutate((current, payload) => payload.toUpperCase()).gamble().pipe(spy);
+        const play = m.gamble().pipe(spy);
+
+        // this shouldn't throw
+        s.pipe().gamble().pipe();
 
         await play('foo');
         await play('bar');
@@ -660,7 +668,9 @@ describe('Given the state', () => {
           ['Nope', 'foo'], ['JACKPOT', 'bar'], ['Nope', 'baz']
         );
         expect(spy2).toBeCalledWithArgs(
-          [[], 'FOO', ['foo']], [[], 'BAR', ['bar']], [[], 'BAZ', ['baz']]
+          ['FOO', ['foo']],
+          ['BAR', ['bar']],
+          ['BAZ', ['baz']]
         );
       });
     });
