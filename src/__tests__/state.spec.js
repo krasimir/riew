@@ -1,4 +1,4 @@
-import { createState, mergeStates, queueMethods } from '../state';
+import { createState, mergeStates } from '../state';
 import registry from '../registry';
 import { delay } from '../__helpers__';
 
@@ -114,6 +114,23 @@ describe('Given the state', () => {
     });
   });
 
+  /* mapToKey */
+  describe('when we use the `mapToKey` method', () => {
+    it('should map to an object which key is equal to the value of the state', () => {
+      const spy = jest.fn();
+      const s = state('foo');
+
+      s.mapToKey('myValue').pipe(spy).subscribe();
+      s.set('bar');
+
+      expect(spy).toBeCalledTimes(1);
+      expect(spy).toBeCalledWith({ myValue: 'bar' });
+    });
+    it('should work as the other queue api methods', () => {
+      expect(state('foo').mapToKey('bar')()).toStrictEqual({ bar: 'foo' });
+    });
+  });
+
   /* mutate */
   describe('when we use the `mutate` method', () => {
     it('should add a queue item for mutating the state', () => {
@@ -172,46 +189,6 @@ describe('Given the state', () => {
       expect(await a()).toEqual('moo');
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('moo');
-    });
-  });
-
-  /* parallel */
-  describe('when we use the `parallel` method', () => {
-    it('should run functions in parallel', () => {
-      const s = state('foo');
-      const spyA = jest.fn().mockImplementation(() => 'a');
-      const spyB = jest.fn().mockImplementation(() => 'b');
-      const spyC = jest.fn().mockImplementation(() => 'c');
-      const m = s.map(() => 'boo').parallel(spyA, spyB, spyC);
-
-      expect(m('moo')).toStrictEqual(['a', 'b', 'c']);
-      expect(spyA).toBeCalledTimes(1);
-      expect(spyA).toBeCalledWith('boo', 'moo');
-      expect(spyB).toBeCalledTimes(1);
-      expect(spyB).toBeCalledWith('boo', 'moo');
-      expect(spyC).toBeCalledTimes(1);
-      expect(spyC).toBeCalledWith('boo', 'moo');
-    });
-    it('should wait till all the async parallel functions are done', async () => {
-      const s = state('foo');
-      const spyA = jest.fn().mockImplementation(() => 'a');
-      const spyB = jest.fn().mockImplementation(async () => {
-        await delay(5);
-        return 'b';
-      });
-      const spyC = jest.fn().mockImplementation(async () => {
-        await delay(7);
-        return 'c';
-      });
-      const m = s.map(() => 'boo').parallel(spyA, spyB, spyC);
-
-      expect(await m('moo')).toStrictEqual(['a', 'b', 'c']);
-      expect(spyA).toBeCalledTimes(1);
-      expect(spyA).toBeCalledWith('boo', 'moo');
-      expect(spyB).toBeCalledTimes(1);
-      expect(spyB).toBeCalledWith('boo', 'moo');
-      expect(spyC).toBeCalledTimes(1);
-      expect(spyC).toBeCalledWith('boo', 'moo');
     });
   });
 
@@ -397,23 +374,6 @@ describe('Given the state', () => {
       s.set('bar');
       expect(s.get('bar'));
       expect(s.get()).toBe('bar');
-    });
-  });
-
-  /* mapToKey */
-  describe('when we use the `mapToKey` method', () => {
-    it('should map to an object which key is equal to the value of the state', () => {
-      const spy = jest.fn();
-      const s = state('foo');
-
-      s.mapToKey('myValue').pipe(spy).subscribe();
-      s.set('bar');
-
-      expect(spy).toBeCalledTimes(1);
-      expect(spy).toBeCalledWith({ myValue: 'bar' });
-    });
-    it('should work as the other queue api methods', () => {
-      expect(state('foo').mapToKey('bar')()).toStrictEqual({ bar: 'foo' });
     });
   });
 
@@ -619,7 +579,13 @@ describe('Given the state', () => {
 
   /* isMutating */
   describe('when we use the `isMutating` method', () => {
-    queueMethods.forEach(method => {
+    [
+      'pipe',
+      'map',
+      'mutate',
+      'filter',
+      'mapToKey'
+    ].forEach(method => {
       it(`should return "true" for the ones that mutate the state (${ method })`, () => {
         expect(state('foo')[method](() => {}).isMutating()).toBe(method === 'mutate');
       });
@@ -638,6 +604,65 @@ describe('Given the state', () => {
       expect(get()).toBe('bar');
       expect(s.map(value => value + 'zar')()).toBe('barzar');
       expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
+    });
+  });
+
+  /* custom methods */
+  xdescribe('when we define a custom method', () => {
+    it('should be able to use it as a normal queue method', () => {
+      const s = state(2);
+      const y = state({ hello: 'world' });
+      const spy3 = jest.fn();
+      const spy2 = jest.fn().mockImplementation((value, arg1, arg2) => {
+        return value + arg1 + arg2;
+      });
+      const spy = jest.fn().mockImplementation(() => {
+        return spy2;
+      });
+
+      s.define('bar', spy);
+
+      let trigger = s.map(value => value * 2).bar('a', 'b').pipe(spy3);
+
+      trigger.subscribe(true);
+
+      expect(trigger(8, 2)).toBe(14);
+
+      s.set(10);
+
+      expect(spy).toBeCalledWithArgs([ ['a', 'b'] ], [ ['a', 'b'] ], [ ['a', 'b'] ]);
+      expect(spy2).toBeCalledWithArgs([ 4 ], [ 4, 8, 2 ], [ 20 ]);
+      expect(s.get()).toBe(10);
+      expect(y.get()).toStrictEqual({ hello: 'world' });
+    });
+    describe('and we use an async function', () => {
+      it('should keep the queue working properly', async () => {
+        const s = state();
+        const spy = jest.fn();
+        const spy2 = jest.fn();
+
+        s.define('gamble', (args) => {
+          return async (word, ...payload) => {
+            spy2(args, word, payload);
+            await delay(5);
+            if (word === 'BAR') return 'JACKPOT';
+            return 'Nope';
+          };
+        });
+
+        const play = s.mutate((current, payload) => payload.toUpperCase()).gamble().pipe(spy);
+
+        await play('foo');
+        await play('bar');
+        await play('baz');
+
+        expect(spy).toBeCalledWithArgs(
+          ['Nope', 'foo'], ['JACKPOT', 'bar'], ['Nope', 'baz']
+        );
+        expect(spy2).toBeCalledWithArgs(
+          [[], 'FOO', ['foo']], [[], 'BAR', ['bar']], [[], 'BAZ', ['baz']]
+        );
+      });
     });
   });
 });

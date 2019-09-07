@@ -5,18 +5,71 @@ import registry from './registry';
 var ids = 0;
 const getId = (prefix) => `@@${ prefix }${ ++ids }`;
 
-export const queueMethods = [
-  'pipe',
-  'map',
-  'mutate',
-  'filter',
-  'parallel',
-  'mapToKey'
-];
+function pipe(func) {
+  return (queueResult, payload, next) => {
+    let result = (func || function () {})(queueResult, ...payload);
 
-function createQueue(setStateValue, getStateValue, onDone = () => {}) {
+    if (isPromise(result)) {
+      return result.then(() => next(queueResult));
+    }
+    return next(queueResult);
+  };
+};
+function map(func) {
+  return (queueResult, payload, next) => {
+    let result = (func || (value => value))(queueResult, ...payload);
+
+    if (isPromise(result)) {
+      return result.then(next);
+    }
+    return next(result);
+  };
+};
+function mapToKey(key) {
+  return (queueResult, payload, next) => {
+    const mappingFunc = (value) => ({ [key]: value });
+
+    return next(mappingFunc(queueResult, ...payload));
+  };
+}
+function mutate(func) {
+  return (queueResult, payload, next, q) => {
+    let result = (func || ((current, payload) => payload))(queueResult, ...payload);
+
+    if (isPromise(result)) {
+      return result.then(asyncResult => {
+        q.setStateValue(asyncResult);
+        return next(asyncResult);
+      });
+    }
+    q.setStateValue(result);
+    return next(result);
+  };
+}
+function filter(func) {
+  return (queueResult, payload, next, q) => {
+    let filterResult = func(queueResult, ...payload);
+
+    if (isPromise(filterResult)) {
+      return filterResult.then(asyncResult => {
+        if (!asyncResult) {
+          q.index = q.items.length;
+        }
+        return next(queueResult);
+      });
+    }
+    if (!filterResult) {
+      q.index = q.items.length;
+    }
+    return next(queueResult);
+  };
+}
+
+function createQueue(setStateValue, getStateValue, onDone = () => {}, queueAPI) {
   const q = {
     index: 0,
+    setStateValue,
+    getStateValue,
     result: getStateValue(),
     id: getId('q'),
     items: [],
@@ -28,7 +81,8 @@ function createQueue(setStateValue, getStateValue, onDone = () => {}) {
 
       q.index = 0;
 
-      function next() {
+      function next(lastResult) {
+        q.result = lastResult;
         q.index++;
         if (q.index < items.length) {
           return loop();
@@ -38,79 +92,11 @@ function createQueue(setStateValue, getStateValue, onDone = () => {}) {
       };
       function loop() {
         const { type, func } = items[q.index];
+        const logic = queueAPI[type];
 
-        switch (type) {
-          /* -------------------------------------------------- pipe */
-          case 'pipe':
-            let pipeResult = (func[0] || function () {})(q.result, ...payload);
-
-            if (isPromise(pipeResult)) {
-              return pipeResult.then(next);
-            }
-            return next();
-          /* -------------------------------------------------- map */
-          case 'map':
-            q.result = (func[0] || (value => value))(q.result, ...payload);
-            if (isPromise(q.result)) {
-              return q.result.then(asyncResult => {
-                q.result = asyncResult;
-                return next();
-              });
-            }
-            return next();
-          /* -------------------------------------------------- map */
-          case 'mapToKey':
-            const mappingFunc = (value) => ({ [func[0]]: value });
-
-            q.result = mappingFunc(q.result, ...payload);
-            return next();
-          /* -------------------------------------------------- mutate */
-          case 'mutate':
-              q.result = (func[0] || ((current, payload) => payload))(q.result, ...payload);
-              if (isPromise(q.result)) {
-                return q.result.then(asyncResult => {
-                  q.result = asyncResult;
-                  setStateValue(q.result);
-                  return next();
-                });
-              }
-              setStateValue(q.result);
-              return next();
-          /* -------------------------------------------------- filter */
-          case 'filter':
-            let filterResult = func[0](q.result, ...payload);
-
-            if (isPromise(filterResult)) {
-              return filterResult.then(asyncResult => {
-                if (!asyncResult) {
-                  q.index = items.length;
-                }
-                return next();
-              });
-            }
-            if (!filterResult) {
-              q.index = items.length;
-            }
-            return next();
-          /* -------------------------------------------------- parallel */
-          case 'parallel':
-            q.result = func.map(f => f(q.result, ...payload));
-            const promises = q.result.filter(isPromise);
-
-            if (promises.length > 0) {
-              return Promise.all(promises).then(() => {
-                q.result.forEach((r, index) => {
-                  if (isPromise(r)) {
-                    r.then(value => (q.result[index] = value));
-                  }
-                });
-                return next();
-              });
-            }
-            return next();
-
+        if (logic) {
+          return logic(q, func, payload, next);
         }
-        /* -------------------------------------------------- error */
         throw new Error(`Unsupported method "${ type }".`);
       };
 
@@ -141,8 +127,10 @@ function implementIterable(stateAPI) {
 }
 
 export function createState(initialValue) {
-  let value = initialValue;
   const stateAPI = {};
+  const queueMethods = [];
+  const queueAPI = {};
+  let value = initialValue;
   let createdQueues = [];
   let listeners = [];
   let active = true;
@@ -178,12 +166,27 @@ export function createState(initialValue) {
     registry.add(exportedAs = key, stateAPI);
     return stateAPI;
   };
+  stateAPI.define = defineQueueMethod;
 
-  queueMethods.forEach(methodName => {
-    stateAPI[methodName] = (...func) => createNewTrigger([ { type: methodName, func } ]);
-  });
+  defineQueueMethod('pipe', pipe);
+  defineQueueMethod('map', map);
+  defineQueueMethod('mapToKey', mapToKey);
+  defineQueueMethod('mutate', mutate);
+  defineQueueMethod('filter', filter);
   implementIterable(stateAPI);
 
+  function defineQueueMethod(methodName, func) {
+    queueMethods.push(methodName);
+    queueAPI[methodName] = function (q, args, payload, next) {
+      const result = func(...args)(q.result, payload, next, q);
+
+      if (isPromise(result)) {
+        return result.then(next);
+      }
+      return next(result);
+    };
+    stateAPI[methodName] = (...methodArgs) => createNewTrigger([ { type: methodName, func: methodArgs } ]);
+  };
   function addListener(trigger) {
     trigger.__isStream = true;
     listeners.push(trigger);
@@ -201,7 +204,7 @@ export function createState(initialValue) {
   function createNewTrigger(items = []) {
     const trigger = function (...payload) {
       if (active === false || trigger.__itemsToCreate.length === 0) return stateAPI.get();
-      const queue = createQueue(stateAPI.set, stateAPI.get, removeQueue);
+      const queue = createQueue(stateAPI.set, stateAPI.get, removeQueue, queueAPI);
 
       addQueue(queue);
       trigger.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
@@ -216,7 +219,7 @@ export function createState(initialValue) {
 
     // queue methods
     queueMethods.forEach(m => {
-      trigger[m] = (...func) => createNewTrigger([ ...trigger.__itemsToCreate, { type: m, func } ]);
+      trigger[m] = (...methodArgs) => createNewTrigger([ ...trigger.__itemsToCreate, { type: m, func: methodArgs } ]);
     });
 
     // not supported in queue methods
