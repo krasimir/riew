@@ -307,6 +307,11 @@ function createRiew(viewFunc) {
   var isActive = function isActive() {
     return active;
   };
+  var isSubscribed = function isSubscribed(s) {
+    return !!subscriptions.find(function (trigger) {
+      return trigger.__state.id === s.id;
+    });
+  };
 
   // triggers
   var updateOutput = output.mutate(function (current, newStuff) {
@@ -316,19 +321,15 @@ function createRiew(viewFunc) {
       Object.keys(newStuff).forEach(function (key) {
         if ((0, _state2.isRiewState)(newStuff[key])) {
           result[key] = newStuff[key].get();
-          if (!subscriptions.find(function (trigger) {
-            return trigger.__state.id === newStuff[key].id;
-          })) {
+          if (!isSubscribed(newStuff[key])) {
             subscriptions.push(newStuff[key].pipe(function (value) {
               return _render3(_defineProperty({}, key, value));
             }).subscribe());
           }
         } else if ((0, _state2.isRiewQueueTrigger)(newStuff[key]) && !newStuff[key].isMutating()) {
           result[key] = newStuff[key]();
-          if (!subscriptions.find(function (trigger) {
-            return trigger.__state.id === newStuff[key].__state.id;
-          })) {
-            subscriptions.push(newStuff[key].pipe(function () {
+          if (!isSubscribed(newStuff[key].__state)) {
+            subscriptions.push(newStuff[key].__state.pipe(function () {
               return _render3(_defineProperty({}, key, newStuff[key]()));
             }).subscribe());
           }
@@ -641,7 +642,7 @@ function createQueue(setStateValue, getStateValue) {
 function implementIterable(stateAPI) {
   if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
     stateAPI[Symbol.iterator] = function () {
-      var values = [stateAPI.get, stateAPI.set, stateAPI];
+      var values = [stateAPI.map(), stateAPI.mutate(), stateAPI];
       var i = 0;
 
       return {
@@ -709,6 +710,15 @@ function createState(initialValue) {
     return stateAPI;
   };
 
+  queueMethods.forEach(function (methodName) {
+    stateAPI[methodName] = function () {
+      for (var _len2 = arguments.length, func = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        func[_key2] = arguments[_key2];
+      }
+
+      return createNewTrigger([{ type: methodName, func: func }]);
+    };
+  });
   implementIterable(stateAPI);
 
   function addListener(trigger) {
@@ -756,8 +766,8 @@ function createState(initialValue) {
     // queue methods
     queueMethods.forEach(function (m) {
       trigger[m] = function () {
-        for (var _len2 = arguments.length, func = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          func[_key2] = arguments[_key2];
+        for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+          func[_key3] = arguments[_key3];
         }
 
         return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: m, func: func }]));
@@ -831,16 +841,6 @@ function createState(initialValue) {
 
     return trigger;
   }
-
-  queueMethods.forEach(function (methodName) {
-    stateAPI[methodName] = function () {
-      for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-        func[_key3] = arguments[_key3];
-      }
-
-      return createNewTrigger([{ type: methodName, func: func }]);
-    };
-  });
 
   return stateAPI;
 };

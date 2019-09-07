@@ -628,12 +628,16 @@ describe('Given the state', () => {
 
   /* Iterable */
   describe('when we destruct a state', () => {
-    it('should give us getter, setter and the state itself', () => {
+    it('should give us getter, setter which are actually triggers and the state itself', () => {
       const [ get, set, s ] = state('foo');
+      const spy = jest.fn();
+
+      get.map(value => value.toUpperCase()).pipe(spy).subscribe(true);
 
       set('bar');
       expect(get()).toBe('bar');
-      expect(s.map(value => value.toUpperCase())()).toBe('BAR');
+      expect(s.map(value => value + 'zar')()).toBe('barzar');
+      expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
     });
   });
 });

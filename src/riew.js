@@ -33,6 +33,7 @@ export default function createRiew(viewFunc, ...effects) {
   const api = state({});
 
   const isActive = () => active;
+  const isSubscribed = s => !!subscriptions.find(trigger => trigger.__state.id === s.id);
 
   // triggers
   const updateOutput = output.mutate((current, newStuff) => {
@@ -42,16 +43,16 @@ export default function createRiew(viewFunc, ...effects) {
       Object.keys(newStuff).forEach(key => {
         if (isRiewState(newStuff[key])) {
           result[key] = newStuff[key].get();
-          if (!subscriptions.find(trigger => trigger.__state.id === newStuff[key].id)) {
+          if (!isSubscribed(newStuff[key])) {
             subscriptions.push(
               newStuff[key].pipe(value => render({ [key]: value })).subscribe()
             );
           }
         } else if (isRiewQueueTrigger(newStuff[key]) && !newStuff[key].isMutating()) {
           result[key] = newStuff[key]();
-          if (!subscriptions.find(trigger => trigger.__state.id === newStuff[key].__state.id)) {
+          if (!isSubscribed(newStuff[key].__state)) {
             subscriptions.push(
-              newStuff[key].pipe(() => render({ [key]: newStuff[key]() })).subscribe()
+              newStuff[key].__state.pipe(() => render({ [key]: newStuff[key]() })).subscribe()
             );
           }
         } else {

@@ -146,6 +146,31 @@ describe('Given the `riew` factory function', () => {
       );
     });
   });
+  describe('when we send a getter or a setter to the view', () => {
+    it(`should
+      * run the getter and pass the value + also subscribe to state changes
+      * pass down the setter`, () => {
+      const view = jest.fn().mockImplementation(({ s, change }) => {
+        if (s !== 'bar') {
+          change('bar');
+        }
+      });
+      const se = function ({ render, state }) {
+        const [ getter, setter ] = state('foo');
+
+        render({ s: getter, change: setter });
+        render({ s: getter, change: setter });
+        render({ s: getter, change: setter });
+      };
+      const r = riew(view, se);
+
+      r.mount();
+      expect(view).toBeCalledWithArgs(
+        [ { s: 'foo', change: expect.any(Function) } ],
+        [ { s: 'bar', change: expect.any(Function) } ]
+      );
+    });
+  });
   describe('when we update the riew', () => {
     it('should render the view with accumulated props', () => {
       const view = jest.fn();

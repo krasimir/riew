@@ -127,7 +127,7 @@ function createQueue(setStateValue, getStateValue, onDone = () => {}) {
 function implementIterable(stateAPI) {
   if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
       stateAPI[Symbol.iterator] = function () {
-        const values = [ stateAPI.get, stateAPI.set, stateAPI ];
+        const values = [ stateAPI.map(), stateAPI.mutate(), stateAPI ];
         let i = 0;
 
         return {
@@ -179,6 +179,9 @@ export function createState(initialValue) {
     return stateAPI;
   };
 
+  queueMethods.forEach(methodName => {
+    stateAPI[methodName] = (...func) => createNewTrigger([ { type: methodName, func } ]);
+  });
   implementIterable(stateAPI);
 
   function addListener(trigger) {
@@ -275,10 +278,6 @@ export function createState(initialValue) {
 
     return trigger;
   }
-
-  queueMethods.forEach(methodName => {
-    stateAPI[methodName] = (...func) => createNewTrigger([ { type: methodName, func } ]);
-  });
 
   return stateAPI;
 };
