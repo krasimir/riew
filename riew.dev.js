@@ -459,7 +459,6 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.queueMethods = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -486,6 +485,14 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
+
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
@@ -496,26 +503,87 @@ function _toConsumableArray(arr) {
   }
 }
 
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
-}
-
 var ids = 0;
 var getId = function getId(prefix) {
   return '@@' + prefix + ++ids;
 };
 
-var queueMethods = exports.queueMethods = ['pipe', 'map', 'mutate', 'filter', 'parallel', 'mapToKey'];
+function pipe(func) {
+  return function (queueResult, payload, next) {
+    var result = (func || function () {}).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+
+    if ((0, _utils.isPromise)(result)) {
+      return result.then(function () {
+        return next(queueResult);
+      });
+    }
+    return next(queueResult);
+  };
+};
+function map(func) {
+  return function (queueResult, payload, next) {
+    var result = (func || function (value) {
+      return value;
+    }).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+
+    if ((0, _utils.isPromise)(result)) {
+      return result.then(next);
+    }
+    return next(result);
+  };
+};
+function mapToKey(key) {
+  return function (queueResult, payload, next) {
+    var mappingFunc = function mappingFunc(value) {
+      return _defineProperty({}, key, value);
+    };
+
+    return next(mappingFunc.apply(undefined, [queueResult].concat(_toConsumableArray(payload))));
+  };
+}
+function mutate(func) {
+  return function (queueResult, payload, next, q) {
+    var result = (func || function (current, payload) {
+      return payload;
+    }).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+
+    if ((0, _utils.isPromise)(result)) {
+      return result.then(function (asyncResult) {
+        q.setStateValue(asyncResult);
+        return next(asyncResult);
+      });
+    }
+    q.setStateValue(result);
+    return next(result);
+  };
+}
+function filter(func) {
+  return function (queueResult, payload, next, q) {
+    var filterResult = func.apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+
+    if ((0, _utils.isPromise)(filterResult)) {
+      return filterResult.then(function (asyncResult) {
+        if (!asyncResult) {
+          q.index = q.items.length;
+        }
+        return next(queueResult);
+      });
+    }
+    if (!filterResult) {
+      q.index = q.items.length;
+    }
+    return next(queueResult);
+  };
+}
 
 function createQueue(setStateValue, getStateValue) {
   var onDone = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
+  var queueAPI = arguments[3];
 
   var q = {
     index: 0,
+    setStateValue: setStateValue,
+    getStateValue: getStateValue,
     result: getStateValue(),
     id: getId('q'),
     items: [],
@@ -531,7 +599,8 @@ function createQueue(setStateValue, getStateValue) {
 
       q.index = 0;
 
-      function next() {
+      function next(lastResult) {
+        q.result = lastResult;
         q.index++;
         if (q.index < items.length) {
           return loop();
@@ -544,88 +613,11 @@ function createQueue(setStateValue, getStateValue) {
             type = _items$q$index.type,
             func = _items$q$index.func;
 
-        switch (type) {
-          /* -------------------------------------------------- pipe */
-          case 'pipe':
-            var pipeResult = (func[0] || function () {}).apply(undefined, [q.result].concat(payload));
+        var logic = queueAPI[type];
 
-            if ((0, _utils.isPromise)(pipeResult)) {
-              return pipeResult.then(next);
-            }
-            return next();
-          /* -------------------------------------------------- map */
-          case 'map':
-            q.result = (func[0] || function (value) {
-              return value;
-            }).apply(undefined, [q.result].concat(payload));
-            if ((0, _utils.isPromise)(q.result)) {
-              return q.result.then(function (asyncResult) {
-                q.result = asyncResult;
-                return next();
-              });
-            }
-            return next();
-          /* -------------------------------------------------- map */
-          case 'mapToKey':
-            var mappingFunc = function mappingFunc(value) {
-              return _defineProperty({}, func[0], value);
-            };
-
-            q.result = mappingFunc.apply(undefined, [q.result].concat(payload));
-            return next();
-          /* -------------------------------------------------- mutate */
-          case 'mutate':
-            q.result = (func[0] || function (current, payload) {
-              return payload;
-            }).apply(undefined, [q.result].concat(payload));
-            if ((0, _utils.isPromise)(q.result)) {
-              return q.result.then(function (asyncResult) {
-                q.result = asyncResult;
-                setStateValue(q.result);
-                return next();
-              });
-            }
-            setStateValue(q.result);
-            return next();
-          /* -------------------------------------------------- filter */
-          case 'filter':
-            var filterResult = func[0].apply(func, [q.result].concat(payload));
-
-            if ((0, _utils.isPromise)(filterResult)) {
-              return filterResult.then(function (asyncResult) {
-                if (!asyncResult) {
-                  q.index = items.length;
-                }
-                return next();
-              });
-            }
-            if (!filterResult) {
-              q.index = items.length;
-            }
-            return next();
-          /* -------------------------------------------------- parallel */
-          case 'parallel':
-            q.result = func.map(function (f) {
-              return f.apply(undefined, [q.result].concat(payload));
-            });
-            var promises = q.result.filter(_utils.isPromise);
-
-            if (promises.length > 0) {
-              return Promise.all(promises).then(function () {
-                q.result.forEach(function (r, index) {
-                  if ((0, _utils.isPromise)(r)) {
-                    r.then(function (value) {
-                      return q.result[index] = value;
-                    });
-                  }
-                });
-                return next();
-              });
-            }
-            return next();
-
+        if (logic) {
+          return logic(q, func, payload, next);
         }
-        /* -------------------------------------------------- error */
         throw new Error('Unsupported method "' + type + '".');
       };
 
@@ -658,8 +650,10 @@ function implementIterable(stateAPI) {
 }
 
 function createState(initialValue) {
-  var value = initialValue;
   var stateAPI = {};
+  var queueMethods = [];
+  var queueAPI = {};
+  var value = initialValue;
   var createdQueues = [];
   var listeners = [];
   var active = true;
@@ -709,18 +703,36 @@ function createState(initialValue) {
     _registry2.default.add(exportedAs = key, stateAPI);
     return stateAPI;
   };
+  stateAPI.define = function () {
+    defineQueueMethod.apply(undefined, arguments);
+    return stateAPI;
+  };
 
-  queueMethods.forEach(function (methodName) {
-    stateAPI[methodName] = function () {
-      for (var _len2 = arguments.length, func = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-        func[_key2] = arguments[_key2];
-      }
-
-      return createNewTrigger([{ type: methodName, func: func }]);
-    };
-  });
+  defineQueueMethod('pipe', pipe);
+  defineQueueMethod('map', map);
+  defineQueueMethod('mapToKey', mapToKey);
+  defineQueueMethod('mutate', mutate);
+  defineQueueMethod('filter', filter);
   implementIterable(stateAPI);
 
+  function defineQueueMethod(methodName, func) {
+    queueMethods.push(methodName);
+    queueAPI[methodName] = function (q, args, payload, next) {
+      var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, next, q);
+
+      if ((0, _utils.isPromise)(result)) {
+        return result.then(next);
+      }
+      return next(result);
+    };
+    stateAPI[methodName] = function () {
+      for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        methodArgs[_key2] = arguments[_key2];
+      }
+
+      return createNewTrigger([{ type: methodName, func: methodArgs }]);
+    };
+  };
   function addListener(trigger) {
     trigger.__isStream = true;
     listeners.push(trigger);
@@ -746,7 +758,7 @@ function createState(initialValue) {
 
     var trigger = function trigger() {
       if (active === false || trigger.__itemsToCreate.length === 0) return stateAPI.get();
-      var queue = createQueue(stateAPI.set, stateAPI.get, removeQueue);
+      var queue = createQueue(stateAPI.set, stateAPI.get, removeQueue, queueAPI);
 
       addQueue(queue);
       trigger.__itemsToCreate.forEach(function (_ref4) {
@@ -766,11 +778,11 @@ function createState(initialValue) {
     // queue methods
     queueMethods.forEach(function (m) {
       trigger[m] = function () {
-        for (var _len3 = arguments.length, func = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-          func[_key3] = arguments[_key3];
+        for (var _len3 = arguments.length, methodArgs = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+          methodArgs[_key3] = arguments[_key3];
         }
 
-        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: m, func: func }]));
+        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: m, func: methodArgs }]));
       };
     });
 
@@ -782,6 +794,17 @@ function createState(initialValue) {
     });
 
     // trigger direct methods
+    trigger.define = function (methodName, func) {
+      defineQueueMethod(methodName, func);
+      trigger[methodName] = function () {
+        for (var _len4 = arguments.length, methodArgs = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+          methodArgs[_key4] = arguments[_key4];
+        }
+
+        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
+      };
+      return trigger;
+    };
     trigger.isMutating = function () {
       return !!trigger.__itemsToCreate.find(function (_ref5) {
         var type = _ref5.type;

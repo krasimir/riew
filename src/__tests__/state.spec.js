@@ -118,10 +118,10 @@ describe('Given the state', () => {
   describe('when we use the `mapToKey` method', () => {
     it('should map to an object which key is equal to the value of the state', () => {
       const spy = jest.fn();
-      const s = state('foo');
+      const [ s, setState ] = state('foo');
 
       s.mapToKey('myValue').pipe(spy).subscribe();
-      s.set('bar');
+      setState('bar');
 
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith({ myValue: 'bar' });
@@ -134,15 +134,15 @@ describe('Given the state', () => {
   /* mutate */
   describe('when we use the `mutate` method', () => {
     it('should add a queue item for mutating the state', () => {
-      const s = state('foo');
+      const [ s ] = state('foo');
       const spy = jest.fn().mockImplementation((current, payload) => current + payload);
       const m = s.mutate(spy);
 
       expect(m('bar')).toBe('foobar');
-      expect(s.get()).toBe('foobar');
+      expect(s()).toBe('foobar');
     });
     it('should support async mutations', async () => {
-      const s = state('foo');
+      const [ s ] = state('foo');
       const spy = jest.fn().mockImplementation(async (current, payload) => {
         await delay(5);
         return current + payload;
@@ -151,33 +151,33 @@ describe('Given the state', () => {
       const result = await m('bar');
 
       expect(result).toBe('foobar');
-      expect(s.get()).toBe('foobar');
+      expect(s()).toBe('foobar');
     });
     it('should work with no function passed', async () => {
-      const s = state('foo');
+      const [ s ] = state('foo');
       const m = s.mutate();
 
       m('bar');
 
-      expect(s.get()).toBe('bar');
+      expect(s()).toBe('bar');
     });
   });
 
   /* filter */
   describe('when we use the `filter` method', () => {
     it('should continue the queue only if the filter function returns `true`', () => {
-      const s = state('foo');
+      const [ s, setState ] = state('foo');
       const spy = jest.fn();
       const a = s.filter((value) => value === 'boo').map(() => 'moo').pipe(spy);
 
       expect(a()).toEqual('foo');
-      s.set('boo');
+      setState('boo');
       expect(a()).toEqual('moo');
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('moo');
     });
     it('should support an async filter', async () => {
-      const s = state('foo');
+      const [ s, setState ] = state('foo');
       const spy = jest.fn();
       const a = s.filter(async (value) => {
         await delay(5);
@@ -185,7 +185,7 @@ describe('Given the state', () => {
       }).map(() => 'moo').pipe(spy);
 
       expect(await a()).toEqual('foo');
-      s.set('boo');
+      setState('boo');
       expect(await a()).toEqual('moo');
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith('moo');
@@ -194,7 +194,7 @@ describe('Given the state', () => {
 
   /* cancel */
   describe('when we use the `cancel` method', () => {
-    it('should empty the queue and disable the creation of new ones', () => {
+    fit('should empty the queue and disable the creation of new ones', () => {
       const s = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();

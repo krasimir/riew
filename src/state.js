@@ -1,69 +1,15 @@
 import equal from 'fast-deep-equal';
+
 import { isPromise, getFuncName } from './utils';
 import registry from './registry';
+import pipe from './state/pipe';
+import map from './state/map';
+import mapToKey from './state/mapToKey';
+import mutate from './state/mutate';
+import filter from './state/filter';
 
 var ids = 0;
 const getId = (prefix) => `@@${ prefix }${ ++ids }`;
-
-function pipe(func) {
-  return (queueResult, payload, next) => {
-    let result = (func || function () {})(queueResult, ...payload);
-
-    if (isPromise(result)) {
-      return result.then(() => next(queueResult));
-    }
-    return next(queueResult);
-  };
-};
-function map(func) {
-  return (queueResult, payload, next) => {
-    let result = (func || (value => value))(queueResult, ...payload);
-
-    if (isPromise(result)) {
-      return result.then(next);
-    }
-    return next(result);
-  };
-};
-function mapToKey(key) {
-  return (queueResult, payload, next) => {
-    const mappingFunc = (value) => ({ [key]: value });
-
-    return next(mappingFunc(queueResult, ...payload));
-  };
-}
-function mutate(func) {
-  return (queueResult, payload, next, q) => {
-    let result = (func || ((current, payload) => payload))(queueResult, ...payload);
-
-    if (isPromise(result)) {
-      return result.then(asyncResult => {
-        q.setStateValue(asyncResult);
-        return next(asyncResult);
-      });
-    }
-    q.setStateValue(result);
-    return next(result);
-  };
-}
-function filter(func) {
-  return (queueResult, payload, next, q) => {
-    let filterResult = func(queueResult, ...payload);
-
-    if (isPromise(filterResult)) {
-      return filterResult.then(asyncResult => {
-        if (!asyncResult) {
-          q.index = q.items.length;
-        }
-        return next(queueResult);
-      });
-    }
-    if (!filterResult) {
-      q.index = q.items.length;
-    }
-    return next(queueResult);
-  };
-}
 
 function createQueue(setStateValue, getStateValue, onDone = () => {}, queueAPI) {
   const q = {
@@ -214,6 +160,8 @@ export function createState(initialValue) {
       return queue.process(...payload);
     };
 
+    implementIterable(trigger);
+
     trigger.id = getId('t');
     trigger.__isStream = false;
     trigger.__riewTrigger = true;
@@ -292,7 +240,7 @@ export function createState(initialValue) {
     return trigger;
   }
 
-  return stateAPI;
+  return createNewTrigger();
 };
 
 export function mergeStates(statesMap) {
