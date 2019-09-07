@@ -124,6 +124,22 @@ function createQueue(setStateValue, getStateValue, onDone = () => {}) {
   return q;
 }
 
+function implementIterable(stateAPI) {
+  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
+      stateAPI[Symbol.iterator] = function () {
+        const values = [ stateAPI.get, stateAPI.set, stateAPI ];
+        let i = 0;
+
+        return {
+          next: () => ({
+            value: values[ i++ ],
+            done: i > values.length
+          })
+        };
+      };
+  }
+}
+
 export function createState(initialValue) {
   let value = initialValue;
   const stateAPI = {};
@@ -162,6 +178,8 @@ export function createState(initialValue) {
     registry.add(exportedAs = key, stateAPI);
     return stateAPI;
   };
+
+  implementIterable(stateAPI);
 
   function addListener(trigger) {
     trigger.__isStream = true;

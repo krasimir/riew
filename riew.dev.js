@@ -638,6 +638,24 @@ function createQueue(setStateValue, getStateValue) {
   return q;
 }
 
+function implementIterable(stateAPI) {
+  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
+    stateAPI[Symbol.iterator] = function () {
+      var values = [stateAPI.get, stateAPI.set, stateAPI];
+      var i = 0;
+
+      return {
+        next: function next() {
+          return {
+            value: values[i++],
+            done: i > values.length
+          };
+        }
+      };
+    };
+  }
+}
+
 function createState(initialValue) {
   var value = initialValue;
   var stateAPI = {};
@@ -690,6 +708,8 @@ function createState(initialValue) {
     _registry2.default.add(exportedAs = key, stateAPI);
     return stateAPI;
   };
+
+  implementIterable(stateAPI);
 
   function addListener(trigger) {
     trigger.__isStream = true;
