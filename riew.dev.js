@@ -581,21 +581,21 @@ function _toConsumableArray(arr) {
 }
 
 function filter(func) {
-  return function (queueResult, payload, next, q) {
-    var filterResult = func.apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+  return function (intermediateValue, payload, next, q) {
+    var filterResult = func.apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
 
     if ((0, _utils.isPromise)(filterResult)) {
       return filterResult.then(function (asyncResult) {
         if (!asyncResult) {
           q.index = q.items.length;
         }
-        return next(queueResult);
+        return next(intermediateValue);
       });
     }
     if (!filterResult) {
       q.index = q.items.length;
     }
-    return next(queueResult);
+    return next(intermediateValue);
   };
 }
 
@@ -724,10 +724,10 @@ function _toConsumableArray(arr) {
 }
 
 function map(func) {
-  return function (queueResult, payload, next) {
+  return function (intermediateValue, payload, next) {
     var result = (func || function (value) {
       return value;
-    }).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+    }).apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
 
     if ((0, _utils.isPromise)(result)) {
       return result.then(next);
@@ -763,12 +763,12 @@ function _defineProperty(obj, key, value) {
 }
 
 function mapToKey(key) {
-  return function (queueResult, payload, next) {
+  return function (intermediateValue, payload, next) {
     var mappingFunc = function mappingFunc(value) {
       return _defineProperty({}, key, value);
     };
 
-    return next(mappingFunc.apply(undefined, [queueResult].concat(_toConsumableArray(payload))));
+    return next(mappingFunc.apply(undefined, [intermediateValue].concat(_toConsumableArray(payload))));
   };
 };
 
@@ -793,10 +793,10 @@ function _toConsumableArray(arr) {
 }
 
 function mutate(func) {
-  return function (queueResult, payload, next, q) {
+  return function (intermediateValue, payload, next, q) {
     var result = (func || function (current, payload) {
       return payload;
-    }).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+    }).apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
 
     if ((0, _utils.isPromise)(result)) {
       return result.then(function (asyncResult) {
@@ -807,7 +807,7 @@ function mutate(func) {
     q.setStateValue(result);
     return next(result);
   };
-}
+};
 
 },{"../utils":14}],11:[function(require,module,exports){
 'use strict';
@@ -830,15 +830,15 @@ function _toConsumableArray(arr) {
 }
 
 function pipe(func) {
-  return function (queueResult, payload, next) {
-    var result = (func || function () {}).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+  return function (intermediateValue, payload, next) {
+    var result = (func || function () {}).apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
 
     if ((0, _utils.isPromise)(result)) {
       return result.then(function () {
-        return next(queueResult);
+        return next(intermediateValue);
       });
     }
-    return next(queueResult);
+    return next(intermediateValue);
   };
 };
 

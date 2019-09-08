@@ -619,7 +619,7 @@ describe('Given the state', () => {
     });
   });
 
-  /* custom methods */
+  /* define (custom methods) */
   describe('when we define a custom method', () => {
     it('should be able to use it as a normal queue method', () => {
       const [ s, setState ] = state(2);
@@ -684,6 +684,23 @@ describe('Given the state', () => {
           ['BAR', ['bar']],
           ['BAZ', ['baz']]
         );
+      });
+    });
+    describe('when we define a method, export the trigger and fork it after that', () => {
+      it('should still work', () => {
+        const [ s ] = state('foo').export('hey');
+
+        s.define('toUpperCase', () => {
+          return (intermediateValue, payload, next, q) => {
+            return next(intermediateValue.toUpperCase());
+          };
+        });
+
+        expect(s.toUpperCase().map()()).toBe('FOO');
+
+        const m = registry.get('hey').mutate(() => 'bar');
+
+        expect(m.toUpperCase()()).toBe('BAR');
       });
     });
   });

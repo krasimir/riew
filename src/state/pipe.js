@@ -1,12 +1,12 @@
 import { isPromise } from '../utils';
 
 export default function pipe(func) {
-  return (queueResult, payload, next) => {
-    let result = (func || function () {})(queueResult, ...payload);
+  return (intermediateValue, payload, next) => {
+    let result = (func || function () {})(intermediateValue, ...payload);
 
     if (isPromise(result)) {
-      return result.then(() => next(queueResult));
+      return result.then(() => next(intermediateValue));
     }
-    return next(queueResult);
+    return next(intermediateValue);
   };
 };

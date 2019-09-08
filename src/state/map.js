@@ -1,8 +1,8 @@
 import { isPromise } from '../utils';
 
 export default function map(func) {
-  return (queueResult, payload, next) => {
-    let result = (func || (value => value))(queueResult, ...payload);
+  return (intermediateValue, payload, next) => {
+    let result = (func || (value => value))(intermediateValue, ...payload);
 
     if (isPromise(result)) {
       return result.then(next);
