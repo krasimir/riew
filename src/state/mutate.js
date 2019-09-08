@@ -13,4 +13,4 @@ export default function mutate(func) {
     q.setStateValue(result);
     return next(result);
   };
-}
+};

@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types, react/jsx-key */
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../../__helpers__';
 import riew from '../index';
 import { createState as state } from '../../state';
@@ -116,6 +116,44 @@ describe('Given the React riew function', () => {
       );
 
       exerciseHTML(container, 'Hello John!');
+    });
+  });
+  describe('when we render state and mutation made out of it', () => {
+    it('when firing the mutation should re-render with a new value', () => {
+      const effect = ({ state, render }) => {
+        const [ value ] = state([
+          { value: 2, selected: true },
+          { value: 67, selected: true }
+        ]);
+
+        render({
+          value,
+          change: value.mutate((current, payload) => {
+            return current.map(item => {
+              return {
+                ...item,
+                selected: item.value === payload ? false : item.selected
+              };
+            });
+          })
+        });
+      };
+      const View = ({ value, change }) => {
+        return (
+          <div>
+            <div>value: { value.filter(({ selected }) => selected).map(({ value }) => value).join(', ') }</div>
+            <button onClick={ () => change(67) }>click me</button>
+          </div>
+        );
+      };
+      const R = riew(View, effect);
+      const { container, getByText } = render(<R />);
+
+      exerciseHTML(container, '<div><div>value: 2, 67</div><button>click me</button></div>');
+
+      fireEvent.click(getByText(/click me/));
+
+      exerciseHTML(container, '<div><div>value: 2</div><button>click me</button></div>');
     });
   });
 });
