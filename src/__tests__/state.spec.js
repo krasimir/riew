@@ -7,6 +7,16 @@ const merge = mergeStates;
 
 describe('Given the state', () => {
 
+  /* get & set */
+  describe('when we use `get` and `set`', () => {
+    it('should get and set the current value', () => {
+      const [ get, set ] = state('foo');
+
+      set('bar');
+      expect(get()).toBe('bar');
+    });
+  });
+
   /* pipe */
   describe('when we use the `pipe` method', () => {
     it('should create a queue of functions and run them one after each other', () => {
@@ -194,8 +204,8 @@ describe('Given the state', () => {
 
   /* cancel */
   describe('when we use the `cancel` method', () => {
-    fit('should empty the queue and disable the creation of new ones', () => {
-      const s = state(10);
+    it('should empty the queue and disable the creation of new ones', () => {
+      const [ s ] = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
       const m = s.mutate((value) => value + 1).cancel().pipe(spyA);
@@ -205,7 +215,7 @@ describe('Given the state', () => {
       expect(m()).toBe(10);
       expect(m()).toBe(10);
       expect(n()).toBe(10);
-      expect(s.get()).toBe(10);
+      expect(s()).toBe(10);
       expect(spyA).toBeCalledTimes(0);
       expect(spyB).toBeCalledTimes(1);
       expect(spyB).toBeCalledWith(10);
@@ -215,7 +225,7 @@ describe('Given the state', () => {
   /* teardown */
   describe('when we use the `teardown` method', () => {
     it('should cancel all the queues', () => {
-      const s = state(10);
+      const [ s ] = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
       const m = s.mutate((value) => value + 1).pipe(spyA);
@@ -226,7 +236,7 @@ describe('Given the state', () => {
       expect(m()).toBe(10);
       expect(m()).toBe(10);
       expect(n()).toBe(10);
-      expect(s.get()).toBe(10);
+      expect(s()).toBe(10);
       expect(spyA).toBeCalledTimes(0);
       expect(spyB).toBeCalledTimes(0);
     });
@@ -250,13 +260,13 @@ describe('Given the state', () => {
       expect(spyB).toBeCalledWith(60);
     });
     it('should not trigger the queue if the value is the same', () => {
-      const s = state(10);
+      const [ s, setState ] = state(10);
       const spy = jest.fn();
 
       s.map(value => value * 2).pipe(spy).subscribe();
-      s.set(20);
-      s.set(20);
-      s.set(20);
+      setState(20);
+      setState(20);
+      setState(20);
 
       expect(spy).toBeCalledWithArgs([ 40 ]);
     });
@@ -270,7 +280,7 @@ describe('Given the state', () => {
       expect(spy).toBeCalledWith(30);
     });
     it('should allow us to fork streams', () => {
-      const s = state(10);
+      const [ s, setState ] = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
       const spyC = jest.fn();
@@ -280,7 +290,7 @@ describe('Given the state', () => {
       const t1 = subscription.map(value => value + 'B').pipe(function B(...args) { spyB(...args); }).subscribe();
       const t2 = subscription.map(value => value + 'C').pipe(function C(...args) { spyC(...args); }).subscribe();
 
-      s.set(100);
+      setState(100);
 
       expect(s.__listeners().map(({ id }) => id)).toStrictEqual([ subscription.id, t1.id, t2.id ]);
       expect(spyA).toBeCalledTimes(3);
@@ -293,7 +303,7 @@ describe('Given the state', () => {
       expect(spyC).toBeCalledWith('200C');
     });
     it('should allow us to unsubscribe from the stream', () => {
-      const s = state(10);
+      const [ s, setState ] = state(10);
       const spy = jest.fn();
       const subscription = s.map(value => value * 3).pipe(spy).subscribe(true);
 
@@ -301,8 +311,8 @@ describe('Given the state', () => {
 
       subscription();
       subscription();
-      s.set(200);
-      s.set(300);
+      setState(200);
+      setState(300);
       subscription();
 
       expect(spy).toBeCalledTimes(4);
@@ -321,59 +331,49 @@ describe('Given the state', () => {
     it('should set a merged value coming from the sources', () => {
       const s1 = state(1);
       const s2 = state('a');
-      const s = merge({ s1, s2 });
+      const [ s ] = merge({ s1, s2 });
 
-      expect(s.get()).toStrictEqual({ s1: 1, s2: 'a' });
+      expect(s()).toStrictEqual({ s1: 1, s2: 'a' });
     });
     it('should update the sources when we update the merged state', () => {
-      const s1 = state(1);
-      const s2 = state('a');
-      const s = merge({ s1, s2 });
+      const [ s1 ] = state(1);
+      const [ s2 ] = state('a');
+      const [ s, setState ] = merge({ s1, s2 });
 
-      s.set({ s1: 2 });
+      setState({ s1: 2 });
 
-      expect(s.get()).toStrictEqual({ s1: 2, s2: 'a' });
-      expect(s1.get()).toBe(2);
-      expect(s2.get()).toBe('a');
+      expect(s()).toStrictEqual({ s1: 2, s2: 'a' });
+      expect(s1()).toBe(2);
+      expect(s2()).toBe('a');
     });
     it('should get the right merged state when we update the source states', () => {
-      const s1 = state(1);
-      const s2 = state('a');
-      const s = merge({ s1, s2 });
+      const [ s1, setState1 ] = state(1);
+      const [ s2, setState2 ] = state('a');
+      const [ s ] = merge({ s1, s2 });
       const getValue = s.map(({ s1, s2 }) => s1 + s2);
 
-      s1.set(2);
-      s2.set('b');
+      setState1(2);
+      setState2('b');
 
       expect(getValue()).toBe('2b');
-      expect(s1.get()).toBe(2);
-      expect(s2.get()).toBe('b');
+      expect(s1()).toBe(2);
+      expect(s2()).toBe('b');
     });
     it('should support the listening on the merge state', () => {
-      const s1 = state(1);
-      const s2 = state('a');
+      const [ s1, setState1 ] = state(1);
+      const [ s2, setState2 ] = state('a');
       const s = merge({ s1, s2 });
       const spy = jest.fn();
 
       s.pipe(spy).subscribe();
 
-      s1.set(2);
-      s2.set('b');
+      setState1(2);
+      setState2('b');
 
-      expect(spy).toBeCalledTimes(2);
-      expect(spy.mock.calls[0]).toStrictEqual([{ s1: 2, s2: 'a' }]);
-      expect(spy.mock.calls[1]).toStrictEqual([{ s1: 2, s2: 'b' }]);
-    });
-  });
-
-  /* get & set */
-  describe('when we use `get` and `set`', () => {
-    it('should get and set the current value', () => {
-      const s = state('foo');
-
-      s.set('bar');
-      expect(s.get('bar'));
-      expect(s.get()).toBe('bar');
+      expect(spy).toBeCalledWithArgs(
+        [{ s1: 2, s2: 'a' }],
+        [{ s1: 2, s2: 'b' }]
+      );
     });
   });
 
@@ -397,7 +397,7 @@ describe('Given the state', () => {
   describe('when we have a slightly more complicated code', () => {
     it('should work :)', async () => {
       const arr = [];
-      const s = state('foo');
+      const [ s ] = state('foo');
       const spyPipe = jest.fn().mockImplementation(async () => arr.push('pipe'));
       const spyMap = jest.fn().mockImplementation(async (value, payload) => {
         await delay(5);
@@ -421,7 +421,7 @@ describe('Given the state', () => {
       const result = await trigger('bar');
 
       expect(result).toBe('THE MESSAGE IS FOOBAR');
-      expect(s.get()).toBe('The message is foobar');
+      expect(s()).toBe('The message is foobar');
       expect(arr).toStrictEqual([
         'pipe', 'map', 'pipe', 'mutate', 'pipe'
       ]);
@@ -435,14 +435,6 @@ describe('Given the state', () => {
 
       expect(m1()).toBe('foo1');
       expect(m2()).toBe('FOO2');
-    });
-  });
-  it('should throw errors if we try using the queue as a state', () => {
-    const s = state('foo');
-
-    ['set', 'get', 'teardown'].forEach(stateMethod => {
-      expect(() => s.pipe()[stateMethod]())
-        .toThrowError(`"${ stateMethod }" is not a queue method but a method of the state object.`);
     });
   });
   describe('when we have a branching on a merged state', () => {
@@ -466,7 +458,7 @@ describe('Given the state', () => {
   });
   describe('when we have two triggers that are subscribed', () => {
     it('should run a fresh queue every time', () => {
-      const s = state(0);
+      const [ s, setState ] = state(0);
       const spyA = jest.fn();
       const spyB = jest.fn();
 
@@ -477,7 +469,8 @@ describe('Given the state', () => {
         .subscribe();
 
       expect(s.__listeners().length).toBe(1);
-      expect(s.__listeners()[0].__itemsToCreate.map(({ type }) => type)).toStrictEqual([ 'filter', 'map', 'pipe' ]);
+      expect(s.__listeners()[0].__itemsToCreate.map(({ type }) => type))
+        .toStrictEqual([ 'map', 'filter', 'map', 'pipe' ]);
 
       s
         .filter((value) => {
@@ -486,8 +479,8 @@ describe('Given the state', () => {
         .pipe(spyB)
         .subscribe();
 
-      s.set(1);
-      s.set(5);
+      setState(1);
+      setState(5);
 
       expect(spyA).toBeCalledTimes(1);
       expect(spyA.mock.calls[0]).toStrictEqual(['value is 1']);
@@ -497,7 +490,7 @@ describe('Given the state', () => {
   });
   describe('when the queue finishes', () => {
     it('should remove it from the state created queues tracker array', async () => {
-      const s = state(10);
+      const [ s ] = state(10);
       const m = s.mutate(async (value) => {
         await delay(5);
         return value * 5;
@@ -507,7 +500,7 @@ describe('Given the state', () => {
       m();
       expect(s.__queues()).toHaveLength(1);
       await delay(7);
-      expect(s.get()).toBe(50);
+      expect(s()).toBe(50);
       expect(s.__queues()).toHaveLength(0);
     });
   });
@@ -562,12 +555,15 @@ describe('Given the state', () => {
 
   /* registry */
   describe('when we register the state into the registry', () => {
-    it('should allow us to use it from there', () => {
-      const s = state(0).export('my state');
+    fit('should allow us to use it from there', () => {
+      state(10).export('my state');
+      const [ getState, setState ] = registry.get('my state');
 
-      expect(registry.get('my state').get(10));
-      s.mutate(() => 200)();
-      expect(registry.get('my state').get(200));
+      expect(getState()).toBe(10);
+      getState.mutate(() => 200)();
+      expect(getState()).toBe(200);
+      setState(42);
+      expect(getState()).toBe(42);
     });
     it('should free the resource in the registry if we teardown the state', () => {
       const s = state(0).export('my state');
@@ -610,8 +606,8 @@ describe('Given the state', () => {
   /* custom methods */
   describe('when we define a custom method', () => {
     it('should be able to use it as a normal queue method', () => {
-      const s = state(2);
-      const y = state({ hello: 'world' });
+      const [ s, setState ] = state(2);
+      const [ y ] = state({ hello: 'world' });
       const spy3 = jest.fn();
       const spy2 = jest.fn().mockImplementation((value, arg1) => {
         return value + arg1.reduce((v, n) => v + n, 0);
@@ -628,7 +624,7 @@ describe('Given the state', () => {
 
       expect(trigger(8, 2)).toBe(14);
 
-      s.set(10);
+      setState(10);
 
       expect(spy).toBeCalledWithArgs([ 'a', 'b' ], [ 'a', 'b'], [ 'a', 'b' ]);
       expect(spy2).toBeCalledWithArgs(
@@ -636,8 +632,8 @@ describe('Given the state', () => {
         [ 4, [8, 2], expect.any(Function), expect.any(Object) ],
         [ 20, [], expect.any(Function), expect.any(Object) ]
       );
-      expect(s.get()).toBe(10);
-      expect(y.get()).toStrictEqual({ hello: 'world' });
+      expect(s()).toBe(10);
+      expect(y()).toStrictEqual({ hello: 'world' });
     });
     describe('and we use an async function', () => {
       it('should keep the queue working properly', async () => {

@@ -37,12 +37,12 @@ describe('Given the React riew function', () => {
         * render with the given state data
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, async () => {
-        const s = state('foo');
+        const [ s, setState ] = state('foo');
         const R = riew(
           ({ state }) => <p>{ state }</p>,
           async function ({ state }) {
             await delay(5);
-            act(() => state.set('bar'));
+            act(() => { setState('bar'); });
           }
         ).with({ state: s });
         const { container, unmount } = render(<R />);
@@ -56,12 +56,15 @@ describe('Given the React riew function', () => {
       });
       describe('and we use a state that is exported into the registry', () => {
         it('should receive the state value and subscribe for changes', async () => {
-          const s = state(42).export('hello');
-          const R = riew(({ state, hello }) => <p>{ state + hello }</p>).with({ state: state('foo') }, 'hello');
+          const [ , setState ] = state(42).export('hello');
+          const View = ({ state, hello }) => {
+            return <p>{ state + hello }</p>;
+          };
+          const R = riew(View).with({ state: state('foo') }, 'hello');
           const { container } = render(<R />);
 
           exerciseHTML(container, '<p>foo42</p>');
-          act(() => s.set('200'));
+          act(() => { setState('200'); });
           exerciseHTML(container, '<p>foo200</p>');
         });
       });

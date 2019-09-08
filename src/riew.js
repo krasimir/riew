@@ -28,12 +28,12 @@ export default function createRiew(viewFunc, ...effects) {
   let onUnmountCallbacks = [];
   let externals = {};
 
-  const input = state({});
-  const output = state({});
-  const api = state({});
+  const [ input ] = state({});
+  const [ output ] = state({});
+  const [ api ] = state({});
 
   const isActive = () => active;
-  const isSubscribed = s => !!subscriptions.find(trigger => trigger.__state.id === s.id);
+  const isSubscribed = s => !!subscriptions.find(trigger => trigger.state.id === s.id);
 
   // triggers
   const updateOutput = output.mutate((current, newStuff) => {
@@ -41,18 +41,13 @@ export default function createRiew(viewFunc, ...effects) {
 
     if (newStuff) {
       Object.keys(newStuff).forEach(key => {
-        if (isRiewState(newStuff[key])) {
-          result[key] = newStuff[key].get();
-          if (!isSubscribed(newStuff[key])) {
+        if (isRiewQueueTrigger(newStuff[key]) && !newStuff[key].isMutating()) {
+          const trigger = newStuff[key];
+
+          result[key] = trigger();
+          if (!isSubscribed(trigger.state)) {
             subscriptions.push(
-              newStuff[key].pipe(value => render({ [key]: value })).subscribe()
-            );
-          }
-        } else if (isRiewQueueTrigger(newStuff[key]) && !newStuff[key].isMutating()) {
-          result[key] = newStuff[key]();
-          if (!isSubscribed(newStuff[key].__state)) {
-            subscriptions.push(
-              newStuff[key].__state.pipe(() => render({ [key]: newStuff[key]() })).subscribe()
+              trigger.pipe(() => render({ [key]: trigger() })).subscribe()
             );
           }
         } else {
@@ -105,7 +100,7 @@ export default function createRiew(viewFunc, ...effects) {
     updateOutput(initialProps);
     processExternals();
 
-    let effectsResult = parallel(...effects)(api.get());
+    let effectsResult = parallel(...effects)(api());
     let done = (result) => (onUnmountCallbacks = result || []);
 
     if (isPromise(effectsResult)) {
