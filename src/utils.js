@@ -105,4 +105,8 @@ export const implementIterable = (obj, getter, setter) => {
       };
     };
   }
-}
+};
+
+let ids = 0;
+
+export const getId = (prefix) => `@@${ prefix }${ ++ids }`;

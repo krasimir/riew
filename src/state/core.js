@@ -1,7 +1,6 @@
 import equal from 'fast-deep-equal';
 
-var ids = 0;
-const getId = (prefix) => `@@${ prefix }${ ++ids }`;
+import { getId } from '../utils';
 
 export default function createCore(initialValue) {
   const api = {};

@@ -1,65 +1,19 @@
-import { getFuncName, implementIterable, isPromise } from '../utils';
+import { getId, implementIterable, isPromise } from '../utils';
 import registry from '../registry';
 import pipe from './pipe';
 import map from './map';
 import mapToKey from './mapToKey';
 import mutate from './mutate';
 import filter from './filter';
-
-var ids = 0;
-const getId = (prefix) => `@@${ prefix }${ ++ids }`;
-
-function createQueue(setStateValue, getStateValue, onDone = () => {}, queueAPI) {
-  const q = {
-    index: 0,
-    setStateValue,
-    getStateValue,
-    result: getStateValue(),
-    id: getId('q'),
-    items: [],
-    add(type, func) {
-      this.items.push({ type, func, name: func.map(getFuncName) });
-    },
-    process(...payload) {
-      var items = q.items;
-
-      q.index = 0;
-
-      function next(lastResult) {
-        q.result = lastResult;
-        q.index++;
-        if (q.index < items.length) {
-          return loop();
-        }
-        onDone(q);
-        return q.result;
-      };
-      function loop() {
-        const { type, func } = items[q.index];
-        const logic = queueAPI[type];
-
-        if (logic) {
-          return logic(q, func, payload, next);
-        }
-        throw new Error(`Unsupported method "${ type }".`);
-      };
-
-      return items.length > 0 ? loop() : q.result;
-    },
-    teardown() {
-      this.items = [];
-    }
-  };
-
-  return q;
-}
+import createQueue from './queue';
 
 export default function (state) {
   const queueMethods = [];
   const queueAPI = {};
-  let exportedAs;
 
   return function createNewTrigger(items = []) {
+    let exportedAs;
+
     function defineQueueMethod(methodName, func) {
       queueMethods.push(methodName);
       queueAPI[methodName] = function (q, args, payload, next) {

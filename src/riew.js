@@ -1,4 +1,4 @@
-import { createState as state, isRiewState, isRiewQueueTrigger } from './state';
+import { createState as state, isRiewQueueTrigger } from './state';
 import registry from './registry';
 import { isPromise, parallel } from './utils';
 

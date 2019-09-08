@@ -49,10 +49,6 @@ export function mergeStates(statesMap) {
   return s;
 }
 
-export function isRiewState(obj) {
-  return obj && obj.__riew === true;
-}
-
 export function isRiewQueueTrigger(func) {
   return func && func.__riewTrigger === true;
 }

@@ -51,7 +51,7 @@ var riew = exports.riew = _riew2.default;
 var react = exports.react = { riew: _react2.default };
 var registry = exports.registry = _registry2.default;
 
-},{"./react":2,"./registry":3,"./riew":4,"./state":7,"./utils":13}],2:[function(require,module,exports){
+},{"./react":2,"./registry":3,"./riew":4,"./state":7,"./utils":14}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -180,7 +180,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../riew":4,"../utils":13}],3:[function(require,module,exports){
+},{"../riew":4,"../utils":14}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -480,7 +480,7 @@ function createRiew(viewFunc) {
   return instance;
 }
 
-},{"./registry":3,"./state":7,"./utils":13}],5:[function(require,module,exports){
+},{"./registry":3,"./state":7,"./utils":14}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -492,14 +492,11 @@ var _fastDeepEqual = require('fast-deep-equal');
 
 var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
 
+var _utils = require('../utils');
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
-
-var ids = 0;
-var getId = function getId(prefix) {
-  return '@@' + prefix + ++ids;
-};
 
 function createCore(initialValue) {
   var api = {};
@@ -508,7 +505,7 @@ function createCore(initialValue) {
   var listeners = [];
   var createdQueues = [];
 
-  api.id = getId('s');
+  api.id = (0, _utils.getId)('s');
   api.triggerListeners = function () {
     listeners.forEach(function (l) {
       return l();
@@ -565,7 +562,7 @@ function createCore(initialValue) {
   return api;
 };
 
-},{"fast-deep-equal":14}],6:[function(require,module,exports){
+},{"../utils":14,"fast-deep-equal":15}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -604,7 +601,7 @@ function filter(func) {
   };
 }
 
-},{"../utils":13}],7:[function(require,module,exports){
+},{"../utils":14}],7:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -647,7 +644,6 @@ var _slicedToArray = function () {
 
 exports.createState = createState;
 exports.mergeStates = mergeStates;
-exports.isRiewState = isRiewState;
 exports.isRiewQueueTrigger = isRiewQueueTrigger;
 
 var _fastDeepEqual = require('fast-deep-equal');
@@ -723,15 +719,11 @@ function mergeStates(statesMap) {
   return s;
 }
 
-function isRiewState(obj) {
-  return obj && obj.__riew === true;
-}
-
 function isRiewQueueTrigger(func) {
   return func && func.__riewTrigger === true;
 }
 
-},{"../utils":13,"./core":5,"./trigger":12,"fast-deep-equal":14}],8:[function(require,module,exports){
+},{"../utils":14,"./core":5,"./trigger":13,"fast-deep-equal":15}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -764,7 +756,7 @@ function map(func) {
   };
 };
 
-},{"../utils":13}],9:[function(require,module,exports){
+},{"../utils":14}],9:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -837,7 +829,7 @@ function mutate(func) {
   };
 }
 
-},{"../utils":13}],11:[function(require,module,exports){
+},{"../utils":14}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -870,7 +862,72 @@ function pipe(func) {
   };
 };
 
-},{"../utils":13}],12:[function(require,module,exports){
+},{"../utils":14}],12:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = createQueue;
+
+var _utils = require('../utils');
+
+function createQueue(setStateValue, getStateValue) {
+  var onDone = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
+  var queueAPI = arguments[3];
+
+  var q = {
+    index: 0,
+    setStateValue: setStateValue,
+    getStateValue: getStateValue,
+    result: getStateValue(),
+    id: (0, _utils.getId)('q'),
+    items: [],
+    add: function add(type, func) {
+      this.items.push({ type: type, func: func, name: func.map(_utils.getFuncName) });
+    },
+    process: function process() {
+      for (var _len = arguments.length, payload = Array(_len), _key = 0; _key < _len; _key++) {
+        payload[_key] = arguments[_key];
+      }
+
+      var items = q.items;
+
+      q.index = 0;
+
+      function next(lastResult) {
+        q.result = lastResult;
+        q.index++;
+        if (q.index < items.length) {
+          return loop();
+        }
+        onDone(q);
+        return q.result;
+      };
+      function loop() {
+        var _items$q$index = items[q.index],
+            type = _items$q$index.type,
+            func = _items$q$index.func;
+
+        var logic = queueAPI[type];
+
+        if (logic) {
+          return logic(q, func, payload, next);
+        }
+        throw new Error('Unsupported method "' + type + '".');
+      };
+
+      return items.length > 0 ? loop() : q.result;
+    },
+    teardown: function teardown() {
+      this.items = [];
+    }
+  };
+
+  return q;
+}
+
+},{"../utils":14}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -880,10 +937,11 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = function (state) {
   var queueMethods = [];
   var queueAPI = {};
-  var exportedAs = void 0;
 
   return function createNewTrigger() {
     var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+
+    var exportedAs = void 0;
 
     function defineQueueMethod(methodName, func) {
       queueMethods.push(methodName);
@@ -899,7 +957,7 @@ exports.default = function (state) {
 
     var trigger = function trigger() {
       if (!state.isActive() || trigger.__itemsToCreate.length === 0) return state.get();
-      var queue = createQueue(state.set, state.get, state.removeQueue, queueAPI);
+      var queue = (0, _queue2.default)(state.set, state.get, state.removeQueue, queueAPI);
 
       state.addQueue(queue);
       trigger.__itemsToCreate.forEach(function (_ref) {
@@ -917,7 +975,7 @@ exports.default = function (state) {
     defineQueueMethod('filter', _filter2.default);
     (0, _utils.implementIterable)(trigger);
 
-    trigger.id = getId('t');
+    trigger.id = (0, _utils.getId)('t');
     trigger.state = state;
     trigger.__riewTrigger = true;
     trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
@@ -927,8 +985,8 @@ exports.default = function (state) {
     // queue methods
     queueMethods.forEach(function (m) {
       trigger[m] = function () {
-        for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          methodArgs[_key2] = arguments[_key2];
+        for (var _len = arguments.length, methodArgs = Array(_len), _key = 0; _key < _len; _key++) {
+          methodArgs[_key] = arguments[_key];
         }
 
         return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: m, func: methodArgs }]));
@@ -939,8 +997,8 @@ exports.default = function (state) {
     trigger.define = function (methodName, func) {
       defineQueueMethod(methodName, func);
       trigger[methodName] = function () {
-        for (var _len3 = arguments.length, methodArgs = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-          methodArgs[_key3] = arguments[_key3];
+        for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          methodArgs[_key2] = arguments[_key2];
         }
 
         return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
@@ -1048,6 +1106,10 @@ var _filter = require('./filter');
 
 var _filter2 = _interopRequireDefault(_filter);
 
+var _queue = require('./queue');
+
+var _queue2 = _interopRequireDefault(_queue);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -1062,69 +1124,9 @@ function _toConsumableArray(arr) {
   }
 }
 
-var ids = 0;
-var getId = function getId(prefix) {
-  return '@@' + prefix + ++ids;
-};
-
-function createQueue(setStateValue, getStateValue) {
-  var onDone = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
-  var queueAPI = arguments[3];
-
-  var q = {
-    index: 0,
-    setStateValue: setStateValue,
-    getStateValue: getStateValue,
-    result: getStateValue(),
-    id: getId('q'),
-    items: [],
-    add: function add(type, func) {
-      this.items.push({ type: type, func: func, name: func.map(_utils.getFuncName) });
-    },
-    process: function process() {
-      for (var _len = arguments.length, payload = Array(_len), _key = 0; _key < _len; _key++) {
-        payload[_key] = arguments[_key];
-      }
-
-      var items = q.items;
-
-      q.index = 0;
-
-      function next(lastResult) {
-        q.result = lastResult;
-        q.index++;
-        if (q.index < items.length) {
-          return loop();
-        }
-        onDone(q);
-        return q.result;
-      };
-      function loop() {
-        var _items$q$index = items[q.index],
-            type = _items$q$index.type,
-            func = _items$q$index.func;
-
-        var logic = queueAPI[type];
-
-        if (logic) {
-          return logic(q, func, payload, next);
-        }
-        throw new Error('Unsupported method "' + type + '".');
-      };
-
-      return items.length > 0 ? loop() : q.result;
-    },
-    teardown: function teardown() {
-      this.items = [];
-    }
-  };
-
-  return q;
-}
-
 ;
 
-},{"../registry":3,"../utils":13,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11}],13:[function(require,module,exports){
+},{"../registry":3,"../utils":14,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11,"./queue":12}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1267,7 +1269,13 @@ var implementIterable = exports.implementIterable = function implementIterable(o
   }
 };
 
-},{}],14:[function(require,module,exports){
+var ids = 0;
+
+var getId = exports.getId = function getId(prefix) {
+  return '@@' + prefix + ++ids;
+};
+
+},{}],15:[function(require,module,exports){
 'use strict';
 
 var isArray = Array.isArray;
