@@ -15,11 +15,11 @@ export default function createCore(initialValue) {
   };
 
   api.get = () => value;
-  api.set = (newValue, callListeners = true) => {
+  api.set = (newValue) => {
     let isEqual = equal(value, newValue);
 
     value = newValue;
-    if (callListeners && !isEqual) api.triggerListeners();
+    if (!isEqual) api.triggerListeners();
   };
   api.teardown = () => {
     createdQueues.forEach(q => q.teardown());

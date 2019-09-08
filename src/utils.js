@@ -91,22 +91,6 @@ export const parallel = (...args) => (arg) => {
   return results;
 };
 
-export const implementIterable = (obj, getter, setter) => {
-  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
-    obj[Symbol.iterator] = function () {
-      const values = [ getter || obj.map(), setter || obj.mutate(), obj ];
-      let i = 0;
-
-      return {
-        next: () => ({
-          value: values[ i++ ],
-          done: i > values.length
-        })
-      };
-    };
-  }
-};
-
 let ids = 0;
 
 export const getId = (prefix) => `@@${ prefix }${ ++ids }`;

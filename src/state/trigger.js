@@ -1,4 +1,4 @@
-import { getId, implementIterable, isPromise } from '../utils';
+import { getId, isPromise } from '../utils';
 import registry from '../registry';
 import pipe from './pipe';
 import map from './map';
@@ -6,8 +6,26 @@ import mapToKey from './mapToKey';
 import mutate from './mutate';
 import filter from './filter';
 import createQueue from './queue';
+import createCore from './core';
 
-export default function (state) {
+export const implementIterable = (obj) => {
+  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
+    obj[Symbol.iterator] = function () {
+      const values = [ obj.map(), obj.mutate(), obj ];
+      let i = 0;
+
+      return {
+        next: () => ({
+          value: values[ i++ ],
+          done: i > values.length
+        })
+      };
+    };
+  }
+};
+
+export default function (initialValue) {
+  const state = createCore(initialValue);
   const queueMethods = [];
   const queueAPI = {};
 

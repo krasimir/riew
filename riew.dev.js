@@ -516,12 +516,10 @@ function createCore(initialValue) {
     return value;
   };
   api.set = function (newValue) {
-    var callListeners = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-
     var isEqual = (0, _fastDeepEqual2.default)(value, newValue);
 
     value = newValue;
-    if (callListeners && !isEqual) api.triggerListeners();
+    if (!isEqual) api.triggerListeners();
   };
   api.teardown = function () {
     createdQueues.forEach(function (q) {
@@ -650,12 +648,6 @@ var _fastDeepEqual = require('fast-deep-equal');
 
 var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
 
-var _utils = require('../utils');
-
-var _core = require('./core');
-
-var _core2 = _interopRequireDefault(_core);
-
 var _trigger = require('./trigger');
 
 var _trigger2 = _interopRequireDefault(_trigger);
@@ -664,16 +656,8 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
-}
-
 function createState(initialValue) {
-  return (0, _trigger2.default)((0, _core2.default)(initialValue))();
+  return (0, _trigger2.default)(initialValue)();
 };
 
 function mergeStates(statesMap) {
@@ -686,44 +670,40 @@ function mergeStates(statesMap) {
       return result;
     }, {});
   };
-  var s = createState(fetchSourceValues());
+  var trigger = createState();
 
-  (0, _utils.implementIterable)(s, s.map(fetchSourceValues), s.mutate(function (current, newValue) {
+  trigger.state.get = fetchSourceValues;
+  trigger.state.set = function (newValue) {
     if ((typeof newValue === 'undefined' ? 'undefined' : _typeof(newValue)) !== 'object') {
       throw new Error('Wrong merged state value. Must be key-value pairs.');
     }
-    return Object.keys(statesMap).reduce(function (result, key) {
+    Object.keys(newValue).forEach(function (key) {
+      if (!statesMap[key]) {
+        throw new Error('There is no state with key "' + key + '".');
+      }
+
       var _statesMap$key2 = _slicedToArray(statesMap[key], 2),
           getChildState = _statesMap$key2[0],
           setChildState = _statesMap$key2[1];
 
-      if (key in newValue && !(0, _fastDeepEqual2.default)(newValue[key], getChildState())) {
+      if (!(0, _fastDeepEqual2.default)(newValue[key], getChildState())) {
         setChildState(newValue[key]);
-        result[key] = newValue[key];
-      } else {
-        result[key] = getChildState();
       }
-      return result;
     }, {});
-  }));
+  };
 
   Object.keys(statesMap).forEach(function (key) {
-    statesMap[key].pipe(function (value) {
-      var _s = _slicedToArray(s, 2),
-          setMergedState = _s[1];
-
-      setMergedState(_defineProperty({}, key, value));
-    }).subscribe();
+    statesMap[key].pipe(trigger.state.triggerListeners).subscribe();
   });
 
-  return s;
+  return trigger;
 }
 
 function isRiewQueueTrigger(func) {
   return func && func.__riewTrigger === true;
 }
 
-},{"../utils":14,"./core":5,"./trigger":13,"fast-deep-equal":15}],8:[function(require,module,exports){
+},{"./trigger":13,"fast-deep-equal":15}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -933,8 +913,10 @@ function createQueue(setStateValue, getStateValue) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.implementIterable = undefined;
 
-exports.default = function (state) {
+exports.default = function (initialValue) {
+  var state = (0, _core2.default)(initialValue);
   var queueMethods = [];
   var queueAPI = {};
 
@@ -973,7 +955,7 @@ exports.default = function (state) {
     defineQueueMethod('mapToKey', _mapToKey2.default);
     defineQueueMethod('mutate', _mutate2.default);
     defineQueueMethod('filter', _filter2.default);
-    (0, _utils.implementIterable)(trigger);
+    implementIterable(trigger);
 
     trigger.id = (0, _utils.getId)('t');
     trigger.state = state;
@@ -1110,6 +1092,10 @@ var _queue = require('./queue');
 
 var _queue2 = _interopRequireDefault(_queue);
 
+var _core = require('./core');
+
+var _core2 = _interopRequireDefault(_core);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -1124,9 +1110,27 @@ function _toConsumableArray(arr) {
   }
 }
 
+var implementIterable = exports.implementIterable = function implementIterable(obj) {
+  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
+    obj[Symbol.iterator] = function () {
+      var values = [obj.map(), obj.mutate(), obj];
+      var i = 0;
+
+      return {
+        next: function next() {
+          return {
+            value: values[i++],
+            done: i > values.length
+          };
+        }
+      };
+    };
+  }
+};
+
 ;
 
-},{"../registry":3,"../utils":14,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11,"./queue":12}],14:[function(require,module,exports){
+},{"../registry":3,"../utils":14,"./core":5,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11,"./queue":12}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1249,24 +1253,6 @@ var parallel = exports.parallel = function parallel() {
     }
     return results;
   };
-};
-
-var implementIterable = exports.implementIterable = function implementIterable(obj, getter, setter) {
-  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
-    obj[Symbol.iterator] = function () {
-      var values = [getter || obj.map(), setter || obj.mutate(), obj];
-      var i = 0;
-
-      return {
-        next: function next() {
-          return {
-            value: values[i++],
-            done: i > values.length
-          };
-        }
-      };
-    };
-  }
 };
 
 var ids = 0;

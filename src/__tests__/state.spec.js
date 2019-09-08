@@ -375,6 +375,18 @@ describe('Given the state', () => {
         [{ s1: 2, s2: 'b' }]
       );
     });
+    it('should update the state properly if we create a mutation out of the merged state', () => {
+      const [ s1 ] = state('foo');
+      const [ s2 ] = state('bar');
+      const [ m ] = merge({ s1, s2 });
+      const change = m.mutate(({ s1, s2 }, payload) => ({
+        s1: s1 + payload,
+        s2: s2 + payload
+      }));
+
+      change('xx');
+      expect(m()).toStrictEqual({ s1: 'fooxx', s2: 'barxx' });
+    });
   });
 
   /* forking */
@@ -450,10 +462,14 @@ describe('Given the state', () => {
 
       action();
 
-      expect(conditionSpy).toBeCalledTimes(1);
-      expect(conditionSpy).toBeCalledWith({ s1: 2, s2: 'b' });
-      expect(okLogic).toBeCalledTimes(1);
-      expect(okLogic).toBeCalledWith({ s1: 2, s2: 'b' });
+      expect(conditionSpy).toBeCalledWithArgs(
+        [{ s1: 2, s2: 'a' }],
+        [{ s1: 2, s2: 'b' }]
+      );
+      expect(okLogic).toBeCalledWithArgs(
+        [{ s1: 2, s2: 'a' }],
+        [{ s1: 2, s2: 'b' }]
+      );
     });
   });
   describe('when we have two triggers that are subscribed', () => {

@@ -1,11 +1,9 @@
 import equal from 'fast-deep-equal';
 
-import { implementIterable } from '../utils';
-import createCore from './core';
 import createTrigger from './trigger';
 
 export function createState(initialValue) {
-  return createTrigger(createCore(initialValue))();
+  return createTrigger(initialValue)();
 };
 
 export function mergeStates(statesMap) {
@@ -15,38 +13,30 @@ export function mergeStates(statesMap) {
     result[key] = s();
     return result;
   }, {});
-  const s = createState(fetchSourceValues());
+  const trigger = createState();
 
-  implementIterable(
-    s,
-    s.map(fetchSourceValues),
-    s.mutate((current, newValue) => {
-      if (typeof newValue !== 'object') {
-        throw new Error('Wrong merged state value. Must be key-value pairs.');
+  trigger.state.get = fetchSourceValues;
+  trigger.state.set = newValue => {
+    if (typeof newValue !== 'object') {
+      throw new Error('Wrong merged state value. Must be key-value pairs.');
+    }
+    Object.keys(newValue).forEach(key => {
+      if (!statesMap[key]) {
+        throw new Error(`There is no state with key "${ key }".`);
       }
-      return Object.keys(statesMap).reduce((result, key) => {
-        const [ getChildState, setChildState ] = statesMap[key];
+      const [ getChildState, setChildState ] = statesMap[key];
 
-        if (key in newValue && !equal(newValue[key], getChildState())) {
-          setChildState(newValue[key]);
-          result[key] = newValue[key];
-        } else {
-          result[key] = getChildState();
-        }
-        return result;
-      }, {});
-    })
-  );
+      if (!equal(newValue[key], getChildState())) {
+        setChildState(newValue[key]);
+      }
+    }, {});
+  };
 
   Object.keys(statesMap).forEach(key => {
-    statesMap[key].pipe((value) => {
-      const [ , setMergedState ] = s;
-
-      setMergedState({ [key]: value });
-    }).subscribe();
+    statesMap[key].pipe(trigger.state.triggerListeners).subscribe();
   });
 
-  return s;
+  return trigger;
 }
 
 export function isRiewQueueTrigger(func) {
