@@ -1,8 +1,8 @@
 import equal from 'fast-deep-equal';
 
-import { implementIterable } from './utils';
-import createCore from './state/core';
-import createTrigger from './state/trigger';
+import { implementIterable } from '../utils';
+import createCore from './core';
+import createTrigger from './trigger';
 
 export function createState(initialValue) {
   return createTrigger(createCore(initialValue))();

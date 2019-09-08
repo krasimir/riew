@@ -51,7 +51,7 @@ var riew = exports.riew = _riew2.default;
 var react = exports.react = { riew: _react2.default };
 var registry = exports.registry = _registry2.default;
 
-},{"./react":2,"./registry":3,"./riew":4,"./state":5,"./utils":6}],2:[function(require,module,exports){
+},{"./react":2,"./registry":3,"./riew":4,"./state":7,"./utils":13}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -180,7 +180,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../riew":4,"../utils":6}],3:[function(require,module,exports){
+},{"../riew":4,"../utils":13}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -230,6 +230,32 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+var _slicedToArray = function () {
+  function sliceIterator(arr, i) {
+    var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
+      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;_e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"]) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }return _arr;
+  }return function (arr, i) {
+    if (Array.isArray(arr)) {
+      return arr;
+    } else if (Symbol.iterator in Object(arr)) {
+      return sliceIterator(arr, i);
+    } else {
+      throw new TypeError("Invalid attempt to destructure non-iterable instance");
+    }
+  };
+}();
+
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
     var source = arguments[i];for (var key in source) {
@@ -248,7 +274,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
 
 exports.default = createRiew;
 
-var _state2 = require('./state');
+var _state8 = require('./state');
 
 var _registry = require('./registry');
 
@@ -300,16 +326,24 @@ function createRiew(viewFunc) {
   var onUnmountCallbacks = [];
   var externals = {};
 
-  var input = (0, _state2.createState)({});
-  var output = (0, _state2.createState)({});
-  var api = (0, _state2.createState)({});
+  var _state = (0, _state8.createState)({}),
+      _state2 = _slicedToArray(_state, 1),
+      input = _state2[0];
+
+  var _state3 = (0, _state8.createState)({}),
+      _state4 = _slicedToArray(_state3, 1),
+      output = _state4[0];
+
+  var _state5 = (0, _state8.createState)({}),
+      _state6 = _slicedToArray(_state5, 1),
+      api = _state6[0];
 
   var isActive = function isActive() {
     return active;
   };
   var isSubscribed = function isSubscribed(s) {
     return !!subscriptions.find(function (trigger) {
-      return trigger.__state.id === s.id;
+      return trigger.state.id === s.id;
     });
   };
 
@@ -319,18 +353,13 @@ function createRiew(viewFunc) {
 
     if (newStuff) {
       Object.keys(newStuff).forEach(function (key) {
-        if ((0, _state2.isRiewState)(newStuff[key])) {
-          result[key] = newStuff[key].get();
-          if (!isSubscribed(newStuff[key])) {
-            subscriptions.push(newStuff[key].pipe(function (value) {
-              return _render3(_defineProperty({}, key, value));
-            }).subscribe());
-          }
-        } else if ((0, _state2.isRiewQueueTrigger)(newStuff[key]) && !newStuff[key].isMutating()) {
-          result[key] = newStuff[key]();
-          if (!isSubscribed(newStuff[key].__state)) {
-            subscriptions.push(newStuff[key].__state.pipe(function () {
-              return _render3(_defineProperty({}, key, newStuff[key]()));
+        if ((0, _state8.isRiewQueueTrigger)(newStuff[key]) && !newStuff[key].isMutating()) {
+          var trigger = newStuff[key];
+
+          result[key] = trigger();
+          if (!isSubscribed(trigger.state)) {
+            subscriptions.push(trigger.pipe(function () {
+              return _render2(_defineProperty({}, key, trigger()));
             }).subscribe());
           }
         } else {
@@ -340,7 +369,7 @@ function createRiew(viewFunc) {
     }
     return result;
   });
-  var _render3 = updateOutput.filter(isActive).pipe(function (value) {
+  var _render2 = updateOutput.filter(isActive).pipe(function (value) {
     return viewFunc(value);
   });
   var updateAPI = api.mutate(accumulate);
@@ -349,14 +378,14 @@ function createRiew(viewFunc) {
   // defining the effect api
   updateAPI({
     state: function state() {
-      var s = _state2.createState.apply(undefined, arguments);
+      var s = _state8.createState.apply(undefined, arguments);
 
       internalStates.push(s);
       return s;
     },
     render: function render(newProps) {
       ensureObject(newProps, 'The `render` method');
-      return _render3(newProps);
+      return _render2(newProps);
     },
 
     isActive: isActive,
@@ -388,7 +417,7 @@ function createRiew(viewFunc) {
     updateOutput(initialProps);
     processExternals();
 
-    var effectsResult = _utils.parallel.apply(undefined, effects)(api.get());
+    var effectsResult = _utils.parallel.apply(undefined, effects)(api());
     var done = function done(result) {
       return onUnmountCallbacks = result || [];
     };
@@ -400,11 +429,11 @@ function createRiew(viewFunc) {
     }
 
     active = true;
-    _render3();
+    _render2();
     return instance;
   };
   instance.update = function (newProps) {
-    _render3(newProps);
+    _render2(newProps);
     updateInput(newProps);
   };
   instance.unmount = function () {
@@ -451,47 +480,100 @@ function createRiew(viewFunc) {
   return instance;
 }
 
-},{"./registry":3,"./state":5,"./utils":6}],5:[function(require,module,exports){
+},{"./registry":3,"./state":7,"./utils":13}],5:[function(require,module,exports){
 'use strict';
-
-var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
-
-exports.createState = createState;
-exports.mergeStates = mergeStates;
-exports.isRiewState = isRiewState;
-exports.isRiewQueueTrigger = isRiewQueueTrigger;
+exports.default = createCore;
 
 var _fastDeepEqual = require('fast-deep-equal');
 
 var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
 
-var _utils = require('./utils');
-
-var _registry = require('./registry');
-
-var _registry2 = _interopRequireDefault(_registry);
-
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
-}
+var ids = 0;
+var getId = function getId(prefix) {
+  return '@@' + prefix + ++ids;
+};
+
+function createCore(initialValue) {
+  var api = {};
+  var active = true;
+  var value = initialValue;
+  var listeners = [];
+  var createdQueues = [];
+
+  api.id = getId('s');
+  api.triggerListeners = function () {
+    listeners.forEach(function (l) {
+      return l();
+    });
+  };
+
+  api.get = function () {
+    return value;
+  };
+  api.set = function (newValue) {
+    var callListeners = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+    var isEqual = (0, _fastDeepEqual2.default)(value, newValue);
+
+    value = newValue;
+    if (callListeners && !isEqual) api.triggerListeners();
+  };
+  api.teardown = function () {
+    createdQueues.forEach(function (q) {
+      return q.teardown();
+    });
+    createdQueues = [];
+    listeners = [];
+    active = false;
+  };
+  api.addQueue = function (q) {
+    createdQueues.push(q);
+  };
+  api.removeQueue = function (q) {
+    createdQueues = createdQueues.filter(function (_ref) {
+      var id = _ref.id;
+      return q.id !== id;
+    });
+  };
+  api.isActive = function () {
+    return active;
+  };
+  api.createdQueues = function () {
+    return createdQueues;
+  };
+  api.listeners = function () {
+    return listeners;
+  };
+  api.addListener = function (trigger) {
+    listeners.push(trigger);
+  };
+  api.removeListener = function (trigger) {
+    listeners = listeners.filter(function (_ref2) {
+      var id = _ref2.id;
+      return id !== trigger.id;
+    });
+  };
+
+  return api;
+};
+
+},{"fast-deep-equal":14}],6:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = filter;
+
+var _utils = require('../utils');
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -503,60 +585,6 @@ function _toConsumableArray(arr) {
   }
 }
 
-var ids = 0;
-var getId = function getId(prefix) {
-  return '@@' + prefix + ++ids;
-};
-
-function pipe(func) {
-  return function (queueResult, payload, next) {
-    var result = (func || function () {}).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
-
-    if ((0, _utils.isPromise)(result)) {
-      return result.then(function () {
-        return next(queueResult);
-      });
-    }
-    return next(queueResult);
-  };
-};
-function map(func) {
-  return function (queueResult, payload, next) {
-    var result = (func || function (value) {
-      return value;
-    }).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
-
-    if ((0, _utils.isPromise)(result)) {
-      return result.then(next);
-    }
-    return next(result);
-  };
-};
-function mapToKey(key) {
-  return function (queueResult, payload, next) {
-    var mappingFunc = function mappingFunc(value) {
-      return _defineProperty({}, key, value);
-    };
-
-    return next(mappingFunc.apply(undefined, [queueResult].concat(_toConsumableArray(payload))));
-  };
-}
-function mutate(func) {
-  return function (queueResult, payload, next, q) {
-    var result = (func || function (current, payload) {
-      return payload;
-    }).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
-
-    if ((0, _utils.isPromise)(result)) {
-      return result.then(function (asyncResult) {
-        q.setStateValue(asyncResult);
-        return next(asyncResult);
-      });
-    }
-    q.setStateValue(result);
-    return next(result);
-  };
-}
 function filter(func) {
   return function (queueResult, payload, next, q) {
     var filterResult = func.apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
@@ -575,6 +603,469 @@ function filter(func) {
     return next(queueResult);
   };
 }
+
+},{"../utils":13}],7:[function(require,module,exports){
+'use strict';
+
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
+
+var _slicedToArray = function () {
+  function sliceIterator(arr, i) {
+    var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
+      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;_e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"]) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }return _arr;
+  }return function (arr, i) {
+    if (Array.isArray(arr)) {
+      return arr;
+    } else if (Symbol.iterator in Object(arr)) {
+      return sliceIterator(arr, i);
+    } else {
+      throw new TypeError("Invalid attempt to destructure non-iterable instance");
+    }
+  };
+}();
+
+exports.createState = createState;
+exports.mergeStates = mergeStates;
+exports.isRiewState = isRiewState;
+exports.isRiewQueueTrigger = isRiewQueueTrigger;
+
+var _fastDeepEqual = require('fast-deep-equal');
+
+var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
+
+var _utils = require('../utils');
+
+var _core = require('./core');
+
+var _core2 = _interopRequireDefault(_core);
+
+var _trigger = require('./trigger');
+
+var _trigger2 = _interopRequireDefault(_trigger);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
+
+function createState(initialValue) {
+  return (0, _trigger2.default)((0, _core2.default)(initialValue))();
+};
+
+function mergeStates(statesMap) {
+  var fetchSourceValues = function fetchSourceValues() {
+    return Object.keys(statesMap).reduce(function (result, key) {
+      var _statesMap$key = _slicedToArray(statesMap[key], 1),
+          s = _statesMap$key[0];
+
+      result[key] = s();
+      return result;
+    }, {});
+  };
+  var s = createState(fetchSourceValues());
+
+  (0, _utils.implementIterable)(s, s.map(fetchSourceValues), s.mutate(function (current, newValue) {
+    if ((typeof newValue === 'undefined' ? 'undefined' : _typeof(newValue)) !== 'object') {
+      throw new Error('Wrong merged state value. Must be key-value pairs.');
+    }
+    return Object.keys(statesMap).reduce(function (result, key) {
+      var _statesMap$key2 = _slicedToArray(statesMap[key], 2),
+          getChildState = _statesMap$key2[0],
+          setChildState = _statesMap$key2[1];
+
+      if (key in newValue && !(0, _fastDeepEqual2.default)(newValue[key], getChildState())) {
+        setChildState(newValue[key]);
+        result[key] = newValue[key];
+      } else {
+        result[key] = getChildState();
+      }
+      return result;
+    }, {});
+  }));
+
+  Object.keys(statesMap).forEach(function (key) {
+    statesMap[key].pipe(function (value) {
+      var _s = _slicedToArray(s, 2),
+          setMergedState = _s[1];
+
+      setMergedState(_defineProperty({}, key, value));
+    }).subscribe();
+  });
+
+  return s;
+}
+
+function isRiewState(obj) {
+  return obj && obj.__riew === true;
+}
+
+function isRiewQueueTrigger(func) {
+  return func && func.__riewTrigger === true;
+}
+
+},{"../utils":13,"./core":5,"./trigger":12,"fast-deep-equal":14}],8:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = map;
+
+var _utils = require('../utils');
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+function map(func) {
+  return function (queueResult, payload, next) {
+    var result = (func || function (value) {
+      return value;
+    }).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+
+    if ((0, _utils.isPromise)(result)) {
+      return result.then(next);
+    }
+    return next(result);
+  };
+};
+
+},{"../utils":13}],9:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = mapToKey;
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
+
+function mapToKey(key) {
+  return function (queueResult, payload, next) {
+    var mappingFunc = function mappingFunc(value) {
+      return _defineProperty({}, key, value);
+    };
+
+    return next(mappingFunc.apply(undefined, [queueResult].concat(_toConsumableArray(payload))));
+  };
+};
+
+},{}],10:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = mutate;
+
+var _utils = require('../utils');
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+function mutate(func) {
+  return function (queueResult, payload, next, q) {
+    var result = (func || function (current, payload) {
+      return payload;
+    }).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+
+    if ((0, _utils.isPromise)(result)) {
+      return result.then(function (asyncResult) {
+        q.setStateValue(asyncResult);
+        return next(asyncResult);
+      });
+    }
+    q.setStateValue(result);
+    return next(result);
+  };
+}
+
+},{"../utils":13}],11:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = pipe;
+
+var _utils = require('../utils');
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+function pipe(func) {
+  return function (queueResult, payload, next) {
+    var result = (func || function () {}).apply(undefined, [queueResult].concat(_toConsumableArray(payload)));
+
+    if ((0, _utils.isPromise)(result)) {
+      return result.then(function () {
+        return next(queueResult);
+      });
+    }
+    return next(queueResult);
+  };
+};
+
+},{"../utils":13}],12:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+exports.default = function (state) {
+  var queueMethods = [];
+  var queueAPI = {};
+  var exportedAs = void 0;
+
+  return function createNewTrigger() {
+    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+
+    function defineQueueMethod(methodName, func) {
+      queueMethods.push(methodName);
+      queueAPI[methodName] = function (q, args, payload, next) {
+        var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, next, q);
+
+        if ((0, _utils.isPromise)(result)) {
+          return result.then(next);
+        }
+        return next(result);
+      };
+    };
+
+    var trigger = function trigger() {
+      if (!state.isActive() || trigger.__itemsToCreate.length === 0) return state.get();
+      var queue = createQueue(state.set, state.get, state.removeQueue, queueAPI);
+
+      state.addQueue(queue);
+      trigger.__itemsToCreate.forEach(function (_ref) {
+        var type = _ref.type,
+            func = _ref.func;
+        return queue.add(type, func);
+      });
+      return queue.process.apply(queue, arguments);
+    };
+
+    defineQueueMethod('pipe', _pipe2.default);
+    defineQueueMethod('map', _map2.default);
+    defineQueueMethod('mapToKey', _mapToKey2.default);
+    defineQueueMethod('mutate', _mutate2.default);
+    defineQueueMethod('filter', _filter2.default);
+    (0, _utils.implementIterable)(trigger);
+
+    trigger.id = getId('t');
+    trigger.state = state;
+    trigger.__riewTrigger = true;
+    trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
+    trigger.__listeners = state.listeners;
+    trigger.__queues = state.createdQueues;
+
+    // queue methods
+    queueMethods.forEach(function (m) {
+      trigger[m] = function () {
+        for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          methodArgs[_key2] = arguments[_key2];
+        }
+
+        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: m, func: methodArgs }]));
+      };
+    });
+
+    // trigger direct methods
+    trigger.define = function (methodName, func) {
+      defineQueueMethod(methodName, func);
+      trigger[methodName] = function () {
+        for (var _len3 = arguments.length, methodArgs = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+          methodArgs[_key3] = arguments[_key3];
+        }
+
+        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
+      };
+      return trigger;
+    };
+    trigger.isMutating = function () {
+      return !!trigger.__itemsToCreate.find(function (_ref2) {
+        var type = _ref2.type;
+        return type === 'mutate';
+      });
+    };
+    trigger.subscribe = function () {
+      var initialCall = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
+      if (trigger.isMutating()) {
+        throw new Error('You should not subscribe a trigger that mutates the state. This will lead to endless recursion.');
+      }
+      if (initialCall) trigger();
+      state.addListener(trigger);
+      return trigger;
+    };
+    trigger.unsubscribe = function () {
+      state.removeListener(trigger);
+      return trigger;
+    };
+    trigger.cancel = function () {
+      trigger.__itemsToCreate = [];
+      queueMethods.forEach(function (m) {
+        return trigger[m] = function () {
+          return trigger;
+        };
+      });
+      return trigger;
+    };
+    trigger.teardown = function () {
+      state.teardown();
+      if (exportedAs) _registry2.default.free(exportedAs);
+      return trigger;
+    };
+    trigger.export = function (key) {
+      // if already exported with different key
+      if (exportedAs) _registry2.default.free(exportedAs);
+      _registry2.default.add(exportedAs = key, trigger);
+      return trigger;
+    };
+    trigger.isActive = function () {
+      return state.isActive();
+    };
+    trigger.test = function (callback) {
+      var testTrigger = createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate)));
+      var tools = {
+        setValue: function setValue(newValue) {
+          testTrigger.__itemsToCreate = [{ type: 'map', func: [function () {
+              return newValue;
+            }] }].concat(_toConsumableArray(testTrigger.__itemsToCreate));
+        },
+        swap: function swap(index, funcs, type) {
+          if (!Array.isArray(funcs)) funcs = [funcs];
+          testTrigger.__itemsToCreate[index].func = funcs;
+          if (type) {
+            testTrigger.__itemsToCreate[index].type = type;
+          }
+        },
+        swapFirst: function swapFirst(funcs, type) {
+          tools.swap(0, funcs, type);
+        },
+        swapLast: function swapLast(funcs, type) {
+          tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
+        }
+      };
+
+      callback(tools);
+
+      return testTrigger;
+    };
+
+    return trigger;
+  };
+};
+
+var _utils = require('../utils');
+
+var _registry = require('../registry');
+
+var _registry2 = _interopRequireDefault(_registry);
+
+var _pipe = require('./pipe');
+
+var _pipe2 = _interopRequireDefault(_pipe);
+
+var _map = require('./map');
+
+var _map2 = _interopRequireDefault(_map);
+
+var _mapToKey = require('./mapToKey');
+
+var _mapToKey2 = _interopRequireDefault(_mapToKey);
+
+var _mutate = require('./mutate');
+
+var _mutate2 = _interopRequireDefault(_mutate);
+
+var _filter = require('./filter');
+
+var _filter2 = _interopRequireDefault(_filter);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+var ids = 0;
+var getId = function getId(prefix) {
+  return '@@' + prefix + ++ids;
+};
 
 function createQueue(setStateValue, getStateValue) {
   var onDone = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
@@ -631,281 +1122,9 @@ function createQueue(setStateValue, getStateValue) {
   return q;
 }
 
-function implementIterable(stateAPI) {
-  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
-    stateAPI[Symbol.iterator] = function () {
-      var values = [stateAPI.map(), stateAPI.mutate(), stateAPI];
-      var i = 0;
+;
 
-      return {
-        next: function next() {
-          return {
-            value: values[i++],
-            done: i > values.length
-          };
-        }
-      };
-    };
-  }
-}
-
-function createState(initialValue) {
-  var stateAPI = {};
-  var queueMethods = [];
-  var queueAPI = {};
-  var value = initialValue;
-  var createdQueues = [];
-  var listeners = [];
-  var active = true;
-  var exportedAs = void 0;
-
-  stateAPI.id = getId('s');
-  stateAPI.__riew = true;
-  stateAPI.__triggerListeners = function () {
-    (0, _fastDeepEqual2.default)('a', 'b');
-    listeners.forEach(function (l) {
-      return l();
-    });
-  };
-  stateAPI.__listeners = function () {
-    return listeners;
-  };
-  stateAPI.__queues = function () {
-    return createdQueues;
-  };
-
-  stateAPI.active = function () {
-    return active;
-  };
-  stateAPI.get = function () {
-    return value;
-  };
-  stateAPI.set = function (newValue) {
-    var callListeners = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-
-    var isEqual = (0, _fastDeepEqual2.default)(value, newValue);
-
-    value = newValue;
-    if (callListeners && !isEqual) stateAPI.__triggerListeners();
-  };
-  stateAPI.teardown = function () {
-    createdQueues.forEach(function (q) {
-      return q.teardown();
-    });
-    createdQueues = [];
-    listeners = [];
-    active = false;
-    if (exportedAs) _registry2.default.free(exportedAs);
-  };
-  stateAPI.export = function (key) {
-    // if already exported with different key
-    if (exportedAs) _registry2.default.free(exportedAs);
-    _registry2.default.add(exportedAs = key, stateAPI);
-    return stateAPI;
-  };
-  stateAPI.define = function () {
-    defineQueueMethod.apply(undefined, arguments);
-    return stateAPI;
-  };
-
-  defineQueueMethod('pipe', pipe);
-  defineQueueMethod('map', map);
-  defineQueueMethod('mapToKey', mapToKey);
-  defineQueueMethod('mutate', mutate);
-  defineQueueMethod('filter', filter);
-  implementIterable(stateAPI);
-
-  function defineQueueMethod(methodName, func) {
-    queueMethods.push(methodName);
-    queueAPI[methodName] = function (q, args, payload, next) {
-      var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, next, q);
-
-      if ((0, _utils.isPromise)(result)) {
-        return result.then(next);
-      }
-      return next(result);
-    };
-    stateAPI[methodName] = function () {
-      for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-        methodArgs[_key2] = arguments[_key2];
-      }
-
-      return createNewTrigger([{ type: methodName, func: methodArgs }]);
-    };
-  };
-  function addListener(trigger) {
-    trigger.__isStream = true;
-    listeners.push(trigger);
-  }
-  function removeListener(trigger) {
-    trigger.__isStream = false;
-    listeners = listeners.filter(function (_ref2) {
-      var id = _ref2.id;
-      return id !== trigger.id;
-    });
-  }
-  function addQueue(q) {
-    createdQueues.push(q);
-  }
-  function removeQueue(q) {
-    createdQueues = createdQueues.filter(function (_ref3) {
-      var id = _ref3.id;
-      return q.id !== id;
-    });
-  }
-  function createNewTrigger() {
-    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-
-    var trigger = function trigger() {
-      if (active === false || trigger.__itemsToCreate.length === 0) return stateAPI.get();
-      var queue = createQueue(stateAPI.set, stateAPI.get, removeQueue, queueAPI);
-
-      addQueue(queue);
-      trigger.__itemsToCreate.forEach(function (_ref4) {
-        var type = _ref4.type,
-            func = _ref4.func;
-        return queue.add(type, func);
-      });
-      return queue.process.apply(queue, arguments);
-    };
-
-    trigger.id = getId('t');
-    trigger.__isStream = false;
-    trigger.__riewTrigger = true;
-    trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
-    trigger.__state = stateAPI;
-
-    // queue methods
-    queueMethods.forEach(function (m) {
-      trigger[m] = function () {
-        for (var _len3 = arguments.length, methodArgs = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-          methodArgs[_key3] = arguments[_key3];
-        }
-
-        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: m, func: methodArgs }]));
-      };
-    });
-
-    // not supported in queue methods
-    ['set', 'get', 'teardown'].forEach(function (stateMethod) {
-      trigger[stateMethod] = function () {
-        throw new Error('"' + stateMethod + '" is not a queue method but a method of the state object.');
-      };
-    });
-
-    // trigger direct methods
-    trigger.define = function (methodName, func) {
-      defineQueueMethod(methodName, func);
-      trigger[methodName] = function () {
-        for (var _len4 = arguments.length, methodArgs = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-          methodArgs[_key4] = arguments[_key4];
-        }
-
-        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
-      };
-      return trigger;
-    };
-    trigger.isMutating = function () {
-      return !!trigger.__itemsToCreate.find(function (_ref5) {
-        var type = _ref5.type;
-        return type === 'mutate';
-      });
-    };
-    trigger.subscribe = function () {
-      var initialCall = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-      if (trigger.isMutating()) {
-        throw new Error('You should not subscribe a trigger that mutates the state. This will lead to endless recursion.');
-      }
-      if (initialCall) trigger();
-      addListener(trigger);
-      return trigger;
-    };
-    trigger.unsubscribe = function () {
-      removeListener(trigger);
-      return trigger;
-    };
-    trigger.cancel = function () {
-      trigger.__itemsToCreate = [];
-      queueMethods.forEach(function (m) {
-        return trigger[m] = function () {
-          return trigger;
-        };
-      });
-      return trigger;
-    };
-    trigger.test = function (callback) {
-      var testTrigger = createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate)));
-      var tools = {
-        setValue: function setValue(newValue) {
-          testTrigger.__itemsToCreate = [{ type: 'map', func: [function () {
-              return newValue;
-            }] }].concat(_toConsumableArray(testTrigger.__itemsToCreate));
-        },
-        swap: function swap(index, funcs, type) {
-          if (!Array.isArray(funcs)) funcs = [funcs];
-          testTrigger.__itemsToCreate[index].func = funcs;
-          if (type) {
-            testTrigger.__itemsToCreate[index].type = type;
-          }
-        },
-        swapFirst: function swapFirst(funcs, type) {
-          tools.swap(0, funcs, type);
-        },
-        swapLast: function swapLast(funcs, type) {
-          tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
-        }
-      };
-
-      callback(tools);
-
-      return testTrigger;
-    };
-
-    return trigger;
-  }
-
-  return stateAPI;
-};
-
-function mergeStates(statesMap) {
-  var fetchSourceValues = function fetchSourceValues() {
-    return Object.keys(statesMap).reduce(function (result, key) {
-      result[key] = statesMap[key].get();
-      return result;
-    }, {});
-  };
-  var s = createState(fetchSourceValues());
-
-  s.set = function (newValue) {
-    if ((typeof newValue === 'undefined' ? 'undefined' : _typeof(newValue)) !== 'object') {
-      throw new Error('Wrong merged state value. Must be key-value pairs.');
-    }
-    Object.keys(newValue).forEach(function (key) {
-      statesMap[key].set(newValue[key], false);
-    });
-    s.__triggerListeners();
-  };
-  s.get = fetchSourceValues;
-
-  Object.keys(statesMap).forEach(function (key) {
-    statesMap[key].pipe(function () {
-      s.__triggerListeners();
-    }).subscribe();
-  });
-
-  return s;
-}
-
-function isRiewState(obj) {
-  return obj && obj.__riew === true;
-}
-
-function isRiewQueueTrigger(func) {
-  return func && func.__riewTrigger === true;
-}
-
-},{"./registry":3,"./utils":6,"fast-deep-equal":7}],6:[function(require,module,exports){
+},{"../registry":3,"../utils":13,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1030,7 +1249,25 @@ var parallel = exports.parallel = function parallel() {
   };
 };
 
-},{}],7:[function(require,module,exports){
+var implementIterable = exports.implementIterable = function implementIterable(obj, getter, setter) {
+  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
+    obj[Symbol.iterator] = function () {
+      var values = [getter || obj.map(), setter || obj.mutate(), obj];
+      var i = 0;
+
+      return {
+        next: function next() {
+          return {
+            value: values[i++],
+            done: i > values.length
+          };
+        }
+      };
+    };
+  }
+};
+
+},{}],14:[function(require,module,exports){
 'use strict';
 
 var isArray = Array.isArray;

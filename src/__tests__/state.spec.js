@@ -555,7 +555,7 @@ describe('Given the state', () => {
 
   /* registry */
   describe('when we register the state into the registry', () => {
-    fit('should allow us to use it from there', () => {
+    it('should allow us to use it from there', () => {
       state(10).export('my state');
       const [ getState, setState ] = registry.get('my state');
 
