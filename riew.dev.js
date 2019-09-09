@@ -51,7 +51,7 @@ var riew = exports.riew = _riew2.default;
 var react = exports.react = { riew: _react2.default };
 var registry = exports.registry = _registry2.default;
 
-},{"./react":2,"./registry":3,"./riew":4,"./state":7,"./utils":14}],2:[function(require,module,exports){
+},{"./react":2,"./registry":3,"./riew":4,"./state":7,"./utils":13}],2:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -180,7 +180,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../riew":4,"../utils":14}],3:[function(require,module,exports){
+},{"../riew":4,"../utils":13}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -315,8 +315,8 @@ var accumulate = function accumulate(current, newStuff) {
 };
 
 function createRiew(viewFunc) {
-  for (var _len = arguments.length, effects = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    effects[_key - 1] = arguments[_key];
+  for (var _len = arguments.length, controllers = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    controllers[_key - 1] = arguments[_key];
   }
 
   var instance = {};
@@ -375,7 +375,7 @@ function createRiew(viewFunc) {
   var updateAPI = api.mutate(accumulate);
   var updateInput = input.mutate(accumulate);
 
-  // defining the effect api
+  // defining the controller api
   updateAPI({
     state: function state() {
       var s = _state8.createState.apply(undefined, arguments);
@@ -417,15 +417,15 @@ function createRiew(viewFunc) {
     updateOutput(initialProps);
     processExternals();
 
-    var effectsResult = _utils.parallel.apply(undefined, effects)(api());
+    var controllersResult = _utils.parallel.apply(undefined, controllers)(api());
     var done = function done(result) {
       return onUnmountCallbacks = result || [];
     };
 
-    if ((0, _utils.isPromise)(effectsResult)) {
-      effectsResult.then(done);
+    if ((0, _utils.isPromise)(controllersResult)) {
+      controllersResult.then(done);
     } else {
-      done(effectsResult);
+      done(controllersResult);
     }
 
     active = true;
@@ -465,13 +465,13 @@ function createRiew(viewFunc) {
       maps[_key2] = arguments[_key2];
     }
 
-    var newInstance = createRiew.apply(undefined, [viewFunc].concat(effects));
+    var newInstance = createRiew.apply(undefined, [viewFunc].concat(controllers));
 
     newInstance.__setExternals(maps);
     return newInstance;
   };
   instance.test = function (map) {
-    var newInstance = createRiew.apply(undefined, [viewFunc].concat(effects));
+    var newInstance = createRiew.apply(undefined, [viewFunc].concat(controllers));
 
     newInstance.__setExternals([map]);
     return newInstance;
@@ -480,65 +480,244 @@ function createRiew(viewFunc) {
   return instance;
 }
 
-},{"./registry":3,"./state":7,"./utils":14}],5:[function(require,module,exports){
+},{"./registry":3,"./state":7,"./utils":13}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = createCore;
+exports.implementIterable = undefined;
 
-var _fastDeepEqual = require('fast-deep-equal');
+exports.default = function (state) {
+  var queueMethods = [];
+  var queueAPI = {};
+  var effects = [];
+  var active = true;
 
-var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
+  function createNewEffect() {
+    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+
+    var exportedAs = void 0;
+
+    var effect = function effect() {
+      if (!active || effect.__itemsToCreate.length === 0) return state.get();
+      var queue = (0, _queue2.default)(state.set, state.get, function () {
+        effect.__queues = effect.__queues.filter(function (_ref) {
+          var id = _ref.id;
+          return queue.id !== id;
+        });
+      }, queueAPI);
+
+      effect.__queues.push(queue);
+      effect.__itemsToCreate.forEach(function (_ref2) {
+        var type = _ref2.type,
+            func = _ref2.func;
+        return queue.add(type, func);
+      });
+      return queue.process.apply(queue, arguments);
+    };
+
+    effects.push(effect);
+    implementIterable(effect);
+
+    effect.id = (0, _utils.getId)('t');
+    effect.state = state;
+    effect.__queues = [];
+    effect.__riewTrigger = true;
+    effect.__itemsToCreate = [].concat(_toConsumableArray(items));
+    effect.__listeners = state.listeners;
+
+    // queue methods
+    queueMethods.forEach(function (m) {
+      effect[m] = function () {
+        for (var _len = arguments.length, methodArgs = Array(_len), _key = 0; _key < _len; _key++) {
+          methodArgs[_key] = arguments[_key];
+        }
+
+        return createNewEffect([].concat(_toConsumableArray(effect.__itemsToCreate), [{ type: m, func: methodArgs }]));
+      };
+    });
+
+    // effect direct methods
+    effect.define = function (methodName, func) {
+      defineQueueMethod(methodName, func);
+      return effect;
+    };
+    effect.isMutating = function () {
+      return !!effect.__itemsToCreate.find(function (_ref3) {
+        var type = _ref3.type;
+        return type === 'mutate';
+      });
+    };
+    effect.subscribe = function () {
+      var initialCall = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
+      if (effect.isMutating()) {
+        throw new Error('You should not subscribe a effect that mutates the state. This will lead to endless recursion.');
+      }
+      if (initialCall) effect();
+      state.addListener(effect);
+      return effect;
+    };
+    effect.unsubscribe = function () {
+      state.removeListener(effect);
+      return effect;
+    };
+    effect.cancel = function () {
+      effect.__queues.forEach(function (q) {
+        return q.cancel();
+      });
+      return effect;
+    };
+    effect.cleanUp = function () {
+      effect.cancel();
+      effect.unsubscribe();
+      if (exportedAs) _registry2.default.free(exportedAs);
+    };
+    effect.teardown = function () {
+      active = false;
+      state.teardown();
+      effects.forEach(function (t) {
+        return t.cleanUp();
+      });
+      effects = [effect];
+      return effect;
+    };
+    effect.export = function (key) {
+      // if already exported with different key
+      if (exportedAs) _registry2.default.free(exportedAs);
+      _registry2.default.add(exportedAs = key, effect);
+      return effect;
+    };
+    effect.isActive = function () {
+      return active;
+    };
+    effect.test = function (callback) {
+      var testTrigger = createNewEffect([].concat(_toConsumableArray(effect.__itemsToCreate)));
+      var tools = {
+        setValue: function setValue(newValue) {
+          testTrigger.__itemsToCreate = [{ type: 'map', func: [function () {
+              return newValue;
+            }] }].concat(_toConsumableArray(testTrigger.__itemsToCreate));
+        },
+        swap: function swap(index, funcs, type) {
+          if (!Array.isArray(funcs)) funcs = [funcs];
+          testTrigger.__itemsToCreate[index].func = funcs;
+          if (type) {
+            testTrigger.__itemsToCreate[index].type = type;
+          }
+        },
+        swapFirst: function swapFirst(funcs, type) {
+          tools.swap(0, funcs, type);
+        },
+        swapLast: function swapLast(funcs, type) {
+          tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
+        }
+      };
+
+      callback(tools);
+
+      return testTrigger;
+    };
+
+    return effect;
+  };
+
+  function defineQueueMethod(methodName, func) {
+    queueMethods.push(methodName);
+    queueAPI[methodName] = function (q, args, payload, next) {
+      var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, next, q);
+
+      if ((0, _utils.isPromise)(result)) {
+        return result.then(next);
+      }
+      return next(result);
+    };
+    effects.forEach(function (t) {
+      t[methodName] = function () {
+        for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          methodArgs[_key2] = arguments[_key2];
+        }
+
+        return createNewEffect([].concat(_toConsumableArray(t.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
+      };
+    });
+  };
+
+  defineQueueMethod('pipe', _pipe2.default);
+  defineQueueMethod('map', _map2.default);
+  defineQueueMethod('mapToKey', _mapToKey2.default);
+  defineQueueMethod('mutate', _mutate2.default);
+  defineQueueMethod('filter', _filter2.default);
+
+  return createNewEffect;
+};
 
 var _utils = require('../utils');
+
+var _registry = require('../registry');
+
+var _registry2 = _interopRequireDefault(_registry);
+
+var _pipe = require('./pipe');
+
+var _pipe2 = _interopRequireDefault(_pipe);
+
+var _map = require('./map');
+
+var _map2 = _interopRequireDefault(_map);
+
+var _mapToKey = require('./mapToKey');
+
+var _mapToKey2 = _interopRequireDefault(_mapToKey);
+
+var _mutate = require('./mutate');
+
+var _mutate2 = _interopRequireDefault(_mutate);
+
+var _filter = require('./filter');
+
+var _filter2 = _interopRequireDefault(_filter);
+
+var _queue = require('./queue');
+
+var _queue2 = _interopRequireDefault(_queue);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function createCore(initialValue) {
-  var api = {};
-  var value = initialValue;
-  var listeners = [];
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
 
-  api.id = (0, _utils.getId)('s');
-  api.triggerListeners = function () {
-    listeners.forEach(function (l) {
-      return l();
-    });
-  };
+var implementIterable = exports.implementIterable = function implementIterable(obj) {
+  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
+    obj[Symbol.iterator] = function () {
+      var values = [obj.map(), obj.mutate(), obj];
+      var i = 0;
 
-  api.get = function () {
-    return value;
-  };
-  api.set = function (newValue) {
-    var isEqual = (0, _fastDeepEqual2.default)(value, newValue);
-
-    value = newValue;
-    if (!isEqual) api.triggerListeners();
-  };
-  api.teardown = function () {
-    listeners = [];
-  };
-  api.listeners = function () {
-    return listeners;
-  };
-  api.addListener = function (trigger) {
-    listeners.push(trigger);
-  };
-  api.removeListener = function (trigger) {
-    listeners = listeners.filter(function (_ref) {
-      var id = _ref.id;
-      return id !== trigger.id;
-    });
-  };
-
-  return api;
+      return {
+        next: function next() {
+          return {
+            value: values[i++],
+            done: i > values.length
+          };
+        }
+      };
+    };
+  }
 };
 
-},{"../utils":14,"fast-deep-equal":15}],6:[function(require,module,exports){
+;
+
+},{"../registry":3,"../utils":13,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11,"./queue":12}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -577,7 +756,7 @@ function filter(func) {
   };
 }
 
-},{"../utils":14}],7:[function(require,module,exports){
+},{"../utils":13}],7:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -626,16 +805,58 @@ var _fastDeepEqual = require('fast-deep-equal');
 
 var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
 
-var _trigger = require('./trigger');
+var _effect = require('./effect');
 
-var _trigger2 = _interopRequireDefault(_trigger);
+var _effect2 = _interopRequireDefault(_effect);
+
+var _utils = require('../utils');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
+function createValue(initialValue) {
+  var api = {};
+  var value = initialValue;
+  var listeners = [];
+
+  api.id = (0, _utils.getId)('s');
+  api.triggerListeners = function () {
+    listeners.forEach(function (l) {
+      return l();
+    });
+  };
+
+  api.get = function () {
+    return value;
+  };
+  api.set = function (newValue) {
+    var isEqual = (0, _fastDeepEqual2.default)(value, newValue);
+
+    value = newValue;
+    if (!isEqual) api.triggerListeners();
+  };
+  api.teardown = function () {
+    listeners = [];
+  };
+  api.listeners = function () {
+    return listeners;
+  };
+  api.addListener = function (trigger) {
+    listeners.push(trigger);
+  };
+  api.removeListener = function (trigger) {
+    listeners = listeners.filter(function (_ref) {
+      var id = _ref.id;
+      return id !== trigger.id;
+    });
+  };
+
+  return api;
+};
+
 function createState(initialValue) {
-  return (0, _trigger2.default)(initialValue)();
+  return (0, _effect2.default)(createValue(initialValue))();
 };
 
 function mergeStates(statesMap) {
@@ -681,7 +902,7 @@ function isRiewQueueTrigger(func) {
   return func && func.__riewTrigger === true;
 }
 
-},{"./trigger":13,"fast-deep-equal":15}],8:[function(require,module,exports){
+},{"../utils":13,"./effect":5,"fast-deep-equal":14}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -714,7 +935,7 @@ function map(func) {
   };
 };
 
-},{"../utils":14}],9:[function(require,module,exports){
+},{"../utils":13}],9:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -787,7 +1008,7 @@ function mutate(func) {
   };
 };
 
-},{"../utils":14}],11:[function(require,module,exports){
+},{"../utils":13}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -820,7 +1041,7 @@ function pipe(func) {
   };
 };
 
-},{"../utils":14}],12:[function(require,module,exports){
+},{"../utils":13}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -883,249 +1104,7 @@ function createQueue(setStateValue, getStateValue) {
   return q;
 }
 
-},{"../utils":14}],13:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.implementIterable = undefined;
-
-exports.default = function (initialValue) {
-  var state = (0, _core2.default)(initialValue);
-  var queueMethods = [];
-  var queueAPI = {};
-  var triggers = [];
-
-  function createNewTrigger() {
-    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-
-    var exportedAs = void 0;
-    var active = true;
-
-    var trigger = function trigger() {
-      if (!active || trigger.__itemsToCreate.length === 0) return state.get();
-      var queue = (0, _queue2.default)(state.set, state.get, function () {
-        trigger.__queues = trigger.__queues.filter(function (_ref) {
-          var id = _ref.id;
-          return queue.id !== id;
-        });
-      }, queueAPI);
-
-      trigger.__queues.push(queue);
-      trigger.__itemsToCreate.forEach(function (_ref2) {
-        var type = _ref2.type,
-            func = _ref2.func;
-        return queue.add(type, func);
-      });
-      return queue.process.apply(queue, arguments);
-    };
-
-    triggers.push(trigger);
-    implementIterable(trigger);
-
-    trigger.id = (0, _utils.getId)('t');
-    trigger.state = state;
-    trigger.__queues = [];
-    trigger.__riewTrigger = true;
-    trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
-    trigger.__listeners = state.listeners;
-
-    // queue methods
-    queueMethods.forEach(function (m) {
-      trigger[m] = function () {
-        for (var _len = arguments.length, methodArgs = Array(_len), _key = 0; _key < _len; _key++) {
-          methodArgs[_key] = arguments[_key];
-        }
-
-        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: m, func: methodArgs }]));
-      };
-    });
-
-    // trigger direct methods
-    trigger.define = function (methodName, func) {
-      defineQueueMethod(methodName, func);
-      return trigger;
-    };
-    trigger.isMutating = function () {
-      return !!trigger.__itemsToCreate.find(function (_ref3) {
-        var type = _ref3.type;
-        return type === 'mutate';
-      });
-    };
-    trigger.subscribe = function () {
-      var initialCall = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-      if (trigger.isMutating()) {
-        throw new Error('You should not subscribe a trigger that mutates the state. This will lead to endless recursion.');
-      }
-      if (initialCall) trigger();
-      state.addListener(trigger);
-      return trigger;
-    };
-    trigger.unsubscribe = function () {
-      state.removeListener(trigger);
-      return trigger;
-    };
-    trigger.cancel = function () {
-      trigger.__queues.forEach(function (q) {
-        return q.cancel();
-      });
-      return trigger;
-    };
-    trigger.cleanUp = function () {
-      active = false;
-      trigger.cancel();
-      trigger.unsubscribe();
-      if (exportedAs) _registry2.default.free(exportedAs);
-    };
-    trigger.teardown = function () {
-      state.teardown();
-      triggers.forEach(function (t) {
-        return t.cleanUp();
-      });
-      triggers = [trigger];
-      return trigger;
-    };
-    trigger.export = function (key) {
-      // if already exported with different key
-      if (exportedAs) _registry2.default.free(exportedAs);
-      _registry2.default.add(exportedAs = key, trigger);
-      return trigger;
-    };
-    trigger.isActive = function () {
-      return active;
-    };
-    trigger.test = function (callback) {
-      var testTrigger = createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate)));
-      var tools = {
-        setValue: function setValue(newValue) {
-          testTrigger.__itemsToCreate = [{ type: 'map', func: [function () {
-              return newValue;
-            }] }].concat(_toConsumableArray(testTrigger.__itemsToCreate));
-        },
-        swap: function swap(index, funcs, type) {
-          if (!Array.isArray(funcs)) funcs = [funcs];
-          testTrigger.__itemsToCreate[index].func = funcs;
-          if (type) {
-            testTrigger.__itemsToCreate[index].type = type;
-          }
-        },
-        swapFirst: function swapFirst(funcs, type) {
-          tools.swap(0, funcs, type);
-        },
-        swapLast: function swapLast(funcs, type) {
-          tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
-        }
-      };
-
-      callback(tools);
-
-      return testTrigger;
-    };
-
-    return trigger;
-  };
-
-  function defineQueueMethod(methodName, func) {
-    queueMethods.push(methodName);
-    queueAPI[methodName] = function (q, args, payload, next) {
-      var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, next, q);
-
-      if ((0, _utils.isPromise)(result)) {
-        return result.then(next);
-      }
-      return next(result);
-    };
-    triggers.forEach(function (t) {
-      t[methodName] = function () {
-        for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          methodArgs[_key2] = arguments[_key2];
-        }
-
-        return createNewTrigger([].concat(_toConsumableArray(t.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
-      };
-    });
-  };
-
-  defineQueueMethod('pipe', _pipe2.default);
-  defineQueueMethod('map', _map2.default);
-  defineQueueMethod('mapToKey', _mapToKey2.default);
-  defineQueueMethod('mutate', _mutate2.default);
-  defineQueueMethod('filter', _filter2.default);
-
-  return createNewTrigger;
-};
-
-var _utils = require('../utils');
-
-var _registry = require('../registry');
-
-var _registry2 = _interopRequireDefault(_registry);
-
-var _pipe = require('./pipe');
-
-var _pipe2 = _interopRequireDefault(_pipe);
-
-var _map = require('./map');
-
-var _map2 = _interopRequireDefault(_map);
-
-var _mapToKey = require('./mapToKey');
-
-var _mapToKey2 = _interopRequireDefault(_mapToKey);
-
-var _mutate = require('./mutate');
-
-var _mutate2 = _interopRequireDefault(_mutate);
-
-var _filter = require('./filter');
-
-var _filter2 = _interopRequireDefault(_filter);
-
-var _queue = require('./queue');
-
-var _queue2 = _interopRequireDefault(_queue);
-
-var _core = require('./core');
-
-var _core2 = _interopRequireDefault(_core);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-var implementIterable = exports.implementIterable = function implementIterable(obj) {
-  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
-    obj[Symbol.iterator] = function () {
-      var values = [obj.map(), obj.mutate(), obj];
-      var i = 0;
-
-      return {
-        next: function next() {
-          return {
-            value: values[i++],
-            done: i > values.length
-          };
-        }
-      };
-    };
-  }
-};
-
-;
-
-},{"../registry":3,"../utils":14,"./core":5,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11,"./queue":12}],14:[function(require,module,exports){
+},{"../utils":13}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1256,7 +1235,7 @@ var getId = exports.getId = function getId(prefix) {
   return '@@' + prefix + ++ids;
 };
 
-},{}],15:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 var isArray = Array.isArray;

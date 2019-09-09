@@ -6,7 +6,6 @@ import mapToKey from './mapToKey';
 import mutate from './mutate';
 import filter from './filter';
 import createQueue from './queue';
-import createCore from './core';
 
 export const implementIterable = (obj) => {
   if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
@@ -24,94 +23,93 @@ export const implementIterable = (obj) => {
   }
 };
 
-export default function (initialValue) {
-  const state = createCore(initialValue);
+export default function (state) {
   const queueMethods = [];
   const queueAPI = {};
-  let triggers = [];
+  let effects = [];
+  let active = true;
 
-  function createNewTrigger(items = []) {
+  function createNewEffect(items = []) {
     let exportedAs;
-    let active = true;
 
-    const trigger = function (...payload) {
-      if (!active || trigger.__itemsToCreate.length === 0) return state.get();
+    const effect = function (...payload) {
+      if (!active || effect.__itemsToCreate.length === 0) return state.get();
       const queue = createQueue(
         state.set,
         state.get,
         () => {
-          trigger.__queues = trigger.__queues.filter(({ id }) => queue.id !== id);
+          effect.__queues = effect.__queues.filter(({ id }) => queue.id !== id);
         },
         queueAPI
       );
 
-      trigger.__queues.push(queue);
-      trigger.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
+      effect.__queues.push(queue);
+      effect.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
       return queue.process(...payload);
     };
 
-    triggers.push(trigger);
-    implementIterable(trigger);
+    effects.push(effect);
+    implementIterable(effect);
 
-    trigger.id = getId('t');
-    trigger.state = state;
-    trigger.__queues = [];
-    trigger.__riewTrigger = true;
-    trigger.__itemsToCreate = [ ...items ];
-    trigger.__listeners = state.listeners;
+    effect.id = getId('t');
+    effect.state = state;
+    effect.__queues = [];
+    effect.__riewTrigger = true;
+    effect.__itemsToCreate = [ ...items ];
+    effect.__listeners = state.listeners;
 
     // queue methods
     queueMethods.forEach(m => {
-      trigger[m] = (...methodArgs) => createNewTrigger([ ...trigger.__itemsToCreate, { type: m, func: methodArgs } ]);
+      effect[m] = (...methodArgs) => createNewEffect([ ...effect.__itemsToCreate, { type: m, func: methodArgs } ]);
     });
 
-    // trigger direct methods
-    trigger.define = (methodName, func) => {
+    // effect direct methods
+    effect.define = (methodName, func) => {
       defineQueueMethod(methodName, func);
-      return trigger;
+      return effect;
     };
-    trigger.isMutating = () => {
-      return !!trigger.__itemsToCreate.find(({ type }) => type === 'mutate');
+    effect.isMutating = () => {
+      return !!effect.__itemsToCreate.find(({ type }) => type === 'mutate');
     };
-    trigger.subscribe = (initialCall = false) => {
-      if (trigger.isMutating()) {
-        throw new Error('You should not subscribe a trigger that mutates the state. This will lead to endless recursion.');
+    effect.subscribe = (initialCall = false) => {
+      if (effect.isMutating()) {
+        throw new Error('You should not subscribe a effect that mutates the state. This will lead to endless recursion.');
       }
-      if (initialCall) trigger();
-      state.addListener(trigger);
-      return trigger;
+      if (initialCall) effect();
+      state.addListener(effect);
+      return effect;
     };
-    trigger.unsubscribe = () => {
-      state.removeListener(trigger);
-      return trigger;
+    effect.unsubscribe = () => {
+      state.removeListener(effect);
+      return effect;
     };
-    trigger.cancel = () => {
-      trigger.__queues.forEach(q => q.cancel());
-      return trigger;
+    effect.cancel = () => {
+      effect.__queues.forEach(q => q.cancel());
+      return effect;
     };
-    trigger.cleanUp = () => {
-      active = false;
-      trigger.cancel();
-      trigger.unsubscribe();
+    effect.cleanUp = () => {
+      effect.cancel();
+      effect.unsubscribe();
       if (exportedAs) registry.free(exportedAs);
     };
-    trigger.teardown = () => {
+    effect.teardown = () => {
+      active = false;
       state.teardown();
-      triggers.forEach(t => t.cleanUp());
-      triggers = [ trigger ];
-      return trigger;
+      effects.forEach(t => t.cleanUp());
+      effects = [ effect ];
+      return effect;
     };
-    trigger.export = (key) => {
+    effect.export = (key) => {
       // if already exported with different key
       if (exportedAs) registry.free(exportedAs);
-      registry.add(exportedAs = key, trigger);
-      return trigger;
+      registry.add(exportedAs = key, effect);
+      return effect;
     };
-    trigger.isActive = () => {
+    effect.isActive = () => {
       return active;
     };
-    trigger.test = function (callback) {
-      const testTrigger = createNewTrigger([ ...trigger.__itemsToCreate ]);
+    effect.test = function (callback) {
+      const testTrigger = createNewEffect([ ...effect.__itemsToCreate ]);
       const tools = {
         setValue(newValue) {
           testTrigger.__itemsToCreate = [
@@ -139,7 +137,7 @@ export default function (initialValue) {
       return testTrigger;
     };
 
-    return trigger;
+    return effect;
   };
 
   function defineQueueMethod(methodName, func) {
@@ -152,9 +150,9 @@ export default function (initialValue) {
       }
       return next(result);
     };
-    triggers.forEach(t => {
+    effects.forEach(t => {
       t[methodName] = (...methodArgs) => {
-        return createNewTrigger([ ...t.__itemsToCreate, { type: methodName, func: methodArgs } ]);
+        return createNewEffect([ ...t.__itemsToCreate, { type: methodName, func: methodArgs } ]);
       };
     });
   };
@@ -165,5 +163,5 @@ export default function (initialValue) {
   defineQueueMethod('mutate', mutate);
   defineQueueMethod('filter', filter);
 
-  return createNewTrigger;
+  return createNewEffect;
 };

@@ -20,7 +20,7 @@ function normalizeExternalsMap(arr) {
 }
 const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
 
-export default function createRiew(viewFunc, ...effects) {
+export default function createRiew(viewFunc, ...controllers) {
   const instance = {};
   let active = false;
   let internalStates = [];
@@ -61,7 +61,7 @@ export default function createRiew(viewFunc, ...effects) {
   const updateAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
 
-  // defining the effect api
+  // defining the controller api
   updateAPI({
     state(...args) {
       const s = state(...args);
@@ -100,13 +100,13 @@ export default function createRiew(viewFunc, ...effects) {
     updateOutput(initialProps);
     processExternals();
 
-    let effectsResult = parallel(...effects)(api());
+    let controllersResult = parallel(...controllers)(api());
     let done = (result) => (onUnmountCallbacks = result || []);
 
-    if (isPromise(effectsResult)) {
-      effectsResult.then(done);
+    if (isPromise(controllersResult)) {
+      controllersResult.then(done);
     } else {
-      done(effectsResult);
+      done(controllersResult);
     }
 
     active = true;
@@ -134,13 +134,13 @@ export default function createRiew(viewFunc, ...effects) {
   };
 
   instance.with = (...maps) => {
-    const newInstance = createRiew(viewFunc, ...effects);
+    const newInstance = createRiew(viewFunc, ...controllers);
 
     newInstance.__setExternals(maps);
     return newInstance;
   };
   instance.test = (map) => {
-    const newInstance = createRiew(viewFunc, ...effects);
+    const newInstance = createRiew(viewFunc, ...controllers);
 
     newInstance.__setExternals([ map ]);
     return newInstance;
