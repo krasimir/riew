@@ -204,21 +204,19 @@ describe('Given the state', () => {
 
   /* cancel */
   describe('when we use the `cancel` method', () => {
-    it('should empty the queue and disable the creation of new ones', () => {
+    it('should stop the currently running queues (if any)', async () => {
       const [ s ] = state(10);
-      const spyA = jest.fn();
-      const spyB = jest.fn();
-      const m = s.mutate((value) => value + 1).cancel().pipe(spyA);
-      const n = s.pipe(() => {}).pipe(spyB);
+      const spy = jest.fn();
+      const m = s.pipe(async () => {
+        await delay(5);
+      }).mutate((value) => value + 5).pipe(spy);
 
-      expect(m()).toBe(10);
-      expect(m()).toBe(10);
-      expect(m()).toBe(10);
-      expect(n()).toBe(10);
+      m();
+      m.cancel();
+
+      await delay(10);
       expect(s()).toBe(10);
-      expect(spyA).toBeCalledTimes(0);
-      expect(spyB).toBeCalledTimes(1);
-      expect(spyB).toBeCalledWith(10);
+      expect(spy).not.toBeCalled();
     });
   });
 
@@ -512,12 +510,11 @@ describe('Given the state', () => {
         return value * 5;
       }).map(value => value - 2);
 
-      expect(s.__queues()).toHaveLength(0);
       m();
-      expect(s.__queues()).toHaveLength(1);
+      expect(m.__queues).toHaveLength(1);
       await delay(7);
       expect(s()).toBe(50);
-      expect(s.__queues()).toHaveLength(0);
+      expect(m.__queues).toHaveLength(0);
     });
   });
   describe('when we use a trigger as a beginning of new queue', () => {
@@ -698,7 +695,11 @@ describe('Given the state', () => {
 
         expect(s.toUpperCase().map()()).toBe('FOO');
 
-        const m = registry.get('hey').mutate(() => 'bar');
+        const exported = registry.get('hey');
+
+        expect('toUpperCase' in exported).toBe(true);
+
+        const m = exported.mutate(() => 'bar');
 
         expect(m.toUpperCase()()).toBe('BAR');
       });

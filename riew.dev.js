@@ -500,10 +500,8 @@ function _interopRequireDefault(obj) {
 
 function createCore(initialValue) {
   var api = {};
-  var active = true;
   var value = initialValue;
   var listeners = [];
-  var createdQueues = [];
 
   api.id = (0, _utils.getId)('s');
   api.triggerListeners = function () {
@@ -522,27 +520,7 @@ function createCore(initialValue) {
     if (!isEqual) api.triggerListeners();
   };
   api.teardown = function () {
-    createdQueues.forEach(function (q) {
-      return q.teardown();
-    });
-    createdQueues = [];
     listeners = [];
-    active = false;
-  };
-  api.addQueue = function (q) {
-    createdQueues.push(q);
-  };
-  api.removeQueue = function (q) {
-    createdQueues = createdQueues.filter(function (_ref) {
-      var id = _ref.id;
-      return q.id !== id;
-    });
-  };
-  api.isActive = function () {
-    return active;
-  };
-  api.createdQueues = function () {
-    return createdQueues;
   };
   api.listeners = function () {
     return listeners;
@@ -551,8 +529,8 @@ function createCore(initialValue) {
     listeners.push(trigger);
   };
   api.removeListener = function (trigger) {
-    listeners = listeners.filter(function (_ref2) {
-      var id = _ref2.id;
+    listeners = listeners.filter(function (_ref) {
+      var id = _ref.id;
       return id !== trigger.id;
     });
   };
@@ -857,11 +835,11 @@ function createQueue(setStateValue, getStateValue) {
   var queueAPI = arguments[3];
 
   var q = {
+    id: (0, _utils.getId)('q'),
     index: 0,
     setStateValue: setStateValue,
     getStateValue: getStateValue,
     result: getStateValue(),
-    id: (0, _utils.getId)('q'),
     items: [],
     add: function add(type, func) {
       this.items.push({ type: type, func: func, name: func.map(_utils.getFuncName) });
@@ -871,23 +849,21 @@ function createQueue(setStateValue, getStateValue) {
         payload[_key] = arguments[_key];
       }
 
-      var items = q.items;
-
       q.index = 0;
 
       function next(lastResult) {
         q.result = lastResult;
         q.index++;
-        if (q.index < items.length) {
+        if (q.index < q.items.length) {
           return loop();
         }
-        onDone(q);
+        onDone();
         return q.result;
       };
       function loop() {
-        var _items$q$index = items[q.index],
-            type = _items$q$index.type,
-            func = _items$q$index.func;
+        var _q$items$q$index = q.items[q.index],
+            type = _q$items$q$index.type,
+            func = _q$items$q$index.func;
 
         var logic = queueAPI[type];
 
@@ -897,10 +873,10 @@ function createQueue(setStateValue, getStateValue) {
         throw new Error('Unsupported method "' + type + '".');
       };
 
-      return items.length > 0 ? loop() : q.result;
+      return q.items.length > 0 ? loop() : q.result;
     },
-    teardown: function teardown() {
-      this.items = [];
+    cancel: function cancel() {
+      q.items = [];
     }
   };
 
@@ -919,50 +895,41 @@ exports.default = function (initialValue) {
   var state = (0, _core2.default)(initialValue);
   var queueMethods = [];
   var queueAPI = {};
+  var triggers = [];
 
-  return function createNewTrigger() {
+  function createNewTrigger() {
     var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
 
     var exportedAs = void 0;
-
-    function defineQueueMethod(methodName, func) {
-      queueMethods.push(methodName);
-      queueAPI[methodName] = function (q, args, payload, next) {
-        var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, next, q);
-
-        if ((0, _utils.isPromise)(result)) {
-          return result.then(next);
-        }
-        return next(result);
-      };
-    };
+    var active = true;
 
     var trigger = function trigger() {
-      if (!state.isActive() || trigger.__itemsToCreate.length === 0) return state.get();
-      var queue = (0, _queue2.default)(state.set, state.get, state.removeQueue, queueAPI);
+      if (!active || trigger.__itemsToCreate.length === 0) return state.get();
+      var queue = (0, _queue2.default)(state.set, state.get, function () {
+        trigger.__queues = trigger.__queues.filter(function (_ref) {
+          var id = _ref.id;
+          return queue.id !== id;
+        });
+      }, queueAPI);
 
-      state.addQueue(queue);
-      trigger.__itemsToCreate.forEach(function (_ref) {
-        var type = _ref.type,
-            func = _ref.func;
+      trigger.__queues.push(queue);
+      trigger.__itemsToCreate.forEach(function (_ref2) {
+        var type = _ref2.type,
+            func = _ref2.func;
         return queue.add(type, func);
       });
       return queue.process.apply(queue, arguments);
     };
 
-    defineQueueMethod('pipe', _pipe2.default);
-    defineQueueMethod('map', _map2.default);
-    defineQueueMethod('mapToKey', _mapToKey2.default);
-    defineQueueMethod('mutate', _mutate2.default);
-    defineQueueMethod('filter', _filter2.default);
+    triggers.push(trigger);
     implementIterable(trigger);
 
     trigger.id = (0, _utils.getId)('t');
     trigger.state = state;
+    trigger.__queues = [];
     trigger.__riewTrigger = true;
     trigger.__itemsToCreate = [].concat(_toConsumableArray(items));
     trigger.__listeners = state.listeners;
-    trigger.__queues = state.createdQueues;
 
     // queue methods
     queueMethods.forEach(function (m) {
@@ -978,18 +945,11 @@ exports.default = function (initialValue) {
     // trigger direct methods
     trigger.define = function (methodName, func) {
       defineQueueMethod(methodName, func);
-      trigger[methodName] = function () {
-        for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          methodArgs[_key2] = arguments[_key2];
-        }
-
-        return createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
-      };
       return trigger;
     };
     trigger.isMutating = function () {
-      return !!trigger.__itemsToCreate.find(function (_ref2) {
-        var type = _ref2.type;
+      return !!trigger.__itemsToCreate.find(function (_ref3) {
+        var type = _ref3.type;
         return type === 'mutate';
       });
     };
@@ -1008,17 +968,23 @@ exports.default = function (initialValue) {
       return trigger;
     };
     trigger.cancel = function () {
-      trigger.__itemsToCreate = [];
-      queueMethods.forEach(function (m) {
-        return trigger[m] = function () {
-          return trigger;
-        };
+      trigger.__queues.forEach(function (q) {
+        return q.cancel();
       });
       return trigger;
     };
+    trigger.cleanUp = function () {
+      active = false;
+      trigger.cancel();
+      trigger.unsubscribe();
+      if (exportedAs) _registry2.default.free(exportedAs);
+    };
     trigger.teardown = function () {
       state.teardown();
-      if (exportedAs) _registry2.default.free(exportedAs);
+      triggers.forEach(function (t) {
+        return t.cleanUp();
+      });
+      triggers = [trigger];
       return trigger;
     };
     trigger.export = function (key) {
@@ -1028,7 +994,7 @@ exports.default = function (initialValue) {
       return trigger;
     };
     trigger.isActive = function () {
-      return state.isActive();
+      return active;
     };
     trigger.test = function (callback) {
       var testTrigger = createNewTrigger([].concat(_toConsumableArray(trigger.__itemsToCreate)));
@@ -1060,6 +1026,35 @@ exports.default = function (initialValue) {
 
     return trigger;
   };
+
+  function defineQueueMethod(methodName, func) {
+    queueMethods.push(methodName);
+    queueAPI[methodName] = function (q, args, payload, next) {
+      var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, next, q);
+
+      if ((0, _utils.isPromise)(result)) {
+        return result.then(next);
+      }
+      return next(result);
+    };
+    triggers.forEach(function (t) {
+      t[methodName] = function () {
+        for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          methodArgs[_key2] = arguments[_key2];
+        }
+
+        return createNewTrigger([].concat(_toConsumableArray(t.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
+      };
+    });
+  };
+
+  defineQueueMethod('pipe', _pipe2.default);
+  defineQueueMethod('map', _map2.default);
+  defineQueueMethod('mapToKey', _mapToKey2.default);
+  defineQueueMethod('mutate', _mutate2.default);
+  defineQueueMethod('filter', _filter2.default);
+
+  return createNewTrigger;
 };
 
 var _utils = require('../utils');

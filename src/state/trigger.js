@@ -28,44 +28,37 @@ export default function (initialValue) {
   const state = createCore(initialValue);
   const queueMethods = [];
   const queueAPI = {};
+  let triggers = [];
 
-  return function createNewTrigger(items = []) {
+  function createNewTrigger(items = []) {
     let exportedAs;
-
-    function defineQueueMethod(methodName, func) {
-      queueMethods.push(methodName);
-      queueAPI[methodName] = function (q, args, payload, next) {
-        const result = func(...args)(q.result, payload, next, q);
-
-        if (isPromise(result)) {
-          return result.then(next);
-        }
-        return next(result);
-      };
-    };
+    let active = true;
 
     const trigger = function (...payload) {
-      if (!state.isActive() || trigger.__itemsToCreate.length === 0) return state.get();
-      const queue = createQueue(state.set, state.get, state.removeQueue, queueAPI);
+      if (!active || trigger.__itemsToCreate.length === 0) return state.get();
+      const queue = createQueue(
+        state.set,
+        state.get,
+        () => {
+          trigger.__queues = trigger.__queues.filter(({ id }) => queue.id !== id);
+        },
+        queueAPI
+      );
 
-      state.addQueue(queue);
+      trigger.__queues.push(queue);
       trigger.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
       return queue.process(...payload);
     };
 
-    defineQueueMethod('pipe', pipe);
-    defineQueueMethod('map', map);
-    defineQueueMethod('mapToKey', mapToKey);
-    defineQueueMethod('mutate', mutate);
-    defineQueueMethod('filter', filter);
+    triggers.push(trigger);
     implementIterable(trigger);
 
     trigger.id = getId('t');
     trigger.state = state;
+    trigger.__queues = [];
     trigger.__riewTrigger = true;
     trigger.__itemsToCreate = [ ...items ];
     trigger.__listeners = state.listeners;
-    trigger.__queues = state.createdQueues;
 
     // queue methods
     queueMethods.forEach(m => {
@@ -75,9 +68,6 @@ export default function (initialValue) {
     // trigger direct methods
     trigger.define = (methodName, func) => {
       defineQueueMethod(methodName, func);
-      trigger[methodName] = (...methodArgs) => {
-        return createNewTrigger([ ...trigger.__itemsToCreate, { type: methodName, func: methodArgs } ]);
-      };
       return trigger;
     };
     trigger.isMutating = () => {
@@ -96,13 +86,19 @@ export default function (initialValue) {
       return trigger;
     };
     trigger.cancel = () => {
-      trigger.__itemsToCreate = [];
-      queueMethods.forEach(m => trigger[m] = () => trigger);
+      trigger.__queues.forEach(q => q.cancel());
       return trigger;
+    };
+    trigger.cleanUp = () => {
+      active = false;
+      trigger.cancel();
+      trigger.unsubscribe();
+      if (exportedAs) registry.free(exportedAs);
     };
     trigger.teardown = () => {
       state.teardown();
-      if (exportedAs) registry.free(exportedAs);
+      triggers.forEach(t => t.cleanUp());
+      triggers = [ trigger ];
       return trigger;
     };
     trigger.export = (key) => {
@@ -112,7 +108,7 @@ export default function (initialValue) {
       return trigger;
     };
     trigger.isActive = () => {
-      return state.isActive();
+      return active;
     };
     trigger.test = function (callback) {
       const testTrigger = createNewTrigger([ ...trigger.__itemsToCreate ]);
@@ -145,4 +141,29 @@ export default function (initialValue) {
 
     return trigger;
   };
+
+  function defineQueueMethod(methodName, func) {
+    queueMethods.push(methodName);
+    queueAPI[methodName] = function (q, args, payload, next) {
+      const result = func(...args)(q.result, payload, next, q);
+
+      if (isPromise(result)) {
+        return result.then(next);
+      }
+      return next(result);
+    };
+    triggers.forEach(t => {
+      t[methodName] = (...methodArgs) => {
+        return createNewTrigger([ ...t.__itemsToCreate, { type: methodName, func: methodArgs } ]);
+      };
+    });
+  };
+
+  defineQueueMethod('pipe', pipe);
+  defineQueueMethod('map', map);
+  defineQueueMethod('mapToKey', mapToKey);
+  defineQueueMethod('mutate', mutate);
+  defineQueueMethod('filter', filter);
+
+  return createNewTrigger;
 };
