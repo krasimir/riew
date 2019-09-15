@@ -142,9 +142,9 @@ describe('Given the Riew library', () => {
     });
   });
   describe('when we mutate the state and have a selector subscribed to it', () => {
-    xit('should re-render the view with the new data', async () => {
+    it('should re-render the view with the new data', async () => {
       const repos = state([ { id: 'a', selected: false }, { id: 'b', selected: true } ]);
-      const selector = repos.filter(({ selected }) => selected);
+      const selector = repos.map(list => list.filter(({ selected }) => selected));
       const change = repos.mutate((list, id) => {
         return list.map((repo) => {
           if (repo.id === id) {
@@ -165,22 +165,20 @@ describe('Given the Riew library', () => {
       };
       const controller = async ({ change }) => {
         await delay(2);
-        change('b');
+        act(() => { change('b'); });
       };
       const R = riew(View, controller).with({ selector, change });
       const { container } = render(<R />);
 
       exerciseHTML(container, `
         <div>
-          <p>a: nope</p>
           <p>b: nope</p>
         </div>
       `);
       await delay(10);
       exerciseHTML(container, `
         <div>
-          <p>a: nope</p>
-          <p>b: foo, bar</p>
+          <p>b: foo,bar</p>
         </div>
       `);
     });

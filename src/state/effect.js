@@ -51,7 +51,7 @@ export default function (state) {
     effects.push(effect);
     implementIterable(effect);
 
-    effect.id = getId('t');
+    effect.id = getId('e');
     effect.state = state;
     effect.__queues = [];
     effect.__riewEffect = true;
