@@ -24,11 +24,11 @@ function createValue(initialValue) {
     listeners = [];
   };
   api.listeners = () => listeners;
-  api.addListener = (trigger) => {
-    listeners.push(trigger);
+  api.addListener = (effect) => {
+    listeners.push(effect);
   };
-  api.removeListener = (trigger) => {
-    listeners = listeners.filter(({ id }) => id !== trigger.id);
+  api.removeListener = (effect) => {
+    listeners = listeners.filter(({ id }) => id !== effect.id);
   };
 
   return api;
@@ -45,10 +45,10 @@ export function mergeStates(statesMap) {
     result[key] = s();
     return result;
   }, {});
-  const trigger = createState();
+  const effect = createState();
 
-  trigger.state.get = fetchSourceValues;
-  trigger.state.set = newValue => {
+  effect.state.get = fetchSourceValues;
+  effect.state.set = newValue => {
     if (typeof newValue !== 'object') {
       throw new Error('Wrong merged state value. Must be key-value pairs.');
     }
@@ -65,12 +65,12 @@ export function mergeStates(statesMap) {
   };
 
   Object.keys(statesMap).forEach(key => {
-    statesMap[key].pipe(trigger.state.triggerListeners).subscribe();
+    statesMap[key].pipe(effect.state.triggerListeners).subscribe();
   });
 
-  return trigger;
+  return effect;
 }
 
-export function isRiewQueueTrigger(func) {
-  return func && func.__riewTrigger === true;
+export function isRiewQueueEffect(func) {
+  return func && func.__riewEffect === true;
 }

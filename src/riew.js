@@ -1,4 +1,4 @@
-import { createState as state, isRiewQueueTrigger } from './state';
+import { createState as state, isRiewQueueEffect } from './state';
 import registry from './registry';
 import { isPromise, parallel } from './utils';
 
@@ -33,21 +33,21 @@ export default function createRiew(viewFunc, ...controllers) {
   const [ api ] = state({});
 
   const isActive = () => active;
-  const isSubscribed = s => !!subscriptions.find(trigger => trigger.state.id === s.id);
+  const isSubscribed = s => !!subscriptions.find(effect => effect.state.id === s.id);
 
-  // triggers
+  // effects
   const updateOutput = output.mutate((current, newStuff) => {
     const result = { ...current };
 
     if (newStuff) {
       Object.keys(newStuff).forEach(key => {
-        if (isRiewQueueTrigger(newStuff[key]) && !newStuff[key].isMutating()) {
-          const trigger = newStuff[key];
+        if (isRiewQueueEffect(newStuff[key]) && !newStuff[key].isMutating()) {
+          const effect = newStuff[key];
 
-          result[key] = trigger();
-          if (!isSubscribed(trigger.state)) {
+          result[key] = effect();
+          if (!isSubscribed(effect.state)) {
             subscriptions.push(
-              trigger.pipe(() => render({ [key]: trigger() })).subscribe()
+              effect.pipe(() => render({ [key]: effect() })).subscribe()
             );
           }
         } else {

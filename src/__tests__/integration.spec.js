@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 
-import { react } from '../index';
+import { react, state } from '../index';
 
 const { riew } = react;
 const DummyComponent = ({ text }) => <p>{ text }</p>;
@@ -139,6 +139,50 @@ describe('Given the Riew library', () => {
       exerciseHTML(getByTestId('text'), '<p>Paris</p>');
       fireEvent.change(getByTestId('select'), { target: { value: 'Sofia' } });
       exerciseHTML(getByTestId('text'), '<p>Sofia</p>');
+    });
+  });
+  describe('when we mutate the state and have a selector subscribed to it', () => {
+    xit('should re-render the view with the new data', async () => {
+      const repos = state([ { id: 'a', selected: false }, { id: 'b', selected: true } ]);
+      const selector = repos.filter(({ selected }) => selected);
+      const change = repos.mutate((list, id) => {
+        return list.map((repo) => {
+          if (repo.id === id) {
+            return {
+              ...repo,
+              prs: ['foo', 'bar']
+            };
+          }
+          return repo;
+        });
+      });
+      const View = ({ selector }) => {
+        return (
+          <div>
+            { selector.map(({ id, prs }) => <p key={ id }>{ id }: { prs ? prs.join(',') : 'nope' }</p>) }
+          </div>
+        );
+      };
+      const controller = async ({ change }) => {
+        await delay(2);
+        change('b');
+      };
+      const R = riew(View, controller).with({ selector, change });
+      const { container } = render(<R />);
+
+      exerciseHTML(container, `
+        <div>
+          <p>a: nope</p>
+          <p>b: nope</p>
+        </div>
+      `);
+      await delay(10);
+      exerciseHTML(container, `
+        <div>
+          <p>a: nope</p>
+          <p>b: foo, bar</p>
+        </div>
+      `);
     });
   });
 });

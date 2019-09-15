@@ -54,7 +54,7 @@ export default function (state) {
     effect.id = getId('t');
     effect.state = state;
     effect.__queues = [];
-    effect.__riewTrigger = true;
+    effect.__riewEffect = true;
     effect.__itemsToCreate = [ ...items ];
     effect.__listeners = state.listeners;
 
