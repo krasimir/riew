@@ -54,7 +54,7 @@ describe('Given the React riew function', () => {
         unmount();
         expect(s.__listeners()).toHaveLength(0);
       });
-      describe('and we use a state that is exported into the registry', () => {
+      describe('and we use a state that is exported into the grid', () => {
         it('should receive the state value and subscribe for changes', async () => {
           const [ , setState ] = state(42).export('hello');
           const View = ({ state, hello }) => {

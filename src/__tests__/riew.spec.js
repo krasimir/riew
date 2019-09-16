@@ -1,11 +1,11 @@
 /* eslint-disable quotes, max-len */
 import riew from '../riew';
 import { createState as state } from '../state';
-import registry from '../registry';
+import grid from '../grid';
 import { delay } from '../__helpers__';
 
 describe('Given the `riew` factory function', () => {
-  beforeEach(() => registry.reset());
+  beforeEach(() => grid.reset());
   describe('when we create and mount riew with a given view and list of side effects', () => {
     it(`should
       * call the view with the initial props
@@ -281,11 +281,12 @@ describe('Given the `riew` factory function', () => {
         );
       });
     });
-    describe('when we want to use exported into the registry state', () => {
+    describe('when we want to use exported into the grid state', () => {
       it('should recognize it and pass it down to the controller', () => {
         const [ s, setState ] = state('foo');
 
-        registry.add('xxx', s);
+        grid.add(s);
+        grid.name(s, 'xxx');
 
         const view = jest.fn();
         const effect = jest.fn();
@@ -306,11 +307,12 @@ describe('Given the `riew` factory function', () => {
           ]
         );
       });
-      describe('and when we have something else exported into the registry', () => {
+      describe('and when we have something else exported into the grid', () => {
         it('should pass it down as it is to the view and to the controller', () => {
-          const something = { a: 'b' };
+          const something = { id: 'fff', a: 'b' };
 
-          registry.add('something', something);
+          grid.add(something);
+          grid.name(something, 'something');
 
           const view = jest.fn();
           const effect = jest.fn();
@@ -319,10 +321,12 @@ describe('Given the `riew` factory function', () => {
           r.mount();
 
           expect(view).toBeCalledWithArgs(
-            [{ something: { a: 'b' } }]
+            [{ something: expect.objectContaining({ a: 'b' }) } ]
           );
           expect(effect).toBeCalledWithArgs(
-            [ expect.objectContaining({ something: { a: 'b' } })]
+            [ expect.objectContaining({
+              something: expect.objectContaining({ a: 'b' })
+            })]
           );
         });
       });

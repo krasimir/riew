@@ -1,5 +1,5 @@
 import { createState, mergeStates } from '../state';
-import registry from '../registry';
+import grid from '../grid';
 import { delay } from '../__helpers__';
 
 const state = createState;
@@ -566,11 +566,11 @@ describe('Given the state', () => {
     });
   });
 
-  /* registry */
-  describe('when we register the state into the registry', () => {
+  /* grid */
+  describe('when we register the state into the grid', () => {
     it('should allow us to use it from there', () => {
       state(10).export('my state');
-      const [ getState, setState ] = registry.get('my state');
+      const [ getState, setState ] = grid.get('my state');
 
       expect(getState()).toBe(10);
       getState.mutate(() => 200)();
@@ -578,11 +578,11 @@ describe('Given the state', () => {
       setState(42);
       expect(getState()).toBe(42);
     });
-    it('should free the resource in the registry if we teardown the state', () => {
+    it('should free the resource in the grid if we teardown the state', () => {
       const s = state(0).export('my state');
 
       s.teardown();
-      expect(() => registry.get('my state')).toThrowError('"my state" is missing in the registry.');
+      expect(() => grid.get('my state')).toThrowError('"my state" is missing in the grid.');
     });
   });
 
@@ -695,7 +695,7 @@ describe('Given the state', () => {
 
         expect(s.toUpperCase().map()()).toBe('FOO');
 
-        const exported = registry.get('hey');
+        const exported = grid.get('hey');
 
         expect('toUpperCase' in exported).toBe(true);
 

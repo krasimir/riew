@@ -1,5 +1,5 @@
 import { createState as state, isRiewQueueEffect } from './state';
-import registry from './registry';
+import grid from './grid';
 import { isPromise, parallel } from './utils';
 
 function ensureObject(value, context) {
@@ -83,7 +83,7 @@ export default function createRiew(viewFunc, ...controllers) {
 
       if (key.charAt(0) === '@') {
         key = key.substr(1, key.length);
-        external = registry.get(key);
+        external = grid.get(key);
       } else {
         external = externals[key];
       }

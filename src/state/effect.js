@@ -1,5 +1,5 @@
 import { getId, isPromise } from '../utils';
-import registry from '../registry';
+import grid from '../grid';
 import pipe from './pipe';
 import map from './map';
 import mapToKey from './mapToKey';
@@ -90,7 +90,7 @@ export default function (state) {
     effect.cleanUp = () => {
       effect.cancel();
       effect.unsubscribe();
-      if (exportedAs) registry.free(exportedAs);
+      if (exportedAs) grid.free(exportedAs);
     };
     effect.teardown = () => {
       active = false;
@@ -99,10 +99,10 @@ export default function (state) {
       effects = [ effect ];
       return effect;
     };
-    effect.export = (key) => {
+    effect.export = (name) => {
       // if already exported with different key
-      if (exportedAs) registry.free(exportedAs);
-      registry.add(exportedAs = key, effect);
+      if (exportedAs) grid.free(exportedAs);
+      grid.add(effect).name(effect, exportedAs = name);
       return effect;
     };
     effect.isActive = () => {

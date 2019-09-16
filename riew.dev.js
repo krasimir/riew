@@ -342,24 +342,24 @@ function createRiew(viewFunc) {
     return active;
   };
   var isSubscribed = function isSubscribed(s) {
-    return !!subscriptions.find(function (trigger) {
-      return trigger.state.id === s.id;
+    return !!subscriptions.find(function (effect) {
+      return effect.state.id === s.id;
     });
   };
 
-  // triggers
+  // effects
   var updateOutput = output.mutate(function (current, newStuff) {
     var result = _extends({}, current);
 
     if (newStuff) {
       Object.keys(newStuff).forEach(function (key) {
-        if ((0, _state8.isRiewQueueTrigger)(newStuff[key]) && !newStuff[key].isMutating()) {
-          var trigger = newStuff[key];
+        if ((0, _state8.isRiewQueueEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
+          var effect = newStuff[key];
 
-          result[key] = trigger();
-          if (!isSubscribed(trigger.state)) {
-            subscriptions.push(trigger.pipe(function () {
-              return _render2(_defineProperty({}, key, trigger()));
+          result[key] = effect();
+          if (!isSubscribed(effect.state)) {
+            subscriptions.push(effect.pipe(function () {
+              return _render2(_defineProperty({}, key, effect()));
             }).subscribe());
           }
         } else {
@@ -520,10 +520,10 @@ exports.default = function (state) {
     effects.push(effect);
     implementIterable(effect);
 
-    effect.id = (0, _utils.getId)('t');
+    effect.id = (0, _utils.getId)('e');
     effect.state = state;
     effect.__queues = [];
-    effect.__riewTrigger = true;
+    effect.__riewEffect = true;
     effect.__itemsToCreate = [].concat(_toConsumableArray(items));
     effect.__listeners = state.listeners;
 
@@ -799,7 +799,7 @@ var _slicedToArray = function () {
 
 exports.createState = createState;
 exports.mergeStates = mergeStates;
-exports.isRiewQueueTrigger = isRiewQueueTrigger;
+exports.isRiewQueueEffect = isRiewQueueEffect;
 
 var _fastDeepEqual = require('fast-deep-equal');
 
@@ -842,13 +842,13 @@ function createValue(initialValue) {
   api.listeners = function () {
     return listeners;
   };
-  api.addListener = function (trigger) {
-    listeners.push(trigger);
+  api.addListener = function (effect) {
+    listeners.push(effect);
   };
-  api.removeListener = function (trigger) {
+  api.removeListener = function (effect) {
     listeners = listeners.filter(function (_ref) {
       var id = _ref.id;
-      return id !== trigger.id;
+      return id !== effect.id;
     });
   };
 
@@ -869,10 +869,10 @@ function mergeStates(statesMap) {
       return result;
     }, {});
   };
-  var trigger = createState();
+  var effect = createState();
 
-  trigger.state.get = fetchSourceValues;
-  trigger.state.set = function (newValue) {
+  effect.state.get = fetchSourceValues;
+  effect.state.set = function (newValue) {
     if ((typeof newValue === 'undefined' ? 'undefined' : _typeof(newValue)) !== 'object') {
       throw new Error('Wrong merged state value. Must be key-value pairs.');
     }
@@ -892,14 +892,14 @@ function mergeStates(statesMap) {
   };
 
   Object.keys(statesMap).forEach(function (key) {
-    statesMap[key].pipe(trigger.state.triggerListeners).subscribe();
+    statesMap[key].pipe(effect.state.triggerListeners).subscribe();
   });
 
-  return trigger;
+  return effect;
 }
 
-function isRiewQueueTrigger(func) {
-  return func && func.__riewTrigger === true;
+function isRiewQueueEffect(func) {
+  return func && func.__riewEffect === true;
 }
 
 },{"../utils":13,"./effect":5,"fast-deep-equal":14}],8:[function(require,module,exports){
