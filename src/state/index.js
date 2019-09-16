@@ -2,7 +2,7 @@ import equal from 'fast-deep-equal';
 
 import createEffect from './effect';
 import { getId } from '../utils';
-import grid from '../grid';
+import { gridAddState, gridDestroy } from '../grid';
 
 function State(initialValue) {
   const s = {};
@@ -23,7 +23,7 @@ function State(initialValue) {
   };
   s.teardown = () => {
     listeners = [];
-    grid.free(s.id);
+    gridDestroy(s.id);
   };
   s.listeners = () => listeners;
   s.addListener = (effect) => {
@@ -33,7 +33,7 @@ function State(initialValue) {
     listeners = listeners.filter(({ id }) => id !== effect.id);
   };
 
-  grid.add(s);
+  gridAddState(s);
 
   return s;
 };

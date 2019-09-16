@@ -1,5 +1,5 @@
 import { createState, mergeStates } from '../state';
-import grid from '../grid';
+import { gridReset, gridGetNode } from '../grid';
 import { delay } from '../__helpers__';
 
 const state = createState;
@@ -7,7 +7,7 @@ const merge = mergeStates;
 
 describe('Given the state', () => {
   beforeEach(() => {
-    grid.reset();
+    gridReset();
   });
 
   /* get & set */
@@ -573,7 +573,7 @@ describe('Given the state', () => {
   describe('when we register the state into the grid', () => {
     it('should allow us to use it from there', () => {
       state(10).export('my state');
-      const [ getState, setState ] = grid.get('my state');
+      const [ getState, setState ] = gridGetNode('my state');
 
       expect(getState()).toBe(10);
       getState.mutate(() => 200)();
@@ -585,7 +585,7 @@ describe('Given the state', () => {
       const s = state(0).export('my state');
 
       s.teardown();
-      expect(() => grid.get('my state')).toThrowError('"my state" is missing in the grid.');
+      expect(() => gridGetNode('my state')).toThrowError('"my state" is missing in the grid.');
     });
   });
 
@@ -698,7 +698,7 @@ describe('Given the state', () => {
 
         expect(s.toUpperCase().map()()).toBe('FOO');
 
-        const exported = grid.get('hey');
+        const exported = gridGetNode('hey');
 
         expect('toUpperCase' in exported).toBe(true);
 

@@ -1,5 +1,5 @@
 import { getId, isPromise } from '../utils';
-import grid from '../grid';
+import { gridDestroy, gridAddEffect, gridSetNodeName } from '../grid';
 import pipe from './pipe';
 import map from './map';
 import mapToKey from './mapToKey';
@@ -90,7 +90,7 @@ export default function (state) {
     effect.cleanUp = () => {
       effect.cancel();
       effect.unsubscribe();
-      if (exportedAs) grid.free(exportedAs);
+      if (exportedAs) gridDestroy(exportedAs);
     };
     effect.teardown = () => {
       active = false;
@@ -101,8 +101,9 @@ export default function (state) {
     };
     effect.export = (name) => {
       // if already exported with different key
-      if (exportedAs) grid.free(exportedAs);
-      grid.add(effect).name(effect, exportedAs = name);
+      if (exportedAs) gridDestroy(exportedAs);
+      gridAddEffect(effect);
+      gridSetNodeName(effect, exportedAs = name);
       return effect;
     };
     effect.isActive = () => {

@@ -1,12 +1,12 @@
 /* eslint-disable quotes, max-len */
 import riew from '../riew';
 import { createState as state } from '../state';
-import grid from '../grid';
+import { gridReset, gridAddState, gridSetNodeName, gridAddNode } from '../grid';
 import { delay } from '../__helpers__';
 
 describe('Given the `riew` factory function', () => {
   beforeEach(() => {
-    grid.reset();
+    gridReset();
   });
   describe('when we create and mount riew with a given view and list of side effects', () => {
     it(`should
@@ -287,8 +287,8 @@ describe('Given the `riew` factory function', () => {
       it('should recognize it and pass it down to the controller', () => {
         const [ s, setState ] = state('foo');
 
-        grid.add(s);
-        grid.name(s, 'xxx');
+        gridAddState(s);
+        gridSetNodeName(s, 'xxx');
 
         const view = jest.fn();
         const effect = jest.fn();
@@ -313,8 +313,8 @@ describe('Given the `riew` factory function', () => {
         it('should pass it down as it is to the view and to the controller', () => {
           const something = { id: 'fff', a: 'b' };
 
-          grid.add(something);
-          grid.name(something, 'something');
+          gridAddNode(something);
+          gridSetNodeName(something, 'something');
 
           const view = jest.fn();
           const effect = jest.fn();
