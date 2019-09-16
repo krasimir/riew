@@ -1,4 +1,5 @@
 import grid from '../grid';
+import { createState as state } from '../state';
 
 describe('Given the grid', () => {
   beforeEach(() => {
@@ -22,6 +23,20 @@ describe('Given the grid', () => {
       grid.add(obj);
       grid.name(obj, 'myObj');
       expect(grid.get('myObj')).toStrictEqual(obj);
+    });
+  });
+  describe('when we create a state', () => {
+    it('should store the state as a node part of the grid and remove it when we teardown the state', () => {
+      const s1 = state('foo');
+      const s2 = state('bar');
+
+      expect(grid.nodes()).toStrictEqual([
+        expect.objectContaining({ id: s1.state.id }),
+        expect.objectContaining({ id: s2.state.id })
+      ]);
+      s1.teardown();
+      s2.teardown();
+      expect(grid.nodes()).toHaveLength(0);
     });
   });
 });

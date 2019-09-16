@@ -2,40 +2,44 @@ import equal from 'fast-deep-equal';
 
 import createEffect from './effect';
 import { getId } from '../utils';
+import grid from '../grid';
 
-function createValue(initialValue) {
-  const api = {};
+function State(initialValue) {
+  const s = {};
   let value = initialValue;
   let listeners = [];
 
-  api.id = getId('s');
-  api.triggerListeners = () => {
+  s.id = getId('s');
+  s.triggerListeners = () => {
     listeners.forEach(l => l());
   };
 
-  api.get = () => value;
-  api.set = (newValue) => {
+  s.get = () => value;
+  s.set = (newValue) => {
     let isEqual = equal(value, newValue);
 
     value = newValue;
-    if (!isEqual) api.triggerListeners();
+    if (!isEqual) s.triggerListeners();
   };
-  api.teardown = () => {
+  s.teardown = () => {
     listeners = [];
+    grid.free(s.id);
   };
-  api.listeners = () => listeners;
-  api.addListener = (effect) => {
+  s.listeners = () => listeners;
+  s.addListener = (effect) => {
     listeners.push(effect);
   };
-  api.removeListener = (effect) => {
+  s.removeListener = (effect) => {
     listeners = listeners.filter(({ id }) => id !== effect.id);
   };
 
-  return api;
+  grid.add(s);
+
+  return s;
 };
 
 export function createState(initialValue) {
-  return createEffect(createValue(initialValue))();
+  return createEffect(State(initialValue))();
 };
 
 export function mergeStates(statesMap) {

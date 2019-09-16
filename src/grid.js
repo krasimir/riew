@@ -22,6 +22,7 @@ function Grid() {
   };
   api.free = (identifier) => {
     nodes = nodes.filter(n => (n[NAME] !== identifier && n.id !== identifier));
+    return api;
   };
   api.reset = () => {
     nodes = [];
@@ -33,6 +34,7 @@ function Grid() {
     node[NAME] = objName;
     return api;
   };
+  api.nodes = () => nodes;
 
   return api;
 }

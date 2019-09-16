@@ -4,8 +4,12 @@ import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../../__helpers__';
 import riew from '../index';
 import { createState as state } from '../../state';
+import grid from '../../grid';
 
 describe('Given the React riew function', () => {
+  beforeEach(() => {
+    grid.reset();
+  });
   describe('when we use the riew Component', () => {
     it('should always render the view at least once', () => {
       const R = riew(() => <p>Hello</p>);

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
+import grid from '../grid';
 
 import { react, state } from '../index';
 
@@ -9,6 +10,9 @@ const { riew } = react;
 const DummyComponent = ({ text }) => <p>{ text }</p>;
 
 describe('Given the Riew library', () => {
+  beforeEach(() => {
+    grid.reset();
+  });
   describe('when we use an async effect', () => {
     it('should allow us to render multiple times', async () => {
       const A = riew(DummyComponent, async ({ render }) => {

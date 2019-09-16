@@ -6,6 +6,9 @@ const state = createState;
 const merge = mergeStates;
 
 describe('Given the state', () => {
+  beforeEach(() => {
+    grid.reset();
+  });
 
   /* get & set */
   describe('when we use `get` and `set`', () => {

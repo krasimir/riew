@@ -5,7 +5,9 @@ import grid from '../grid';
 import { delay } from '../__helpers__';
 
 describe('Given the `riew` factory function', () => {
-  beforeEach(() => grid.reset());
+  beforeEach(() => {
+    grid.reset();
+  });
   describe('when we create and mount riew with a given view and list of side effects', () => {
     it(`should
       * call the view with the initial props
