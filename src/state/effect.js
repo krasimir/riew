@@ -1,5 +1,5 @@
 import { getId, isPromise } from '../utils';
-import { gridFreeNode, gridEffectQueueStep, GRID_NAME, gridAddEffect } from '../grid';
+import { gridFreeNode, gridEffectQueueStep, gridAddEffect, GRID_NAME } from '../grid';
 import pipe from './pipe';
 import map from './map';
 import mapToKey from './mapToKey';
@@ -46,6 +46,7 @@ export default function (state) {
 
       effect.__queues.push(queue);
       effect.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
+      gridAddEffect(effect);
       return queue.process(...payload);
     };
 
@@ -58,7 +59,6 @@ export default function (state) {
 
     effects.push(effect);
     implementIterable(effect);
-    gridAddEffect(effect);
 
     // queue methods
     queueMethods.forEach(m => {

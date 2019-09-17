@@ -571,7 +571,7 @@ describe('Given the state', () => {
 
   /* grid */
   describe('when we register the state into the grid', () => {
-    it('should allow us to use it from there', () => {
+    fit('should allow us to use it from there', () => {
       state(10).export('my state');
       const [ getState, setState ] = gridGetNode('my state');
 
