@@ -1,6 +1,6 @@
 import { getFuncName, getId } from '../utils';
 
-export default function createQueue(setStateValue, getStateValue, onDone = () => {}, queueAPI) {
+export default function createQueue(setStateValue, getStateValue, onDone = () => {}, onStep = () => {}, queueAPI) {
   const q = {
     id: getId('q'),
     index: 0,
@@ -28,7 +28,10 @@ export default function createQueue(setStateValue, getStateValue, onDone = () =>
         const logic = queueAPI[type];
 
         if (logic) {
-          return logic(q, func, payload, next);
+          const r = logic(q, func, payload, next);
+
+          onStep(q);
+          return r;
         }
         throw new Error(`Unsupported method "${ type }".`);
       };

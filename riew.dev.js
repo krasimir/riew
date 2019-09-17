@@ -4,7 +4,122 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.parallel = exports.serial = exports.compose = exports.registry = exports.react = exports.riew = exports.merge = exports.state = undefined;
+var NAME = '__@@name';
+var MAX_NUM_OF_EVENTS = 500;
+
+var ADD_STATE = 'ADD_STATE';
+var ADD_NODE = 'ADD_NODE';
+var ADD_EFFECT = 'ADD_EFFECT';
+var FREE = 'FREE';
+var RESET = 'RESET';
+var SET_NAME = 'SET_NAME';
+var EFFECT_QUEUE_STEP = 'EFFECT_QUEUE_STEP';
+var RIEW_RENDER = 'RIEW_RENDER';
+
+function Grid() {
+  var api = {};
+  var nodes = [];
+  var events = [];
+
+  var add = function add(obj) {
+    if (!obj || !obj.id) {
+      throw new Error('Each node in the grid must be an object with "id" field. Instead "' + obj + '" given.');
+    }
+
+    nodes.push(obj);
+    return api;
+  };
+  var free = function free(identifier) {
+    nodes = nodes.filter(function (n) {
+      return n[NAME] !== identifier && n.id !== identifier;
+    });
+    return api;
+  };
+  var get = function get(identifier) {
+    var node = nodes.find(function (n) {
+      return n[NAME] === identifier || n.id === identifier;
+    });
+
+    if (node) {
+      return node;
+    }
+    throw new Error('A node with identifier "' + identifier + '" is missing in the grid.');
+  };
+
+  api.dispatch = function (type, payload) {
+    switch (type) {
+      case ADD_STATE:
+      case ADD_NODE:
+      case ADD_EFFECT:
+        add(payload);
+        break;
+      case FREE:
+        free(payload);
+        break;
+      case RESET:
+        nodes = [];
+        break;
+      case SET_NAME:
+        var node = get(payload[0].id);
+
+        node[NAME] = payload[1];
+        break;
+    }
+    if (true) {
+      events.push([type, payload]);
+      if (events.length > MAX_NUM_OF_EVENTS) {
+        events.shift();
+      }
+    }
+  };
+  api.get = get;
+  api.nodes = function () {
+    return nodes;
+  };
+
+  return api;
+}
+
+var grid = Grid();
+
+var gridAdd = exports.gridAdd = function gridAdd(node) {
+  return grid.dispatch(ADD_NODE, node);
+};
+var gridAddState = exports.gridAddState = function gridAddState(state) {
+  return grid.dispatch(ADD_STATE, state);
+};
+var gridAddEffect = exports.gridAddEffect = function gridAddEffect(node) {
+  return grid.dispatch(ADD_EFFECT, node);
+};
+var gridFreeNode = exports.gridFreeNode = function gridFreeNode(identifier) {
+  return grid.dispatch(FREE, identifier);
+};
+var gridReset = exports.gridReset = function gridReset() {
+  return grid.dispatch(RESET);
+};
+var gridSetNodeName = exports.gridSetNodeName = function gridSetNodeName(node, name) {
+  return grid.dispatch(SET_NAME, [node, name]);
+};
+var gridEffectQueueStep = exports.gridEffectQueueStep = function gridEffectQueueStep(payload) {
+  return grid.dispatch(EFFECT_QUEUE_STEP, payload);
+};
+var gridRiewRender = exports.gridRiewRender = function gridRiewRender(payload) {
+  return grid.dispatch(RIEW_RENDER, payload);
+};
+var gridGetNode = exports.gridGetNode = function gridGetNode(identifier) {
+  return grid.get(identifier);
+};
+var gridGetNodes = exports.gridGetNodes = function gridGetNodes() {
+  return grid.nodes();
+};
+
+},{}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.parallel = exports.serial = exports.compose = exports.grid = exports.react = exports.riew = exports.merge = exports.state = undefined;
 
 var _utils = require('./utils');
 
@@ -37,9 +152,9 @@ var _react = require('./react');
 
 var _react2 = _interopRequireDefault(_react);
 
-var _registry = require('./registry');
+var _grid = require('./grid');
 
-var _registry2 = _interopRequireDefault(_registry);
+var _grid2 = _interopRequireDefault(_grid);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -49,9 +164,9 @@ var state = exports.state = _state.createState;
 var merge = exports.merge = _state.mergeStates;
 var riew = exports.riew = _riew2.default;
 var react = exports.react = { riew: _react2.default };
-var registry = exports.registry = _registry2.default;
+var grid = exports.grid = _grid2.default;
 
-},{"./react":2,"./registry":3,"./riew":4,"./state":7,"./utils":13}],2:[function(require,module,exports){
+},{"./grid":1,"./react":3,"./riew":4,"./state":7,"./utils":13}],3:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -180,48 +295,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../riew":4,"../utils":13}],3:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-var Registry = {
-  __resources: {},
-  __resolver: function __resolver(key) {
-    if (this.__resources[key]) {
-      return this.__resources[key];
-    }
-    throw new Error("\"" + key + "\" is missing in the registry.");
-  },
-  __dissolver: function __dissolver(key) {
-    delete this.__resources[key];
-    return key;
-  },
-  add: function add(key, value) {
-    this.__resources[key] = value;
-  },
-  get: function get(key) {
-    return this.__resolver(key);
-  },
-  free: function free(key) {
-    return this.__dissolver(key);
-  },
-  custom: function custom(_ref) {
-    var resolver = _ref.resolver,
-        dissolver = _ref.dissolver;
-
-    this.__resolver = resolver;
-    this.__dissolver = dissolver;
-  },
-  reset: function reset() {
-    this.__resources = {};
-  }
-};
-
-exports.default = Registry;
-
-},{}],4:[function(require,module,exports){
+},{"../riew":4,"../utils":13}],4:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -276,15 +350,9 @@ exports.default = createRiew;
 
 var _state8 = require('./state');
 
-var _registry = require('./registry');
-
-var _registry2 = _interopRequireDefault(_registry);
+var _grid = require('./grid');
 
 var _utils = require('./utils');
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
 
 function _defineProperty(obj, key, value) {
   if (key in obj) {
@@ -319,7 +387,7 @@ function createRiew(viewFunc) {
     controllers[_key - 1] = arguments[_key];
   }
 
-  var instance = {};
+  var instance = { id: (0, _utils.getId)('r'), name: (0, _utils.getFuncName)(viewFunc) };
   var active = false;
   var internalStates = [];
   var subscriptions = [];
@@ -370,7 +438,8 @@ function createRiew(viewFunc) {
     return result;
   });
   var _render2 = updateOutput.filter(isActive).pipe(function (value) {
-    return viewFunc(value);
+    viewFunc(value);
+    (0, _grid.gridRiewRender)([instance, value]);
   });
   var updateAPI = api.mutate(accumulate);
   var updateInput = input.mutate(accumulate);
@@ -398,7 +467,7 @@ function createRiew(viewFunc) {
 
       if (key.charAt(0) === '@') {
         key = key.substr(1, key.length);
-        external = _registry2.default.get(key);
+        external = (0, _grid.gridGetNode)(key);
       } else {
         external = externals[key];
       }
@@ -480,7 +549,7 @@ function createRiew(viewFunc) {
   return instance;
 }
 
-},{"./registry":3,"./state":7,"./utils":13}],5:[function(require,module,exports){
+},{"./grid":1,"./state":7,"./utils":13}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -506,6 +575,8 @@ exports.default = function (state) {
           var id = _ref.id;
           return queue.id !== id;
         });
+      }, function (q) {
+        (0, _grid.gridEffectQueueStep)([effect, q]);
       }, queueAPI);
 
       effect.__queues.push(queue);
@@ -572,7 +643,7 @@ exports.default = function (state) {
     effect.cleanUp = function () {
       effect.cancel();
       effect.unsubscribe();
-      if (exportedAs) _registry2.default.free(exportedAs);
+      if (exportedAs) (0, _grid.gridFreeNode)(exportedAs);
     };
     effect.teardown = function () {
       active = false;
@@ -583,10 +654,11 @@ exports.default = function (state) {
       effects = [effect];
       return effect;
     };
-    effect.export = function (key) {
+    effect.export = function (name) {
       // if already exported with different key
-      if (exportedAs) _registry2.default.free(exportedAs);
-      _registry2.default.add(exportedAs = key, effect);
+      if (exportedAs) (0, _grid.gridFreeNode)(exportedAs);
+      (0, _grid.gridAddEffect)(effect);
+      (0, _grid.gridSetNodeName)(effect, exportedAs = name);
       return effect;
     };
     effect.isActive = function () {
@@ -655,9 +727,7 @@ exports.default = function (state) {
 
 var _utils = require('../utils');
 
-var _registry = require('../registry');
-
-var _registry2 = _interopRequireDefault(_registry);
+var _grid = require('../grid');
 
 var _pipe = require('./pipe');
 
@@ -717,7 +787,7 @@ var implementIterable = exports.implementIterable = function implementIterable(o
 
 ;
 
-},{"../registry":3,"../utils":13,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11,"./queue":12}],6:[function(require,module,exports){
+},{"../grid":1,"../utils":13,"./filter":6,"./map":8,"./mapToKey":9,"./mutate":10,"./pipe":11,"./queue":12}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -811,52 +881,57 @@ var _effect2 = _interopRequireDefault(_effect);
 
 var _utils = require('../utils');
 
+var _grid = require('../grid');
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function createValue(initialValue) {
-  var api = {};
+function State(initialValue) {
+  var s = {};
   var value = initialValue;
   var listeners = [];
 
-  api.id = (0, _utils.getId)('s');
-  api.triggerListeners = function () {
+  s.id = (0, _utils.getId)('s');
+  s.triggerListeners = function () {
     listeners.forEach(function (l) {
       return l();
     });
   };
 
-  api.get = function () {
+  s.get = function () {
     return value;
   };
-  api.set = function (newValue) {
+  s.set = function (newValue) {
     var isEqual = (0, _fastDeepEqual2.default)(value, newValue);
 
     value = newValue;
-    if (!isEqual) api.triggerListeners();
+    if (!isEqual) s.triggerListeners();
   };
-  api.teardown = function () {
+  s.teardown = function () {
     listeners = [];
+    (0, _grid.gridFreeNode)(s.id);
   };
-  api.listeners = function () {
+  s.listeners = function () {
     return listeners;
   };
-  api.addListener = function (effect) {
+  s.addListener = function (effect) {
     listeners.push(effect);
   };
-  api.removeListener = function (effect) {
+  s.removeListener = function (effect) {
     listeners = listeners.filter(function (_ref) {
       var id = _ref.id;
       return id !== effect.id;
     });
   };
 
-  return api;
+  (0, _grid.gridAddState)(s);
+
+  return s;
 };
 
 function createState(initialValue) {
-  return (0, _effect2.default)(createValue(initialValue))();
+  return (0, _effect2.default)(State(initialValue))();
 };
 
 function mergeStates(statesMap) {
@@ -902,7 +977,7 @@ function isRiewQueueEffect(func) {
   return func && func.__riewEffect === true;
 }
 
-},{"../utils":13,"./effect":5,"fast-deep-equal":14}],8:[function(require,module,exports){
+},{"../grid":1,"../utils":13,"./effect":5,"fast-deep-equal":14}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1053,7 +1128,8 @@ var _utils = require('../utils');
 
 function createQueue(setStateValue, getStateValue) {
   var onDone = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
-  var queueAPI = arguments[3];
+  var onStep = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : function () {};
+  var queueAPI = arguments[4];
 
   var q = {
     id: (0, _utils.getId)('q'),
@@ -1089,7 +1165,10 @@ function createQueue(setStateValue, getStateValue) {
         var logic = queueAPI[type];
 
         if (logic) {
-          return logic(q, func, payload, next);
+          var r = logic(q, func, payload, next);
+
+          onStep(q);
+          return r;
         }
         throw new Error('Unsupported method "' + type + '".');
       };
@@ -1292,5 +1371,5 @@ module.exports = function equal(a, b) {
   return false;
 };
 
-},{}]},{},[1])(1)
+},{}]},{},[2])(2)
 });

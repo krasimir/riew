@@ -582,9 +582,9 @@ describe('Given the state', () => {
       expect(getState()).toBe(42);
     });
     it('should free the resource in the grid if we teardown the state', () => {
-      const s = state(0).export('my state');
+      const effect = state(0).export('my state');
 
-      s.teardown();
+      effect.teardown();
       expect(() => gridGetNode('my state')).toThrowError('"my state" is missing in the grid.');
     });
   });

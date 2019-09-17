@@ -1,7 +1,7 @@
 /* eslint-disable quotes, max-len */
 import riew from '../riew';
 import { createState as state } from '../state';
-import { gridReset, gridAddState, gridSetNodeName, gridAddNode } from '../grid';
+import { gridReset, gridAdd, GRID_NAME } from '../grid';
 import { delay } from '../__helpers__';
 
 describe('Given the `riew` factory function', () => {
@@ -285,10 +285,7 @@ describe('Given the `riew` factory function', () => {
     });
     describe('when we want to use exported into the grid state', () => {
       it('should recognize it and pass it down to the controller', () => {
-        const [ s, setState ] = state('foo');
-
-        gridAddState(s);
-        gridSetNodeName(s, 'xxx');
+        const [ , setState ] = state('foo').export('xxx');
 
         const view = jest.fn();
         const effect = jest.fn();
@@ -311,10 +308,9 @@ describe('Given the `riew` factory function', () => {
       });
       describe('and when we have something else exported into the grid', () => {
         it('should pass it down as it is to the view and to the controller', () => {
-          const something = { id: 'fff', a: 'b' };
+          const something = { id: 'fff', a: 'b', [GRID_NAME]: 'something' };
 
-          gridAddNode(something);
-          gridSetNodeName(something, 'something');
+          gridAdd(something);
 
           const view = jest.fn();
           const effect = jest.fn();

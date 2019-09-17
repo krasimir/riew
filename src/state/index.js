@@ -2,14 +2,15 @@ import equal from 'fast-deep-equal';
 
 import createEffect from './effect';
 import { getId } from '../utils';
-import { gridAddState, gridDestroy } from '../grid';
+import { gridAddState } from '../grid';
 
-function State(initialValue) {
+function State(initialValue, options = { internal: false }) {
   const s = {};
   let value = initialValue;
   let listeners = [];
 
   s.id = getId('s');
+  s.internal = options.internal;
   s.triggerListeners = () => {
     listeners.forEach(l => l());
   };
@@ -23,7 +24,6 @@ function State(initialValue) {
   };
   s.teardown = () => {
     listeners = [];
-    gridDestroy(s.id);
   };
   s.listeners = () => listeners;
   s.addListener = (effect) => {
@@ -38,8 +38,12 @@ function State(initialValue) {
   return s;
 };
 
-export function createState(initialValue) {
-  return createEffect(State(initialValue))();
+export function createState(initialValue, options = {}) {
+  return createEffect(State(initialValue, options))();
+};
+
+export function createInternalState(initialValue, options = {}) {
+  return createEffect(State(initialValue, { ...options, internal: true }))();
 };
 
 export function mergeStates(statesMap) {

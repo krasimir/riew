@@ -1,6 +1,6 @@
-import { createState as state, isRiewQueueEffect } from './state';
-import grid, { gridGetNode } from './grid';
-import { isPromise, parallel } from './utils';
+import { createInternalState as state, isRiewQueueEffect } from './state';
+import { gridGetNode, gridRiewRender } from './grid';
+import { isPromise, parallel, getFuncName, getId } from './utils';
 
 function ensureObject(value, context) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
@@ -21,7 +21,7 @@ function normalizeExternalsMap(arr) {
 const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
 
 export default function createRiew(viewFunc, ...controllers) {
-  const instance = {};
+  const instance = { id: getId('r'), name: getFuncName(viewFunc) };
   let active = false;
   let internalStates = [];
   let subscriptions = [];
@@ -57,7 +57,10 @@ export default function createRiew(viewFunc, ...controllers) {
     }
     return result;
   });
-  const render = updateOutput.filter(isActive).pipe(value => viewFunc(value));
+  const render = updateOutput.filter(isActive).pipe(value => {
+    viewFunc(value);
+    gridRiewRender([ instance, value ]);
+  });
   const updateAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
 

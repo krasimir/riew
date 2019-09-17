@@ -1,5 +1,5 @@
 import { getId, isPromise } from '../utils';
-import { gridDestroy, gridAddEffect, gridSetNodeName } from '../grid';
+import { gridFreeNode, gridEffectQueueStep, GRID_NAME, gridAddEffect } from '../grid';
 import pipe from './pipe';
 import map from './map';
 import mapToKey from './mapToKey';
@@ -30,8 +30,6 @@ export default function (state) {
   let active = true;
 
   function createNewEffect(items = []) {
-    let exportedAs;
-
     const effect = function (...payload) {
       if (!active || effect.__itemsToCreate.length === 0) return state.get();
       const queue = createQueue(
@@ -39,6 +37,9 @@ export default function (state) {
         state.get,
         () => {
           effect.__queues = effect.__queues.filter(({ id }) => queue.id !== id);
+        },
+        (q) => {
+          gridEffectQueueStep([ effect, q ]);
         },
         queueAPI
       );
@@ -48,15 +49,16 @@ export default function (state) {
       return queue.process(...payload);
     };
 
-    effects.push(effect);
-    implementIterable(effect);
-
     effect.id = getId('e');
     effect.state = state;
     effect.__queues = [];
     effect.__riewEffect = true;
     effect.__itemsToCreate = [ ...items ];
     effect.__listeners = state.listeners;
+
+    effects.push(effect);
+    implementIterable(effect);
+    gridAddEffect(effect);
 
     // queue methods
     queueMethods.forEach(m => {
@@ -90,24 +92,23 @@ export default function (state) {
     effect.cleanUp = () => {
       effect.cancel();
       effect.unsubscribe();
-      if (exportedAs) gridDestroy(exportedAs);
+      gridFreeNode(effect);
     };
     effect.teardown = () => {
       active = false;
       state.teardown();
       effects.forEach(t => t.cleanUp());
       effects = [ effect ];
-      return effect;
-    };
-    effect.export = (name) => {
-      // if already exported with different key
-      if (exportedAs) gridDestroy(exportedAs);
-      gridAddEffect(effect);
-      gridSetNodeName(effect, exportedAs = name);
+      gridFreeNode(effect);
+      gridFreeNode(effect.state);
       return effect;
     };
     effect.isActive = () => {
       return active;
+    };
+    effect.export = name => {
+      effect[GRID_NAME] = name;
+      return effect;
     };
     effect.test = function (callback) {
       const testTrigger = createNewEffect([ ...effect.__itemsToCreate ]);
