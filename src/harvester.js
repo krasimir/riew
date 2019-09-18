@@ -4,7 +4,7 @@ import { State } from './state';
 import effectFactory from './effect';
 import createRiew from './riew';
 import reactRiew from './react';
-import { gridAddState, gridFreeNode, gridEffectQueueStep, gridAddEffect, gridReset, gridGetNodes } from './grid';
+import { gridAdd, gridFreeNode, gridReset, gridGetNodes } from './grid';
 
 function Harvester() {
   const api = {};
@@ -41,7 +41,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   h.defineProduct('effectFactory', (state) => {
     return effectFactory(state, {
       in(effect) {
-        gridAddEffect(effect);
+        gridAdd(effect);
       },
       out(effect) {
         gridFreeNode(effect);
@@ -51,7 +51,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
         }
       },
       queueStep(effect, q) {
-        gridEffectQueueStep([ effect, q ]);
+
       },
       export(effect, name) {
         effect.__exportedAs = name;
@@ -63,7 +63,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     const state = State(initialValue, options);
     const createEffect = h.produce('effectFactory', state);
 
-    gridAddState(state);
+    gridAdd(state);
     return createEffect();
   });
   h.defineProduct('mergeStates', (statesMap) => {
