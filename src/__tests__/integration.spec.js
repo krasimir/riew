@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { gridReset } from '../grid';
+import harvester from '../harvester';
 
 import { react, state } from '../index';
 
@@ -11,7 +11,7 @@ const DummyComponent = ({ text }) => <p>{ text }</p>;
 
 describe('Given the Riew library', () => {
   beforeEach(() => {
-    gridReset();
+    harvester.reset();
   });
   describe('when we use an async effect', () => {
     it('should allow us to render multiple times', async () => {

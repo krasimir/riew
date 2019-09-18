@@ -1,4 +1,3 @@
-import gridRaw from './grid';
 import harvester from './harvester';
 
 export const state = (initialValue) => {
@@ -22,5 +21,4 @@ export const register = (name, whatever) => {
   return harvester.defineProduct(name, () => whatever);
 };
 
-export const grid = gridRaw;
 export { compose, serial, parallel } from './utils';

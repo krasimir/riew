@@ -1,6 +1,5 @@
 import { state, use } from './index';
 import { isRiewQueueEffect } from './effect';
-import { gridRiewRender } from './grid';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 
 function ensureObject(value, context) {
@@ -60,7 +59,6 @@ export default function createRiew(viewFunc, ...controllers) {
   });
   const render = updateOutput.filter(isActive).pipe(value => {
     viewFunc(value);
-    gridRiewRender([ instance, value ]);
   });
   const updateAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
