@@ -1,4 +1,4 @@
-import { getFuncName, getId } from '../utils';
+import { getFuncName, getId } from './utils';
 
 export default function createQueue(setStateValue, getStateValue, onDone = () => {}, onStep = () => {}, queueAPI) {
   const q = {

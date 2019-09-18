@@ -1,11 +1,14 @@
-import { getId, isPromise } from '../utils';
-import { gridFreeNode, gridEffectQueueStep, gridAddEffect, GRID_NAME } from '../grid';
-import pipe from './pipe';
-import map from './map';
-import mapToKey from './mapToKey';
-import mutate from './mutate';
-import filter from './filter';
+import { getId, isPromise } from './utils';
+import pipe from './queueMethods/pipe';
+import map from './queueMethods/map';
+import mapToKey from './queueMethods/mapToKey';
+import mutate from './queueMethods/mutate';
+import filter from './queueMethods/filter';
 import createQueue from './queue';
+
+export function isRiewQueueEffect(func) {
+  return func && func.__riewEffect === true;
+}
 
 export const implementIterable = (obj) => {
   if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
@@ -23,7 +26,7 @@ export const implementIterable = (obj) => {
   }
 };
 
-export default function (state) {
+export default function effectFactory(state, lifecycle) {
   const queueMethods = [];
   const queueAPI = {};
   let effects = [];
@@ -39,14 +42,14 @@ export default function (state) {
           effect.__queues = effect.__queues.filter(({ id }) => queue.id !== id);
         },
         (q) => {
-          gridEffectQueueStep([ effect, q ]);
+          lifecycle.queueStep(effect, q);
         },
         queueAPI
       );
 
       effect.__queues.push(queue);
       effect.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
-      gridAddEffect(effect);
+      lifecycle.in(effect);
       return queue.process(...payload);
     };
 
@@ -92,22 +95,20 @@ export default function (state) {
     effect.cleanUp = () => {
       effect.cancel();
       effect.unsubscribe();
-      gridFreeNode(effect);
     };
     effect.teardown = () => {
       active = false;
       state.teardown();
       effects.forEach(t => t.cleanUp());
       effects = [ effect ];
-      gridFreeNode(effect);
-      gridFreeNode(effect.state);
+      lifecycle.out(effect);
       return effect;
     };
     effect.isActive = () => {
       return active;
     };
     effect.export = name => {
-      effect[GRID_NAME] = name;
+      lifecycle.export(effect, name);
       return effect;
     };
     effect.test = function (callback) {

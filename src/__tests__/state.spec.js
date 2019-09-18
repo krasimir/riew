@@ -1,13 +1,10 @@
-import { createState, mergeStates } from '../state';
-import { gridReset, gridGetNode } from '../grid';
+import { state, merge, use } from '../index';
 import { delay } from '../__helpers__';
-
-const state = createState;
-const merge = mergeStates;
+import harvester from '../harvester';
 
 describe('Given the state', () => {
   beforeEach(() => {
-    gridReset();
+    harvester.reset();
   });
 
   /* get & set */
@@ -569,11 +566,11 @@ describe('Given the state', () => {
     });
   });
 
-  /* grid */
-  describe('when we register the state into the grid', () => {
-    fit('should allow us to use it from there', () => {
+  /* harvester/grid */
+  describe('when we export the state', () => {
+    it('should allow us to use it later', () => {
       state(10).export('my state');
-      const [ getState, setState ] = gridGetNode('my state');
+      const [ getState, setState ] = use('my state');
 
       expect(getState()).toBe(10);
       getState.mutate(() => 200)();
@@ -585,7 +582,7 @@ describe('Given the state', () => {
       const effect = state(0).export('my state');
 
       effect.teardown();
-      expect(() => gridGetNode('my state')).toThrowError('"my state" is missing in the grid.');
+      expect(() => use('my state')).toThrowError('There is no entry with name "my state"');
     });
   });
 
@@ -698,7 +695,7 @@ describe('Given the state', () => {
 
         expect(s.toUpperCase().map()()).toBe('FOO');
 
-        const exported = gridGetNode('hey');
+        const exported = use('hey');
 
         expect('toUpperCase' in exported).toBe(true);
 

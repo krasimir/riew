@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
 import createRiew from '../riew';
 
-export default function riew(View, ...effects) {
+export default function riew(View, ...controllers) {
   const createBridge = function (externals = []) {
     const comp = function (outerProps) {
       let [ instance, setInstance ] = useState(null);
@@ -23,7 +23,7 @@ export default function riew(View, ...effects) {
               setContent(<View {...props}/>);
             }
           },
-          ...effects
+          ...controllers
         );
 
         if (externals && externals.length > 0) {
