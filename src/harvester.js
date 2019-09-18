@@ -66,13 +66,6 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     gridAddState(state);
     return createEffect();
   });
-  h.defineProduct('internalState', (initialValue, options = {}) => {
-    const state = State(initialValue, { ...options, internal: true });
-    const createEffect = h.produce('effectFactory', state);
-
-    gridAddState(state);
-    return createEffect(state)();
-  });
   h.defineProduct('mergeStates', (statesMap) => {
     const fetchSourceValues = () => Object.keys(statesMap).reduce((result, key) => {
       const [ s ] = statesMap[key];

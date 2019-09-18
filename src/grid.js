@@ -1,4 +1,3 @@
-export const GRID_NAME = '__@@name';
 const MAX_NUM_OF_EVENTS = 850;
 
 const ADD_STATE = 'ADD_STATE';
@@ -23,11 +22,11 @@ function Grid() {
     return api;
   };
   const free = (identifier) => {
-    nodes = nodes.filter(n => (n[GRID_NAME] !== identifier && n.id !== identifier));
+    nodes = nodes.filter(n => (n.id !== identifier));
     return api;
   };
   const get = (identifier) => {
-    const node = nodes.find(n => (n[GRID_NAME] === identifier || n.id === identifier));
+    const node = nodes.find(n => (n.id === identifier));
 
     if (node) {
       return node;

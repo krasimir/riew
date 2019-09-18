@@ -1,7 +1,6 @@
 import equal from 'fast-deep-equal';
 
 import { getId } from './utils';
-import { gridAddState } from './grid';
 
 export function State(initialValue, options = { internal: false }) {
   const s = {};
@@ -31,8 +30,6 @@ export function State(initialValue, options = { internal: false }) {
   s.removeListener = (effect) => {
     listeners = listeners.filter(({ id }) => id !== effect.id);
   };
-
-  gridAddState(s);
 
   return s;
 };

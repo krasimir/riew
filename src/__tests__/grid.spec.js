@@ -1,10 +1,10 @@
-import { gridAdd, gridFreeNode, gridReset, gridGetNode, gridGetNodes, gridGetEvents, GRID_NAME } from '../grid';
-import { createState as state } from '../state';
-import { default as riew } from '../riew';
+import { gridAdd, gridFreeNode, gridGetNode, gridGetNodes, gridGetEvents } from '../grid';
+import { state, riew } from '../index';
+import harvester from '../harvester';
 
 describe('Given the grid', () => {
   beforeEach(() => {
-    gridReset();
+    harvester.reset();
   });
   describe('when we use the grid', () => {
     it('should store stuff for us and let us free resources', () => {
@@ -12,17 +12,9 @@ describe('Given the grid', () => {
 
       gridAdd(obj);
       expect(gridGetNode('foo')).toStrictEqual(obj);
-      gridFreeNode('foo');
+      gridFreeNode(obj);
       expect(() => gridGetNode('foo')).toThrowError('A node with identifier "foo" is missing in the grid.');
       expect(() => gridGetNode('something')).toThrowError('A node with identifier "something" is missing in the grid.');
-    });
-  });
-  describe('when set a name of a node', () => {
-    it('should let us fetch the node by name', () => {
-      const obj = { id: 'foo', something: 'else', [GRID_NAME]: 'myObj' };
-
-      gridAdd(obj);
-      expect(gridGetNode('myObj')).toStrictEqual(obj);
     });
   });
   describe('when we create a state', () => {
@@ -32,9 +24,7 @@ describe('Given the grid', () => {
 
       expect(gridGetNodes()).toStrictEqual([
         expect.objectContaining({ id: s1.state.id }),
-        expect.any(Function),
-        expect.objectContaining({ id: s2.state.id }),
-        expect.any(Function)
+        expect.objectContaining({ id: s2.state.id })
       ]);
       s1.teardown();
       s2.teardown();

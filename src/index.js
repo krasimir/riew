@@ -18,6 +18,9 @@ export const react = {
 export const use = (name, ...args) => {
   return harvester.produce(name, ...args);
 };
+export const register = (name, whatever) => {
+  return harvester.defineProduct(name, () => whatever);
+};
 
 export const grid = gridRaw;
 export { compose, serial, parallel } from './utils';

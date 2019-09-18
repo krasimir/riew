@@ -1,5 +1,6 @@
-import { createInternalState as state, isRiewQueueEffect } from './state';
-import { gridGetNode, gridRiewRender } from './grid';
+import { state, use } from './index';
+import { isRiewQueueEffect } from './effect';
+import { gridRiewRender } from './grid';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 
 function ensureObject(value, context) {
@@ -28,9 +29,9 @@ export default function createRiew(viewFunc, ...controllers) {
   let onUnmountCallbacks = [];
   let externals = {};
 
-  const [ input ] = state({});
-  const [ output ] = state({});
-  const [ api ] = state({});
+  const [ input ] = state({}, { internal: true });
+  const [ output ] = state({}, { internal: true });
+  const [ api ] = state({}, { internal: true });
 
   const isActive = () => active;
   const isSubscribed = s => !!subscriptions.find(effect => effect.state.id === s.id);
@@ -86,7 +87,7 @@ export default function createRiew(viewFunc, ...controllers) {
 
       if (key.charAt(0) === '@') {
         key = key.substr(1, key.length);
-        external = gridGetNode(key);
+        external = use(key);
       } else {
         external = externals[key];
       }

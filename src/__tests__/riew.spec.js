@@ -1,12 +1,12 @@
 /* eslint-disable quotes, max-len */
 import riew from '../riew';
-import { createState as state } from '../state';
-import { gridReset, gridAdd, GRID_NAME } from '../grid';
+import harvester from '../harvester';
 import { delay } from '../__helpers__';
+import { state, register } from '../index';
 
 describe('Given the `riew` factory function', () => {
   beforeEach(() => {
-    gridReset();
+    harvester.reset();
   });
   describe('when we create and mount riew with a given view and list of side effects', () => {
     it(`should
@@ -283,7 +283,7 @@ describe('Given the `riew` factory function', () => {
         );
       });
     });
-    describe('when we want to use exported into the grid state', () => {
+    describe('when we want to an exported state', () => {
       it('should recognize it and pass it down to the controller', () => {
         const [ , setState ] = state('foo').export('xxx');
 
@@ -308,9 +308,9 @@ describe('Given the `riew` factory function', () => {
       });
       describe('and when we have something else exported into the grid', () => {
         it('should pass it down as it is to the view and to the controller', () => {
-          const something = { id: 'fff', a: 'b', [GRID_NAME]: 'something' };
+          const something = { id: 'fff', a: 'b' };
 
-          gridAdd(something);
+          register('something', something);
 
           const view = jest.fn();
           const effect = jest.fn();
