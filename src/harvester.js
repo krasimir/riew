@@ -6,42 +6,65 @@ import createRiew from './riew';
 import reactRiew from './react';
 import { gridAdd, gridFreeNode, gridReset, gridGetNodes } from './grid';
 
+const MAX_NUM_OF_EVENTS = 850;
+const STATE_CREATED = 'STATE_CREATED';
+const EFFECT_ADDED = 'EFFECT_ADDED';
+const EFFECT_REMOVED = 'EFFECT_REMOVED';
+const EFFECT_TEARDOWN = 'EFFECT_TEARDOWN';
+const EFFECT_STEP = 'EFFECT_STEP';
+const EFFECT_EXPORTED = 'EFFECT_EXPORTED';
+const RIEW_CREATED = 'RIEW_CREATED';
+
 function Harvester() {
   const api = {};
-  let commands = {};
+  const events = [];
+  let products = {};
 
   api.defineProduct = (product, func) => {
-    if (commands[product]) {
+    if (products[product]) {
       throw new Error(`An entry with name "${ product }" already exists.`);
     }
-    commands[product] = func;
+    products[product] = func;
   };
   api.undefineProduct = (product) => {
-    if (!commands[product]) {
+    if (!products[product]) {
       throw new Error(`There is no entry with name "${ product }" to be removed.`);
     }
-    delete commands[product];
+    delete products[product];
   };
-  api.produce = (name, ...args) => {
-    if (!commands[name]) {
-      throw new Error(`There is no entry with name "${ name }".`);
+  api.produce = (product, ...args) => {
+    if (!products[product]) {
+      throw new Error(`There is no entry with name "${ product }".`);
     }
-    return commands[name](...args);
+    return products[product](...args);
   };
   api.reset = () => {
-    commands = {};
+    products = {};
     gridReset();
     defineHarvesterBuiltInCapabilities(api);
   };
+  api.createRecorder = (shouldRecord = true) => (type, ...payload) => {
+    if (__DEV__ && shouldRecord) {
+      if (events.length > MAX_NUM_OF_EVENTS) {
+        events.shift();
+      }
+      events.push({ type, payload });
+    }
+  };
+  api.events = () => events;
+  api.grid = () => gridGetNodes();
 
   return api;
 };
 
 const defineHarvesterBuiltInCapabilities = function (h) {
-  h.defineProduct('effectFactory', (state) => {
-    return effectFactory(state, {
+
+  // ---------------------- effect factory
+  h.defineProduct('effectFactory', (state, recordEvent) => {
+    const factory = effectFactory(state, {
       in(effect) {
         gridAdd(effect);
+        recordEvent(EFFECT_ADDED, effect);
       },
       out(effect) {
         gridFreeNode(effect);
@@ -49,23 +72,40 @@ const defineHarvesterBuiltInCapabilities = function (h) {
         if ('__exportedAs' in effect) {
           h.undefineProduct(effect.__exportedAs);
         }
+        recordEvent(EFFECT_REMOVED, effect);
+      },
+      teardown(effect) {
+        recordEvent(EFFECT_TEARDOWN, effect);
       },
       queueStep(effect, q) {
-
+        recordEvent(EFFECT_STEP, effect, q);
       },
       export(effect, name) {
         effect.__exportedAs = name;
         h.defineProduct(name, () => effect);
+        recordEvent(EFFECT_EXPORTED, effect, name);
+      },
+      fork(items) {
+        return factory(items);
       }
     });
+
+    return factory;
   });
-  h.defineProduct('state', (initialValue, options = {}) => {
-    const state = State(initialValue, options);
-    const createEffect = h.produce('effectFactory', state);
+
+  // ---------------------- state
+  h.defineProduct('state', (initialValue, shouldRecordEvents) => {
+    const recordEvent = h.createRecorder(shouldRecordEvents);
+    const state = State(initialValue);
+    const factory = h.produce('effectFactory', state, recordEvent);
+    const effect = factory();
 
     gridAdd(state);
-    return createEffect();
+    recordEvent(STATE_CREATED, state);
+    return effect;
   });
+
+  // ---------------------- mergeStates
   h.defineProduct('mergeStates', (statesMap) => {
     const fetchSourceValues = () => Object.keys(statesMap).reduce((result, key) => {
       const [ s ] = statesMap[key];
@@ -98,9 +138,16 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
     return effect;
   });
+
+  // ---------------------- riew
   h.defineProduct('riew', (viewFunc, ...controllers) => {
-    return createRiew(viewFunc, ...controllers);
+    const r = createRiew(viewFunc, ...controllers);
+
+    h.createRecorder()(RIEW_CREATED, viewFunc, controllers);
+    return r;
   });
+
+  // ---------------------- reactRiew
   h.defineProduct('reactRiew', (viewFunc, ...controllers) => {
     return reactRiew(viewFunc, ...controllers);
   });

@@ -1,7 +1,10 @@
 import harvester from './harvester';
 
 export const state = (initialValue) => {
-  return harvester.produce('state', initialValue);
+  return harvester.produce('state', initialValue, true);
+};
+export const internalState = (initialValue) => {
+  return harvester.produce('state', initialValue, false);
 };
 export const merge = (statesMap) => {
   return harvester.produce('mergeStates', statesMap);

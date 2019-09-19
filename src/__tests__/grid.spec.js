@@ -1,5 +1,5 @@
-import { gridAdd, gridFreeNode, gridGetNode, gridGetNodes, gridGetEvents } from '../grid';
-import { state, riew } from '../index';
+import { gridAdd, gridFreeNode, gridGetNode, gridGetNodes } from '../grid';
+import { state } from '../index';
 import harvester from '../harvester';
 
 describe('Given the grid', () => {
@@ -29,20 +29,6 @@ describe('Given the grid', () => {
       s1.teardown();
       s2.teardown();
       expect(gridGetNodes()).toHaveLength(0);
-    });
-  });
-  describe('when we want to display what to see what happened', () => {
-    it('should show us the events that happened', () => {
-      const view = jest.fn();
-      const [ s1, setState1 ] = state('a');
-      const controller = jest.fn();
-      const r = riew(view, controller).with({ s1 });
-
-      r.mount();
-      setState1('foo');
-      r.update({ x: 'y' });
-
-      // console.log(gridGetEvents());
     });
   });
 });

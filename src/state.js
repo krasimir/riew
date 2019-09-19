@@ -2,13 +2,12 @@ import equal from 'fast-deep-equal';
 
 import { getId } from './utils';
 
-export function State(initialValue, options = { internal: false }) {
+export function State(initialValue) {
   const s = {};
   let value = initialValue;
   let listeners = [];
 
   s.id = getId('s');
-  s.internal = options.internal;
   s.triggerListeners = () => {
     listeners.forEach(l => l());
   };

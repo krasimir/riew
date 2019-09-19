@@ -28,9 +28,11 @@ export default function createQueue(setStateValue, getStateValue, onDone = () =>
         const logic = queueAPI[type];
 
         if (logic) {
-          const r = logic(q, func, payload, next);
+          const r = logic(q, func, payload, (lastResult) => {
+            onStep(q);
+            return next(lastResult);
+          });
 
-          onStep(q);
           return r;
         }
         throw new Error(`Unsupported method "${ type }".`);

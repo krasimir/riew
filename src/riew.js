@@ -1,5 +1,5 @@
-import { state, use } from './index';
-import { isRiewQueueEffect } from './effect';
+import { internalState, state, use } from './index';
+import { isRiewEffect } from './effect';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 
 function ensureObject(value, context) {
@@ -28,9 +28,9 @@ export default function createRiew(viewFunc, ...controllers) {
   let onUnmountCallbacks = [];
   let externals = {};
 
-  const [ input ] = state({}, { internal: true });
-  const [ output ] = state({}, { internal: true });
-  const [ api ] = state({}, { internal: true });
+  const [ input ] = internalState({});
+  const [ output ] = internalState({});
+  const [ api ] = internalState({});
 
   const isActive = () => active;
   const isSubscribed = s => !!subscriptions.find(effect => effect.state.id === s.id);
@@ -41,7 +41,7 @@ export default function createRiew(viewFunc, ...controllers) {
 
     if (newStuff) {
       Object.keys(newStuff).forEach(key => {
-        if (isRiewQueueEffect(newStuff[key]) && !newStuff[key].isMutating()) {
+        if (isRiewEffect(newStuff[key]) && !newStuff[key].isMutating()) {
           const effect = newStuff[key];
 
           result[key] = effect();

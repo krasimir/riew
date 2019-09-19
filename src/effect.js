@@ -6,7 +6,7 @@ import mutate from './queueMethods/mutate';
 import filter from './queueMethods/filter';
 import createQueue from './queue';
 
-export function isRiewQueueEffect(func) {
+export function isRiewEffect(func) {
   return func && func.__riewEffect === true;
 }
 
@@ -40,6 +40,7 @@ export default function effectFactory(state, lifecycle) {
         state.get,
         () => {
           effect.__queues = effect.__queues.filter(({ id }) => queue.id !== id);
+          lifecycle.out(effect);
         },
         (q) => {
           lifecycle.queueStep(effect, q);
@@ -65,7 +66,7 @@ export default function effectFactory(state, lifecycle) {
 
     // queue methods
     queueMethods.forEach(m => {
-      effect[m] = (...methodArgs) => createNewEffect([ ...effect.__itemsToCreate, { type: m, func: methodArgs } ]);
+      effect[m] = (...methodArgs) => lifecycle.fork([ ...effect.__itemsToCreate, { type: m, func: methodArgs } ]);
     });
 
     // effect direct methods
@@ -101,7 +102,7 @@ export default function effectFactory(state, lifecycle) {
       state.teardown();
       effects.forEach(t => t.cleanUp());
       effects = [ effect ];
-      lifecycle.out(effect);
+      lifecycle.teardown(effect);
       return effect;
     };
     effect.isActive = () => {
@@ -112,7 +113,7 @@ export default function effectFactory(state, lifecycle) {
       return effect;
     };
     effect.test = function (callback) {
-      const testTrigger = createNewEffect([ ...effect.__itemsToCreate ]);
+      const testTrigger = lifecycle.fork([ ...effect.__itemsToCreate ]);
       const tools = {
         setValue(newValue) {
           testTrigger.__itemsToCreate = [
@@ -155,7 +156,7 @@ export default function effectFactory(state, lifecycle) {
     };
     effects.forEach(t => {
       t[methodName] = (...methodArgs) => {
-        return createNewEffect([ ...t.__itemsToCreate, { type: methodName, func: methodArgs } ]);
+        return lifecycle.fork([ ...t.__itemsToCreate, { type: methodName, func: methodArgs } ]);
       };
     });
   };
