@@ -42,8 +42,8 @@ export default function effectFactory(state, lifecycle) {
           effect.__queues = effect.__queues.filter(({ id }) => queue.id !== id);
           lifecycle.out(effect);
         },
-        (q) => {
-          lifecycle.queueStep(effect, q);
+        () => {
+          lifecycle.queueStep(effect);
         },
         queueAPI
       );

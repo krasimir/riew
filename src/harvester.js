@@ -5,19 +5,20 @@ import effectFactory from './effect';
 import createRiew from './riew';
 import reactRiew from './react';
 import { gridAdd, gridFreeNode, gridReset, gridGetNodes } from './grid';
-
-const MAX_NUM_OF_EVENTS = 850;
-const STATE_CREATED = 'STATE_CREATED';
-const EFFECT_ADDED = 'EFFECT_ADDED';
-const EFFECT_REMOVED = 'EFFECT_REMOVED';
-const EFFECT_TEARDOWN = 'EFFECT_TEARDOWN';
-const EFFECT_STEP = 'EFFECT_STEP';
-const EFFECT_EXPORTED = 'EFFECT_EXPORTED';
-const RIEW_CREATED = 'RIEW_CREATED';
+import {
+  createLogger,
+  STATE_CREATED,
+  EFFECT_ADDED,
+  EFFECT_REMOVED,
+  EFFECT_TEARDOWN,
+  EFFECT_STEP,
+  EFFECT_EXPORTED,
+  RIEW_CREATED
+} from './logger';
 
 function Harvester() {
   const api = {};
-  const events = [];
+  const logger = createLogger();
   let products = {};
 
   api.defineProduct = (product, func) => {
@@ -43,15 +44,7 @@ function Harvester() {
     gridReset();
     defineHarvesterBuiltInCapabilities(api);
   };
-  api.createRecorder = (shouldRecord = true) => (type, ...payload) => {
-    if (__DEV__ && shouldRecord) {
-      if (events.length > MAX_NUM_OF_EVENTS) {
-        events.shift();
-      }
-      events.push({ type, payload });
-    }
-  };
-  api.events = () => events;
+  api.logger = logger;
   api.grid = () => gridGetNodes();
 
   return api;
@@ -73,6 +66,9 @@ const defineHarvesterBuiltInCapabilities = function (h) {
         }
         recordEvent(EFFECT_REMOVED, effect);
       },
+      queueStep(effect) {
+        recordEvent(EFFECT_STEP, effect);
+      },
       teardown(effect) {
         gridFreeNode(effect);
         gridFreeNode(effect.state);
@@ -80,9 +76,6 @@ const defineHarvesterBuiltInCapabilities = function (h) {
           h.undefineProduct(effect.__exportedAs);
         }
         recordEvent(EFFECT_TEARDOWN, effect);
-      },
-      queueStep(effect, q) {
-        recordEvent(EFFECT_STEP, effect, q);
       },
       export(effect, name) {
         effect.__exportedAs = name;
@@ -99,7 +92,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
   // ---------------------- state
   h.defineProduct('state', (initialValue, shouldRecordEvents) => {
-    const recordEvent = h.createRecorder(shouldRecordEvents);
+    const recordEvent = shouldRecordEvents ? h.logger.log : () => {};
     const state = State(initialValue);
     const factory = h.produce('effectFactory', state, recordEvent);
     const effect = factory();
@@ -147,7 +140,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   h.defineProduct('riew', (viewFunc, ...controllers) => {
     const r = createRiew(viewFunc, ...controllers);
 
-    h.createRecorder()(RIEW_CREATED, viewFunc, controllers);
+    h.logger.log(RIEW_CREATED, viewFunc, controllers);
     return r;
   });
 

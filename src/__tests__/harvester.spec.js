@@ -1,7 +1,4 @@
-import createRiewDebugger from 'riew-debugger';
 import { use, register, state, riew, harvester } from '../index';
-
-const riewDebugger = createRiewDebugger(harvester);
 
 describe('Given the harvester', () => {
   beforeEach(() => {
@@ -21,14 +18,13 @@ describe('Given the harvester', () => {
       const view = jest.fn();
       const [ s1, setState1 ] = state('a');
       const controller = function myController() {};
-      const r = riew(view, controller);
-      // const r = riew(view, controller).with({ s1 });
+      const r = riew(view, controller).with({ s1 });
 
-      // r.mount();
+      r.mount();
       // setState1('foo');
       // r.update({ x: 'y' });
 
-      // riewDebugger.printEvents();
+      console.log(JSON.stringify(harvester.logger.events(), null, 2));
 
       // console.log(gridGetEvents());
     });
