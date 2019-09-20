@@ -1,4 +1,4 @@
-import { use, register, state, riew, harvester } from '../index';
+import { use, register, state, riew, harvester, logger } from '../index';
 
 describe('Given the harvester', () => {
   beforeEach(() => {
@@ -24,9 +24,7 @@ describe('Given the harvester', () => {
       // setState1('foo');
       // r.update({ x: 'y' });
 
-      console.log(JSON.stringify(harvester.logger.events(), null, 2));
-
-      // console.log(gridGetEvents());
+      logger.events.log();
     });
   });
 });

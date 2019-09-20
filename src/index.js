@@ -1,4 +1,5 @@
 import h from './harvester';
+import l from './logger';
 
 export const state = (initialValue) => {
   return h.produce('state', initialValue, true);
@@ -26,3 +27,4 @@ export const register = (name, whatever) => {
 
 export { compose, serial, parallel } from './utils';
 export const harvester = h;
+export const logger = l;

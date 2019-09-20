@@ -1,34 +1,37 @@
 import sanitize from './sanitize';
 import { getFuncName } from './utils';
+import {
+  STATE_CREATED,
+  EFFECT_ADDED,
+  EFFECT_REMOVED,
+  EFFECT_TEARDOWN,
+  EFFECT_STEP,
+  EFFECT_EXPORTED,
+  RIEW_CREATED
+} from './constants';
 
 const MAX_NUM_OF_EVENTS = 850;
 
-export const STATE_CREATED = 'STATE_CREATED';
-export const EFFECT_ADDED = 'EFFECT_ADDED';
-export const EFFECT_REMOVED = 'EFFECT_REMOVED';
-export const EFFECT_TEARDOWN = 'EFFECT_TEARDOWN';
-export const EFFECT_STEP = 'EFFECT_STEP';
-export const EFFECT_EXPORTED = 'EFFECT_EXPORTED';
-export const RIEW_CREATED = 'RIEW_CREATED';
+// normalizers
 
-function formatState(state) {
+function normalizeState(state) {
   return {
     id: state.id,
     value: sanitize(state.get())
   };
 }
-function formatEffect(effect) {
+function normalizeEffect(effect) {
   return {
     id: effect.id,
-    state: formatState(effect.state),
+    state: normalizeState(effect.state),
     queueItems: effect.__itemsToCreate.map(({ type, func }) => ({
       type,
       func: getFuncName(func)
     })),
-    queues: effect.__queues.map(formatQueue)
+    queues: effect.__queues.map(normalizeQueue)
   };
 }
-function formatQueue(q) {
+function normalizeQueue(q) {
   return {
     index: q.index,
     result: sanitize(q.result),
@@ -36,33 +39,60 @@ function formatQueue(q) {
   };
 }
 
-function formatEvent(type, payload) {
-  switch (type) {
-    case STATE_CREATED:
-      return {
-        type,
-        state: formatState(payload[0])
-      };
-    case RIEW_CREATED:
-      const view = payload[0];
-      const controllers = payload[1];
+// types
 
-      return {
-        type,
-        view: getFuncName(view),
-        controllers: controllers.map(getFuncName)
-      };
-    case EFFECT_ADDED:
-    case EFFECT_STEP:
-      return {
-        type,
-        effect: formatEffect(payload[0])
-      };
+const state = {
+  normalize(payload) {
+    return {
+      state: normalizeState(payload[0])
+    };
+  },
+  oneliner(event) {
+    return `${ event.type } (${ event.state.id })
+  ↳ ${ JSON.stringify(event.state.value) }`;
   }
-  return { type };
-}
+};
+const effect = {
+  normalize(payload) {
+    return {
+      effect: normalizeEffect(payload[0])
+    };
+  },
+  oneliner(event) {
+    console.log(JSON.stringify(event, null, 2));
+    return `${ event.type } (${ event.effect.id })
+  ↳ ${ event.effect.queueItems.map(({ type, func }) => `${ type }${ func !== 'unknown' ? `(${ func })` : '' }`) }
+  ↳ ${ JSON.stringify(event.effect.state.value) }`;
+  }
+};
+const riew = {
+  normalize(payload) {
+    const view = payload[0];
+    const controllers = payload[1];
 
-export function createLogger() {
+    return {
+      view: getFuncName(view),
+      controllers: controllers.map(getFuncName)
+    };
+  },
+  oneliner(event) {
+    return `${ event.type }
+  ↳ view: ${ event.view }
+  ↳ controllers: ${ event.controllers.join(', ') }`;
+  }
+};
+
+const TYPES = {
+  [ STATE_CREATED ]: state,
+  [ EFFECT_ADDED ]: effect,
+  [ EFFECT_REMOVED ]: effect,
+  [ EFFECT_TEARDOWN ]: effect,
+  [ EFFECT_STEP ]: effect,
+  [ EFFECT_EXPORTED ]: effect,
+  [ RIEW_CREATED ]: riew
+};
+
+function createLogger() {
   const api = {};
   const events = [];
 
@@ -70,9 +100,26 @@ export function createLogger() {
     if (events.length > MAX_NUM_OF_EVENTS) {
       events.shift();
     }
-    events.push(formatEvent(type, payload));
+    if (TYPES[type]) {
+      events.push({ type, ...TYPES[type].normalize(payload) });
+    } else {
+      events.push({ type });
+    }
   };
-  api.events = () => events;
+  api.events = {
+    get() {
+      return events;
+    },
+    log() {
+      let str = events.map(event => TYPES[event.type] ? TYPES[event.type].oneliner(event) : event.type).join('\n');
+
+      console.log(str);
+    }
+  };
 
   return api;
 };
+
+const logger = createLogger();
+
+export default logger;

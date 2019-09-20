@@ -15,8 +15,6 @@ export default function createQueue(setStateValue, getStateValue, onDone = () =>
       q.index = 0;
 
       function next(lastResult) {
-        q.result = lastResult;
-        q.index++;
         if (q.index < q.items.length) {
           return loop();
         }
@@ -29,6 +27,8 @@ export default function createQueue(setStateValue, getStateValue, onDone = () =>
 
         if (logic) {
           const r = logic(q, func, payload, (lastResult) => {
+            q.result = lastResult;
+            q.index++;
             onStep(q);
             return next(lastResult);
           });

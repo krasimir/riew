@@ -5,8 +5,8 @@ import effectFactory from './effect';
 import createRiew from './riew';
 import reactRiew from './react';
 import { gridAdd, gridFreeNode, gridReset, gridGetNodes } from './grid';
+import logger from './logger';
 import {
-  createLogger,
   STATE_CREATED,
   EFFECT_ADDED,
   EFFECT_REMOVED,
@@ -14,11 +14,10 @@ import {
   EFFECT_STEP,
   EFFECT_EXPORTED,
   RIEW_CREATED
-} from './logger';
+} from './constants';
 
 function Harvester() {
   const api = {};
-  const logger = createLogger();
   let products = {};
 
   api.defineProduct = (product, func) => {
@@ -44,7 +43,6 @@ function Harvester() {
     gridReset();
     defineHarvesterBuiltInCapabilities(api);
   };
-  api.logger = logger;
   api.grid = () => gridGetNodes();
 
   return api;
@@ -92,7 +90,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
   // ---------------------- state
   h.defineProduct('state', (initialValue, shouldRecordEvents) => {
-    const recordEvent = shouldRecordEvents ? h.logger.log : () => {};
+    const recordEvent = shouldRecordEvents ? logger.log : () => {};
     const state = State(initialValue);
     const factory = h.produce('effectFactory', state, recordEvent);
     const effect = factory();
@@ -140,7 +138,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   h.defineProduct('riew', (viewFunc, ...controllers) => {
     const r = createRiew(viewFunc, ...controllers);
 
-    h.logger.log(RIEW_CREATED, viewFunc, controllers);
+    logger.log(RIEW_CREATED, viewFunc, controllers);
     return r;
   });
 
