@@ -1,7 +1,7 @@
 export default function mapToKey(key) {
-  return (intermediateValue, payload, next) => {
+  return (intermediateValue, payload) => {
     const mappingFunc = (value) => ({ [key]: value });
 
-    return next(mappingFunc(intermediateValue, ...payload));
+    return mappingFunc(intermediateValue, ...payload);
   };
 };

@@ -641,9 +641,9 @@ describe('Given the state', () => {
 
       expect(spy).toBeCalledWithArgs([ 'a', 'b' ], [ 'a', 'b'], [ 'a', 'b' ]);
       expect(spy2).toBeCalledWithArgs(
-        [ 4, [], expect.any(Function), expect.any(Object) ],
-        [ 4, [8, 2], expect.any(Function), expect.any(Object) ],
-        [ 20, [], expect.any(Function), expect.any(Object) ]
+        [ 4, [], expect.any(Object) ],
+        [ 4, [8, 2], expect.any(Object) ],
+        [ 20, [], expect.any(Object) ]
       );
       expect(s()).toBe(10);
       expect(y()).toStrictEqual({ hello: 'world' });
@@ -688,8 +688,8 @@ describe('Given the state', () => {
         const [ s ] = state('foo').export('hey');
 
         s.define('toUpperCase', () => {
-          return (intermediateValue, payload, next, q) => {
-            return next(intermediateValue.toUpperCase());
+          return (intermediateValue, payload, q) => {
+            return intermediateValue.toUpperCase();
           };
         });
 

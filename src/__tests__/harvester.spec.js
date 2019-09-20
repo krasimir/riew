@@ -1,6 +1,7 @@
-import harvester from '../harvester';
-import { use, register } from '../index';
-import { state, riew } from '../index';
+import createRiewDebugger from 'riew-debugger';
+import { use, register, state, riew, harvester } from '../index';
+
+const riewDebugger = createRiewDebugger(harvester);
 
 describe('Given the harvester', () => {
   beforeEach(() => {
@@ -16,17 +17,18 @@ describe('Given the harvester', () => {
     });
   });
   describe('when we want to display what to see what happened', () => {
-    fit('should show us the events that happened', () => {
+    it('should show us the events that happened', () => {
       const view = jest.fn();
       const [ s1, setState1 ] = state('a');
-      const controller = jest.fn();
-      const r = riew(view, controller).with({ s1 });
+      const controller = function myController() {};
+      const r = riew(view, controller);
+      // const r = riew(view, controller).with({ s1 });
 
-      r.mount();
+      // r.mount();
       // setState1('foo');
       // r.update({ x: 'y' });
 
-      console.log(harvester.events());
+      // riewDebugger.printEvents();
 
       // console.log(gridGetEvents());
     });

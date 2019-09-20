@@ -1,7 +1,7 @@
 import { isPromise } from '../utils';
 
 export default function filter(func) {
-  return (intermediateValue, payload, next, q) => {
+  return (intermediateValue, payload, q) => {
     let filterResult = func(intermediateValue, ...payload);
 
     if (isPromise(filterResult)) {
@@ -9,12 +9,12 @@ export default function filter(func) {
         if (!asyncResult) {
           q.index = q.items.length;
         }
-        return next(intermediateValue);
+        return intermediateValue;
       });
     }
     if (!filterResult) {
       q.index = q.items.length;
     }
-    return next(intermediateValue);
+    return intermediateValue;
   };
 }

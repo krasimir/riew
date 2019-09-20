@@ -147,7 +147,7 @@ export default function effectFactory(state, lifecycle) {
   function defineQueueMethod(methodName, func) {
     queueMethods.push(methodName);
     queueAPI[methodName] = function (q, args, payload, next) {
-      const result = func(...args)(q.result, payload, next, q);
+      const result = func(...args)(q.result, payload, q);
 
       if (isPromise(result)) {
         return result.then(next);

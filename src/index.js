@@ -1,27 +1,28 @@
-import harvester from './harvester';
+import h from './harvester';
 
 export const state = (initialValue) => {
-  return harvester.produce('state', initialValue, true);
+  return h.produce('state', initialValue, true);
 };
 export const internalState = (initialValue) => {
-  return harvester.produce('state', initialValue, false);
+  return h.produce('state', initialValue, false);
 };
 export const merge = (statesMap) => {
-  return harvester.produce('mergeStates', statesMap);
+  return h.produce('mergeStates', statesMap);
 };
 export const riew = (...args) => {
-  return harvester.produce('riew', ...args);
+  return h.produce('riew', ...args);
 };
 export const react = {
   riew: (...args) => {
-    return harvester.produce('reactRiew', ...args);
+    return h.produce('reactRiew', ...args);
   }
 };
 export const use = (name, ...args) => {
-  return harvester.produce(name, ...args);
+  return h.produce(name, ...args);
 };
 export const register = (name, whatever) => {
-  return harvester.defineProduct(name, () => whatever);
+  return h.defineProduct(name, () => whatever);
 };
 
 export { compose, serial, parallel } from './utils';
+export const harvester = h;

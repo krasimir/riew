@@ -68,13 +68,17 @@ const defineHarvesterBuiltInCapabilities = function (h) {
       },
       out(effect) {
         gridFreeNode(effect);
-        gridFreeNode(effect.state);
         if ('__exportedAs' in effect) {
           h.undefineProduct(effect.__exportedAs);
         }
         recordEvent(EFFECT_REMOVED, effect);
       },
       teardown(effect) {
+        gridFreeNode(effect);
+        gridFreeNode(effect.state);
+        if ('__exportedAs' in effect) {
+          h.undefineProduct(effect.__exportedAs);
+        }
         recordEvent(EFFECT_TEARDOWN, effect);
       },
       queueStep(effect, q) {
