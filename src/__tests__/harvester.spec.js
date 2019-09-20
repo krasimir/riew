@@ -24,7 +24,7 @@ describe('Given the harvester', () => {
       // setState1('foo');
       // r.update({ x: 'y' });
 
-      logger.events.log();
+      logger.events();
     });
   });
 });

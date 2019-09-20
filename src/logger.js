@@ -26,9 +26,8 @@ function normalizeEffect(effect) {
     state: normalizeState(effect.state),
     queueItems: effect.__itemsToCreate.map(({ type, func }) => ({
       type,
-      func: getFuncName(func)
-    })),
-    queues: effect.__queues.map(normalizeQueue)
+      name: getFuncName(func)
+    }))
   };
 }
 function normalizeQueue(q) {
@@ -39,57 +38,30 @@ function normalizeQueue(q) {
   };
 }
 
-// types
+function formatQueueItem({ type, name }) {
+  return `${ type }${ name !== 'unknown' ? `(${ name })` : ''}`;
+}
 
-const state = {
-  normalize(payload) {
+const normalizers = {
+  [ STATE_CREATED ]: normalizeState,
+  [ EFFECT_ADDED ]: normalizeEffect,
+  [ EFFECT_REMOVED ]: normalizeEffect,
+  [ EFFECT_TEARDOWN ]: normalizeEffect,
+  [ EFFECT_STEP ]: (effect, q) => {
     return {
-      state: normalizeState(payload[0])
+      ...normalizeEffect(effect),
+      queue: normalizeQueue(q)
     };
   },
-  oneliner(event) {
-    return `${ event.type } (${ event.state.id })
-  ↳ ${ JSON.stringify(event.state.value) }`;
-  }
-};
-const effect = {
-  normalize(payload) {
+  [ EFFECT_EXPORTED ]: normalizeEffect,
+  [ RIEW_CREATED ]: (r, view, controllers) => {
     return {
-      effect: normalizeEffect(payload[0])
-    };
-  },
-  oneliner(event) {
-    console.log(JSON.stringify(event, null, 2));
-    return `${ event.type } (${ event.effect.id })
-  ↳ ${ event.effect.queueItems.map(({ type, func }) => `${ type }${ func !== 'unknown' ? `(${ func })` : '' }`) }
-  ↳ ${ JSON.stringify(event.effect.state.value) }`;
-  }
-};
-const riew = {
-  normalize(payload) {
-    const view = payload[0];
-    const controllers = payload[1];
-
-    return {
+      id: r.id,
+      name: r.name,
       view: getFuncName(view),
       controllers: controllers.map(getFuncName)
     };
-  },
-  oneliner(event) {
-    return `${ event.type }
-  ↳ view: ${ event.view }
-  ↳ controllers: ${ event.controllers.join(', ') }`;
   }
-};
-
-const TYPES = {
-  [ STATE_CREATED ]: state,
-  [ EFFECT_ADDED ]: effect,
-  [ EFFECT_REMOVED ]: effect,
-  [ EFFECT_TEARDOWN ]: effect,
-  [ EFFECT_STEP ]: effect,
-  [ EFFECT_EXPORTED ]: effect,
-  [ RIEW_CREATED ]: riew
 };
 
 function createLogger() {
@@ -100,21 +72,40 @@ function createLogger() {
     if (events.length > MAX_NUM_OF_EVENTS) {
       events.shift();
     }
-    if (TYPES[type]) {
-      events.push({ type, ...TYPES[type].normalize(payload) });
+    if (normalizers[type]) {
+      events.push({ type, ...normalizers[type](...payload) });
     } else {
       events.push({ type });
     }
   };
-  api.events = {
-    get() {
-      return events;
-    },
-    log() {
-      let str = events.map(event => TYPES[event.type] ? TYPES[event.type].oneliner(event) : event.type).join('\n');
+  api.events = () => {
+    events.forEach(event => {
+      switch (event.type) {
+        case STATE_CREATED:
+          console.log(`${ event.id }:${ event.type }`, event.value);
+          break;
+        case RIEW_CREATED:
+          console.log(`${ event.id }:${ event.type }(${ event.name })`);
+          console.log(` ↳ view: ${ event.view }, controllers: ${ event.controllers.join(', ')}`);
+          break;
+        case EFFECT_ADDED:
+          console.log(`${ event.id }:${ event.type } [${ event.queueItems.map(formatQueueItem) }]`);
+          break;
+        case EFFECT_STEP:
+          const queue = event.queue;
 
-      console.log(str);
-    }
+          console.log(`${ event.id }:${ event.type }[${ queue.index }]->${ formatQueueItem(queue.items[queue.index]) }`, queue.result);
+          break;
+        case EFFECT_REMOVED:
+          console.log(`${ event.id }:${ event.type }`);
+          break;
+        default:
+          console.log(event.type);
+      }
+    });
+  };
+  api.data = {
+    events() { return events; }
   };
 
   return api;

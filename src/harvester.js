@@ -64,8 +64,8 @@ const defineHarvesterBuiltInCapabilities = function (h) {
         }
         recordEvent(EFFECT_REMOVED, effect);
       },
-      queueStep(effect) {
-        recordEvent(EFFECT_STEP, effect);
+      queueStep(effect, q) {
+        recordEvent(EFFECT_STEP, effect, q);
       },
       teardown(effect) {
         gridFreeNode(effect);
@@ -138,7 +138,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   h.defineProduct('riew', (viewFunc, ...controllers) => {
     const r = createRiew(viewFunc, ...controllers);
 
-    logger.log(RIEW_CREATED, viewFunc, controllers);
+    logger.log(RIEW_CREATED, r, viewFunc, controllers);
     return r;
   });
 

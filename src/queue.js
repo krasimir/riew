@@ -28,8 +28,8 @@ export default function createQueue(setStateValue, getStateValue, onDone = () =>
         if (logic) {
           const r = logic(q, func, payload, (lastResult) => {
             q.result = lastResult;
-            q.index++;
             onStep(q);
+            q.index++;
             return next(lastResult);
           });
 
