@@ -5,8 +5,9 @@ import mapToKey from './queueMethods/mapToKey';
 import mutate from './queueMethods/mutate';
 import filter from './queueMethods/filter';
 import createQueue from './queue';
+import { EFFECT_FORK, EFFECT_EXPORTED, STATE_DESTROY, EFFECT_QUEUE_END } from './constants';
 
-export function isRiewEffect(func) {
+export function isEffect(func) {
   return func && func.__riewEffect === true;
 }
 
@@ -26,133 +27,118 @@ export const implementIterable = (obj) => {
   }
 };
 
-export default function effectFactory(state, lifecycle, loggable) {
-  const queueMethods = [];
+export default function createEffect(state, items = [], emit) {
   const queueAPI = {};
-  let effects = [];
   let active = true;
 
-  function createNewEffect(items = []) {
-    const effect = function (...payload) {
-      if (!active || effect.__itemsToCreate.length === 0) {
-        return state.get();
-      }
-      const queue = createQueue(
-        state.set,
-        state.get,
-        () => {
-          effect.__queues = effect.__queues.filter(({ id }) => queue.id !== id);
-          lifecycle.out(effect);
-        },
-        (q, phase) => {
-          lifecycle.queueStep(effect, q, phase);
-        },
-        queueAPI
-      );
-
-      effect.__queues.push(queue);
-      effect.__itemsToCreate.forEach(({ type, func }) => queue.add(type, func));
-      lifecycle.in(effect);
-      return queue.process(...payload);
-    };
-
-    effect.id = getId('e');
-    effect.state = state;
-    effect.loggable = loggable;
-    effect.__queues = [];
-    effect.__riewEffect = true;
-    effect.__itemsToCreate = [ ...items ];
-    effect.__listeners = state.listeners;
-
-    effects.push(effect);
-    implementIterable(effect);
-
-    // queue methods
-    queueMethods.forEach(m => {
-      effect[m] = (...methodArgs) => lifecycle.fork([ ...effect.__itemsToCreate, { type: m, func: methodArgs } ]);
-    });
-
-    // effect direct methods
-    effect.define = (methodName, func) => {
-      defineQueueMethod(methodName, func);
-      return effect;
-    };
-    effect.isMutating = () => {
-      return !!effect.__itemsToCreate.find(({ type }) => type === 'mutate');
-    };
-    effect.subscribe = (initialCall = false) => {
-      if (effect.isMutating()) {
-        throw new Error('You should not subscribe a effect that mutates the state. This will lead to endless recursion.');
-      }
-      if (initialCall) effect();
-      state.addListener(effect);
-      return effect;
-    };
-    effect.unsubscribe = () => {
-      state.removeListener(effect);
-      return effect;
-    };
-    effect.cancel = () => {
-      effect.__queues.forEach(q => q.cancel());
-      return effect;
-    };
-    effect.cleanUp = () => {
-      effect.cancel();
-      effect.unsubscribe();
-    };
-    effect.teardown = () => {
-      active = false;
-      state.teardown();
-      effects.forEach(t => t.cleanUp());
-      effects = [ effect ];
-      lifecycle.teardown(effect);
-      return effect;
-    };
-    effect.isActive = () => {
-      return active;
-    };
-    effect.export = name => {
-      lifecycle.export(effect, name);
-      return effect;
-    };
-    effect.logability = flag => {
-      effect.loggable = flag;
-      return effect;
-    };
-    effect.test = function (callback) {
-      const testTrigger = lifecycle.fork([ ...effect.__itemsToCreate ]);
-      const tools = {
-        setValue(newValue) {
-          testTrigger.__itemsToCreate = [
-            { type: 'map', func: [ () => newValue ] },
-            ...testTrigger.__itemsToCreate
-          ];
-        },
-        swap(index, funcs, type) {
-          if (!Array.isArray(funcs)) funcs = [funcs];
-          testTrigger.__itemsToCreate[index].func = funcs;
-          if (type) {
-            testTrigger.__itemsToCreate[index].type = type;
-          }
-        },
-        swapFirst(funcs, type) {
-          tools.swap(0, funcs, type);
-        },
-        swapLast(funcs, type) {
-          tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
+  const effect = function (...payload) {
+    if (!active || effect.__items.length === 0) {
+      return state.get();
+    }
+    const queue = createQueue(
+      state.set,
+      state.get,
+      queueAPI,
+      emit.extend({
+        [ EFFECT_QUEUE_END ]: () => {
+          effect.__queues = effect.__queues.filter(q => q.id !== queue.id);
         }
-      };
+      })
+    );
 
-      callback(tools);
+    effect.__queues.push(queue);
+    effect.__items.forEach(({ type, func }) => queue.add(type, func));
+    return queue.process(...payload);
+  };
+  const fork = function (newItems) {
+    return emit(EFFECT_FORK, effect, newItems);
+  };
 
-      return testTrigger;
+  effect.id = getId('e');
+  effect.state = state;
+  effect.loggable = state.loggable;
+  effect.__queues = [];
+  effect.__riewEffect = true;
+  effect.__items = [ ...items ];
+
+  implementIterable(effect);
+
+  // queue methods
+  Object.keys(queueAPI).forEach(m => {
+    effect[m] = (...methodArgs) => fork([ { type: m, func: methodArgs } ]);
+  });
+
+  // effect direct methods
+  effect.define = (methodName, func) => {
+    defineQueueMethod(methodName, func);
+    return effect;
+  };
+  effect.isMutating = () => {
+    return !!effect.__items.find(({ type }) => type === 'mutate');
+  };
+  effect.subscribe = (initialCall = false) => {
+    if (effect.isMutating()) {
+      throw new Error('You should not subscribe a effect that mutates the state. This will lead to endless recursion.');
+    }
+    if (initialCall) effect();
+    state.addListener(effect);
+    return effect;
+  };
+  effect.unsubscribe = () => {
+    state.removeListener(effect);
+    return effect;
+  };
+  effect.cancel = () => {
+    active = false;
+    effect.unsubscribe();
+    effect.__queues.forEach(q => q.cancel());
+    return effect;
+  };
+  effect.destroy = () => {
+    emit(STATE_DESTROY);
+    return effect;
+  };
+  effect.isActive = () => {
+    return active;
+  };
+  effect.export = name => {
+    emit(EFFECT_EXPORTED, effect, name);
+    return effect;
+  };
+  effect.logability = flag => {
+    effect.loggable = flag;
+    return effect;
+  };
+  effect.test = function (callback) {
+    const testTrigger = fork([]);
+    const tools = {
+      setValue(newValue) {
+        testTrigger.__items = [
+          { type: 'map', func: [ () => newValue ] },
+          ...testTrigger.__items
+        ];
+      },
+      swap(index, funcs, type) {
+        if (!Array.isArray(funcs)) funcs = [funcs];
+        testTrigger.__items[index].func = funcs;
+        if (type) {
+          testTrigger.__items[index].type = type;
+        }
+      },
+      swapFirst(funcs, type) {
+        tools.swap(0, funcs, type);
+      },
+      swapLast(funcs, type) {
+        tools.swap(testTrigger.__items.length - 1, funcs, type);
+      }
     };
 
-    return effect;
+    callback(tools);
+
+    return testTrigger;
   };
 
   function defineQueueMethod(methodName, func) {
-    queueMethods.push(methodName);
     queueAPI[methodName] = function (q, args, payload, next) {
       const result = func(...args)(q.result, payload, q);
 
@@ -161,11 +147,9 @@ export default function effectFactory(state, lifecycle, loggable) {
       }
       return next(result);
     };
-    effects.forEach(t => {
-      t[methodName] = (...methodArgs) => {
-        return lifecycle.fork([ ...t.__itemsToCreate, { type: methodName, func: methodArgs } ]);
-      };
-    });
+    effect[methodName] = (...methodArgs) => {
+      return fork([ { type: methodName, func: methodArgs } ]);
+    };
   };
 
   defineQueueMethod('pipe', pipe);
@@ -174,5 +158,5 @@ export default function effectFactory(state, lifecycle, loggable) {
   defineQueueMethod('mutate', mutate);
   defineQueueMethod('filter', filter);
 
-  return createNewEffect;
+  return effect;
 };

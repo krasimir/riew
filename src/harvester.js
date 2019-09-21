@@ -1,45 +1,48 @@
 import equal from 'fast-deep-equal';
 
 import { State } from './state';
-import effectFactory from './effect';
+import createEffect, { isEffect } from './effect';
 import createRiew from './riew';
 import reactRiew from './react';
-import { gridAdd, gridFreeNode, gridReset, gridGetNodes } from './grid';
+import { gridAdd, gridRemove, gridReset, gridGetNodes } from './grid';
 import logger from './logger';
+import { createEventBus } from './utils';
 import {
   STATE_CREATED,
-  EFFECT_ADDED,
+  EFFECT_CREATED,
   EFFECT_REMOVED,
-  EFFECT_TEARDOWN,
+  STATE_DESTROY,
   EFFECT_STEP,
   EFFECT_EXPORTED,
   RIEW_CREATED,
   RIEW_RENDER,
   RIEW_UNMOUNT,
-  STATE_TEARDOWN
+  EFFECT_FORK
 } from './constants';
 
 function Harvester() {
   const api = {};
   let products = {};
 
-  api.defineProduct = (product, func) => {
-    if (products[product]) {
-      throw new Error(`An entry with name "${ product }" already exists.`);
+  api.defineProduct = (type, func) => {
+    if (products[type]) {
+      throw new Error(`A product with type "${ type }" already exists.`);
     }
-    products[product] = func;
+    products[type] = func;
   };
-  api.undefineProduct = (product) => {
-    if (!products[product]) {
-      throw new Error(`There is no entry with name "${ product }" to be removed.`);
+  api.undefineProduct = (type) => {
+    if (!products[type]) {
+      throw new Error(`There is no product with type "${ type }" to be removed.`);
     }
-    delete products[product];
+    delete products[type];
   };
-  api.produce = (product, ...args) => {
-    if (!products[product]) {
-      throw new Error(`There is no entry with name "${ product }".`);
+  api.produce = (type, ...args) => {
+    if (!products[type]) {
+      throw new Error(`There is no product with type "${ type }".`);
     }
-    return products[product](...args);
+    const product = products[type](...args);
+
+    return product;
   };
   api.reset = () => {
     products = {};
@@ -54,55 +57,41 @@ function Harvester() {
 
 const defineHarvesterBuiltInCapabilities = function (h) {
 
-  // ------------------------------------------------------------------ effect factory
-  h.defineProduct('effectFactory', (state, loggable) => {
-    const factory = effectFactory(state, {
-      in(effect) {
-        gridAdd(effect);
-        logger.log(EFFECT_ADDED, effect);
-      },
-      out(effect) {
-        gridFreeNode(effect);
-        if ('__exportedAs' in effect) {
-          h.undefineProduct(effect.__exportedAs);
-        }
-        logger.log(EFFECT_REMOVED, effect);
-      },
-      queueStep(effect, q, phase) {
-        logger.log(EFFECT_STEP, effect, q, phase);
-      },
-      teardown(effect) {
-        gridFreeNode(effect);
-        gridFreeNode(effect.state);
-        if ('__exportedAs' in effect) {
-          h.undefineProduct(effect.__exportedAs);
-        }
-        logger.log(EFFECT_TEARDOWN, effect);
-        logger.log(STATE_TEARDOWN, effect.state);
-      },
-      export(effect, name) {
-        effect.__exportedAs = name;
-        h.defineProduct(name, () => effect);
-        logger.log(EFFECT_EXPORTED, effect, name);
-      },
-      fork(items) {
-        return factory(items);
-      }
-    }, loggable);
-
-    return factory;
-  });
-
   // ------------------------------------------------------------------ state
-  h.defineProduct('state', (initialValue, loggable) => {
-    const state = State(initialValue, loggable);
-    const factory = h.produce('effectFactory', state, loggable);
-    const effect = factory();
+  h.defineProduct(
+    'state',
+    (initialValue, loggable) => {
+      const state = State(initialValue, loggable);
+      const emit = createEventBus({
+        [ STATE_DESTROY ]: () => {
+          const removed = gridRemove(state);
 
-    gridAdd(state);
-    logger.log(STATE_CREATED, state);
-    return effect;
-  });
+          removed.filter(isEffect).forEach(e => {
+            if ('__exportedAs' in e) {
+              h.undefineProduct(e.__exportedAs);
+            }
+            e.cancel();
+          });
+        },
+        [ EFFECT_EXPORTED ]: (effect, name) => {
+          effect.__exportedAs = name;
+          h.defineProduct(name, () => effect);
+          logger.log(EFFECT_EXPORTED, effect, name);
+        },
+        [ EFFECT_FORK ]: (effect, newItems) => {
+          const newEffect = createEffect(state, [ ...effect.__items, ...newItems ], emit);
+
+          gridAdd(newEffect, effect.id);
+          return newEffect;
+        }
+      });
+      const effect = createEffect(state, [], emit);
+
+      gridAdd(state);
+      gridAdd(effect, state.id);
+      return effect;
+    }
+  );
 
   // ------------------------------------------------------------------ mergeStates
   h.defineProduct('mergeStates', (statesMap) => {
@@ -141,14 +130,14 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   // ------------------------------------------------------------------ riew
   h.defineProduct('riew', (viewFunc, ...controllers) => {
     return createRiew({
-      created(riew) {
-        logger.log(RIEW_CREATED, riew, viewFunc, controllers);
+      created(riew, props) {
+        logger.log(RIEW_CREATED, riew, props, viewFunc, controllers);
       },
       render(riew, props) {
-        logger.log(RIEW_RENDER, riew, props);
+        logger.log(RIEW_RENDER, riew, props, viewFunc, controllers);
       },
-      unmount(riew) {
-        logger.log(RIEW_UNMOUNT, riew);
+      unmount(riew, props) {
+        logger.log(RIEW_UNMOUNT, riew, props, viewFunc, controllers);
       }
     })(viewFunc, ...controllers);
   });

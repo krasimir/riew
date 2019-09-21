@@ -1,9 +1,10 @@
 import { getFuncName, getId } from './utils';
+import { EFFECT_QUEUE_END, EFFECT_QUEUE_STEP_IN, EFFECT_QUEUE_STEP_OUT } from './constants';
 
-export default function createQueue(setStateValue, getStateValue, onDone = () => {}, onStep = () => {}, queueAPI) {
+export default function createQueue(setStateValue, getStateValue, queueAPI, emit) {
   const q = {
     id: getId('q'),
-    index: 0,
+    index: null,
     setStateValue,
     getStateValue,
     result: getStateValue(),
@@ -14,24 +15,25 @@ export default function createQueue(setStateValue, getStateValue, onDone = () =>
     process(...payload) {
       q.index = 0;
 
-      function next(lastResult) {
+      function next() {
         if (q.index < q.items.length) {
           return loop();
         }
-        onDone();
+        q.index = null;
+        emit(EFFECT_QUEUE_END);
         return q.result;
       };
       function loop() {
-        onStep(q, 'in');
+        emit(EFFECT_QUEUE_STEP_IN, q);
         const { type, func } = q.items[q.index];
         const logic = queueAPI[type];
 
         if (logic) {
           const r = logic(q, func, payload, (lastResult) => {
             q.result = lastResult;
-            onStep(q, 'out');
+            emit(EFFECT_QUEUE_STEP_OUT, q);
             q.index++;
-            return next(lastResult);
+            return next();
           });
 
           return r;

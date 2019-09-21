@@ -15,7 +15,7 @@ describe('Given the harvester', () => {
     });
   });
   describe('when we want to see what happened', () => {
-    it('should show us the events that happened', () => {
+    xit('should show us the events that happened', () => {
       const view = function MyView() {};
       const [ s1, setState1 ] = state('a');
       const controller = function myController() {};
@@ -30,7 +30,7 @@ describe('Given the harvester', () => {
     });
   });
   describe('when we want to see the grid', () => {
-    fit('should shows us the grid', () => {
+    it('should shows us the grid', () => {
       const view = function MyView() {};
       const [ s1, setState1 ] = state('a');
       const controller = function myController({ state, render }) {
@@ -44,10 +44,9 @@ describe('Given the harvester', () => {
       setState1('foo');
       s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
       r.update({ x: 'y' });
+      // logger.grid();
       r.unmount();
-
-      logger.events();
-      logger.grid();
+      // logger.events();
     });
   });
 });

@@ -1,5 +1,5 @@
 import { state, use } from './index';
-import { isRiewEffect } from './effect';
+import { isEffect } from './effect';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 
 function ensureObject(value, context) {
@@ -41,7 +41,7 @@ export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
 
     if (newStuff) {
       Object.keys(newStuff).forEach(key => {
-        if (isRiewEffect(newStuff[key]) && !newStuff[key].isMutating()) {
+        if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
           const effect = newStuff[key];
 
           result[key] = effect();
@@ -130,7 +130,7 @@ export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
     onUnmountCallbacks = [];
     subscriptions.forEach(s => s.unsubscribe());
     subscriptions = [];
-    lifecycle.unmount(instance);
+    lifecycle.unmount(instance, output());
     return instance;
   };
   instance.__setExternals = (maps) => {
@@ -150,6 +150,6 @@ export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
     return newInstance;
   };
 
-  lifecycle.created(instance);
+  lifecycle.created(instance, output());
   return instance;
 };

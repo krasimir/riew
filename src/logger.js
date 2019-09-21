@@ -28,10 +28,19 @@ function normalizeEffect(effect) {
   return {
     id: effect.id,
     state: normalizeState(effect.state),
-    queueItems: effect.__itemsToCreate.map(({ type, func }) => ({
+    queueItems: effect.__items.map(({ type, func }) => ({
       type,
       name: getFuncName(func)
-    }))
+    })),
+    queues: effect.__queues.map(normalizeQueue)
+  };
+}
+function normalizeRiew(r, props, view, controllers) {
+  return {
+    id: r.id,
+    props: sanitize(props),
+    view: getFuncName(view),
+    controllers: controllers.map(getFuncName)
   };
 }
 function normalizeQueue(q) {
@@ -51,21 +60,28 @@ function getSpaces(n) {
 function formatQueueItem({ type, name }) {
   return `${ type }${ name !== 'unknown' ? `(${ name })` : ''}`;
 }
-function formatId(obj) {
+function formatId(obj, noSpaces = false) {
   if (!obj.id) return getSpaces(INDENT);
   const [ type, n ] = obj.id.split('_');
   const what = (function () {
-    if (type === 's') return 'state';
-    if (type === 'r') return 'riew';
-    if (type === 'e') return 'effect';
+    if (type === 's') return `$${ n }`;
+    if (type === 'r') return `<${ n }>`;
+    if (type === 'e') return `effect#${ n }`;
     return type;
   })();
-  const text = `${ what }#${ n }`;
+  const text = `${ what }`;
+
+  if (noSpaces) {
+    return text;
+  }
 
   if (text.length < INDENT) {
     return getSpaces(INDENT - text.length) + text + ' ';
   }
   return text + ' ';
+}
+function formatQueueItems(effect) {
+  return effect.queueItems.map(formatQueueItem).join(', ');
 }
 
 const normalizers = {
@@ -82,36 +98,26 @@ const normalizers = {
     };
   },
   [ EFFECT_EXPORTED ]: normalizeEffect,
-  [ RIEW_CREATED ]: (r, view, controllers) => {
-    return {
-      id: r.id,
-      name: r.name,
-      view: getFuncName(view),
-      controllers: controllers.map(getFuncName)
-    };
-  },
-  [ RIEW_RENDER ]: (r, props) => {
-    return {
-      id: r.id,
-      name: r.name,
-      props: sanitize(props)
-    };
-  },
-  [ RIEW_UNMOUNT ]: (r) => {
-    return {
-      id: r.id,
-      name: r.name
-    };
-  }
+  [ RIEW_CREATED ]: normalizeRiew,
+  [ RIEW_RENDER ]: normalizeRiew,
+  [ RIEW_UNMOUNT ]: normalizeRiew
 };
 
 function createSimpleStorage() {
   const api = {};
   let items = [];
 
-  api.add = item => items.push(item);
+  api.add = item => {
+    const found = items.findIndex(({ id }) => item.id === id);
+
+    if (found >= 0) {
+      items[found] = item;
+    } else {
+      items.push(item);
+    }
+  };
   api.get = () => items;
-  api.remove = item => (items = items.filter(({ id }) => item !== id));
+  api.remove = item => (items = items.filter(({ id }) => item.id !== id));
   api.clear = () => (items = []);
 
   return api;
@@ -131,19 +137,32 @@ function createLogger() {
     if (events.length > MAX_NUM_OF_EVENTS) {
       events.shift();
     }
-    switch (type) {
-      case STATE_CREATED: states.add(payload[0]); break;
-      case STATE_TEARDOWN: states.remove(payload[0]); break;
-      case EFFECT_ADDED: effects.add(payload[0]); break;
-      case EFFECT_REMOVED: effects.remove(payload[0]); break;
-      case EFFECT_TEARDOWN: effects.remove(payload[0]); break;
-      case RIEW_CREATED: riews.add(payload[0]); break;
-      case RIEW_UNMOUNT: riews.remove(payload[0]); break;
-    }
+
+    let item = {};
+
     if (normalizers[type]) {
-      events.push({ type, ...normalizers[type](...payload) });
+      item = normalizers[type](...payload);
+      events.push({ type, ...item });
     } else {
       events.push({ type });
+    }
+
+    switch (type) {
+      case STATE_CREATED: states.add(item); break;
+      case STATE_TEARDOWN: states.remove(item); break;
+      case EFFECT_ADDED:
+      case EFFECT_STEP:
+        effects.add(item);
+        break;
+      case EFFECT_REMOVED:
+      case EFFECT_TEARDOWN:
+        // effects.remove(item);
+        break;
+      case RIEW_CREATED:
+      case RIEW_RENDER:
+        riews.add(item);
+        break;
+      case RIEW_UNMOUNT: riews.remove(item); break;
     }
   };
   api.events = () => {
@@ -165,7 +184,7 @@ function createLogger() {
           console.log(`${ formatId(event) } ✔ ${ event.name }`, event.props);
           break;
         case EFFECT_ADDED:
-          console.log(`${ formatId(event) } + [${ event.queueItems.map(formatQueueItem).join(', ') }]`);
+          console.log(`${ formatId(event) } + [${ formatQueueItems(event) }]`);
           break;
         case EFFECT_STEP:
           const queue = event.queue;
@@ -191,7 +210,19 @@ function createLogger() {
   api.grid = () => {
     const grid = api.data.grid();
 
-    console.log(grid);
+    riews.get().forEach(riew => {
+      console.log(`${ formatId(riew) } ${ riew.view }`, riew.props);
+    });
+    console.log(getSpaces(INDENT) + '  ~~~');
+    grid.states.forEach(state => {
+      console.log(formatId(state), state.value);
+      state.effects.forEach(effect => {
+        console.log(`${ getSpaces(INDENT) }  ↳ ${ formatId(effect, true) }`);
+        console.log(effect);
+      });
+    });
+
+    // console.log(JSON.stringify(grid, null, 2));
   };
   api.clear = () => {
     events = [];
@@ -202,7 +233,26 @@ function createLogger() {
   api.data = {
     events() { return events; },
     grid() {
+      const ss = states.get().map((state) => ({ ...state, effects: [] }));
 
+      effects.get().forEach(effect => {
+        const state = ss.find(({ id }) => effect.state.id);
+
+        if (state) {
+          state.effects.push(effect);
+        } else {
+          ss.push({ ...effect.state, effects: [ effect ]});
+        }
+      });
+      // console.log(JSON.stringify(states.get(), null, 2));
+      // return {
+      //   states: states.get().
+      // }
+      // console.log(JSON.stringify(effects.get(), null, 2));
+
+      return {
+        states: ss
+      };
     }
   };
 

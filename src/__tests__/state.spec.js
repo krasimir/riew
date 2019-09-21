@@ -220,16 +220,16 @@ describe('Given the state', () => {
     });
   });
 
-  /* teardown */
-  describe('when we use the `teardown` method', () => {
-    it('should cancel all the queues', () => {
+  /* destroy */
+  describe('when we use the `destroy` method', () => {
+    it('should cancel all the queues and teardown the state', () => {
       const [ s ] = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
-      const m = s.mutate((value) => value + 1).pipe(spyA);
+      const m = s.mutate((value) => value + 5).pipe(spyA);
       const n = s.pipe(() => {}).pipe(spyB);
 
-      s.teardown();
+      s.destroy();
       expect(m()).toBe(10);
       expect(m()).toBe(10);
       expect(m()).toBe(10);
@@ -290,7 +290,7 @@ describe('Given the state', () => {
 
       setState(100);
 
-      expect(s.__listeners().map(({ id }) => id)).toStrictEqual([ subscription.id, t1.id, t2.id ]);
+      expect(s.state.listeners().map(({ id }) => id)).toStrictEqual([ subscription.id, t1.id, t2.id ]);
       expect(spyA).toBeCalledTimes(3);
       expect(spyA.mock.calls[0]).toStrictEqual([ 200 ]);
       expect(spyA.mock.calls[1]).toStrictEqual([ 200 ]);
@@ -482,8 +482,8 @@ describe('Given the state', () => {
         .pipe(spyA)
         .subscribe();
 
-      expect(s.__listeners().length).toBe(1);
-      expect(s.__listeners()[0].__itemsToCreate.map(({ type }) => type))
+      expect(s.state.listeners().length).toBe(1);
+      expect(s.state.listeners()[0].__items.map(({ type }) => type))
         .toStrictEqual([ 'filter', 'map', 'pipe' ]);
 
       s
@@ -503,7 +503,7 @@ describe('Given the state', () => {
     });
   });
   describe('when the queue finishes', () => {
-    it('should remove it from the state created queues tracker array', async () => {
+    it('should remove it from the effect\'s __queues array', async () => {
       const [ s ] = state(10);
       const m = s.mutate(async (value) => {
         await delay(5);
@@ -578,11 +578,11 @@ describe('Given the state', () => {
       setState(42);
       expect(getState()).toBe(42);
     });
-    it('should free the resource in the grid if we teardown the state', () => {
+    it('should free the resource in the grid if we destroy the state', () => {
       const effect = state(0).export('my state');
 
-      effect.teardown();
-      expect(() => use('my state')).toThrowError('There is no entry with name "my state"');
+      effect.destroy();
+      expect(() => use('my state')).toThrowError('There is no product with type "my state"');
     });
   });
 
@@ -618,7 +618,7 @@ describe('Given the state', () => {
 
   /* define (custom methods) */
   describe('when we define a custom method', () => {
-    it('should be able to use it as a normal queue method', () => {
+    fit('should be able to use it as a normal queue method', () => {
       const [ s, setState ] = state(2);
       const [ y ] = state({ hello: 'world' });
       const spy3 = jest.fn();
