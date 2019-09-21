@@ -14,7 +14,9 @@ import {
   EFFECT_STEP,
   EFFECT_EXPORTED,
   RIEW_CREATED,
-  RIEW_RENDER
+  RIEW_RENDER,
+  RIEW_UNMOUNT,
+  STATE_TEARDOWN
 } from './constants';
 
 function Harvester() {
@@ -43,6 +45,7 @@ function Harvester() {
     products = {};
     gridReset();
     defineHarvesterBuiltInCapabilities(api);
+    logger.clear();
   };
   api.grid = () => gridGetNodes();
 
@@ -75,6 +78,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
           h.undefineProduct(effect.__exportedAs);
         }
         logger.log(EFFECT_TEARDOWN, effect);
+        logger.log(STATE_TEARDOWN, effect.state);
       },
       export(effect, name) {
         effect.__exportedAs = name;
@@ -142,6 +146,9 @@ const defineHarvesterBuiltInCapabilities = function (h) {
       },
       render(riew, props) {
         logger.log(RIEW_RENDER, riew, props);
+      },
+      unmount(riew) {
+        logger.log(RIEW_UNMOUNT, riew);
       }
     })(viewFunc, ...controllers);
   });

@@ -130,6 +130,7 @@ export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
     onUnmountCallbacks = [];
     subscriptions.forEach(s => s.unsubscribe());
     subscriptions = [];
+    lifecycle.unmount(instance);
     return instance;
   };
   instance.__setExternals = (maps) => {

@@ -1,0 +1,304 @@
+[
+  {
+    "type": "STATE_CREATED",
+    "id": "s_1",
+    "value": "a"
+  },
+  {
+    "type": "RIEW_CREATED",
+    "id": "r_4",
+    "name": "MyView",
+    "view": "MyView",
+    "controllers": [
+      "myController"
+    ]
+  },
+  {
+    "type": "RIEW_CREATED",
+    "id": "r_20",
+    "name": "MyView",
+    "view": "MyView",
+    "controllers": [
+      "myController"
+    ]
+  },
+  {
+    "type": "RIEW_RENDER",
+    "id": "r_20",
+    "name": "MyView",
+    "props": {
+      "s1": "a"
+    }
+  },
+  {
+    "type": "EFFECT_ADDED",
+    "id": "e_3",
+    "state": {
+      "id": "s_1",
+      "value": "a"
+    },
+    "queueItems": [
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ]
+  },
+  {
+    "type": "EFFECT_STEP",
+    "id": "e_3",
+    "state": {
+      "id": "s_1",
+      "value": "a"
+    },
+    "queueItems": [
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ],
+    "queue": {
+      "index": 0,
+      "result": "a",
+      "items": [
+        {
+          "type": "mutate",
+          "name": "unknown"
+        }
+      ]
+    },
+    "phase": "in"
+  },
+  {
+    "type": "RIEW_RENDER",
+    "id": "r_20",
+    "name": "MyView",
+    "props": {
+      "s1": "foo"
+    }
+  },
+  {
+    "type": "EFFECT_STEP",
+    "id": "e_3",
+    "state": {
+      "id": "s_1",
+      "value": "foo"
+    },
+    "queueItems": [
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ],
+    "queue": {
+      "index": 0,
+      "result": "foo",
+      "items": [
+        {
+          "type": "mutate",
+          "name": "unknown"
+        }
+      ]
+    },
+    "phase": "out"
+  },
+  {
+    "type": "EFFECT_REMOVED",
+    "id": "e_3",
+    "state": {
+      "id": "s_1",
+      "value": "foo"
+    },
+    "queueItems": [
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ]
+  },
+  {
+    "type": "EFFECT_ADDED",
+    "id": "e_46",
+    "state": {
+      "id": "s_1",
+      "value": "foo"
+    },
+    "queueItems": [
+      {
+        "type": "map",
+        "name": "unknown"
+      },
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ]
+  },
+  {
+    "type": "EFFECT_STEP",
+    "id": "e_46",
+    "state": {
+      "id": "s_1",
+      "value": "foo"
+    },
+    "queueItems": [
+      {
+        "type": "map",
+        "name": "unknown"
+      },
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ],
+    "queue": {
+      "index": 0,
+      "result": "foo",
+      "items": [
+        {
+          "type": "map",
+          "name": "unknown"
+        },
+        {
+          "type": "mutate",
+          "name": "unknown"
+        }
+      ]
+    },
+    "phase": "in"
+  },
+  {
+    "type": "EFFECT_STEP",
+    "id": "e_46",
+    "state": {
+      "id": "s_1",
+      "value": "foo"
+    },
+    "queueItems": [
+      {
+        "type": "map",
+        "name": "unknown"
+      },
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ],
+    "queue": {
+      "index": 0,
+      "result": "FOO",
+      "items": [
+        {
+          "type": "map",
+          "name": "unknown"
+        },
+        {
+          "type": "mutate",
+          "name": "unknown"
+        }
+      ]
+    },
+    "phase": "out"
+  },
+  {
+    "type": "EFFECT_STEP",
+    "id": "e_46",
+    "state": {
+      "id": "s_1",
+      "value": "foo"
+    },
+    "queueItems": [
+      {
+        "type": "map",
+        "name": "unknown"
+      },
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ],
+    "queue": {
+      "index": 1,
+      "result": "FOO",
+      "items": [
+        {
+          "type": "map",
+          "name": "unknown"
+        },
+        {
+          "type": "mutate",
+          "name": "unknown"
+        }
+      ]
+    },
+    "phase": "in"
+  },
+  {
+    "type": "RIEW_RENDER",
+    "id": "r_20",
+    "name": "MyView",
+    "props": {
+      "s1": "FOOBAR"
+    }
+  },
+  {
+    "type": "EFFECT_STEP",
+    "id": "e_46",
+    "state": {
+      "id": "s_1",
+      "value": "FOOBAR"
+    },
+    "queueItems": [
+      {
+        "type": "map",
+        "name": "unknown"
+      },
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ],
+    "queue": {
+      "index": 1,
+      "result": "FOOBAR",
+      "items": [
+        {
+          "type": "map",
+          "name": "unknown"
+        },
+        {
+          "type": "mutate",
+          "name": "unknown"
+        }
+      ]
+    },
+    "phase": "out"
+  },
+  {
+    "type": "EFFECT_REMOVED",
+    "id": "e_46",
+    "state": {
+      "id": "s_1",
+      "value": "FOOBAR"
+    },
+    "queueItems": [
+      {
+        "type": "map",
+        "name": "unknown"
+      },
+      {
+        "type": "mutate",
+        "name": "unknown"
+      }
+    ]
+  },
+  {
+    "type": "RIEW_RENDER",
+    "id": "r_20",
+    "name": "MyView",
+    "props": {
+      "s1": "FOOBAR",
+      "x": "y"
+    }
+  }
+]

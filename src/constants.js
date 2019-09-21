@@ -1,4 +1,5 @@
 export const STATE_CREATED = 'STATE_CREATED';
+export const STATE_TEARDOWN = 'STATE_TEARDOWN';
 export const EFFECT_ADDED = 'EFFECT_ADDED';
 export const EFFECT_REMOVED = 'EFFECT_REMOVED';
 export const EFFECT_TEARDOWN = 'EFFECT_TEARDOWN';
@@ -6,3 +7,4 @@ export const EFFECT_STEP = 'EFFECT_STEP';
 export const EFFECT_EXPORTED = 'EFFECT_EXPORTED';
 export const RIEW_CREATED = 'RIEW_CREATED';
 export const RIEW_RENDER = 'RIEW_RENDER';
+export const RIEW_UNMOUNT = 'RIEW_UNMOUNT';

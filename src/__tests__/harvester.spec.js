@@ -1,4 +1,5 @@
 import { use, register, state, riew, harvester, logger } from '../index';
+import loggerEvents from './data/logger.events.json';
 
 describe('Given the harvester', () => {
   beforeEach(() => {
@@ -14,7 +15,7 @@ describe('Given the harvester', () => {
     });
   });
   describe('when we want to see what happened', () => {
-    fit('should show us the events that happened', () => {
+    it('should show us the events that happened', () => {
       const view = function MyView() {};
       const [ s1, setState1 ] = state('a');
       const controller = function myController() {};
@@ -25,7 +26,28 @@ describe('Given the harvester', () => {
       s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
       r.update({ x: 'y' });
 
+      expect(logger.data.events()).toStrictEqual(loggerEvents);
+    });
+  });
+  describe('when we want to see the grid', () => {
+    fit('should shows us the grid', () => {
+      const view = function MyView() {};
+      const [ s1, setState1 ] = state('a');
+      const controller = function myController({ state, render }) {
+        const [ xxx ] = state('banana');
+
+        render({ xxx });
+      };
+      const r = riew(view, controller).with({ s1 });
+
+      r.mount();
+      setState1('foo');
+      s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
+      r.update({ x: 'y' });
+      r.unmount();
+
       logger.events();
+      logger.grid();
     });
   });
 });

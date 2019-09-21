@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
-import createRiew from '../riew';
+import { riew as createRiew } from '../index';
 
 export default function riew(View, ...controllers) {
   const createBridge = function (externals = []) {

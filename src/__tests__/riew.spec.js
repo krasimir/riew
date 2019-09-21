@@ -1,8 +1,7 @@
 /* eslint-disable quotes, max-len */
-import riew from '../riew';
 import harvester from '../harvester';
 import { delay } from '../__helpers__';
-import { state, register } from '../index';
+import { state, register, riew } from '../index';
 
 describe('Given the `riew` factory function', () => {
   beforeEach(() => {
