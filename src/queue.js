@@ -22,13 +22,14 @@ export default function createQueue(setStateValue, getStateValue, onDone = () =>
         return q.result;
       };
       function loop() {
+        onStep(q, 'in');
         const { type, func } = q.items[q.index];
         const logic = queueAPI[type];
 
         if (logic) {
           const r = logic(q, func, payload, (lastResult) => {
             q.result = lastResult;
-            onStep(q);
+            onStep(q, 'out');
             q.index++;
             return next(lastResult);
           });

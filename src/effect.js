@@ -13,7 +13,7 @@ export function isRiewEffect(func) {
 export const implementIterable = (obj) => {
   if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
     obj[Symbol.iterator] = function () {
-      const values = [ obj.map(), obj.mutate(), obj ];
+      const values = [ obj, obj.mutate(), obj ];
       let i = 0;
 
       return {
@@ -26,7 +26,7 @@ export const implementIterable = (obj) => {
   }
 };
 
-export default function effectFactory(state, lifecycle) {
+export default function effectFactory(state, lifecycle, loggable) {
   const queueMethods = [];
   const queueAPI = {};
   let effects = [];
@@ -34,7 +34,9 @@ export default function effectFactory(state, lifecycle) {
 
   function createNewEffect(items = []) {
     const effect = function (...payload) {
-      if (!active || effect.__itemsToCreate.length === 0) return state.get();
+      if (!active || effect.__itemsToCreate.length === 0) {
+        return state.get();
+      }
       const queue = createQueue(
         state.set,
         state.get,
@@ -42,8 +44,8 @@ export default function effectFactory(state, lifecycle) {
           effect.__queues = effect.__queues.filter(({ id }) => queue.id !== id);
           lifecycle.out(effect);
         },
-        (q) => {
-          lifecycle.queueStep(effect, q);
+        (q, phase) => {
+          lifecycle.queueStep(effect, q, phase);
         },
         queueAPI
       );
@@ -56,6 +58,7 @@ export default function effectFactory(state, lifecycle) {
 
     effect.id = getId('e');
     effect.state = state;
+    effect.loggable = loggable;
     effect.__queues = [];
     effect.__riewEffect = true;
     effect.__itemsToCreate = [ ...items ];
@@ -110,6 +113,10 @@ export default function effectFactory(state, lifecycle) {
     };
     effect.export = name => {
       lifecycle.export(effect, name);
+      return effect;
+    };
+    effect.logability = flag => {
+      effect.loggable = flag;
       return effect;
     };
     effect.test = function (callback) {

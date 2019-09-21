@@ -7,10 +7,12 @@ import {
   EFFECT_TEARDOWN,
   EFFECT_STEP,
   EFFECT_EXPORTED,
-  RIEW_CREATED
+  RIEW_CREATED,
+  RIEW_RENDER
 } from './constants';
 
 const MAX_NUM_OF_EVENTS = 850;
+const INDENT = 12;
 
 // normalizers
 
@@ -38,8 +40,30 @@ function normalizeQueue(q) {
   };
 }
 
+function getSpaces(n) {
+  let str = '';
+
+  for (let i = 0; i < n; i++) str += ' ';
+  return str;
+};
 function formatQueueItem({ type, name }) {
   return `${ type }${ name !== 'unknown' ? `(${ name })` : ''}`;
+}
+function formatId(obj) {
+  if (!obj.id) return getSpaces(INDENT);
+  const [ type, n ] = obj.id.split('_');
+  const what = (function () {
+    if (type === 's') return 'state';
+    if (type === 'r') return 'riew';
+    if (type === 'e') return 'effect';
+    return type;
+  })();
+  const text = `${ what }#${ n }`;
+
+  if (text.length < INDENT) {
+    return getSpaces(INDENT - text.length) + text + ' ';
+  }
+  return text + ' ';
 }
 
 const normalizers = {
@@ -47,10 +71,11 @@ const normalizers = {
   [ EFFECT_ADDED ]: normalizeEffect,
   [ EFFECT_REMOVED ]: normalizeEffect,
   [ EFFECT_TEARDOWN ]: normalizeEffect,
-  [ EFFECT_STEP ]: (effect, q) => {
+  [ EFFECT_STEP ]: (effect, q, phase) => {
     return {
       ...normalizeEffect(effect),
-      queue: normalizeQueue(q)
+      queue: normalizeQueue(q),
+      phase
     };
   },
   [ EFFECT_EXPORTED ]: normalizeEffect,
@@ -61,6 +86,13 @@ const normalizers = {
       view: getFuncName(view),
       controllers: controllers.map(getFuncName)
     };
+  },
+  [ RIEW_RENDER ]: (r, props) => {
+    return {
+      id: r.id,
+      name: r.name,
+      props: sanitize(props)
+    };
   }
 };
 
@@ -69,6 +101,9 @@ function createLogger() {
   const events = [];
 
   api.log = (type, ...payload) => {
+    if ('loggable' in payload[0] && payload[0].loggable === false) {
+      return;
+    }
     if (events.length > MAX_NUM_OF_EVENTS) {
       events.shift();
     }
@@ -82,25 +117,32 @@ function createLogger() {
     events.forEach(event => {
       switch (event.type) {
         case STATE_CREATED:
-          console.log(`${ event.id }:${ event.type }`, event.value);
+          console.log(`${ formatId(event) }`, event.value);
           break;
         case RIEW_CREATED:
-          console.log(`${ event.id }:${ event.type }(${ event.name })`);
-          console.log(` ↳ view: ${ event.view }, controllers: ${ event.controllers.join(', ')}`);
+          // console.log(`${ formatId(event) } + ${ event.view } | ${ event.controllers.join(', ')}`);
           break;
+        case RIEW_RENDER:
+            console.log(`${ formatId(event) } ✔ ${ event.name }`, event.props);
+            break;
         case EFFECT_ADDED:
-          console.log(`${ event.id }:${ event.type } [${ event.queueItems.map(formatQueueItem) }]`);
+          console.log(`${ formatId(event) } + [${ event.queueItems.map(formatQueueItem).join(', ') }]`);
           break;
         case EFFECT_STEP:
           const queue = event.queue;
+          const text = formatQueueItem(queue.items[queue.index]);
 
-          console.log(`${ event.id }:${ event.type }[${ queue.index }]->${ formatQueueItem(queue.items[queue.index]) }`, queue.result);
+          if (event.phase === 'in') {
+            console.log(`${ formatId(event) } > ${ text }`, queue.result);
+          } else {
+            console.log(`${ formatId(event) } < ${ text }`, queue.result);
+          }
           break;
         case EFFECT_REMOVED:
-          console.log(`${ event.id }:${ event.type }`);
+          console.log(`${ formatId(event) } -`);
           break;
         default:
-          console.log(event.type);
+          console.log(getSpaces(INDENT) + '  ' + event.type);
       }
     });
   };

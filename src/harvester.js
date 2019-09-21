@@ -13,7 +13,8 @@ import {
   EFFECT_TEARDOWN,
   EFFECT_STEP,
   EFFECT_EXPORTED,
-  RIEW_CREATED
+  RIEW_CREATED,
+  RIEW_RENDER
 } from './constants';
 
 function Harvester() {
@@ -50,22 +51,22 @@ function Harvester() {
 
 const defineHarvesterBuiltInCapabilities = function (h) {
 
-  // ---------------------- effect factory
-  h.defineProduct('effectFactory', (state, recordEvent) => {
+  // ------------------------------------------------------------------ effect factory
+  h.defineProduct('effectFactory', (state, loggable) => {
     const factory = effectFactory(state, {
       in(effect) {
         gridAdd(effect);
-        recordEvent(EFFECT_ADDED, effect);
+        logger.log(EFFECT_ADDED, effect);
       },
       out(effect) {
         gridFreeNode(effect);
         if ('__exportedAs' in effect) {
           h.undefineProduct(effect.__exportedAs);
         }
-        recordEvent(EFFECT_REMOVED, effect);
+        logger.log(EFFECT_REMOVED, effect);
       },
-      queueStep(effect, q) {
-        recordEvent(EFFECT_STEP, effect, q);
+      queueStep(effect, q, phase) {
+        logger.log(EFFECT_STEP, effect, q, phase);
       },
       teardown(effect) {
         gridFreeNode(effect);
@@ -73,34 +74,33 @@ const defineHarvesterBuiltInCapabilities = function (h) {
         if ('__exportedAs' in effect) {
           h.undefineProduct(effect.__exportedAs);
         }
-        recordEvent(EFFECT_TEARDOWN, effect);
+        logger.log(EFFECT_TEARDOWN, effect);
       },
       export(effect, name) {
         effect.__exportedAs = name;
         h.defineProduct(name, () => effect);
-        recordEvent(EFFECT_EXPORTED, effect, name);
+        logger.log(EFFECT_EXPORTED, effect, name);
       },
       fork(items) {
         return factory(items);
       }
-    });
+    }, loggable);
 
     return factory;
   });
 
-  // ---------------------- state
-  h.defineProduct('state', (initialValue, shouldRecordEvents) => {
-    const recordEvent = shouldRecordEvents ? logger.log : () => {};
-    const state = State(initialValue);
-    const factory = h.produce('effectFactory', state, recordEvent);
+  // ------------------------------------------------------------------ state
+  h.defineProduct('state', (initialValue, loggable) => {
+    const state = State(initialValue, loggable);
+    const factory = h.produce('effectFactory', state, loggable);
     const effect = factory();
 
     gridAdd(state);
-    recordEvent(STATE_CREATED, state);
+    logger.log(STATE_CREATED, state);
     return effect;
   });
 
-  // ---------------------- mergeStates
+  // ------------------------------------------------------------------ mergeStates
   h.defineProduct('mergeStates', (statesMap) => {
     const fetchSourceValues = () => Object.keys(statesMap).reduce((result, key) => {
       const [ s ] = statesMap[key];
@@ -134,15 +134,19 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     return effect;
   });
 
-  // ---------------------- riew
+  // ------------------------------------------------------------------ riew
   h.defineProduct('riew', (viewFunc, ...controllers) => {
-    const r = createRiew(viewFunc, ...controllers);
-
-    logger.log(RIEW_CREATED, r, viewFunc, controllers);
-    return r;
+    return createRiew({
+      created(riew) {
+        logger.log(RIEW_CREATED, riew, viewFunc, controllers);
+      },
+      render(riew, props) {
+        logger.log(RIEW_RENDER, riew, props);
+      }
+    })(viewFunc, ...controllers);
   });
 
-  // ---------------------- reactRiew
+  // ------------------------------------------------------------------ reactRiew
   h.defineProduct('reactRiew', (viewFunc, ...controllers) => {
     return reactRiew(viewFunc, ...controllers);
   });

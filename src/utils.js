@@ -93,4 +93,4 @@ export const parallel = (...args) => (arg) => {
 
 let ids = 0;
 
-export const getId = (prefix) => `${ prefix }${ ++ids }`;
+export const getId = (prefix) => `${ prefix }_${ ++ids }`;

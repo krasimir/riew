@@ -484,7 +484,7 @@ describe('Given the state', () => {
 
       expect(s.__listeners().length).toBe(1);
       expect(s.__listeners()[0].__itemsToCreate.map(({ type }) => type))
-        .toStrictEqual([ 'map', 'filter', 'map', 'pipe' ]);
+        .toStrictEqual([ 'filter', 'map', 'pipe' ]);
 
       s
         .filter((value) => {

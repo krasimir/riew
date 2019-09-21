@@ -1,11 +1,8 @@
 import h from './harvester';
 import l from './logger';
 
-export const state = (initialValue) => {
-  return h.produce('state', initialValue, true);
-};
-export const internalState = (initialValue) => {
-  return h.produce('state', initialValue, false);
+export const state = (initialValue, loggable = true) => {
+  return h.produce('state', initialValue, loggable);
 };
 export const merge = (statesMap) => {
   return h.produce('mergeStates', statesMap);

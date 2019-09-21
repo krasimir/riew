@@ -9,7 +9,7 @@ describe('Given the createQueue helper', () => {
     it('should cycle over the items and call the appropriate callbacks', () => {
       const steps = [];
       const onDone = jest.fn();
-      const onStep = jest.fn().mockImplementation(q => steps.push(q.result));
+      const onStep = jest.fn().mockImplementation((q, phase) => steps.push([ q.result, phase ]));
       const queueAPI = {
         foo: jest.fn().mockImplementation((q, func, payload, next) => next(func[0](q.result))),
         bar: jest.fn().mockImplementation((q, func, payload, next) => next(func[0](q.result)))
@@ -30,7 +30,9 @@ describe('Given the createQueue helper', () => {
 
       expect(q.process()).toEqual(75);
       expect(onDone).toBeCalledTimes(1);
-      expect(steps).toStrictEqual([ 42, 52, 57 ]);
+      expect(steps).toStrictEqual(
+        [[42, 'in'], [52, 'out'], [52, 'in'], [57, 'out'], [57, 'in'], [75, 'out']]
+      );
     });
   });
 });

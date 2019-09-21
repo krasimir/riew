@@ -2,11 +2,12 @@ import equal from 'fast-deep-equal';
 
 import { getId } from './utils';
 
-export function State(initialValue) {
+export function State(initialValue, loggable) {
   const s = {};
   let value = initialValue;
   let listeners = [];
 
+  s.loggable = loggable;
   s.id = getId('s');
   s.triggerListeners = () => {
     listeners.forEach(l => l());

@@ -5,3 +5,4 @@ export const EFFECT_TEARDOWN = 'EFFECT_TEARDOWN';
 export const EFFECT_STEP = 'EFFECT_STEP';
 export const EFFECT_EXPORTED = 'EFFECT_EXPORTED';
 export const RIEW_CREATED = 'RIEW_CREATED';
+export const RIEW_RENDER = 'RIEW_RENDER';

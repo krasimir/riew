@@ -1,4 +1,4 @@
-import { internalState, state, use } from './index';
+import { state, use } from './index';
 import { isRiewEffect } from './effect';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 
@@ -20,7 +20,7 @@ function normalizeExternalsMap(arr) {
 }
 const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
 
-export default function createRiew(viewFunc, ...controllers) {
+export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
   const instance = { id: getId('r'), name: getFuncName(viewFunc) };
   let active = false;
   let internalStates = [];
@@ -28,9 +28,9 @@ export default function createRiew(viewFunc, ...controllers) {
   let onUnmountCallbacks = [];
   let externals = {};
 
-  const [ input ] = internalState({});
-  const [ output ] = internalState({});
-  const [ api ] = internalState({});
+  const [ input ] = state({}, false);
+  const [ output ] = state({}, false);
+  const [ api ] = state({}, false);
 
   const isActive = () => active;
   const isSubscribed = s => !!subscriptions.find(effect => effect.state.id === s.id);
@@ -47,7 +47,7 @@ export default function createRiew(viewFunc, ...controllers) {
           result[key] = effect();
           if (!isSubscribed(effect.state)) {
             subscriptions.push(
-              effect.pipe(() => render({ [key]: effect() })).subscribe()
+              effect.pipe(() => render({ [key]: effect() })).subscribe().logability(false)
             );
           }
         } else {
@@ -59,6 +59,7 @@ export default function createRiew(viewFunc, ...controllers) {
   });
   const render = updateOutput.filter(isActive).pipe(value => {
     viewFunc(value);
+    lifecycle.render(instance, value);
   });
   const updateAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
@@ -148,6 +149,6 @@ export default function createRiew(viewFunc, ...controllers) {
     return newInstance;
   };
 
+  lifecycle.created(instance);
   return instance;
-}
-
+};

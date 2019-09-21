@@ -1,7 +1,8 @@
 function noop() {};
 const logger = {
   log: noop,
-  events: { get: noop, log: noop }
+  events: noop,
+  data: { events: noop }
 };
 
 export default logger;

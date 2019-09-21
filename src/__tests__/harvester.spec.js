@@ -13,16 +13,17 @@ describe('Given the harvester', () => {
       expect(() => register('foo', 'bar')).toThrowError('An entry with name "foo" already exists.');
     });
   });
-  describe('when we want to display what to see what happened', () => {
-    it('should show us the events that happened', () => {
-      const view = jest.fn();
+  describe('when we want to see what happened', () => {
+    fit('should show us the events that happened', () => {
+      const view = function MyView() {};
       const [ s1, setState1 ] = state('a');
       const controller = function myController() {};
       const r = riew(view, controller).with({ s1 });
 
       r.mount();
-      // setState1('foo');
-      // r.update({ x: 'y' });
+      setState1('foo');
+      s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
+      r.update({ x: 'y' });
 
       logger.events();
     });
