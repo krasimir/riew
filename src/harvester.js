@@ -8,16 +8,15 @@ import { gridAdd, gridRemove, gridReset, gridGetNodes } from './grid';
 import logger from './logger';
 import { createEventBus } from './utils';
 import {
-  STATE_CREATED,
-  EFFECT_CREATED,
-  EFFECT_REMOVED,
   STATE_DESTROY,
-  EFFECT_STEP,
   EFFECT_EXPORTED,
   RIEW_CREATED,
   RIEW_RENDER,
   RIEW_UNMOUNT,
-  EFFECT_FORK
+  EFFECT_FORK,
+  STATE_CREATED,
+  EFFECT_CREATED,
+  EFFECT_REMOVED
 } from './constants';
 
 function Harvester() {
@@ -71,6 +70,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
               h.undefineProduct(e.__exportedAs);
             }
             e.cancel();
+            emit(EFFECT_REMOVED, e);
           });
         },
         [ EFFECT_EXPORTED ]: (effect, name) => {
@@ -82,13 +82,16 @@ const defineHarvesterBuiltInCapabilities = function (h) {
           const newEffect = createEffect(state, [ ...effect.__items, ...newItems ], emit);
 
           gridAdd(newEffect, effect.id);
+          emit(EFFECT_CREATED, newEffect);
           return newEffect;
         }
       });
       const effect = createEffect(state, [], emit);
 
       gridAdd(state);
+      emit(STATE_CREATED, state);
       gridAdd(effect, state.id);
+      emit(EFFECT_CREATED, effect);
       return effect;
     }
   );
@@ -129,17 +132,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
   // ------------------------------------------------------------------ riew
   h.defineProduct('riew', (viewFunc, ...controllers) => {
-    return createRiew({
-      created(riew, props) {
-        logger.log(RIEW_CREATED, riew, props, viewFunc, controllers);
-      },
-      render(riew, props) {
-        logger.log(RIEW_RENDER, riew, props, viewFunc, controllers);
-      },
-      unmount(riew, props) {
-        logger.log(RIEW_UNMOUNT, riew, props, viewFunc, controllers);
-      }
-    })(viewFunc, ...controllers);
+    return createRiew(createEventBus({}))(viewFunc, ...controllers);
   });
 
   // ------------------------------------------------------------------ reactRiew

@@ -1,5 +1,4 @@
 import { use, register, state, riew, harvester, logger } from '../index';
-import loggerEvents from './data/logger.events.json';
 
 describe('Given the harvester', () => {
   beforeEach(() => {
@@ -11,7 +10,7 @@ describe('Given the harvester', () => {
 
       register('foo', myFunc);
       expect(use('foo')()).toBe(42);
-      expect(() => register('foo', 'bar')).toThrowError('An entry with name "foo" already exists.');
+      expect(() => register('foo', 'bar')).toThrowError('A product with type "foo" already exists.');
     });
   });
   describe('when we want to see what happened', () => {

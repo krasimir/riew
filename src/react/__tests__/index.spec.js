@@ -51,12 +51,12 @@ describe('Given the React riew function', () => {
         ).with({ state: s });
         const { container, unmount } = render(<R />);
 
-        expect(s.__listeners()).toHaveLength(1);
+        expect(s.state.listeners()).toHaveLength(1);
         exerciseHTML(container, '<p>foo</p>');
         await delay(7);
         exerciseHTML(container, '<p>bar</p>');
         unmount();
-        expect(s.__listeners()).toHaveLength(0);
+        expect(s.state.listeners()).toHaveLength(0);
       });
       describe('and we use a state that is exported into the grid', () => {
         it('should receive the state value and subscribe for changes', async () => {

@@ -1,22 +1,21 @@
 import sanitize from './sanitize';
 import { getFuncName } from './utils';
-import {
-  STATE_CREATED,
-  STATE_TEARDOWN,
-  EFFECT_ADDED,
-  EFFECT_REMOVED,
-  EFFECT_TEARDOWN,
-  EFFECT_STEP,
-  EFFECT_EXPORTED,
-  RIEW_CREATED,
-  RIEW_RENDER,
-  RIEW_UNMOUNT
-} from './constants';
 
 const MAX_NUM_OF_EVENTS = 850;
 const INDENT = 12;
 
-// normalizers
+function noop() {};
+const logger = {
+  log: noop,
+  events: noop,
+  grid: noop,
+  data: { events: noop, grid: noop },
+  clear: noop
+};
+
+export default logger;
+
+/*
 
 function normalizeState(state) {
   return {
@@ -262,3 +261,4 @@ function createLogger() {
 const logger = createLogger();
 
 export default logger;
+*/

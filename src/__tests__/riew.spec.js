@@ -111,9 +111,9 @@ describe('Given the `riew` factory function', () => {
 
       r.mount();
       setState('baz');
-      expect(s.__listeners()).toHaveLength(1);
+      expect(s.state.listeners()).toHaveLength(1);
       r.unmount();
-      expect(s.__listeners()).toHaveLength(0);
+      expect(s.state.listeners()).toHaveLength(0);
       expect(view).toBeCalledWithArgs(
         [ { s: 'foo' } ],
         [ { s: 'baz' } ]

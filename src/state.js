@@ -1,6 +1,7 @@
 import equal from 'fast-deep-equal';
 
 import { getId } from './utils';
+import { createQueueAPI } from './queue';
 
 export function State(initialValue, loggable) {
   const s = {};
@@ -9,10 +10,10 @@ export function State(initialValue, loggable) {
 
   s.loggable = loggable;
   s.id = getId('s');
+  s.queueAPI = createQueueAPI();
   s.triggerListeners = () => {
     listeners.forEach(l => l());
   };
-
   s.get = () => value;
   s.set = (newValue) => {
     let isEqual = equal(value, newValue);

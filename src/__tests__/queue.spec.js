@@ -1,5 +1,5 @@
 import harvester from '../harvester';
-import createQueue from '../queue';
+import { createQueue } from '../queue';
 
 describe('Given the createQueue helper', () => {
   beforeEach(() => {
@@ -8,18 +8,16 @@ describe('Given the createQueue helper', () => {
   describe('when we create a queue', () => {
     it('should cycle over the items and call the appropriate callbacks', () => {
       const steps = [];
-      const lifecycle = {
-        out: jest.fn(),
-        stepIn: jest.fn().mockImplementation((q) => steps.push([ q.result, 'in' ])),
-        stepOut: jest.fn().mockImplementation((q) => steps.push([ q.result, 'out' ]))
-      };
       const queueAPI = {
         foo: jest.fn().mockImplementation((q, func, payload, next) => next(func[0](q.result))),
         bar: jest.fn().mockImplementation((q, func, payload, next) => next(func[0](q.result)))
       };
       const setValue = jest.fn();
       const getValue = jest.fn().mockImplementation(() => 42);
-      const q = createQueue(setValue, getValue, lifecycle, queueAPI);
+      const emit = jest.fn().mockImplementation((type, q) => {
+        steps.push([ type, q.result ]);
+      });
+      const q = createQueue({ set: setValue, get: getValue, queueAPI }, emit);
 
       q.add('foo', [(value) => {
         return value + 10;
@@ -32,10 +30,16 @@ describe('Given the createQueue helper', () => {
       }]);
 
       expect(q.process()).toEqual(75);
-      expect(lifecycle.out).toBeCalledTimes(1);
-      expect(steps).toStrictEqual(
-        [[42, 'in'], [52, 'out'], [52, 'in'], [57, 'out'], [57, 'in'], [75, 'out']]
-      );
+      expect(steps).toStrictEqual([
+        [ 'EFFECT_QUEUE_START', 42 ],
+        [ 'EFFECT_QUEUE_STEP_IN', 42 ],
+        [ 'EFFECT_QUEUE_STEP_OUT', 52 ],
+        [ 'EFFECT_QUEUE_STEP_IN', 52 ],
+        [ 'EFFECT_QUEUE_STEP_OUT', 57 ],
+        [ 'EFFECT_QUEUE_STEP_IN', 57 ],
+        [ 'EFFECT_QUEUE_STEP_OUT', 75 ],
+        [ 'EFFECT_QUEUE_END', 75 ]
+      ]);
     });
   });
 });

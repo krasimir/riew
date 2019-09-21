@@ -5,12 +5,17 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 var STATE_CREATED = exports.STATE_CREATED = 'STATE_CREATED';
-var STATE_TEARDOWN = exports.STATE_TEARDOWN = 'STATE_TEARDOWN';
-var EFFECT_ADDED = exports.EFFECT_ADDED = 'EFFECT_ADDED';
+var STATE_DESTROY = exports.STATE_DESTROY = 'STATE_DESTROY';
+
+var EFFECT_CREATED = exports.EFFECT_CREATED = 'EFFECT_CREATED';
 var EFFECT_REMOVED = exports.EFFECT_REMOVED = 'EFFECT_REMOVED';
-var EFFECT_TEARDOWN = exports.EFFECT_TEARDOWN = 'EFFECT_TEARDOWN';
-var EFFECT_STEP = exports.EFFECT_STEP = 'EFFECT_STEP';
+var EFFECT_QUEUE_START = exports.EFFECT_QUEUE_START = 'EFFECT_QUEUE_START';
+var EFFECT_QUEUE_STEP_IN = exports.EFFECT_QUEUE_STEP_IN = 'EFFECT_QUEUE_STEP_IN';
+var EFFECT_QUEUE_STEP_OUT = exports.EFFECT_QUEUE_STEP_OUT = 'EFFECT_QUEUE_STEP_OUT';
+var EFFECT_QUEUE_END = exports.EFFECT_QUEUE_END = 'EFFECT_QUEUE_END';
 var EFFECT_EXPORTED = exports.EFFECT_EXPORTED = 'EFFECT_EXPORTED';
+var EFFECT_FORK = exports.EFFECT_FORK = 'EFFECT_FORK';
+
 var RIEW_CREATED = exports.RIEW_CREATED = 'RIEW_CREATED';
 var RIEW_RENDER = exports.RIEW_RENDER = 'RIEW_RENDER';
 var RIEW_UNMOUNT = exports.RIEW_UNMOUNT = 'RIEW_UNMOUNT';
@@ -22,38 +27,14 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.implementIterable = undefined;
-exports.isRiewEffect = isRiewEffect;
-exports.default = effectFactory;
+exports.isEffect = isEffect;
+exports.default = createEffect;
 
 var _utils = require('./utils');
 
-var _pipe = require('./queueMethods/pipe');
-
-var _pipe2 = _interopRequireDefault(_pipe);
-
-var _map = require('./queueMethods/map');
-
-var _map2 = _interopRequireDefault(_map);
-
-var _mapToKey = require('./queueMethods/mapToKey');
-
-var _mapToKey2 = _interopRequireDefault(_mapToKey);
-
-var _mutate = require('./queueMethods/mutate');
-
-var _mutate2 = _interopRequireDefault(_mutate);
-
-var _filter = require('./queueMethods/filter');
-
-var _filter2 = _interopRequireDefault(_filter);
-
 var _queue = require('./queue');
 
-var _queue2 = _interopRequireDefault(_queue);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
+var _constants = require('./constants');
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -65,7 +46,15 @@ function _toConsumableArray(arr) {
   }
 }
 
-function isRiewEffect(func) {
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
+
+function isEffect(func) {
   return func && func.__riewEffect === true;
 }
 
@@ -87,216 +76,209 @@ var implementIterable = exports.implementIterable = function implementIterable(o
   }
 };
 
-function effectFactory(state, lifecycle, loggable) {
-  var queueMethods = [];
-  var queueAPI = {};
-  var effects = [];
+function createEffect(state) {
+  var items = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+  var emit = arguments[2];
+
   var active = true;
 
-  function createNewEffect() {
-    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-
-    var effect = function effect() {
-      if (!active || effect.__itemsToCreate.length === 0) {
-        return state.get();
-      }
-      var queue = (0, _queue2.default)(state.set, state.get, function () {
-        effect.__queues = effect.__queues.filter(function (_ref) {
-          var id = _ref.id;
-          return queue.id !== id;
-        });
-        lifecycle.out(effect);
-      }, function (q, phase) {
-        lifecycle.queueStep(effect, q, phase);
-      }, queueAPI);
-
-      effect.__queues.push(queue);
-      effect.__itemsToCreate.forEach(function (_ref2) {
-        var type = _ref2.type,
-            func = _ref2.func;
-        return queue.add(type, func);
+  var effect = function effect() {
+    if (!active || effect.__items.length === 0) {
+      return state.get();
+    }
+    var queue = (0, _queue.createQueue)(state, emit.extend(_defineProperty({}, _constants.EFFECT_QUEUE_END, function () {
+      effect.__queues = effect.__queues.filter(function (q) {
+        return q.id !== queue.id;
       });
-      lifecycle.in(effect);
-      return queue.process.apply(queue, arguments);
-    };
+    })));
 
-    effect.id = (0, _utils.getId)('e');
-    effect.state = state;
-    effect.loggable = loggable;
-    effect.__queues = [];
-    effect.__riewEffect = true;
-    effect.__itemsToCreate = [].concat(_toConsumableArray(items));
-    effect.__listeners = state.listeners;
-
-    effects.push(effect);
-    implementIterable(effect);
-
-    // queue methods
-    queueMethods.forEach(function (m) {
-      effect[m] = function () {
-        for (var _len = arguments.length, methodArgs = Array(_len), _key = 0; _key < _len; _key++) {
-          methodArgs[_key] = arguments[_key];
-        }
-
-        return lifecycle.fork([].concat(_toConsumableArray(effect.__itemsToCreate), [{ type: m, func: methodArgs }]));
-      };
+    effect.__queues.push(queue);
+    effect.__items.forEach(function (_ref) {
+      var type = _ref.type,
+          func = _ref.func;
+      return queue.add(type, func);
     });
+    return queue.process.apply(queue, arguments);
+  };
+  var fork = function fork(newItems) {
+    return emit(_constants.EFFECT_FORK, effect, newItems);
+  };
 
-    // effect direct methods
-    effect.define = function (methodName, func) {
-      defineQueueMethod(methodName, func);
-      return effect;
-    };
-    effect.isMutating = function () {
-      return !!effect.__itemsToCreate.find(function (_ref3) {
-        var type = _ref3.type;
-        return type === 'mutate';
-      });
-    };
-    effect.subscribe = function () {
-      var initialCall = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+  effect.id = (0, _utils.getId)('e');
+  effect.state = state;
+  effect.loggable = state.loggable;
+  effect.__queues = [];
+  effect.__riewEffect = true;
+  effect.__items = [].concat(_toConsumableArray(items));
 
-      if (effect.isMutating()) {
-        throw new Error('You should not subscribe a effect that mutates the state. This will lead to endless recursion.');
+  implementIterable(effect);
+
+  // queue methods
+  Object.keys(state.queueAPI).forEach(function (m) {
+    effect[m] = function () {
+      for (var _len = arguments.length, methodArgs = Array(_len), _key = 0; _key < _len; _key++) {
+        methodArgs[_key] = arguments[_key];
       }
-      if (initialCall) effect();
-      state.addListener(effect);
-      return effect;
-    };
-    effect.unsubscribe = function () {
-      state.removeListener(effect);
-      return effect;
-    };
-    effect.cancel = function () {
-      effect.__queues.forEach(function (q) {
-        return q.cancel();
-      });
-      return effect;
-    };
-    effect.cleanUp = function () {
-      effect.cancel();
-      effect.unsubscribe();
-    };
-    effect.teardown = function () {
-      active = false;
-      state.teardown();
-      effects.forEach(function (t) {
-        return t.cleanUp();
-      });
-      effects = [effect];
-      lifecycle.teardown(effect);
-      return effect;
-    };
-    effect.isActive = function () {
-      return active;
-    };
-    effect.export = function (name) {
-      lifecycle.export(effect, name);
-      return effect;
-    };
-    effect.logability = function (flag) {
-      effect.loggable = flag;
-      return effect;
-    };
-    effect.test = function (callback) {
-      var testTrigger = lifecycle.fork([].concat(_toConsumableArray(effect.__itemsToCreate)));
-      var tools = {
-        setValue: function setValue(newValue) {
-          testTrigger.__itemsToCreate = [{ type: 'map', func: [function () {
-              return newValue;
-            }] }].concat(_toConsumableArray(testTrigger.__itemsToCreate));
-        },
-        swap: function swap(index, funcs, type) {
-          if (!Array.isArray(funcs)) funcs = [funcs];
-          testTrigger.__itemsToCreate[index].func = funcs;
-          if (type) {
-            testTrigger.__itemsToCreate[index].type = type;
-          }
-        },
-        swapFirst: function swapFirst(funcs, type) {
-          tools.swap(0, funcs, type);
-        },
-        swapLast: function swapLast(funcs, type) {
-          tools.swap(testTrigger.__itemsToCreate.length - 1, funcs, type);
-        }
-      };
 
-      callback(tools);
-
-      return testTrigger;
+      return fork([{ type: m, func: methodArgs }]);
     };
+  });
 
+  // effect direct methods
+  effect.define = function (methodName, func) {
+    state.queueAPI.define(methodName, func);
+    effect[methodName] = function () {
+      for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        methodArgs[_key2] = arguments[_key2];
+      }
+
+      return fork([{ type: methodName, func: methodArgs }]);
+    };
     return effect;
   };
-
-  function defineQueueMethod(methodName, func) {
-    queueMethods.push(methodName);
-    queueAPI[methodName] = function (q, args, payload, next) {
-      var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, q);
-
-      if ((0, _utils.isPromise)(result)) {
-        return result.then(next);
-      }
-      return next(result);
-    };
-    effects.forEach(function (t) {
-      t[methodName] = function () {
-        for (var _len2 = arguments.length, methodArgs = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          methodArgs[_key2] = arguments[_key2];
-        }
-
-        return lifecycle.fork([].concat(_toConsumableArray(t.__itemsToCreate), [{ type: methodName, func: methodArgs }]));
-      };
+  effect.isMutating = function () {
+    return !!effect.__items.find(function (_ref2) {
+      var type = _ref2.type;
+      return type === 'mutate';
     });
   };
+  effect.subscribe = function () {
+    var initialCall = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
-  defineQueueMethod('pipe', _pipe2.default);
-  defineQueueMethod('map', _map2.default);
-  defineQueueMethod('mapToKey', _mapToKey2.default);
-  defineQueueMethod('mutate', _mutate2.default);
-  defineQueueMethod('filter', _filter2.default);
+    if (effect.isMutating()) {
+      throw new Error('You should not subscribe a effect that mutates the state. This will lead to endless recursion.');
+    }
+    if (initialCall) effect();
+    state.addListener(effect);
+    return effect;
+  };
+  effect.unsubscribe = function () {
+    state.removeListener(effect);
+    return effect;
+  };
+  effect.cancel = function () {
+    active = false;
+    effect.unsubscribe();
+    effect.__queues.forEach(function (q) {
+      return q.cancel();
+    });
+    return effect;
+  };
+  effect.destroy = function () {
+    emit(_constants.STATE_DESTROY);
+    return effect;
+  };
+  effect.isActive = function () {
+    return active;
+  };
+  effect.export = function (name) {
+    emit(_constants.EFFECT_EXPORTED, effect, name);
+    return effect;
+  };
+  effect.logability = function (flag) {
+    effect.loggable = flag;
+    return effect;
+  };
+  effect.test = function (callback) {
+    var testTrigger = fork([]);
+    var tools = {
+      setValue: function setValue(newValue) {
+        testTrigger.__items = [{ type: 'map', func: [function () {
+            return newValue;
+          }] }].concat(_toConsumableArray(testTrigger.__items));
+      },
+      swap: function swap(index, funcs, type) {
+        if (!Array.isArray(funcs)) funcs = [funcs];
+        testTrigger.__items[index].func = funcs;
+        if (type) {
+          testTrigger.__items[index].type = type;
+        }
+      },
+      swapFirst: function swapFirst(funcs, type) {
+        tools.swap(0, funcs, type);
+      },
+      swapLast: function swapLast(funcs, type) {
+        tools.swap(testTrigger.__items.length - 1, funcs, type);
+      }
+    };
 
-  return createNewEffect;
+    callback(tools);
+
+    return testTrigger;
+  };
+
+  return effect;
 };
 
-},{"./queue":7,"./queueMethods/filter":8,"./queueMethods/map":9,"./queueMethods/mapToKey":10,"./queueMethods/mutate":11,"./queueMethods/pipe":12,"./utils":19}],3:[function(require,module,exports){
+},{"./constants":1,"./queue":7,"./utils":19}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+function Node(data, parent) {
+  return {
+    id: data.id,
+    parent: parent,
+    data: data,
+    is: function is(id) {
+      return this.id === id;
+    },
+    hasParent: function hasParent(parentId) {
+      return this.parent === parentId;
+    }
+  };
+}
+
 function Grid() {
   var api = {};
   var nodes = [];
 
-  var add = function add(obj) {
+  function getIdsToRemove(identifier) {
+    var children = nodes.filter(function (n) {
+      return n.hasParent(identifier);
+    });
+
+    return [identifier].concat(children.reduce(function (arr, n) {
+      return arr.concat(getIdsToRemove(n.id));
+    }, []));
+  }
+
+  var add = function add(obj, parent) {
     if (!obj || !obj.id) {
       throw new Error("Each node in the grid must be an object with \"id\" field. Instead \"" + obj + "\" given.");
     }
 
-    nodes.push(obj);
+    nodes.push(Node(obj, parent));
     return api;
   };
-  var free = function free(identifier) {
+  var remove = function remove(identifier) {
+    var ids = getIdsToRemove(identifier);
+    var removed = [];
+
     nodes = nodes.filter(function (n) {
-      return n.id !== identifier;
+      if (ids.indexOf(n.id) === -1) {
+        return true;
+      }
+      removed.push(n.data);
+      return false;
     });
-    return api;
+    return removed;
   };
   var get = function get(identifier) {
     var node = nodes.find(function (n) {
-      return n.id === identifier;
+      return n.is(identifier);
     });
 
     if (node) {
-      return node;
+      return node.data;
     }
     throw new Error("A node with identifier \"" + identifier + "\" is missing in the grid.");
   };
 
   api.get = get;
   api.add = add;
-  api.free = free;
+  api.remove = remove;
   api.reset = function () {
     return nodes = [];
   };
@@ -309,11 +291,11 @@ function Grid() {
 
 var grid = Grid();
 
-var gridAdd = exports.gridAdd = function gridAdd(node) {
-  return grid.add(node);
+var gridAdd = exports.gridAdd = function gridAdd(node, parent) {
+  return grid.add(node, parent);
 };
-var gridFreeNode = exports.gridFreeNode = function gridFreeNode(node) {
-  return grid.free(node.id);
+var gridRemove = exports.gridRemove = function gridRemove(node) {
+  return grid.remove(node.id);
 };
 var gridReset = exports.gridReset = function gridReset() {
   return grid.reset();
@@ -390,39 +372,61 @@ var _logger = require('./logger');
 
 var _logger2 = _interopRequireDefault(_logger);
 
+var _utils = require('./utils');
+
 var _constants = require('./constants');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
 function Harvester() {
   var api = {};
   var products = {};
 
-  api.defineProduct = function (product, func) {
-    if (products[product]) {
-      throw new Error('An entry with name "' + product + '" already exists.');
+  api.defineProduct = function (type, func) {
+    if (products[type]) {
+      throw new Error('A product with type "' + type + '" already exists.');
     }
-    products[product] = func;
+    products[type] = func;
   };
-  api.undefineProduct = function (product) {
-    if (!products[product]) {
-      throw new Error('There is no entry with name "' + product + '" to be removed.');
+  api.undefineProduct = function (type) {
+    if (!products[type]) {
+      throw new Error('There is no product with type "' + type + '" to be removed.');
     }
-    delete products[product];
+    delete products[type];
   };
-  api.produce = function (product) {
+  api.produce = function (type) {
     var _products;
 
     for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
       args[_key - 1] = arguments[_key];
     }
 
-    if (!products[product]) {
-      throw new Error('There is no entry with name "' + product + '".');
+    if (!products[type]) {
+      throw new Error('There is no product with type "' + type + '".');
     }
-    return (_products = products)[product].apply(_products, args);
+    var product = (_products = products)[type].apply(_products, args);
+
+    return product;
   };
   api.reset = function () {
     products = {};
@@ -439,55 +443,36 @@ function Harvester() {
 
 var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabilities(h) {
 
-  // ------------------------------------------------------------------ effect factory
-  h.defineProduct('effectFactory', function (state, loggable) {
-    var factory = (0, _effect2.default)(state, {
-      in: function _in(effect) {
-        (0, _grid.gridAdd)(effect);
-        _logger2.default.log(_constants.EFFECT_ADDED, effect);
-      },
-      out: function out(effect) {
-        (0, _grid.gridFreeNode)(effect);
-        if ('__exportedAs' in effect) {
-          h.undefineProduct(effect.__exportedAs);
-        }
-        _logger2.default.log(_constants.EFFECT_REMOVED, effect);
-      },
-      queueStep: function queueStep(effect, q, phase) {
-        _logger2.default.log(_constants.EFFECT_STEP, effect, q, phase);
-      },
-      teardown: function teardown(effect) {
-        (0, _grid.gridFreeNode)(effect);
-        (0, _grid.gridFreeNode)(effect.state);
-        if ('__exportedAs' in effect) {
-          h.undefineProduct(effect.__exportedAs);
-        }
-        _logger2.default.log(_constants.EFFECT_TEARDOWN, effect);
-        _logger2.default.log(_constants.STATE_TEARDOWN, effect.state);
-      },
-      export: function _export(effect, name) {
-        effect.__exportedAs = name;
-        h.defineProduct(name, function () {
-          return effect;
-        });
-        _logger2.default.log(_constants.EFFECT_EXPORTED, effect, name);
-      },
-      fork: function fork(items) {
-        return factory(items);
-      }
-    }, loggable);
-
-    return factory;
-  });
-
   // ------------------------------------------------------------------ state
   h.defineProduct('state', function (initialValue, loggable) {
+    var _createEventBus;
+
     var state = (0, _state.State)(initialValue, loggable);
-    var factory = h.produce('effectFactory', state, loggable);
-    var effect = factory();
+    var emit = (0, _utils.createEventBus)((_createEventBus = {}, _defineProperty(_createEventBus, _constants.STATE_DESTROY, function () {
+      var removed = (0, _grid.gridRemove)(state);
+
+      removed.filter(_effect.isEffect).forEach(function (e) {
+        if ('__exportedAs' in e) {
+          h.undefineProduct(e.__exportedAs);
+        }
+        e.cancel();
+      });
+    }), _defineProperty(_createEventBus, _constants.EFFECT_EXPORTED, function (effect, name) {
+      effect.__exportedAs = name;
+      h.defineProduct(name, function () {
+        return effect;
+      });
+      _logger2.default.log(_constants.EFFECT_EXPORTED, effect, name);
+    }), _defineProperty(_createEventBus, _constants.EFFECT_FORK, function (effect, newItems) {
+      var newEffect = (0, _effect2.default)(state, [].concat(_toConsumableArray(effect.__items), _toConsumableArray(newItems)), emit);
+
+      (0, _grid.gridAdd)(newEffect, effect.id);
+      return newEffect;
+    }), _createEventBus));
+    var effect = (0, _effect2.default)(state, [], emit);
 
     (0, _grid.gridAdd)(state);
-    _logger2.default.log(_constants.STATE_CREATED, state);
+    (0, _grid.gridAdd)(effect, state.id);
     return effect;
   });
 
@@ -538,14 +523,14 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
     }
 
     return (0, _riew2.default)({
-      created: function created(riew) {
-        _logger2.default.log(_constants.RIEW_CREATED, riew, viewFunc, controllers);
+      created: function created(riew, props) {
+        _logger2.default.log(_constants.RIEW_CREATED, riew, props, viewFunc, controllers);
       },
       render: function render(riew, props) {
-        _logger2.default.log(_constants.RIEW_RENDER, riew, props);
+        _logger2.default.log(_constants.RIEW_RENDER, riew, props, viewFunc, controllers);
       },
-      unmount: function unmount(riew) {
-        _logger2.default.log(_constants.RIEW_UNMOUNT, riew);
+      unmount: function unmount(riew, props) {
+        _logger2.default.log(_constants.RIEW_UNMOUNT, riew, props, viewFunc, controllers);
       }
     }).apply(undefined, [viewFunc].concat(controllers));
   });
@@ -566,7 +551,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./constants":1,"./effect":2,"./grid":3,"./logger":6,"./react":13,"./riew":14,"./state":18,"fast-deep-equal":20}],5:[function(require,module,exports){
+},{"./constants":1,"./effect":2,"./grid":3,"./logger":6,"./react":13,"./riew":14,"./state":18,"./utils":19,"fast-deep-equal":20}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -727,14 +712,23 @@ function normalizeEffect(effect) {
   return {
     id: effect.id,
     state: normalizeState(effect.state),
-    queueItems: effect.__itemsToCreate.map(function (_ref) {
+    queueItems: effect.__items.map(function (_ref) {
       var type = _ref.type,
           func = _ref.func;
       return {
         type: type,
         name: (0, _utils.getFuncName)(func)
       };
-    })
+    }),
+    queues: effect.__queues.map(normalizeQueue)
+  };
+}
+function normalizeRiew(r, props, view, controllers) {
+  return {
+    id: r.id,
+    props: (0, _sanitize2.default)(props),
+    view: (0, _utils.getFuncName)(view),
+    controllers: controllers.map(_utils.getFuncName)
   };
 }
 function normalizeQueue(q) {
@@ -763,6 +757,8 @@ function formatQueueItem(_ref3) {
   return '' + type + (name !== 'unknown' ? '(' + name + ')' : '');
 }
 function formatId(obj) {
+  var noSpaces = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
   if (!obj.id) return getSpaces(INDENT);
 
   var _obj$id$split = obj.id.split('_'),
@@ -771,17 +767,24 @@ function formatId(obj) {
       n = _obj$id$split2[1];
 
   var what = function () {
-    if (type === 's') return 'state';
-    if (type === 'r') return 'riew';
-    if (type === 'e') return 'effect';
+    if (type === 's') return '$' + n;
+    if (type === 'r') return '<' + n + '>';
+    if (type === 'e') return 'effect#' + n;
     return type;
   }();
-  var text = what + '#' + n;
+  var text = '' + what;
+
+  if (noSpaces) {
+    return text;
+  }
 
   if (text.length < INDENT) {
     return getSpaces(INDENT - text.length) + text + ' ';
   }
   return text + ' ';
+}
+function formatQueueItems(effect) {
+  return effect.queueItems.map(formatQueueItem).join(', ');
 }
 
 var normalizers = (_normalizers = {}, _defineProperty(_normalizers, _constants.STATE_CREATED, normalizeState), _defineProperty(_normalizers, _constants.STATE_TEARDOWN, normalizeState), _defineProperty(_normalizers, _constants.EFFECT_ADDED, normalizeEffect), _defineProperty(_normalizers, _constants.EFFECT_REMOVED, normalizeEffect), _defineProperty(_normalizers, _constants.EFFECT_TEARDOWN, normalizeEffect), _defineProperty(_normalizers, _constants.EFFECT_STEP, function (effect, q, phase) {
@@ -789,40 +792,31 @@ var normalizers = (_normalizers = {}, _defineProperty(_normalizers, _constants.S
     queue: normalizeQueue(q),
     phase: phase
   });
-}), _defineProperty(_normalizers, _constants.EFFECT_EXPORTED, normalizeEffect), _defineProperty(_normalizers, _constants.RIEW_CREATED, function (r, view, controllers) {
-  return {
-    id: r.id,
-    name: r.name,
-    view: (0, _utils.getFuncName)(view),
-    controllers: controllers.map(_utils.getFuncName)
-  };
-}), _defineProperty(_normalizers, _constants.RIEW_RENDER, function (r, props) {
-  return {
-    id: r.id,
-    name: r.name,
-    props: (0, _sanitize2.default)(props)
-  };
-}), _defineProperty(_normalizers, _constants.RIEW_UNMOUNT, function (r) {
-  return {
-    id: r.id,
-    name: r.name
-  };
-}), _normalizers);
+}), _defineProperty(_normalizers, _constants.EFFECT_EXPORTED, normalizeEffect), _defineProperty(_normalizers, _constants.RIEW_CREATED, normalizeRiew), _defineProperty(_normalizers, _constants.RIEW_RENDER, normalizeRiew), _defineProperty(_normalizers, _constants.RIEW_UNMOUNT, normalizeRiew), _normalizers);
 
 function createSimpleStorage() {
   var api = {};
   var items = [];
 
   api.add = function (item) {
-    return items.push(item);
+    var found = items.findIndex(function (_ref4) {
+      var id = _ref4.id;
+      return item.id === id;
+    });
+
+    if (found >= 0) {
+      items[found] = item;
+    } else {
+      items.push(item);
+    }
   };
   api.get = function () {
     return items;
   };
   api.remove = function (item) {
-    return items = items.filter(function (_ref4) {
-      var id = _ref4.id;
-      return item !== id;
+    return items = items.filter(function (_ref5) {
+      var id = _ref5.id;
+      return item.id !== id;
     });
   };
   api.clear = function () {
@@ -850,26 +844,35 @@ function createLogger() {
     if (_events.length > MAX_NUM_OF_EVENTS) {
       _events.shift();
     }
-    switch (type) {
-      case _constants.STATE_CREATED:
-        states.add(payload[0]);break;
-      case _constants.STATE_TEARDOWN:
-        states.remove(payload[0]);break;
-      case _constants.EFFECT_ADDED:
-        effects.add(payload[0]);break;
-      case _constants.EFFECT_REMOVED:
-        effects.remove(payload[0]);break;
-      case _constants.EFFECT_TEARDOWN:
-        effects.remove(payload[0]);break;
-      case _constants.RIEW_CREATED:
-        riews.add(payload[0]);break;
-      case _constants.RIEW_UNMOUNT:
-        riews.remove(payload[0]);break;
-    }
+
+    var item = {};
+
     if (normalizers[type]) {
-      _events.push(_extends({ type: type }, normalizers[type].apply(normalizers, payload)));
+      item = normalizers[type].apply(normalizers, payload);
+      _events.push(_extends({ type: type }, item));
     } else {
       _events.push({ type: type });
+    }
+
+    switch (type) {
+      case _constants.STATE_CREATED:
+        states.add(item);break;
+      case _constants.STATE_TEARDOWN:
+        states.remove(item);break;
+      case _constants.EFFECT_ADDED:
+      case _constants.EFFECT_STEP:
+        effects.add(item);
+        break;
+      case _constants.EFFECT_REMOVED:
+      case _constants.EFFECT_TEARDOWN:
+        // effects.remove(item);
+        break;
+      case _constants.RIEW_CREATED:
+      case _constants.RIEW_RENDER:
+        riews.add(item);
+        break;
+      case _constants.RIEW_UNMOUNT:
+        riews.remove(item);break;
     }
   };
   api.events = function () {
@@ -891,7 +894,7 @@ function createLogger() {
           console.log(formatId(event) + " \u2714 " + event.name, event.props);
           break;
         case _constants.EFFECT_ADDED:
-          console.log(formatId(event) + ' + [' + event.queueItems.map(formatQueueItem).join(', ') + ']');
+          console.log(formatId(event) + ' + [' + formatQueueItems(event) + ']');
           break;
         case _constants.EFFECT_STEP:
           var queue = event.queue;
@@ -917,7 +920,19 @@ function createLogger() {
   api.grid = function () {
     var grid = api.data.grid();
 
-    console.log(grid);
+    riews.get().forEach(function (riew) {
+      console.log(formatId(riew) + ' ' + riew.view, riew.props);
+    });
+    console.log(getSpaces(INDENT) + '  ~~~');
+    grid.states.forEach(function (state) {
+      console.log(formatId(state), state.value);
+      state.effects.forEach(function (effect) {
+        console.log(getSpaces(INDENT) + "  \u21B3 " + formatId(effect, true));
+        console.log(effect);
+      });
+    });
+
+    // console.log(JSON.stringify(grid, null, 2));
   };
   api.clear = function () {
     _events = [];
@@ -929,7 +944,33 @@ function createLogger() {
     events: function events() {
       return _events;
     },
-    grid: function grid() {}
+    grid: function grid() {
+      var ss = states.get().map(function (state) {
+        return _extends({}, state, { effects: [] });
+      });
+
+      effects.get().forEach(function (effect) {
+        var state = ss.find(function (_ref6) {
+          var id = _ref6.id;
+          return effect.state.id;
+        });
+
+        if (state) {
+          state.effects.push(effect);
+        } else {
+          ss.push(_extends({}, effect.state, { effects: [effect] }));
+        }
+      });
+      // console.log(JSON.stringify(states.get(), null, 2));
+      // return {
+      //   states: states.get().
+      // }
+      // console.log(JSON.stringify(effects.get(), null, 2));
+
+      return {
+        states: ss
+      };
+    }
   };
 
   return api;
@@ -945,18 +986,88 @@ exports.default = logger;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = createQueue;
+
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
+};
+
+exports.createQueueAPI = createQueueAPI;
+exports.createQueue = createQueue;
 
 var _utils = require('./utils');
 
-function createQueue(setStateValue, getStateValue) {
-  var onDone = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
-  var onStep = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : function () {};
-  var queueAPI = arguments[4];
+var _constants = require('./constants');
 
+var _pipe = require('./queueMethods/pipe');
+
+var _pipe2 = _interopRequireDefault(_pipe);
+
+var _map = require('./queueMethods/map');
+
+var _map2 = _interopRequireDefault(_map);
+
+var _mapToKey = require('./queueMethods/mapToKey');
+
+var _mapToKey2 = _interopRequireDefault(_mapToKey);
+
+var _mutate = require('./queueMethods/mutate');
+
+var _mutate2 = _interopRequireDefault(_mutate);
+
+var _filter = require('./queueMethods/filter');
+
+var _filter2 = _interopRequireDefault(_filter);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+var queueAPI = {
+  define: function define(methodName, func) {
+    this[methodName] = function (q, args, payload, next) {
+      var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, q);
+
+      if ((0, _utils.isPromise)(result)) {
+        return result.then(next);
+      }
+      return next(result);
+    };
+  }
+};
+
+queueAPI.define('pipe', _pipe2.default);
+queueAPI.define('map', _map2.default);
+queueAPI.define('mapToKey', _mapToKey2.default);
+queueAPI.define('mutate', _mutate2.default);
+queueAPI.define('filter', _filter2.default);
+
+function createQueueAPI() {
+  return _extends({}, queueAPI);
+};
+
+function createQueue(state, emit) {
+  var setStateValue = state.set;
+  var getStateValue = state.get;
+  var queueAPI = state.queueAPI;
   var q = {
     id: (0, _utils.getId)('q'),
-    index: 0,
+    index: null,
     setStateValue: setStateValue,
     getStateValue: getStateValue,
     result: getStateValue(),
@@ -971,15 +1082,16 @@ function createQueue(setStateValue, getStateValue) {
 
       q.index = 0;
 
-      function next(lastResult) {
+      function next() {
         if (q.index < q.items.length) {
           return loop();
         }
-        onDone();
+        q.index = null;
+        emit(_constants.EFFECT_QUEUE_END, q);
         return q.result;
       };
       function loop() {
-        onStep(q, 'in');
+        emit(_constants.EFFECT_QUEUE_STEP_IN, q);
         var _q$items$q$index = q.items[q.index],
             type = _q$items$q$index.type,
             func = _q$items$q$index.func;
@@ -989,9 +1101,9 @@ function createQueue(setStateValue, getStateValue) {
         if (logic) {
           var r = logic(q, func, payload, function (lastResult) {
             q.result = lastResult;
-            onStep(q, 'out');
+            emit(_constants.EFFECT_QUEUE_STEP_OUT, q);
             q.index++;
-            return next(lastResult);
+            return next();
           });
 
           return r;
@@ -999,6 +1111,7 @@ function createQueue(setStateValue, getStateValue) {
         throw new Error('Unsupported method "' + type + '".');
       };
 
+      emit(_constants.EFFECT_QUEUE_START, q);
       return q.items.length > 0 ? loop() : q.result;
     },
     cancel: function cancel() {
@@ -1009,7 +1122,7 @@ function createQueue(setStateValue, getStateValue) {
   return q;
 }
 
-},{"./utils":19}],8:[function(require,module,exports){
+},{"./constants":1,"./queueMethods/filter":8,"./queueMethods/map":9,"./queueMethods/mapToKey":10,"./queueMethods/mutate":11,"./queueMethods/pipe":12,"./utils":19}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1432,7 +1545,7 @@ exports.default = function (lifecycle) {
 
       if (newStuff) {
         Object.keys(newStuff).forEach(function (key) {
-          if ((0, _effect.isRiewEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
+          if ((0, _effect.isEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
             var effect = newStuff[key];
 
             result[key] = effect();
@@ -1528,10 +1641,10 @@ exports.default = function (lifecycle) {
     };
     instance.unmount = function () {
       active = false;
-      output.teardown();
-      api.teardown();
+      output.destroy();
+      api.destroy();
       internalStates.forEach(function (s) {
-        return s.teardown();
+        return s.destroy();
       });
       internalStates = [];
       onUnmountCallbacks.filter(function (f) {
@@ -1544,7 +1657,7 @@ exports.default = function (lifecycle) {
         return s.unsubscribe();
       });
       subscriptions = [];
-      lifecycle.unmount(instance);
+      lifecycle.unmount(instance, output());
       return instance;
     };
     instance.__setExternals = function (maps) {
@@ -1568,7 +1681,7 @@ exports.default = function (lifecycle) {
       return newInstance;
     };
 
-    lifecycle.created(instance);
+    lifecycle.created(instance, output());
     return instance;
   };
 };
@@ -1912,6 +2025,8 @@ var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
 
 var _utils = require('./utils');
 
+var _queue = require('./queue');
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -1923,12 +2038,12 @@ function State(initialValue, loggable) {
 
   s.loggable = loggable;
   s.id = (0, _utils.getId)('s');
+  s.queueAPI = (0, _queue.createQueueAPI)();
   s.triggerListeners = function () {
     listeners.forEach(function (l) {
       return l();
     });
   };
-
   s.get = function () {
     return value;
   };
@@ -1957,12 +2072,13 @@ function State(initialValue, loggable) {
   return s;
 };
 
-},{"./utils":19,"fast-deep-equal":20}],19:[function(require,module,exports){
+},{"./queue":7,"./utils":19,"fast-deep-equal":20}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+/* eslint-disable consistent-return */
 var isPromise = exports.isPromise = function isPromise(obj) {
   return obj && typeof obj['then'] === 'function';
 };
@@ -2086,6 +2202,33 @@ var ids = 0;
 
 var getId = exports.getId = function getId(prefix) {
   return prefix + '_' + ++ids;
+};
+
+var createEventBus = exports.createEventBus = function createEventBus(events) {
+  var emit = function emit(type) {
+    for (var _len4 = arguments.length, payload = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
+      payload[_key4 - 1] = arguments[_key4];
+    }
+
+    if (events[type]) {
+      return events[type].apply(events, payload);
+    }
+  };
+
+  emit.extend = function (newEvents) {
+    var newEmit = createEventBus(newEvents);
+
+    return function (type) {
+      for (var _len5 = arguments.length, payload = Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
+        payload[_key5 - 1] = arguments[_key5];
+      }
+
+      newEmit.apply(undefined, [type].concat(payload));
+      emit.apply(undefined, [type].concat(payload));
+    };
+  };
+
+  return emit;
 };
 
 },{}],20:[function(require,module,exports){

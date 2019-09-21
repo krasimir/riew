@@ -618,7 +618,7 @@ describe('Given the state', () => {
 
   /* define (custom methods) */
   describe('when we define a custom method', () => {
-    fit('should be able to use it as a normal queue method', () => {
+    it('should be able to use it as a normal queue method', () => {
       const [ s, setState ] = state(2);
       const [ y ] = state({ hello: 'world' });
       const spy3 = jest.fn();

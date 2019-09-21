@@ -1,6 +1,7 @@
 import { state, use } from './index';
 import { isEffect } from './effect';
 import { isPromise, parallel, getFuncName, getId } from './utils';
+import { RIEW_RENDER, RIEW_UNMOUNT, RIEW_CREATED } from './constants';
 
 function ensureObject(value, context) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
@@ -20,7 +21,7 @@ function normalizeExternalsMap(arr) {
 }
 const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
 
-export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
+export default (emit) => function createRiew(viewFunc, ...controllers) {
   const instance = { id: getId('r'), name: getFuncName(viewFunc) };
   let active = false;
   let internalStates = [];
@@ -59,7 +60,7 @@ export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
   });
   const render = updateOutput.filter(isActive).pipe(value => {
     viewFunc(value);
-    lifecycle.render(instance, value);
+    emit(RIEW_RENDER, instance, value);
   });
   const updateAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
@@ -122,15 +123,15 @@ export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
   };
   instance.unmount = () => {
     active = false;
-    output.teardown();
-    api.teardown();
-    internalStates.forEach(s => s.teardown());
+    output.destroy();
+    api.destroy();
+    internalStates.forEach(s => s.destroy());
     internalStates = [];
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
     subscriptions.forEach(s => s.unsubscribe());
     subscriptions = [];
-    lifecycle.unmount(instance, output());
+    emit(RIEW_UNMOUNT, instance, output());
     return instance;
   };
   instance.__setExternals = (maps) => {
@@ -150,6 +151,6 @@ export default (lifecycle) => function createRiew(viewFunc, ...controllers) {
     return newInstance;
   };
 
-  lifecycle.created(instance, output());
+  emit(RIEW_CREATED, instance, output());
   return instance;
 };

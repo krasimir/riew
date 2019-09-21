@@ -1,10 +1,5 @@
-import { getId, isPromise } from './utils';
-import pipe from './queueMethods/pipe';
-import map from './queueMethods/map';
-import mapToKey from './queueMethods/mapToKey';
-import mutate from './queueMethods/mutate';
-import filter from './queueMethods/filter';
-import createQueue from './queue';
+import { getId } from './utils';
+import { createQueue } from './queue';
 import { EFFECT_FORK, EFFECT_EXPORTED, STATE_DESTROY, EFFECT_QUEUE_END } from './constants';
 
 export function isEffect(func) {
@@ -28,7 +23,6 @@ export const implementIterable = (obj) => {
 };
 
 export default function createEffect(state, items = [], emit) {
-  const queueAPI = {};
   let active = true;
 
   const effect = function (...payload) {
@@ -36,9 +30,7 @@ export default function createEffect(state, items = [], emit) {
       return state.get();
     }
     const queue = createQueue(
-      state.set,
-      state.get,
-      queueAPI,
+      state,
       emit.extend({
         [ EFFECT_QUEUE_END ]: () => {
           effect.__queues = effect.__queues.filter(q => q.id !== queue.id);
@@ -64,13 +56,16 @@ export default function createEffect(state, items = [], emit) {
   implementIterable(effect);
 
   // queue methods
-  Object.keys(queueAPI).forEach(m => {
+  Object.keys(state.queueAPI).forEach(m => {
     effect[m] = (...methodArgs) => fork([ { type: m, func: methodArgs } ]);
   });
 
   // effect direct methods
   effect.define = (methodName, func) => {
-    defineQueueMethod(methodName, func);
+    state.queueAPI.define(methodName, func);
+    effect[methodName] = (...methodArgs) => {
+      return fork([ { type: methodName, func: methodArgs } ]);
+    };
     return effect;
   };
   effect.isMutating = () => {
@@ -137,26 +132,6 @@ export default function createEffect(state, items = [], emit) {
 
     return testTrigger;
   };
-
-  function defineQueueMethod(methodName, func) {
-    queueAPI[methodName] = function (q, args, payload, next) {
-      const result = func(...args)(q.result, payload, q);
-
-      if (isPromise(result)) {
-        return result.then(next);
-      }
-      return next(result);
-    };
-    effect[methodName] = (...methodArgs) => {
-      return fork([ { type: methodName, func: methodArgs } ]);
-    };
-  };
-
-  defineQueueMethod('pipe', pipe);
-  defineQueueMethod('map', map);
-  defineQueueMethod('mapToKey', mapToKey);
-  defineQueueMethod('mutate', mutate);
-  defineQueueMethod('filter', filter);
 
   return effect;
 };

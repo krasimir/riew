@@ -1,4 +1,4 @@
-import { gridAdd, gridFreeNode, gridGetNode, gridGetNodes } from '../grid';
+import { gridAdd, gridRemove, gridGetNode, gridGetNodes } from '../grid';
 import { state } from '../index';
 import harvester from '../harvester';
 
@@ -16,7 +16,7 @@ describe('Given the grid', () => {
       gridAdd(obj2, obj.id);
       gridAdd(obj3, obj2.id);
       expect(gridGetNode('foo')).toStrictEqual(obj);
-      gridFreeNode(obj);
+      gridRemove(obj);
       expect(() => gridGetNode('foo')).toThrowError('A node with identifier "foo" is missing in the grid.');
       expect(() => gridGetNode('bar')).toThrowError('A node with identifier "bar" is missing in the grid.');
       expect(() => gridGetNode('moo')).toThrowError('A node with identifier "moo" is missing in the grid.');
@@ -34,8 +34,8 @@ describe('Given the grid', () => {
         expect.objectContaining({ id: s2.state.id }),
         expect.objectContaining({ id: s2.id })
       ]);
-      s1.teardown();
-      s2.teardown();
+      s1.destroy();
+      s2.destroy();
       expect(gridGetNodes()).toHaveLength(0);
     });
   });
