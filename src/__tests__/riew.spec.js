@@ -56,18 +56,20 @@ describe('Given the `riew` factory function', () => {
     it('should teardown the effect if the riew is unmounted', () => {
       let ss;
       const view = jest.fn();
-      const se = function ({ state, render }) {
-        const s = ss = state('foo');
+      const controller = function ({ state, render }) {
+        const [ s, set ] = state('foo').subscribe();
 
         render({ s });
+        ss = set;
+        set('bar');
       };
-      const r = riew(view, se);
+      const r = riew(view, controller);
 
       r.mount();
-      expect(view).toBeCalledWithArgs([ expect.any(Object) ]);
-      expect(ss.isActive()).toBe(true);
       r.unmount();
-      expect(ss.isActive()).toBe(false);
+      ss('moo');
+      ss('boo');
+      expect(view).toBeCalledWithArgs([ { s: 'bar' } ]);
     });
     it('should send the state value to the view', () => {
       const view = jest.fn();

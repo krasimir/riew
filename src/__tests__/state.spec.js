@@ -207,14 +207,18 @@ describe('Given the state', () => {
     it('should stop the currently running queues (if any)', async () => {
       const [ s ] = state(10);
       const spy = jest.fn();
-      const m = s.pipe(async () => {
-        await delay(5);
-      }).mutate((value) => value + 5).pipe(spy);
+      const [ m, , cancel ] = s.pipe(async (value, nDelay) => {
+        await delay(nDelay);
+      }).mutate((value) => {
+        return value + 5;
+      }).pipe(spy);
 
-      m();
-      m.cancel();
+      m(5);
+      m(6);
+      m(7);
+      cancel();
 
-      await delay(10);
+      await delay(15);
       expect(s()).toBe(10);
       expect(spy).not.toBeCalled();
     });
@@ -483,7 +487,7 @@ describe('Given the state', () => {
         .subscribe();
 
       expect(s.state.listeners().length).toBe(1);
-      expect(s.state.listeners()[0].__items.map(({ type }) => type))
+      expect(s.state.listeners()[0].items.map(({ type }) => type))
         .toStrictEqual([ 'filter', 'map', 'pipe' ]);
 
       s
@@ -503,7 +507,7 @@ describe('Given the state', () => {
     });
   });
   describe('when the queue finishes', () => {
-    it('should remove it from the effect\'s __queues array', async () => {
+    it('should remove it from the state\'s queues array', async () => {
       const [ s ] = state(10);
       const m = s.mutate(async (value) => {
         await delay(5);
@@ -511,10 +515,10 @@ describe('Given the state', () => {
       }).map(value => value - 2);
 
       m();
-      expect(m.__queues).toHaveLength(1);
-      await delay(7);
+      expect(m.state.queues()).toHaveLength(1);
+      await delay(10);
       expect(s()).toBe(50);
-      expect(m.__queues).toHaveLength(0);
+      expect(m.state.queues()).toHaveLength(0);
     });
   });
   describe('when we use a trigger as a beginning of new queue', () => {
@@ -535,7 +539,7 @@ describe('Given the state', () => {
       expect(spy2.mock.calls[0]).toStrictEqual([ 'FOO' ]);
     });
   });
-  describe('when we want to test a trigger', () => {
+  describe('when we want to test an effect', () => {
     it('should allow us to set a predefine value and swap queue items', () => {
       const s = state({ flag: false, index: 0 });
       const spy = jest.fn();
@@ -603,16 +607,17 @@ describe('Given the state', () => {
 
   /* Iterable */
   describe('when we destruct a state', () => {
-    it('should give us getter, setter which are actually triggers and the state itself', () => {
-      const [ get, set, s ] = state('foo');
+    it('should give us getter, setter which are actually effects and the state cancel method', () => {
+      const [ get, set, cancel ] = state('foo');
       const spy = jest.fn();
 
       get.map(value => value.toUpperCase()).pipe(spy).subscribe(true);
 
       set('bar');
       expect(get()).toBe('bar');
-      expect(s.map(value => value + 'zar')()).toBe('barzar');
+      expect(get.map(value => value + 'zar')()).toBe('barzar');
       expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
+      expect(cancel).toBe(get.state.cancel);
     });
   });
 

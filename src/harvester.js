@@ -10,9 +10,6 @@ import { createEventBus } from './utils';
 import {
   STATE_DESTROY,
   EFFECT_EXPORTED,
-  RIEW_CREATED,
-  RIEW_RENDER,
-  RIEW_UNMOUNT,
   EFFECT_FORK,
   STATE_CREATED,
   EFFECT_CREATED,
@@ -60,16 +57,15 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   h.defineProduct(
     'state',
     (initialValue, loggable) => {
-      const state = State(initialValue, loggable);
       const emit = createEventBus({
         [ STATE_DESTROY ]: () => {
           const removed = gridRemove(state);
 
+          state.destroy();
           removed.filter(isEffect).forEach(e => {
             if ('__exportedAs' in e) {
               h.undefineProduct(e.__exportedAs);
             }
-            e.cancel();
             emit(EFFECT_REMOVED, e);
           });
         },
@@ -79,13 +75,14 @@ const defineHarvesterBuiltInCapabilities = function (h) {
           logger.log(EFFECT_EXPORTED, effect, name);
         },
         [ EFFECT_FORK ]: (effect, newItems) => {
-          const newEffect = createEffect(state, [ ...effect.__items, ...newItems ], emit);
+          const newEffect = createEffect(state, [ ...effect.items, ...newItems ], emit);
 
           gridAdd(newEffect, effect.id);
           emit(EFFECT_CREATED, newEffect);
           return newEffect;
         }
       });
+      const state = State(initialValue, loggable, emit);
       const effect = createEffect(state, [], emit);
 
       gridAdd(state);

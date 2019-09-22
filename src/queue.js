@@ -73,7 +73,11 @@ export function createQueue(state, emit) {
       };
 
       emit(EFFECT_QUEUE_START, q);
-      return q.items.length > 0 ? loop() : q.result;
+      if (q.items.length > 0) {
+        return loop();
+      }
+      emit(EFFECT_QUEUE_END, q);
+      return q.result;
     },
     cancel() {
       q.items = [];
