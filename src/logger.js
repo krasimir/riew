@@ -4,7 +4,6 @@ import sanitize from './sanitize';
 import { getFuncName } from './utils';
 import { isState } from './state';
 import { isEffect } from './effect';
-import { isQueue } from './queue';
 import { isGridNode } from './grid';
 import { isRiew } from './riew';
 
@@ -36,6 +35,7 @@ function normalizeQueue(q) {
 
   return {
     id: q.id,
+    effectId: q.effectId,
     result: sanitize(q.result),
     items: items,
     index: q.index,
@@ -60,7 +60,7 @@ function normalizeRiew(riew, props) {
 }
 
 function normalize(payload) {
-  let state, effect, queue, gridNode, riew;
+  let state, effect, gridNode, riew;
   let product = payload[0];
 
   if (product && product.loggable === false) return;
@@ -69,8 +69,6 @@ function normalize(payload) {
     state = normalizeState(product);
   } else if (isEffect(product)) {
     effect = normalizeEffect(product);
-  } else if (isQueue(product)) {
-    queue = normalizeQueue(product);
   } else if (isGridNode(product)) {
     gridNode = normalizeGridNode(product);
   } else if (isRiew(product)) {
@@ -81,7 +79,6 @@ function normalize(payload) {
     {},
     state,
     effect,
-    queue,
     gridNode,
     riew
   );

@@ -9,47 +9,46 @@ export function isState(state) {
 }
 
 export function State(initialValue, emit) {
-  const s = {};
+  const state = {};
   let value = initialValue;
   let listeners = [];
   let queues = [];
   let active = true;
 
-  s.id = getId('s');
-  s.queueAPI = createQueueAPI();
-  s.triggerListeners = () => (listeners.forEach(l => l()));
-  s.get = () => value;
-  s.set = (newValue) => {
+  state.id = getId('s');
+  state.queueAPI = createQueueAPI();
+  state.triggerListeners = () => (listeners.forEach(l => l()));
+  state.get = () => value;
+  state.set = (newValue) => {
     if (equal(value, newValue)) return;
     value = newValue;
-    s.triggerListeners();
+    state.triggerListeners();
   };
-  s.destroy = () => {
+  state.destroy = () => {
     active = false;
-    s.cancel();
+    state.cancel();
     listeners = [];
   };
-  s.listeners = () => listeners;
-  s.addListener = (effect) => listeners.push(effect);
-  s.removeListener = (effect) => (listeners = listeners.filter(({ id }) => id !== effect.id));
-  s.runQueue = (effect, payload) => {
+  state.listeners = () => listeners;
+  state.addListener = (effect) => listeners.push(effect);
+  state.removeListener = (effect) => (listeners = listeners.filter(({ id }) => id !== effect.id));
+  state.runQueue = (effect, payload) => {
     if (!active) return value;
-    emit(EFFECT_START, effect);
     const queue = createQueue(
-      s,
+      state,
       {
-        start() {
-          emit(EFFECT_START, effect);
+        start(q) {
+          emit(EFFECT_START, effect, q);
         },
-        end() {
-          queues = queues.filter(({ id }) => id !== queue.id);
+        end(q) {
+          queues = queues.filter(({ id }) => id !== q.id);
           emit(EFFECT_END, effect);
         },
-        stepIn() {
-          emit(QUEUE_STEP_IN, effect, queue);
+        stepIn(q) {
+          emit(QUEUE_STEP_IN, effect, q);
         },
-        stepOut() {
-          emit(QUEUE_STEP_OUT, effect, queue);
+        stepOut(q) {
+          emit(QUEUE_STEP_OUT, effect, q);
         }
       }
     );
@@ -58,11 +57,11 @@ export function State(initialValue, emit) {
     queues.push(queue);
     return queue.process(...payload);
   };
-  s.cancel = () => {
+  state.cancel = () => {
     queues.forEach(q => q.cancel());
     queues = [];
   };
-  s.queues = () => queues;
+  state.queues = () => queues;
 
-  return s;
+  return state;
 };

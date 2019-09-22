@@ -17,7 +17,10 @@ export default function createEffect(state, items = [], emit = () => {}) {
       newItems.push(newItem);
     }
 
-    return createEffect(state, newItems, emit);
+    const newEffect = createEffect(state, newItems, emit);
+
+    newEffect.loggability(effect.loggable);
+    return newEffect;
   };
 
   effect.id = getId('e');

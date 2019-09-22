@@ -12,9 +12,9 @@ describe('Given the logger', () => {
       const r = riew(view, controller).with({ s1 });
 
       r.mount();
+      setState1('foo');
       console.log(JSON.stringify(logger.events(), null, 2));
 
-      // setState1('foo');
       // s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
       // r.update({ x: 'y' });
 
