@@ -2,7 +2,7 @@ import equal from 'fast-deep-equal';
 
 import { getId } from './utils';
 import { createQueueAPI, createQueue } from './queue';
-import { QUEUE_END } from './constants';
+import { EFFECT_START, EFFECT_END, QUEUE_STEP_IN, QUEUE_STEP_OUT } from './constants';
 
 export function isState(state) {
   return state && state.id && state.id.split('_').shift() === 's';
@@ -32,18 +32,29 @@ export function State(initialValue, emit) {
   s.listeners = () => listeners;
   s.addListener = (effect) => listeners.push(effect);
   s.removeListener = (effect) => (listeners = listeners.filter(({ id }) => id !== effect.id));
-  s.runQueue = (items, payload) => {
+  s.runQueue = (effect, payload) => {
     if (!active) return value;
+    emit(EFFECT_START, effect);
     const queue = createQueue(
       s,
-      emit.extend({
-        [ QUEUE_END ]: () => {
-          queues = queues.filter(q => q.id !== queue.id);
+      {
+        start() {
+          emit(EFFECT_START, effect);
+        },
+        end() {
+          queues = queues.filter(({ id }) => id !== queue.id);
+          emit(EFFECT_END, effect);
+        },
+        stepIn() {
+          emit(QUEUE_STEP_IN, effect, queue);
+        },
+        stepOut() {
+          emit(QUEUE_STEP_OUT, effect, queue);
         }
-      })
+      }
     );
 
-    items.forEach(({ type, func }) => queue.add(type, func));
+    effect.items.forEach(({ type, func }) => queue.add(type, func));
     queues.push(queue);
     return queue.process(...payload);
   };

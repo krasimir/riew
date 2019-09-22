@@ -9,7 +9,8 @@ import createEventBus from './eventBus';
 import {
   STATE_DESTROY,
   EFFECT_EXPORTED,
-  EFFECT_TRIGGERED
+  EFFECT_START,
+  EFFECT_END
 } from './constants';
 import { implementLoggableInterface } from './interfaces';
 
@@ -64,14 +65,18 @@ const defineHarvesterBuiltInCapabilities = function (h) {
           effect.__exportedAs = name;
           h.defineProduct(name, () => effect);
         },
-        [ EFFECT_TRIGGERED ]: (effect) => {
+        [ EFFECT_START ]: (effect) => {
           grid.add(effect, effect.state.id);
+        },
+        [ EFFECT_END ]: (effect) => {
+          grid.remove(effect);
         }
       });
       const state = State(initialValue, emit);
-      const effect = createEffect(state, [], emit);
 
       implementLoggableInterface(state, loggable);
+
+      const effect = createEffect(state, [], emit);
 
       grid.add(state);
       return effect;

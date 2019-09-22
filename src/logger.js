@@ -93,7 +93,7 @@ function Logger() {
 
   api.log = (type, payload) => {
     if (Array.isArray(payload[0])) {
-      payload[0].forEach(p => api.log(type, p));
+      payload[0].forEach(x => api.log(type, [ x ]));
       return;
     };
     const normalizedPayload = normalize(payload);

@@ -1,5 +1,4 @@
 import { getFuncName, getId, isPromise } from './utils';
-import { QUEUE_END, QUEUE_START, QUEUE_STEP_IN, QUEUE_STEP_OUT } from './constants';
 import pipe from './queueMethods/pipe';
 import map from './queueMethods/map';
 import mapToKey from './queueMethods/mapToKey';
@@ -34,7 +33,7 @@ export function createQueueAPI() {
   return { ...queueAPI };
 };
 
-export function createQueue(state, emit) {
+export function createQueue(state, lifecycle) {
   const setStateValue = state.set;
   const getStateValue = state.get;
   const queueAPI = state.queueAPI;
@@ -56,18 +55,18 @@ export function createQueue(state, emit) {
           return loop();
         }
         q.index = null;
-        emit(QUEUE_END, q);
+        lifecycle.end();
         return q.result;
       };
       function loop() {
-        emit(QUEUE_STEP_IN, q);
+        lifecycle.stepIn();
         const { type, func } = q.items[q.index];
         const logic = queueAPI[type];
 
         if (logic) {
           const r = logic(q, func, payload, (lastResult) => {
             q.result = lastResult;
-            emit(QUEUE_STEP_OUT, q);
+            lifecycle.stepOut();
             q.index++;
             return next();
           });
@@ -77,11 +76,11 @@ export function createQueue(state, emit) {
         throw new Error(`Unsupported method "${ type }".`);
       };
 
-      emit(QUEUE_START, q);
+      lifecycle.start();
       if (q.items.length > 0) {
         return loop();
       }
-      emit(QUEUE_END, q);
+      lifecycle.end();
       return q.result;
     },
     cancel() {

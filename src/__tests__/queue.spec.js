@@ -14,10 +14,20 @@ describe('Given the createQueue helper', () => {
       };
       const setValue = jest.fn();
       const getValue = jest.fn().mockImplementation(() => 42);
-      const emit = jest.fn().mockImplementation((type, q) => {
-        steps.push([ type, q.result ]);
+      const q = createQueue({ set: setValue, get: getValue, queueAPI }, {
+        start() {
+          steps.push([ 'start', q.result ]);
+        },
+        end() {
+          steps.push([ 'end', q.result ]);
+        },
+        stepIn() {
+          steps.push([ 'stepIn', q.result ]);
+        },
+        stepOut() {
+          steps.push([ 'stepOut', q.result ]);
+        }
       });
-      const q = createQueue({ set: setValue, get: getValue, queueAPI }, emit);
 
       q.add('foo', [(value) => {
         return value + 10;
@@ -31,14 +41,14 @@ describe('Given the createQueue helper', () => {
 
       expect(q.process()).toEqual(75);
       expect(steps).toStrictEqual([
-        [ 'QUEUE_START', 42 ],
-        [ 'QUEUE_STEP_IN', 42 ],
-        [ 'QUEUE_STEP_OUT', 52 ],
-        [ 'QUEUE_STEP_IN', 52 ],
-        [ 'QUEUE_STEP_OUT', 57 ],
-        [ 'QUEUE_STEP_IN', 57 ],
-        [ 'QUEUE_STEP_OUT', 75 ],
-        [ 'QUEUE_END', 75 ]
+        [ 'start', 42 ],
+        [ 'stepIn', 42 ],
+        [ 'stepOut', 52 ],
+        [ 'stepIn', 52 ],
+        [ 'stepOut', 57 ],
+        [ 'stepIn', 57 ],
+        [ 'stepOut', 75 ],
+        [ 'end', 75 ]
       ]);
     });
   });

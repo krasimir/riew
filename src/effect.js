@@ -1,5 +1,5 @@
 import { getId } from './utils';
-import { EFFECT_EXPORTED, STATE_DESTROY, EFFECT_TRIGGERED } from './constants';
+import { EFFECT_EXPORTED, STATE_DESTROY } from './constants';
 import { implementIterableProtocol, implementLoggableInterface } from './interfaces';
 
 export function isEffect(effect) {
@@ -8,10 +8,7 @@ export function isEffect(effect) {
 
 export default function createEffect(state, items = [], emit = () => {}) {
   const effect = function (...payload) {
-    const r = state.runQueue(effect.items, payload);
-
-    emit(EFFECT_TRIGGERED, effect);
-    return r;
+    return state.runQueue(effect, payload);
   };
   const fork = function (newItem) {
     const newItems = [ ...effect.items ];

@@ -343,7 +343,7 @@ describe('Given the `riew` factory function', () => {
       });
     });
     describe('and when we use same instance with different externals', () => {
-      it('should keep the externals and instances different', () => {
+      it('should add externals on top of the existing ones', () => {
         const spy = jest.fn();
         const r = riew(spy);
         const ra = r.with({ foo: 'bar' });
@@ -352,9 +352,10 @@ describe('Given the `riew` factory function', () => {
         ra.mount({});
         rb.mount({});
 
-        expect(spy).toBeCalledTimes(2);
-        expect(spy.mock.calls[0]).toStrictEqual([ { foo: 'bar' } ]);
-        expect(spy.mock.calls[1]).toStrictEqual([ { moo: 'noo' } ]);
+        expect(spy).toBeCalledWithArgs(
+          [ { foo: 'bar', moo: 'noo' } ],
+          [ { foo: 'bar', moo: 'noo' } ]
+        );
       });
     });
   });

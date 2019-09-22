@@ -148,10 +148,8 @@ export default function createRiew(viewFunc, ...controllers) {
   };
 
   instance.with = (...maps) => {
-    const newInstance = createRiew(viewFunc, ...controllers);
-
-    newInstance.__setExternals(maps);
-    return newInstance;
+    instance.__setExternals(maps);
+    return instance;
   };
   instance.test = (map) => {
     const newInstance = createRiew(viewFunc, ...controllers);
