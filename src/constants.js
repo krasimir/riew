@@ -2,12 +2,13 @@ export const STATE_DESTROY = 'STATE_DESTROY';
 
 export const GRID_ADD = 'GRID_ADD';
 export const GRID_REMOVE = 'GRID_REMOVE';
-export const EFFECT_QUEUE_START = 'EFFECT_QUEUE_START';
-export const EFFECT_QUEUE_STEP_IN = 'EFFECT_QUEUE_STEP_IN';
-export const EFFECT_QUEUE_STEP_OUT = 'EFFECT_QUEUE_STEP_OUT';
-export const EFFECT_QUEUE_END = 'EFFECT_QUEUE_END';
+export const QUEUE_START = 'QUEUE_START';
+export const QUEUE_STEP_IN = 'QUEUE_STEP_IN';
+export const QUEUE_STEP_OUT = 'QUEUE_STEP_OUT';
+export const QUEUE_END = 'QUEUE_END';
+
+export const EFFECT_TRIGGERED = 'EFFECT_TRIGGERED';
 export const EFFECT_EXPORTED = 'EFFECT_EXPORTED';
-export const EFFECT_FORK = 'EFFECT_FORK';
 
 export const RIEW_CREATED = 'RIEW_CREATED';
 export const RIEW_RENDER = 'RIEW_RENDER';

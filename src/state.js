@@ -2,7 +2,7 @@ import equal from 'fast-deep-equal';
 
 import { getId } from './utils';
 import { createQueueAPI, createQueue } from './queue';
-import { EFFECT_QUEUE_END } from './constants';
+import { QUEUE_END } from './constants';
 
 export function isState(state) {
   return state && state.id && state.id.split('_').shift() === 's';
@@ -37,7 +37,7 @@ export function State(initialValue, emit) {
     const queue = createQueue(
       s,
       emit.extend({
-        [ EFFECT_QUEUE_END ]: () => {
+        [ QUEUE_END ]: () => {
           queues = queues.filter(q => q.id !== queue.id);
         }
       })

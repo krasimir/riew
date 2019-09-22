@@ -9,7 +9,7 @@ import createEventBus from './eventBus';
 import {
   STATE_DESTROY,
   EFFECT_EXPORTED,
-  EFFECT_FORK
+  EFFECT_TRIGGERED
 } from './constants';
 import { implementLoggableInterface } from './interfaces';
 
@@ -52,31 +52,20 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     'state',
     (initialValue, loggable) => {
       const emit = createEventBus({
-        [ STATE_DESTROY ]: () => {
-          const removed = grid.remove(state);
+        [ STATE_DESTROY ]: (effect) => {
+          const removed = grid.remove(state); /* eslint-disable-line */
 
           state.destroy();
-          removed.filter(isEffect).forEach(e => {
-            if ('__exportedAs' in e) {
-              h.undefineProduct(e.__exportedAs);
-            }
-          });
+          if ('__exportedAs' in effect) {
+            h.undefineProduct(effect.__exportedAs);
+          }
         },
         [ EFFECT_EXPORTED ]: (effect, name) => {
           effect.__exportedAs = name;
           h.defineProduct(name, () => effect);
         },
-        [ EFFECT_FORK ]: (effect, newItem) => {
-          const newItems = [ ...effect.items ];
-
-          if (newItem) {
-            newItems.push(newItem);
-          }
-
-          const newEffect = createEffect(state, newItems, emit);
-
-          grid.add(newEffect, effect.id);
-          return newEffect;
+        [ EFFECT_TRIGGERED ]: (effect) => {
+          grid.add(effect, effect.state.id);
         }
       });
       const state = State(initialValue, emit);
@@ -85,7 +74,6 @@ const defineHarvesterBuiltInCapabilities = function (h) {
       implementLoggableInterface(state, loggable);
 
       grid.add(state);
-      grid.add(effect, state.id);
       return effect;
     }
   );

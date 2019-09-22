@@ -1,14 +1,26 @@
 import { getId } from './utils';
-import { EFFECT_FORK, EFFECT_EXPORTED, STATE_DESTROY } from './constants';
+import { EFFECT_EXPORTED, STATE_DESTROY, EFFECT_TRIGGERED } from './constants';
 import { implementIterableProtocol, implementLoggableInterface } from './interfaces';
 
 export function isEffect(effect) {
   return effect && effect.id && effect.id.split('_').shift() === 'e';
 }
 
-export default function createEffect(state, items = [], emit) {
+export default function createEffect(state, items = [], emit = () => {}) {
   const effect = function (...payload) {
-    return state.runQueue(effect.items, payload);
+    const r = state.runQueue(effect.items, payload);
+
+    emit(EFFECT_TRIGGERED, effect);
+    return r;
+  };
+  const fork = function (newItem) {
+    const newItems = [ ...effect.items ];
+
+    if (newItem) {
+      newItems.push(newItem);
+    }
+
+    return createEffect(state, newItems, emit);
   };
 
   effect.id = getId('e');
@@ -20,14 +32,14 @@ export default function createEffect(state, items = [], emit) {
 
   // queue methods
   Object.keys(state.queueAPI).forEach(m => {
-    effect[m] = (...methodArgs) => emit(EFFECT_FORK, effect, { type: m, func: methodArgs });
+    effect[m] = (...methodArgs) => fork({ type: m, func: methodArgs });
   });
 
   // effect direct methods
   effect.define = (methodName, func) => {
     state.queueAPI.define(methodName, func);
     effect[methodName] = (...methodArgs) => {
-      return emit(EFFECT_FORK, effect, { type: methodName, func: methodArgs });
+      return fork({ type: methodName, func: methodArgs });
     };
     return effect;
   };
@@ -47,7 +59,7 @@ export default function createEffect(state, items = [], emit) {
     return effect;
   };
   effect.destroy = () => {
-    emit(STATE_DESTROY);
+    emit(STATE_DESTROY, effect);
     return effect;
   };
   effect.export = name => {
@@ -55,7 +67,7 @@ export default function createEffect(state, items = [], emit) {
     return effect;
   };
   effect.test = function (callback) {
-    const test = emit(EFFECT_FORK, effect);
+    const test = fork();
     const tools = {
       setValue(newValue) {
         test.items = [

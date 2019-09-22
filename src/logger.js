@@ -75,8 +75,6 @@ function normalize(payload) {
     gridNode = normalizeGridNode(product);
   } else if (isRiew(product)) {
     riew = normalizeRiew(product, payload[1]);
-  } else if (typeof product !== 'undefined') {
-    console.error('Logger: unrecognized logger entry', payload[0]);
   }
 
   return Object.assign(

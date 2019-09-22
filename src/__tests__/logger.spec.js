@@ -5,7 +5,7 @@ describe('Given the logger', () => {
     reset();
   });
   describe('when we want to see what happened', () => {
-    it('should show us the events that were emitted', () => {
+    xit('should show us the events that were emitted', () => {
       const view = function MyView() {};
       const [ s1, setState1 ] = state('a');
       // const controller = function myController() {};

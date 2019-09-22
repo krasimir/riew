@@ -31,14 +31,14 @@ describe('Given the createQueue helper', () => {
 
       expect(q.process()).toEqual(75);
       expect(steps).toStrictEqual([
-        [ 'EFFECT_QUEUE_START', 42 ],
-        [ 'EFFECT_QUEUE_STEP_IN', 42 ],
-        [ 'EFFECT_QUEUE_STEP_OUT', 52 ],
-        [ 'EFFECT_QUEUE_STEP_IN', 52 ],
-        [ 'EFFECT_QUEUE_STEP_OUT', 57 ],
-        [ 'EFFECT_QUEUE_STEP_IN', 57 ],
-        [ 'EFFECT_QUEUE_STEP_OUT', 75 ],
-        [ 'EFFECT_QUEUE_END', 75 ]
+        [ 'QUEUE_START', 42 ],
+        [ 'QUEUE_STEP_IN', 42 ],
+        [ 'QUEUE_STEP_OUT', 52 ],
+        [ 'QUEUE_STEP_IN', 52 ],
+        [ 'QUEUE_STEP_OUT', 57 ],
+        [ 'QUEUE_STEP_IN', 57 ],
+        [ 'QUEUE_STEP_OUT', 75 ],
+        [ 'QUEUE_END', 75 ]
       ]);
     });
   });

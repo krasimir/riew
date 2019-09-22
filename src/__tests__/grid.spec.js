@@ -29,9 +29,7 @@ describe('Given the grid', () => {
 
       expect(grid.nodes()).toStrictEqual([
         expect.objectContaining({ product: expect.objectContaining({ id: s1.state.id }) }),
-        expect.objectContaining({ product: expect.objectContaining({ id: s1.id }) }),
-        expect.objectContaining({ product: expect.objectContaining({ id: s2.state.id }) }),
-        expect.objectContaining({ product: expect.objectContaining({ id: s2.id }) })
+        expect.objectContaining({ product: expect.objectContaining({ id: s2.state.id }) })
       ]);
       s1.destroy();
       s2.destroy();
