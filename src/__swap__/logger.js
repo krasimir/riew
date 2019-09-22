@@ -1,10 +1,8 @@
 function noop() {};
 const logger = {
   log: noop,
-  events: noop,
-  grid: noop,
-  data: { events: noop, grid: noop },
-  reset: noop
+  reset: noop,
+  events: noop
 };
 
 export default logger;

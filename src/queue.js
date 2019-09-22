@@ -5,6 +5,7 @@ import map from './queueMethods/map';
 import mapToKey from './queueMethods/mapToKey';
 import mutate from './queueMethods/mutate';
 import filter from './queueMethods/filter';
+import { implementLoggableInterface } from './interfaces';
 
 const queueAPI = {
   define(methodName, func) {
@@ -24,6 +25,10 @@ queueAPI.define('map', map);
 queueAPI.define('mapToKey', mapToKey);
 queueAPI.define('mutate', mutate);
 queueAPI.define('filter', filter);
+
+export function isQueue(queue) {
+  return queue && queue.id && queue.items && queue.process;
+}
 
 export function createQueueAPI() {
   return { ...queueAPI };
@@ -83,6 +88,8 @@ export function createQueue(state, emit) {
       q.items = [];
     }
   };
+
+  implementLoggableInterface(q, state.loggable);
 
   return q;
 }

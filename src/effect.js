@@ -1,25 +1,10 @@
 import { getId } from './utils';
 import { EFFECT_FORK, EFFECT_EXPORTED, STATE_DESTROY } from './constants';
+import { implementIterableProtocol, implementLoggableInterface } from './interfaces';
 
-export function isEffect(func) {
-  return func && func.id && func.state && func.items;
+export function isEffect(effect) {
+  return effect && effect.id && effect.id.split('_').shift() === 'e';
 }
-
-export const implementIterable = (effect) => {
-  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
-    effect[Symbol.iterator] = function () {
-      const values = [ effect, effect.mutate(), effect.state.cancel ];
-      let i = 0;
-
-      return {
-        next: () => ({
-          value: values[ i++ ],
-          done: i > values.length
-        })
-      };
-    };
-  }
-};
 
 export default function createEffect(state, items = [], emit) {
   const effect = function (...payload) {
@@ -30,7 +15,8 @@ export default function createEffect(state, items = [], emit) {
   effect.state = state;
   effect.items = items;
 
-  implementIterable(effect);
+  implementLoggableInterface(effect, state.loggable);
+  implementIterableProtocol(effect);
 
   // queue methods
   Object.keys(state.queueAPI).forEach(m => {

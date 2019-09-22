@@ -5,12 +5,13 @@ import createEffect, { isEffect } from './effect';
 import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
-import { createEventBus } from './utils';
+import createEventBus from './eventBus';
 import {
   STATE_DESTROY,
   EFFECT_EXPORTED,
   EFFECT_FORK
 } from './constants';
+import { implementLoggableInterface } from './interfaces';
 
 function Harvester() {
   const api = {};
@@ -78,8 +79,10 @@ const defineHarvesterBuiltInCapabilities = function (h) {
           return newEffect;
         }
       });
-      const state = State(initialValue, loggable, emit);
+      const state = State(initialValue, emit);
       const effect = createEffect(state, [], emit);
+
+      implementLoggableInterface(state, loggable);
 
       grid.add(state);
       grid.add(effect, state.id);
@@ -123,7 +126,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
   // ------------------------------------------------------------------ riew
   h.defineProduct('riew', (viewFunc, ...controllers) => {
-    return createRiew(createEventBus({}))(viewFunc, ...controllers);
+    return createRiew(viewFunc, ...controllers);
   });
 
   // ------------------------------------------------------------------ reactRiew

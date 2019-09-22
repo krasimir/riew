@@ -4,14 +4,17 @@ import { getId } from './utils';
 import { createQueueAPI, createQueue } from './queue';
 import { EFFECT_QUEUE_END } from './constants';
 
-export function State(initialValue, loggable, emit) {
+export function isState(state) {
+  return state && state.id && state.id.split('_').shift() === 's';
+}
+
+export function State(initialValue, emit) {
   const s = {};
   let value = initialValue;
   let listeners = [];
   let queues = [];
   let active = true;
 
-  s.loggable = loggable;
   s.id = getId('s');
   s.queueAPI = createQueueAPI();
   s.triggerListeners = () => (listeners.forEach(l => l()));

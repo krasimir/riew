@@ -1,4 +1,3 @@
-/* eslint-disable consistent-return */
 export const isPromise = obj => obj && typeof obj['then'] === 'function';
 export const isObjectLiteral = obj => (obj ? obj.constructor === {}.constructor : false);
 export const getFuncName = (func) => {
@@ -95,22 +94,3 @@ export const parallel = (...args) => (arg) => {
 let ids = 0;
 
 export const getId = (prefix) => `${ prefix }_${ ++ids }`;
-
-export const createEventBus = (events) => {
-  const emit = (type, ...payload) => {
-    if (events[type]) {
-      return events[type](...payload);
-    }
-  };
-
-  emit.extend = (newEvents) => {
-    const newEmit = createEventBus(newEvents);
-
-    return (type, ...payload) => {
-      newEmit(type, ...payload);
-      emit(type, ...payload);
-    };
-  };
-
-  return emit;
-};

@@ -1,17 +1,118 @@
+/* eslint-disable consistent-return */
+
 import sanitize from './sanitize';
 import { getFuncName } from './utils';
+import { isState } from './state';
+import { isEffect } from './effect';
+import { isQueue } from './queue';
+import { isGridNode } from './grid';
+import { isRiew } from './riew';
 
 const MAX_NUM_OF_EVENTS = 850;
 const INDENT = 12;
 
-function noop() {};
-const logger = {
-  log: noop,
-  events: noop,
-  grid: noop,
-  data: { events: noop, grid: noop },
-  reset: noop
-};
+function formatQueueItem({ type, func }) {
+  const name = getFuncName(func);
+
+  return `${ type }${ name !== 'unknown' ? `:${ name }` : ''}`;
+}
+
+function normalizeState(state) {
+  return {
+    id: state.id,
+    value: sanitize(state.get()),
+    queues: state.queues().map(normalizeQueue)
+  };
+}
+function normalizeEffect(effect) {
+  return {
+    id: effect.id,
+    state: normalizeState(effect.state),
+    items: effect.items.map(({ type }) => type)
+  };
+}
+function normalizeQueue(q) {
+  const items = q.items.map(formatQueueItem);
+
+  return {
+    id: q.id,
+    result: sanitize(q.result),
+    items: items,
+    index: q.index,
+    currentItem: items[q.index]
+  };
+}
+function normalizeGridNode(node) {
+  // console.log(node.product);
+  return {
+    id: node.id,
+    parent: node.parentId,
+    product: normalize([ node.product ])
+  };
+}
+function normalizeRiew(riew, props) {
+  return {
+    id: riew.id,
+    name: riew.name,
+    active: riew.isActive(),
+    props: sanitize(props)
+  };
+}
+
+function normalize(payload) {
+  let state, effect, queue, gridNode, riew;
+  let product = payload[0];
+
+  if (product && product.loggable === false) return;
+
+  if (isState(product)) {
+    state = normalizeState(product);
+  } else if (isEffect(product)) {
+    effect = normalizeEffect(product);
+  } else if (isQueue(product)) {
+    queue = normalizeQueue(product);
+  } else if (isGridNode(product)) {
+    gridNode = normalizeGridNode(product);
+  } else if (isRiew(product)) {
+    riew = normalizeRiew(product, payload[1]);
+  } else if (typeof product !== 'undefined') {
+    console.error('Logger: unrecognized logger entry', payload[0]);
+  }
+
+  return Object.assign(
+    {},
+    state,
+    effect,
+    queue,
+    gridNode,
+    riew
+  );
+}
+
+function Logger() {
+  const api = {};
+  let events = [];
+
+  api.log = (type, payload) => {
+    if (Array.isArray(payload[0])) {
+      payload[0].forEach(p => api.log(type, p));
+      return;
+    };
+    const normalizedPayload = normalize(payload);
+
+    if (normalizedPayload) {
+      events.push({ type, ...normalizedPayload });
+    }
+  };
+  api.reset = () => {
+    events = [];
+  };
+  api.events = () => events;
+
+  return api;
+}
+
+const logger = Logger();
 
 export default logger;
 

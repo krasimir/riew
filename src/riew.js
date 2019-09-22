@@ -1,7 +1,13 @@
 import { state, use } from './index';
 import { isEffect } from './effect';
 import { isPromise, parallel, getFuncName, getId } from './utils';
+import createEventBus from './eventBus';
 import { RIEW_RENDER, RIEW_UNMOUNT, RIEW_CREATED } from './constants';
+import { implementLoggableInterface } from './interfaces';
+
+export function isRiew(riew) {
+  return riew && riew.mount && riew.unmount;
+}
 
 function ensureObject(value, context) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
@@ -20,8 +26,9 @@ function normalizeExternalsMap(arr) {
   }, {});
 }
 const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
+const emit = createEventBus();
 
-export default (emit) => function createRiew(viewFunc, ...controllers) {
+export default function createRiew(viewFunc, ...controllers) {
   const instance = { id: getId('r'), name: getFuncName(viewFunc) };
   let active = false;
   let internalStates = [];
@@ -36,6 +43,8 @@ export default (emit) => function createRiew(viewFunc, ...controllers) {
   const isActive = () => active;
   const isSubscribed = s => !!subscriptions.find(effect => effect.state.id === s.id);
 
+  implementLoggableInterface(instance);
+
   // effects
   const updateOutput = output.mutate((current, newStuff) => {
     const result = { ...current };
@@ -48,7 +57,7 @@ export default (emit) => function createRiew(viewFunc, ...controllers) {
           result[key] = effect();
           if (!isSubscribed(effect.state)) {
             subscriptions.push(
-              effect.pipe(() => render({ [key]: effect() })).subscribe()
+              effect.pipe(() => render({ [key]: effect() })).subscribe().loggability(false)
             );
           }
         } else {
