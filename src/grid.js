@@ -32,8 +32,8 @@ function Grid() {
     nodes.push(Node(obj, parent));
     return api;
   };
-  const remove = (identifier) => {
-    const ids = getIdsToRemove(identifier);
+  const remove = (node) => {
+    const ids = getIdsToRemove(node.id);
     const removed = [];
 
     nodes = nodes.filter(n => {
@@ -65,8 +65,4 @@ function Grid() {
 
 const grid = Grid();
 
-export const gridAdd = (node, parent) => grid.add(node, parent);
-export const gridRemove = (node) => grid.remove(node.id);
-export const gridReset = () => grid.reset();
-export const gridGetNode = (identifier) => grid.get(identifier);
-export const gridGetNodes = () => grid.nodes();
+export default grid;

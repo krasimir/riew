@@ -4,16 +4,12 @@ import { State } from './state';
 import createEffect, { isEffect } from './effect';
 import createRiew from './riew';
 import reactRiew from './react';
-import { gridAdd, gridRemove, gridReset, gridGetNodes } from './grid';
-import logger from './logger';
+import grid from './grid';
 import { createEventBus } from './utils';
 import {
   STATE_DESTROY,
   EFFECT_EXPORTED,
-  EFFECT_FORK,
-  STATE_CREATED,
-  EFFECT_CREATED,
-  EFFECT_REMOVED
+  EFFECT_FORK
 } from './constants';
 
 function Harvester() {
@@ -42,11 +38,8 @@ function Harvester() {
   };
   api.reset = () => {
     products = {};
-    gridReset();
     defineHarvesterBuiltInCapabilities(api);
-    logger.clear();
   };
-  api.grid = () => gridGetNodes();
 
   return api;
 };
@@ -59,36 +52,37 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     (initialValue, loggable) => {
       const emit = createEventBus({
         [ STATE_DESTROY ]: () => {
-          const removed = gridRemove(state);
+          const removed = grid.remove(state);
 
           state.destroy();
           removed.filter(isEffect).forEach(e => {
             if ('__exportedAs' in e) {
               h.undefineProduct(e.__exportedAs);
             }
-            emit(EFFECT_REMOVED, e);
           });
         },
         [ EFFECT_EXPORTED ]: (effect, name) => {
           effect.__exportedAs = name;
           h.defineProduct(name, () => effect);
-          logger.log(EFFECT_EXPORTED, effect, name);
         },
-        [ EFFECT_FORK ]: (effect, newItems) => {
-          const newEffect = createEffect(state, [ ...effect.items, ...newItems ], emit);
+        [ EFFECT_FORK ]: (effect, newItem) => {
+          const newItems = [ ...effect.items ];
 
-          gridAdd(newEffect, effect.id);
-          emit(EFFECT_CREATED, newEffect);
+          if (newItem) {
+            newItems.push(newItem);
+          }
+
+          const newEffect = createEffect(state, newItems, emit);
+
+          grid.add(newEffect, effect.id);
           return newEffect;
         }
       });
       const state = State(initialValue, loggable, emit);
       const effect = createEffect(state, [], emit);
 
-      gridAdd(state);
-      emit(STATE_CREATED, state);
-      gridAdd(effect, state.id);
-      emit(EFFECT_CREATED, effect);
+      grid.add(state);
+      grid.add(effect, state.id);
       return effect;
     }
   );

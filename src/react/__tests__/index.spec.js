@@ -3,12 +3,11 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../../__helpers__';
 import riew from '../index';
-import { state } from '../../index';
-import harvester from '../../harvester';
+import { state, reset } from '../../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
-    harvester.reset();
+    reset();
   });
   describe('when we use the riew Component', () => {
     it('should always render the view at least once', () => {

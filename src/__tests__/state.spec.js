@@ -1,10 +1,9 @@
-import { state, merge, use } from '../index';
+import { state, merge, use, reset } from '../index';
 import { delay } from '../__helpers__';
-import harvester from '../harvester';
 
 describe('Given the state', () => {
   beforeEach(() => {
-    harvester.reset();
+    reset();
   });
 
   /* get & set */

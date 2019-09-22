@@ -48,7 +48,7 @@ export default (emit) => function createRiew(viewFunc, ...controllers) {
           result[key] = effect();
           if (!isSubscribed(effect.state)) {
             subscriptions.push(
-              effect.pipe(() => render({ [key]: effect() })).subscribe().logability(false)
+              effect.pipe(() => render({ [key]: effect() })).subscribe()
             );
           }
         } else {

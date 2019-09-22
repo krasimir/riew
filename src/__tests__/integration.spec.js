@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import harvester from '../harvester';
+import { reset } from '../index';
 
 import { react, state } from '../index';
 
@@ -11,7 +11,7 @@ const DummyComponent = ({ text }) => <p>{ text }</p>;
 
 describe('Given the Riew library', () => {
   beforeEach(() => {
-    harvester.reset();
+    reset();
   });
   describe('when we use an async effect', () => {
     it('should allow us to render multiple times', async () => {

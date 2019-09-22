@@ -1,11 +1,10 @@
 /* eslint-disable quotes, max-len */
-import harvester from '../harvester';
 import { delay } from '../__helpers__';
-import { state, register, riew } from '../index';
+import { state, register, riew, reset } from '../index';
 
 describe('Given the `riew` factory function', () => {
   beforeEach(() => {
-    harvester.reset();
+    reset();
   });
   describe('when we create and mount riew with a given view and list of side effects', () => {
     it(`should

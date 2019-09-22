@@ -1,10 +1,9 @@
-import { gridAdd, gridRemove, gridGetNode, gridGetNodes } from '../grid';
-import { state } from '../index';
-import harvester from '../harvester';
+import grid from '../grid';
+import { state, reset } from '../index';
 
 describe('Given the grid', () => {
   beforeEach(() => {
-    harvester.reset();
+    reset();
   });
   describe('when we use the grid', () => {
     it('should store stuff for us and let us free resources', () => {
@@ -12,15 +11,15 @@ describe('Given the grid', () => {
       const obj2 = { id: 'bar' };
       const obj3 = { id: 'moo' };
 
-      gridAdd(obj);
-      gridAdd(obj2, obj.id);
-      gridAdd(obj3, obj2.id);
-      expect(gridGetNode('foo')).toStrictEqual(obj);
-      gridRemove(obj);
-      expect(() => gridGetNode('foo')).toThrowError('A node with identifier "foo" is missing in the grid.');
-      expect(() => gridGetNode('bar')).toThrowError('A node with identifier "bar" is missing in the grid.');
-      expect(() => gridGetNode('moo')).toThrowError('A node with identifier "moo" is missing in the grid.');
-      expect(() => gridGetNode('something')).toThrowError('A node with identifier "something" is missing in the grid.');
+      grid.add(obj);
+      grid.add(obj2, obj.id);
+      grid.add(obj3, obj2.id);
+      expect(grid.get('foo')).toStrictEqual(obj);
+      grid.remove(obj);
+      expect(() => grid.get('foo')).toThrowError('A node with identifier "foo" is missing in the grid.');
+      expect(() => grid.get('bar')).toThrowError('A node with identifier "bar" is missing in the grid.');
+      expect(() => grid.get('moo')).toThrowError('A node with identifier "moo" is missing in the grid.');
+      expect(() => grid.get('something')).toThrowError('A node with identifier "something" is missing in the grid.');
     });
   });
   describe('when we create a state', () => {
@@ -28,7 +27,7 @@ describe('Given the grid', () => {
       const s1 = state('foo');
       const s2 = state('bar');
 
-      expect(gridGetNodes()).toStrictEqual([
+      expect(grid.nodes()).toStrictEqual([
         expect.objectContaining({ id: s1.state.id }),
         expect.objectContaining({ id: s1.id }),
         expect.objectContaining({ id: s2.state.id }),
@@ -36,7 +35,7 @@ describe('Given the grid', () => {
       ]);
       s1.destroy();
       s2.destroy();
-      expect(gridGetNodes()).toHaveLength(0);
+      expect(grid.nodes()).toHaveLength(0);
     });
   });
 });

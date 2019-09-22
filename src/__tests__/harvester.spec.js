@@ -1,8 +1,8 @@
-import { use, register, state, riew, harvester, logger } from '../index';
+import { use, register, state, riew, logger, reset } from '../index';
 
 describe('Given the harvester', () => {
   beforeEach(() => {
-    harvester.reset();
+    reset();
   });
   describe('when we register something in there', () => {
     it('should let us use it later', () => {

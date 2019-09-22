@@ -1,9 +1,9 @@
-import harvester from '../harvester';
+import { reset } from '../index';
 import { createQueue } from '../queue';
 
 describe('Given the createQueue helper', () => {
   beforeEach(() => {
-    harvester.reset();
+    reset();
   });
   describe('when we create a queue', () => {
     it('should cycle over the items and call the appropriate callbacks', () => {

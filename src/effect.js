@@ -2,7 +2,7 @@ import { getId } from './utils';
 import { EFFECT_FORK, EFFECT_EXPORTED, STATE_DESTROY } from './constants';
 
 export function isEffect(func) {
-  return func && func.riewEffect === true;
+  return func && func.id && func.state && func.items;
 }
 
 export const implementIterable = (effect) => {
@@ -28,22 +28,20 @@ export default function createEffect(state, items = [], emit) {
 
   effect.id = getId('e');
   effect.state = state;
-  effect.loggable = state.loggable;
   effect.items = items;
-  effect.riewEffect = true;
 
   implementIterable(effect);
 
   // queue methods
   Object.keys(state.queueAPI).forEach(m => {
-    effect[m] = (...methodArgs) => emit(EFFECT_FORK, effect, [ { type: m, func: methodArgs } ]);
+    effect[m] = (...methodArgs) => emit(EFFECT_FORK, effect, { type: m, func: methodArgs });
   });
 
   // effect direct methods
   effect.define = (methodName, func) => {
     state.queueAPI.define(methodName, func);
     effect[methodName] = (...methodArgs) => {
-      return emit(EFFECT_FORK, effect, [ { type: methodName, func: methodArgs } ]);
+      return emit(EFFECT_FORK, effect, { type: methodName, func: methodArgs });
     };
     return effect;
   };
@@ -70,12 +68,8 @@ export default function createEffect(state, items = [], emit) {
     emit(EFFECT_EXPORTED, effect, name);
     return effect;
   };
-  effect.logability = flag => {
-    effect.loggable = flag;
-    return effect;
-  };
   effect.test = function (callback) {
-    const test = emit(EFFECT_FORK, effect, []);
+    const test = emit(EFFECT_FORK, effect);
     const tools = {
       setValue(newValue) {
         test.items = [
