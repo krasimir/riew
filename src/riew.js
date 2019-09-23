@@ -1,5 +1,5 @@
 import { state, use } from './index';
-import { isEffect } from './effect';
+import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 import createEventBus from './eventBus';
 import { RIEW_RENDER, RIEW_UNMOUNT, RIEW_CREATED } from './constants';
@@ -52,8 +52,9 @@ export default function createRiew(viewFunc, ...controllers) {
     if (newStuff) {
       Object.keys(newStuff).forEach(key => {
         if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
-          const effect = newStuff[key].loggability(false);
+          const [ effect ] = newStuff[key];
 
+          effect.loggability(false);
           result[key] = effect();
           if (!isSubscribed(effect.state)) {
             subscriptions.push(

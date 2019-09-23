@@ -4,17 +4,14 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var STATE_CREATED = exports.STATE_CREATED = 'STATE_CREATED';
 var STATE_DESTROY = exports.STATE_DESTROY = 'STATE_DESTROY';
 
-var EFFECT_CREATED = exports.EFFECT_CREATED = 'EFFECT_CREATED';
-var EFFECT_REMOVED = exports.EFFECT_REMOVED = 'EFFECT_REMOVED';
-var EFFECT_QUEUE_START = exports.EFFECT_QUEUE_START = 'EFFECT_QUEUE_START';
-var EFFECT_QUEUE_STEP_IN = exports.EFFECT_QUEUE_STEP_IN = 'EFFECT_QUEUE_STEP_IN';
-var EFFECT_QUEUE_STEP_OUT = exports.EFFECT_QUEUE_STEP_OUT = 'EFFECT_QUEUE_STEP_OUT';
-var EFFECT_QUEUE_END = exports.EFFECT_QUEUE_END = 'EFFECT_QUEUE_END';
+var EFFECT_START = exports.EFFECT_START = 'EFFECT_START';
+var EFFECT_END = exports.EFFECT_END = 'EFFECT_END';
 var EFFECT_EXPORTED = exports.EFFECT_EXPORTED = 'EFFECT_EXPORTED';
-var EFFECT_FORK = exports.EFFECT_FORK = 'EFFECT_FORK';
+
+var QUEUE_STEP_IN = exports.QUEUE_STEP_IN = 'QUEUE_STEP_IN';
+var QUEUE_STEP_OUT = exports.QUEUE_STEP_OUT = 'QUEUE_STEP_OUT';
 
 var RIEW_CREATED = exports.RIEW_CREATED = 'RIEW_CREATED';
 var RIEW_RENDER = exports.RIEW_RENDER = 'RIEW_RENDER';
@@ -26,13 +23,14 @@ var RIEW_UNMOUNT = exports.RIEW_UNMOUNT = 'RIEW_UNMOUNT';
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.implementIterable = undefined;
 exports.isEffect = isEffect;
 exports.default = createEffect;
 
 var _utils = require('./utils');
 
 var _constants = require('./constants');
+
+var _interfaces = require('./interfaces');
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -44,45 +42,40 @@ function _toConsumableArray(arr) {
   }
 }
 
-function isEffect(func) {
-  return func && func.id && func.state && func.items;
+function isEffect(effect) {
+  return effect && effect.id && effect.id.split('_').shift() === 'e';
 }
-
-var implementIterable = exports.implementIterable = function implementIterable(effect) {
-  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
-    effect[Symbol.iterator] = function () {
-      var values = [effect, effect.mutate(), effect.state.cancel];
-      var i = 0;
-
-      return {
-        next: function next() {
-          return {
-            value: values[i++],
-            done: i > values.length
-          };
-        }
-      };
-    };
-  }
-};
 
 function createEffect(state) {
   var items = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-  var emit = arguments[2];
+  var emit = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {};
 
   var effect = function effect() {
     for (var _len = arguments.length, payload = Array(_len), _key = 0; _key < _len; _key++) {
       payload[_key] = arguments[_key];
     }
 
-    return state.runQueue(effect.items, payload);
+    return state.runQueue(effect, payload);
+  };
+  var fork = function fork(newItem) {
+    var newItems = [].concat(_toConsumableArray(effect.items));
+
+    if (newItem) {
+      newItems.push(newItem);
+    }
+
+    var newEffect = createEffect(state, newItems, emit);
+
+    newEffect.loggability(effect.loggable);
+    return newEffect;
   };
 
   effect.id = (0, _utils.getId)('e');
   effect.state = state;
   effect.items = items;
 
-  implementIterable(effect);
+  (0, _interfaces.implementLoggableInterface)(effect, state.loggable);
+  (0, _interfaces.implementIterableProtocol)(effect);
 
   // queue methods
   Object.keys(state.queueAPI).forEach(function (m) {
@@ -91,7 +84,7 @@ function createEffect(state) {
         methodArgs[_key2] = arguments[_key2];
       }
 
-      return emit(_constants.EFFECT_FORK, effect, { type: m, func: methodArgs });
+      return fork({ type: m, func: methodArgs });
     };
   });
 
@@ -103,7 +96,7 @@ function createEffect(state) {
         methodArgs[_key3] = arguments[_key3];
       }
 
-      return emit(_constants.EFFECT_FORK, effect, { type: methodName, func: methodArgs });
+      return fork({ type: methodName, func: methodArgs });
     };
     return effect;
   };
@@ -128,7 +121,7 @@ function createEffect(state) {
     return effect;
   };
   effect.destroy = function () {
-    emit(_constants.STATE_DESTROY);
+    emit(_constants.STATE_DESTROY, effect);
     return effect;
   };
   effect.export = function (name) {
@@ -136,7 +129,7 @@ function createEffect(state) {
     return effect;
   };
   effect.test = function (callback) {
-    var test = emit(_constants.EFFECT_FORK, effect);
+    var test = fork();
     var tools = {
       setValue: function setValue(newValue) {
         test.items = [{ type: 'map', func: [function () {
@@ -165,57 +158,107 @@ function createEffect(state) {
   return effect;
 };
 
-},{"./constants":1,"./utils":19}],3:[function(require,module,exports){
-"use strict";
+},{"./constants":1,"./interfaces":7,"./utils":21}],3:[function(require,module,exports){
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-function Node(data, parent) {
-  return {
-    id: data.id,
-    parent: parent,
-    data: data,
-    is: function is(id) {
-      return this.id === id;
-    },
-    hasParent: function hasParent(parentId) {
-      return this.parent === parentId;
+exports.default = createEventBus;
+
+var _logger = require('./logger');
+
+var _logger2 = _interopRequireDefault(_logger);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function createEventBus() {
+  var events = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+  var emit = function emit(type) {
+    for (var _len = arguments.length, payload = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      payload[_key - 1] = arguments[_key];
+    }
+
+    if (true) _logger2.default.log.apply(_logger2.default, [type].concat(payload));
+    if (events[type]) {
+      return events[type].apply(events, payload);
     }
   };
+
+  return emit;
+} /* eslint-disable consistent-return */
+;
+
+},{"./logger":8}],4:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _utils = require('./utils');
+
+var _interfaces = require('./interfaces');
+
+function Node(product, parentId) {
+  var node = {
+    id: (0, _utils.getId)('g'),
+    parentId: parentId,
+    product: product,
+    is: function is(id) {
+      return this.product.id === id;
+    },
+    hasParent: function hasParent(parentId) {
+      return this.parentId === parentId;
+    }
+  };
+
+  (0, _interfaces.implementLoggableInterface)(node, product.loggable);
+
+  return node;
 }
 
 function Grid() {
   var api = {};
   var nodes = [];
 
-  function getIdsToRemove(identifier) {
-    var children = nodes.filter(function (n) {
-      return n.hasParent(identifier);
-    });
-
-    return [identifier].concat(children.reduce(function (arr, n) {
-      return arr.concat(getIdsToRemove(n.id));
-    }, []));
+  function getNodesToRemove(productId) {
+    return nodes.reduce(function (arr, node) {
+      if (node.is(productId)) {
+        arr.push(node);
+      } else if (node.hasParent(productId)) {
+        arr = arr.concat(getNodesToRemove(node.product.id));
+      }
+      return arr;
+    }, []);
   }
 
-  var add = function add(obj, parent) {
-    if (!obj || !obj.id) {
-      throw new Error("Each node in the grid must be an object with \"id\" field. Instead \"" + obj + "\" given.");
+  var add = function add(product, parentId) {
+    if (!product || !product.id) {
+      throw new Error('Each node in the grid must be an object with "id" field. Instead "' + product + '" given.');
     }
 
-    nodes.push(Node(obj, parent));
+    var node = Node(product, parentId);
+
+    nodes.push(node);
     return api;
   };
-  var remove = function remove(identifier) {
-    var ids = getIdsToRemove(identifier);
+  var remove = function remove(product) {
+    var nodesToRemove = getNodesToRemove(product.id);
+    var idsToRemove = nodesToRemove.map(function (_ref) {
+      var id = _ref.id;
+      return id;
+    });
     var removed = [];
 
     nodes = nodes.filter(function (n) {
-      if (ids.indexOf(n.id) === -1) {
+      if (idsToRemove.indexOf(n.id) === -1) {
         return true;
       }
-      removed.push(n.data);
+      removed.push(n.product);
       return false;
     });
     return removed;
@@ -226,9 +269,9 @@ function Grid() {
     });
 
     if (node) {
-      return node.data;
+      return node.product;
     }
-    throw new Error("A node with identifier \"" + identifier + "\" is missing in the grid.");
+    throw new Error('A node with identifier "' + identifier + '" is missing in the grid.');
   };
 
   api.get = get;
@@ -246,23 +289,9 @@ function Grid() {
 
 var grid = Grid();
 
-var gridAdd = exports.gridAdd = function gridAdd(node, parent) {
-  return grid.add(node, parent);
-};
-var gridRemove = exports.gridRemove = function gridRemove(node) {
-  return grid.remove(node.id);
-};
-var gridReset = exports.gridReset = function gridReset() {
-  return grid.reset();
-};
-var gridGetNode = exports.gridGetNode = function gridGetNode(identifier) {
-  return grid.get(identifier);
-};
-var gridGetNodes = exports.gridGetNodes = function gridGetNodes() {
-  return grid.nodes();
-};
+exports.default = grid;
 
-},{}],4:[function(require,module,exports){
+},{"./interfaces":7,"./utils":21}],5:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -323,13 +352,15 @@ var _react2 = _interopRequireDefault(_react);
 
 var _grid = require('./grid');
 
-var _logger = require('./logger');
+var _grid2 = _interopRequireDefault(_grid);
 
-var _logger2 = _interopRequireDefault(_logger);
+var _eventBus = require('./eventBus');
 
-var _utils = require('./utils');
+var _eventBus2 = _interopRequireDefault(_eventBus);
 
 var _constants = require('./constants');
+
+var _interfaces = require('./interfaces');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -341,16 +372,6 @@ function _defineProperty(obj, key, value) {
   } else {
     obj[key] = value;
   }return obj;
-}
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
 }
 
 function Harvester() {
@@ -385,12 +406,7 @@ function Harvester() {
   };
   api.reset = function () {
     products = {};
-    (0, _grid.gridReset)();
     defineHarvesterBuiltInCapabilities(api);
-    _logger2.default.clear();
-  };
-  api.grid = function () {
-    return (0, _grid.gridGetNodes)();
   };
 
   return api;
@@ -402,42 +418,30 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
   h.defineProduct('state', function (initialValue, loggable) {
     var _createEventBus;
 
-    var emit = (0, _utils.createEventBus)((_createEventBus = {}, _defineProperty(_createEventBus, _constants.STATE_DESTROY, function () {
-      var removed = (0, _grid.gridRemove)(state);
+    var emit = (0, _eventBus2.default)((_createEventBus = {}, _defineProperty(_createEventBus, _constants.STATE_DESTROY, function (effect) {
+      var removed = _grid2.default.remove(state); /* eslint-disable-line */
 
       state.destroy();
-      removed.filter(_effect.isEffect).forEach(function (e) {
-        if ('__exportedAs' in e) {
-          h.undefineProduct(e.__exportedAs);
-        }
-        emit(_constants.EFFECT_REMOVED, e);
-      });
+      if ('__exportedAs' in effect) {
+        h.undefineProduct(effect.__exportedAs);
+      }
     }), _defineProperty(_createEventBus, _constants.EFFECT_EXPORTED, function (effect, name) {
       effect.__exportedAs = name;
       h.defineProduct(name, function () {
         return effect;
       });
-      _logger2.default.log(_constants.EFFECT_EXPORTED, effect, name);
-    }), _defineProperty(_createEventBus, _constants.EFFECT_FORK, function (effect, newItem) {
-      var newItems = [].concat(_toConsumableArray(effect.items));
-
-      if (newItem) {
-        newItems.push(newItem);
-      }
-
-      var newEffect = (0, _effect2.default)(state, newItems, emit);
-
-      (0, _grid.gridAdd)(newEffect, effect.id);
-      emit(_constants.EFFECT_CREATED, newEffect);
-      return newEffect;
+    }), _defineProperty(_createEventBus, _constants.EFFECT_START, function (effect) {
+      _grid2.default.add(effect, effect.state.id);
+    }), _defineProperty(_createEventBus, _constants.EFFECT_END, function (effect) {
+      _grid2.default.remove(effect);
     }), _createEventBus));
-    var state = (0, _state.State)(initialValue, loggable, emit);
+    var state = (0, _state.State)(initialValue, emit);
+
+    (0, _interfaces.implementLoggableInterface)(state, loggable);
+
     var effect = (0, _effect2.default)(state, [], emit);
 
-    (0, _grid.gridAdd)(state);
-    emit(_constants.STATE_CREATED, state);
-    (0, _grid.gridAdd)(effect, state.id);
-    emit(_constants.EFFECT_CREATED, effect);
+    _grid2.default.add(state);
     return effect;
   });
 
@@ -487,7 +491,7 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
       controllers[_key2 - 1] = arguments[_key2];
     }
 
-    return (0, _riew2.default)((0, _utils.createEventBus)({})).apply(undefined, [viewFunc].concat(controllers));
+    return _riew2.default.apply(undefined, [viewFunc].concat(controllers));
   });
 
   // ------------------------------------------------------------------ reactRiew
@@ -506,13 +510,13 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./constants":1,"./effect":2,"./grid":3,"./logger":6,"./react":13,"./riew":14,"./state":18,"./utils":19,"fast-deep-equal":20}],5:[function(require,module,exports){
+},{"./constants":1,"./effect":2,"./eventBus":3,"./grid":4,"./interfaces":7,"./react":15,"./riew":16,"./state":20,"fast-deep-equal":22}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.logger = exports.harvester = exports.parallel = exports.serial = exports.compose = exports.register = exports.use = exports.react = exports.riew = exports.merge = exports.state = undefined;
+exports.logger = exports.harvester = exports.parallel = exports.serial = exports.compose = exports.reset = exports.register = exports.use = exports.react = exports.riew = exports.merge = exports.state = undefined;
 
 var _utils = require('./utils');
 
@@ -542,6 +546,10 @@ var _harvester2 = _interopRequireDefault(_harvester);
 var _logger = require('./logger');
 
 var _logger2 = _interopRequireDefault(_logger);
+
+var _grid = require('./grid');
+
+var _grid2 = _interopRequireDefault(_grid);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -583,22 +591,81 @@ var register = exports.register = function register(name, whatever) {
     return whatever;
   });
 };
+var reset = exports.reset = function reset() {
+  _logger2.default.reset();
+  _harvester2.default.reset();
+  _grid2.default.reset();
+};
 
 var harvester = exports.harvester = _harvester2.default;
 var logger = exports.logger = _logger2.default;
 
-},{"./harvester":4,"./logger":6,"./utils":19}],6:[function(require,module,exports){
+},{"./grid":4,"./harvester":5,"./logger":8,"./utils":21}],7:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.implementIterableProtocol = implementIterableProtocol;
+exports.implementLoggableInterface = implementLoggableInterface;
+function implementIterableProtocol(effect) {
+  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
+    effect[Symbol.iterator] = function () {
+      var values = [effect, effect.mutate(), effect.state.cancel];
+      var i = 0;
+
+      return {
+        next: function next() {
+          return {
+            value: values[i++],
+            done: i > values.length
+          };
+        }
+      };
+    };
+  }
+};
+
+function implementLoggableInterface(obj) {
+  var initialValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+  obj.loggable = initialValue;
+  obj.loggability = function (value) {
+    obj.loggable = value;
+    return obj;
+  };
+}
+
+},{}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
+}; /* eslint-disable consistent-return */
+
 var _sanitize = require('./sanitize');
 
 var _sanitize2 = _interopRequireDefault(_sanitize);
 
 var _utils = require('./utils');
+
+var _state = require('./state');
+
+var _effect = require('./effect');
+
+var _riew = require('./riew');
+
+var _constants = require('./constants');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -607,14 +674,111 @@ function _interopRequireDefault(obj) {
 var MAX_NUM_OF_EVENTS = 850;
 var INDENT = 12;
 
-function noop() {};
-var logger = {
-  log: noop,
-  events: noop,
-  grid: noop,
-  data: { events: noop, grid: noop },
-  clear: noop
-};
+function formatQueueItem(_ref) {
+  var type = _ref.type,
+      func = _ref.func;
+
+  var name = (0, _utils.getFuncName)(func);
+
+  return '' + type + (name !== 'unknown' ? ':' + name : '');
+}
+
+function normalizeState(state) {
+  return {
+    id: state.id,
+    value: (0, _sanitize2.default)(state.get()),
+    queues: state.queues().map(normalizeQueue)
+  };
+}
+function normalizeEffect(effect) {
+  return {
+    id: effect.id,
+    items: effect.items.map(function (_ref2) {
+      var type = _ref2.type;
+      return type;
+    }),
+    state: normalizeState(effect.state)
+  };
+}
+function normalizeQueue(q) {
+  var items = q.items.map(formatQueueItem);
+
+  return {
+    id: q.id,
+    effectId: q.effectId,
+    result: (0, _sanitize2.default)(q.result),
+    items: items,
+    index: q.index,
+    currentItem: items[q.index]
+  };
+}
+function normalizeRiew(riew, props) {
+  return {
+    id: riew.id,
+    name: riew.name,
+    active: riew.isActive(),
+    props: (0, _sanitize2.default)(props)
+  };
+}
+
+function normalize(product, type, payload) {
+  var state = void 0,
+      effect = void 0,
+      gridNode = void 0,
+      riew = void 0,
+      queue = void 0;
+
+  if (product && product.loggable === false) return;
+
+  if ((0, _state.isState)(product)) {
+    state = normalizeState(product);
+  } else if ((0, _effect.isEffect)(product)) {
+    effect = normalizeEffect(product);
+    if (type === _constants.EFFECT_START || type === _constants.EFFECT_END || type === _constants.QUEUE_STEP_IN || type === _constants.QUEUE_STEP_OUT) {
+      queue = normalizeQueue(payload[0]);
+    }
+  } else if ((0, _riew.isRiew)(product)) {
+    riew = normalizeRiew(product, payload[0]);
+  }
+
+  return Object.assign({}, state && { state: state }, effect && { effect: effect }, gridNode && { gridNode: gridNode }, riew && { riew: riew }, queue && { queue: queue });
+}
+
+function Logger() {
+  var api = {};
+  var events = [];
+
+  api.log = function (type) {
+    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      args[_key - 1] = arguments[_key];
+    }
+
+    var product = args[0],
+        payload = args.slice(1);
+
+    if (Array.isArray(product)) {
+      product.forEach(function (x) {
+        return api.log(type, x);
+      });
+      return;
+    };
+    var normalizedProduct = normalize(product, type, payload);
+
+    if (normalizedProduct) {
+      events.push(_extends({ type: type }, normalizedProduct));
+    }
+  };
+  api.reset = function () {
+    events = [];
+  };
+  api.events = function () {
+    return events;
+  };
+
+  return api;
+}
+
+var logger = Logger();
 
 exports.default = logger;
 
@@ -866,7 +1030,7 @@ const logger = createLogger();
 export default logger;
 */
 
-},{"./sanitize":15,"./utils":19}],7:[function(require,module,exports){
+},{"./constants":1,"./effect":2,"./riew":16,"./sanitize":17,"./state":20,"./utils":21}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -887,8 +1051,6 @@ exports.createQueueAPI = createQueueAPI;
 exports.createQueue = createQueue;
 
 var _utils = require('./utils');
-
-var _constants = require('./constants');
 
 var _pipe = require('./queueMethods/pipe');
 
@@ -947,7 +1109,7 @@ function createQueueAPI() {
   return _extends({}, queueAPI);
 };
 
-function createQueue(state, emit) {
+function createQueue(state, lifecycle) {
   var setStateValue = state.set;
   var getStateValue = state.get;
   var queueAPI = state.queueAPI;
@@ -973,11 +1135,11 @@ function createQueue(state, emit) {
           return loop();
         }
         q.index = null;
-        emit(_constants.EFFECT_QUEUE_END, q);
+        lifecycle.end(q);
         return q.result;
       };
       function loop() {
-        emit(_constants.EFFECT_QUEUE_STEP_IN, q);
+        lifecycle.stepIn(q);
         var _q$items$q$index = q.items[q.index],
             type = _q$items$q$index.type,
             func = _q$items$q$index.func;
@@ -987,7 +1149,7 @@ function createQueue(state, emit) {
         if (logic) {
           var r = logic(q, func, payload, function (lastResult) {
             q.result = lastResult;
-            emit(_constants.EFFECT_QUEUE_STEP_OUT, q);
+            lifecycle.stepOut(q);
             q.index++;
             return next();
           });
@@ -997,11 +1159,11 @@ function createQueue(state, emit) {
         throw new Error('Unsupported method "' + type + '".');
       };
 
-      emit(_constants.EFFECT_QUEUE_START, q);
+      lifecycle.start(q);
       if (q.items.length > 0) {
         return loop();
       }
-      emit(_constants.EFFECT_QUEUE_END, q);
+      lifecycle.end(q);
       return q.result;
     },
     cancel: function cancel() {
@@ -1012,7 +1174,7 @@ function createQueue(state, emit) {
   return q;
 }
 
-},{"./constants":1,"./queueMethods/filter":8,"./queueMethods/map":9,"./queueMethods/mapToKey":10,"./queueMethods/mutate":11,"./queueMethods/pipe":12,"./utils":19}],8:[function(require,module,exports){
+},{"./queueMethods/filter":10,"./queueMethods/map":11,"./queueMethods/mapToKey":12,"./queueMethods/mutate":13,"./queueMethods/pipe":14,"./utils":21}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1051,7 +1213,7 @@ function filter(func) {
   };
 }
 
-},{"../utils":19}],9:[function(require,module,exports){
+},{"../utils":21}],11:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1077,7 +1239,7 @@ function map(func) {
   };
 };
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1113,7 +1275,7 @@ function mapToKey(key) {
   };
 };
 
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1150,7 +1312,7 @@ function mutate(func) {
   };
 };
 
-},{"../utils":19}],12:[function(require,module,exports){
+},{"../utils":21}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1183,7 +1345,7 @@ function pipe(func) {
   };
 };
 
-},{"../utils":19}],13:[function(require,module,exports){
+},{"../utils":21}],15:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1310,7 +1472,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":5,"../utils":19}],14:[function(require,module,exports){
+},{"../index":6,"../utils":21}],16:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1361,13 +1523,26 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 };
 
+exports.isRiew = isRiew;
+exports.default = createRiew;
+
 var _index = require('./index');
 
 var _effect = require('./effect');
 
 var _utils = require('./utils');
 
+var _eventBus = require('./eventBus');
+
+var _eventBus2 = _interopRequireDefault(_eventBus);
+
 var _constants = require('./constants');
+
+var _interfaces = require('./interfaces');
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
 
 function _defineProperty(obj, key, value) {
   if (key in obj) {
@@ -1375,6 +1550,10 @@ function _defineProperty(obj, key, value) {
   } else {
     obj[key] = value;
   }return obj;
+}
+
+function isRiew(riew) {
+  return riew && riew.mount && riew.unmount;
 }
 
 function ensureObject(value, context) {
@@ -1396,189 +1575,178 @@ function normalizeExternalsMap(arr) {
 var accumulate = function accumulate(current, newStuff) {
   return _extends({}, current, newStuff);
 };
+var emit = (0, _eventBus2.default)();
 
-exports.default = function (emit) {
-  return function createRiew(viewFunc) {
-    for (var _len = arguments.length, controllers = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      controllers[_key - 1] = arguments[_key];
-    }
+function createRiew(viewFunc) {
+  for (var _len = arguments.length, controllers = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    controllers[_key - 1] = arguments[_key];
+  }
 
-    var instance = { id: (0, _utils.getId)('r'), name: (0, _utils.getFuncName)(viewFunc) };
-    var active = false;
-    var internalStates = [];
-    var subscriptions = [];
-    var onUnmountCallbacks = [];
-    var externals = {};
+  var instance = { id: (0, _utils.getId)('r'), name: (0, _utils.getFuncName)(viewFunc) };
+  var active = false;
+  var internalStates = [];
+  var subscriptions = [];
+  var onUnmountCallbacks = [];
+  var externals = {};
 
-    var _state = (0, _index.state)({}, false),
-        _state2 = _slicedToArray(_state, 1),
-        input = _state2[0];
+  var _state = (0, _index.state)({}, false),
+      _state2 = _slicedToArray(_state, 1),
+      input = _state2[0];
 
-    var _state3 = (0, _index.state)({}, false),
-        _state4 = _slicedToArray(_state3, 1),
-        output = _state4[0];
+  var _state3 = (0, _index.state)({}, false),
+      _state4 = _slicedToArray(_state3, 1),
+      output = _state4[0];
 
-    var _state5 = (0, _index.state)({}, false),
-        _state6 = _slicedToArray(_state5, 1),
-        api = _state6[0];
+  var _state5 = (0, _index.state)({}, false),
+      _state6 = _slicedToArray(_state5, 1),
+      api = _state6[0];
 
-    var isActive = function isActive() {
-      return active;
-    };
-    var isSubscribed = function isSubscribed(s) {
-      return !!subscriptions.find(function (effect) {
-        return effect.state.id === s.id;
-      });
-    };
+  var isActive = function isActive() {
+    return active;
+  };
+  var isSubscribed = function isSubscribed(s) {
+    return !!subscriptions.find(function (effect) {
+      return effect.state.id === s.id;
+    });
+  };
 
-    // effects
-    var updateOutput = output.mutate(function (current, newStuff) {
-      var result = _extends({}, current);
+  (0, _interfaces.implementLoggableInterface)(instance);
 
-      if (newStuff) {
-        Object.keys(newStuff).forEach(function (key) {
-          if ((0, _effect.isEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
-            var effect = newStuff[key];
+  // effects
+  var updateOutput = output.mutate(function (current, newStuff) {
+    var result = _extends({}, current);
 
-            result[key] = effect();
-            if (!isSubscribed(effect.state)) {
-              subscriptions.push(effect.pipe(function () {
-                return render(_defineProperty({}, key, effect()));
-              }).subscribe());
-            }
-          } else {
-            result[key] = newStuff[key];
+    if (newStuff) {
+      Object.keys(newStuff).forEach(function (key) {
+        if ((0, _effect.isEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
+          var effect = newStuff[key].loggability(false);
+
+          result[key] = effect();
+          if (!isSubscribed(effect.state)) {
+            subscriptions.push(effect.pipe(function () {
+              return _render2(_defineProperty({}, key, effect()));
+            }).subscribe());
           }
-        });
-      }
-      return result;
-    });
-    var render = updateOutput.filter(isActive).pipe(function (value) {
-      viewFunc(value);
-      emit(_constants.RIEW_RENDER, instance, value);
-    });
-    var updateAPI = api.mutate(accumulate);
-    var updateInput = input.mutate(accumulate);
-
-    // defining the controller api
-    updateAPI({
-      state: function state() {
-        var s = _index.state.apply(undefined, arguments);
-
-        internalStates.push(s);
-        return s;
-      },
-      render: function (_render2) {
-        function render(_x) {
-          return _render2.apply(this, arguments);
-        }
-
-        render.toString = function () {
-          return _render2.toString();
-        };
-
-        return render;
-      }(function (newProps) {
-        ensureObject(newProps, 'The `render` method');
-        return render(newProps);
-      }),
-
-      isActive: isActive,
-      props: input
-    });
-
-    function processExternals() {
-      Object.keys(externals).forEach(function (key) {
-        var external = void 0;
-
-        if (key.charAt(0) === '@') {
-          key = key.substr(1, key.length);
-          external = (0, _index.use)(key);
         } else {
-          external = externals[key];
+          result[key] = newStuff[key];
         }
-
-        updateOutput(_defineProperty({}, key, external));
-        updateAPI(_defineProperty({}, key, external));
       });
     }
+    return result;
+  });
+  var _render2 = updateOutput.filter(isActive).pipe(function (value) {
+    viewFunc(value);
+    emit(_constants.RIEW_RENDER, instance, value);
+  });
+  var updateAPI = api.mutate(accumulate);
+  var updateInput = input.mutate(accumulate);
 
-    instance.isActive = isActive;
-    instance.mount = function () {
-      var initialProps = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  // defining the controller api
+  updateAPI({
+    state: function state() {
+      var s = _index.state.apply(undefined, arguments);
 
-      ensureObject(initialProps, 'The `mount` method');
-      updateInput(initialProps);
-      updateOutput(initialProps);
-      processExternals();
+      internalStates.push(s);
+      return s;
+    },
+    render: function render(newProps) {
+      ensureObject(newProps, 'The `render` method');
+      return _render2(newProps);
+    },
 
-      var controllersResult = _utils.parallel.apply(undefined, controllers)(api());
-      var done = function done(result) {
-        return onUnmountCallbacks = result || [];
-      };
+    isActive: isActive,
+    props: input
+  });
 
-      if ((0, _utils.isPromise)(controllersResult)) {
-        controllersResult.then(done);
+  function processExternals() {
+    Object.keys(externals).forEach(function (key) {
+      var external = void 0;
+
+      if (key.charAt(0) === '@') {
+        key = key.substr(1, key.length);
+        external = (0, _index.use)(key);
       } else {
-        done(controllersResult);
+        external = externals[key];
       }
 
-      active = true;
-      render();
-      return instance;
-    };
-    instance.update = function (newProps) {
-      render(newProps);
-      updateInput(newProps);
-    };
-    instance.unmount = function () {
-      active = false;
-      output.destroy();
-      api.destroy();
-      internalStates.forEach(function (s) {
-        return s.destroy();
-      });
-      internalStates = [];
-      onUnmountCallbacks.filter(function (f) {
-        return typeof f === 'function';
-      }).forEach(function (f) {
-        return f();
-      });
-      onUnmountCallbacks = [];
-      subscriptions.forEach(function (s) {
-        return s.unsubscribe();
-      });
-      subscriptions = [];
-      emit(_constants.RIEW_UNMOUNT, instance, output());
-      return instance;
-    };
-    instance.__setExternals = function (maps) {
-      externals = _extends({}, externals, normalizeExternalsMap(maps));
+      updateOutput(_defineProperty({}, key, external));
+      updateAPI(_defineProperty({}, key, external));
+    });
+  }
+
+  instance.isActive = isActive;
+  instance.mount = function () {
+    var initialProps = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+    ensureObject(initialProps, 'The `mount` method');
+    updateInput(initialProps);
+    updateOutput(initialProps);
+    processExternals();
+
+    var controllersResult = _utils.parallel.apply(undefined, controllers)(api());
+    var done = function done(result) {
+      return onUnmountCallbacks = result || [];
     };
 
-    instance.with = function () {
-      for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-        maps[_key2] = arguments[_key2];
-      }
+    if ((0, _utils.isPromise)(controllersResult)) {
+      controllersResult.then(done);
+    } else {
+      done(controllersResult);
+    }
 
-      var newInstance = createRiew.apply(undefined, [viewFunc].concat(controllers));
-
-      newInstance.__setExternals(maps);
-      return newInstance;
-    };
-    instance.test = function (map) {
-      var newInstance = createRiew.apply(undefined, [viewFunc].concat(controllers));
-
-      newInstance.__setExternals([map]);
-      return newInstance;
-    };
-
-    emit(_constants.RIEW_CREATED, instance, output());
+    active = true;
+    _render2();
     return instance;
   };
+  instance.update = function (newProps) {
+    _render2(newProps);
+    updateInput(newProps);
+  };
+  instance.unmount = function () {
+    active = false;
+    output.destroy();
+    api.destroy();
+    internalStates.forEach(function (s) {
+      return s.destroy();
+    });
+    internalStates = [];
+    onUnmountCallbacks.filter(function (f) {
+      return typeof f === 'function';
+    }).forEach(function (f) {
+      return f();
+    });
+    onUnmountCallbacks = [];
+    subscriptions.forEach(function (s) {
+      return s.unsubscribe();
+    });
+    subscriptions = [];
+    emit(_constants.RIEW_UNMOUNT, instance, output());
+    return instance;
+  };
+  instance.__setExternals = function (maps) {
+    externals = _extends({}, externals, normalizeExternalsMap(maps));
+  };
+
+  instance.with = function () {
+    for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      maps[_key2] = arguments[_key2];
+    }
+
+    instance.__setExternals(maps);
+    return instance;
+  };
+  instance.test = function (map) {
+    var newInstance = createRiew.apply(undefined, [viewFunc].concat(controllers));
+
+    newInstance.__setExternals([map]);
+    return newInstance;
+  };
+
+  emit(_constants.RIEW_CREATED, instance, output());
+  return instance;
 };
 
-},{"./constants":1,"./effect":2,"./index":5,"./utils":19}],15:[function(require,module,exports){
+},{"./constants":1,"./effect":2,"./eventBus":3,"./index":6,"./interfaces":7,"./utils":21}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1626,7 +1794,7 @@ function sanitize(something) {
   return result;
 }
 
-},{"./vendor/CircularJSON":16,"./vendor/SerializeError":17}],16:[function(require,module,exports){
+},{"./vendor/CircularJSON":18,"./vendor/SerializeError":19}],18:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1812,7 +1980,7 @@ exports.default = {
   parse: parseRecursion
 };
 
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 /* eslint-disable */
 // Credits: https://github.com/sindresorhus/serialize-error
 
@@ -1903,12 +2071,13 @@ function destroyCircular(from, seen) {
 	return to;
 }
 
-},{}],18:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.isState = isState;
 exports.State = State;
 
 var _fastDeepEqual = require('fast-deep-equal');
@@ -1935,90 +2104,97 @@ function _toConsumableArray(arr) {
   }
 }
 
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
+function isState(state) {
+  return state && state.id && state.id.split('_').shift() === 's';
 }
 
-function State(initialValue, loggable, emit) {
-  var s = {};
+function State(initialValue, emit) {
+  var state = {};
   var value = initialValue;
   var listeners = [];
   var queues = [];
   var active = true;
 
-  s.loggable = loggable;
-  s.id = (0, _utils.getId)('s');
-  s.queueAPI = (0, _queue.createQueueAPI)();
-  s.triggerListeners = function () {
+  state.id = (0, _utils.getId)('s');
+  state.queueAPI = (0, _queue.createQueueAPI)();
+  state.triggerListeners = function () {
     return listeners.forEach(function (l) {
       return l();
     });
   };
-  s.get = function () {
+  state.get = function () {
     return value;
   };
-  s.set = function (newValue) {
+  state.set = function (newValue) {
     if ((0, _fastDeepEqual2.default)(value, newValue)) return;
     value = newValue;
-    s.triggerListeners();
+    state.triggerListeners();
   };
-  s.destroy = function () {
+  state.destroy = function () {
     active = false;
-    s.cancel();
+    state.cancel();
     listeners = [];
   };
-  s.listeners = function () {
+  state.listeners = function () {
     return listeners;
   };
-  s.addListener = function (effect) {
+  state.addListener = function (effect) {
     return listeners.push(effect);
   };
-  s.removeListener = function (effect) {
+  state.removeListener = function (effect) {
     return listeners = listeners.filter(function (_ref) {
       var id = _ref.id;
       return id !== effect.id;
     });
   };
-  s.runQueue = function (items, payload) {
+  state.runQueue = function (effect, payload) {
     if (!active) return value;
-    var queue = (0, _queue.createQueue)(s, emit.extend(_defineProperty({}, _constants.EFFECT_QUEUE_END, function () {
-      queues = queues.filter(function (q) {
-        return q.id !== queue.id;
-      });
-    })));
+    var queue = (0, _queue.createQueue)(state, {
+      start: function start(q) {
+        emit(_constants.EFFECT_START, effect, q);
+      },
+      end: function end(q) {
+        queues = queues.filter(function (_ref2) {
+          var id = _ref2.id;
+          return id !== q.id;
+        });
+        emit(_constants.EFFECT_END, effect, q);
+      },
+      stepIn: function stepIn(q) {
+        emit(_constants.QUEUE_STEP_IN, effect, q);
+      },
+      stepOut: function stepOut(q) {
+        emit(_constants.QUEUE_STEP_OUT, effect, q);
+      }
+    });
 
-    items.forEach(function (_ref2) {
-      var type = _ref2.type,
-          func = _ref2.func;
+    effect.items.forEach(function (_ref3) {
+      var type = _ref3.type,
+          func = _ref3.func;
       return queue.add(type, func);
     });
     queues.push(queue);
     return queue.process.apply(queue, _toConsumableArray(payload));
   };
-  s.cancel = function () {
+  state.cancel = function () {
     queues.forEach(function (q) {
       return q.cancel();
     });
     queues = [];
   };
-  s.queues = function () {
+  state.queues = function () {
     return queues;
   };
 
-  return s;
+  return state;
 };
 
-},{"./constants":1,"./queue":7,"./utils":19,"fast-deep-equal":20}],19:[function(require,module,exports){
+},{"./constants":1,"./queue":9,"./utils":21,"fast-deep-equal":22}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-/* eslint-disable consistent-return */
 var isPromise = exports.isPromise = function isPromise(obj) {
   return obj && typeof obj['then'] === 'function';
 };
@@ -2144,34 +2320,7 @@ var getId = exports.getId = function getId(prefix) {
   return prefix + '_' + ++ids;
 };
 
-var createEventBus = exports.createEventBus = function createEventBus(events) {
-  var emit = function emit(type) {
-    for (var _len4 = arguments.length, payload = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
-      payload[_key4 - 1] = arguments[_key4];
-    }
-
-    if (events[type]) {
-      return events[type].apply(events, payload);
-    }
-  };
-
-  emit.extend = function (newEvents) {
-    var newEmit = createEventBus(newEvents);
-
-    return function (type) {
-      for (var _len5 = arguments.length, payload = Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
-        payload[_key5 - 1] = arguments[_key5];
-      }
-
-      newEmit.apply(undefined, [type].concat(payload));
-      emit.apply(undefined, [type].concat(payload));
-    };
-  };
-
-  return emit;
-};
-
-},{}],20:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 var isArray = Array.isArray;
@@ -2228,5 +2377,5 @@ module.exports = function equal(a, b) {
   return a!==a && b!==b;
 };
 
-},{}]},{},[5])(5)
+},{}]},{},[6])(6)
 });

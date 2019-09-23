@@ -2,10 +2,9 @@
 
 import sanitize from './sanitize';
 import { getFuncName } from './utils';
-import { isState } from './state';
-import { isEffect } from './effect';
-import { isGridNode } from './grid';
+import { isState, isEffect } from './state';
 import { isRiew } from './riew';
+import { QUEUE_START, QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT } from './constants';
 
 const MAX_NUM_OF_EVENTS = 850;
 const INDENT = 12;
@@ -26,8 +25,8 @@ function normalizeState(state) {
 function normalizeEffect(effect) {
   return {
     id: effect.id,
-    state: normalizeState(effect.state),
-    items: effect.items.map(({ type }) => type)
+    items: effect.items.map(({ type }) => type),
+    state: normalizeState(effect.state)
   };
 }
 function normalizeQueue(q) {
@@ -42,14 +41,6 @@ function normalizeQueue(q) {
     currentItem: items[q.index]
   };
 }
-function normalizeGridNode(node) {
-  // console.log(node.product);
-  return {
-    id: node.id,
-    parent: node.parentId,
-    product: normalize([ node.product ])
-  };
-}
 function normalizeRiew(riew, props) {
   return {
     id: riew.id,
@@ -59,9 +50,8 @@ function normalizeRiew(riew, props) {
   };
 }
 
-function normalize(payload) {
-  let state, effect, gridNode, riew;
-  let product = payload[0];
+function normalize(product, type, payload) {
+  let state, effect, gridNode, riew, queue;
 
   if (product && product.loggable === false) return;
 
@@ -69,18 +59,20 @@ function normalize(payload) {
     state = normalizeState(product);
   } else if (isEffect(product)) {
     effect = normalizeEffect(product);
-  } else if (isGridNode(product)) {
-    gridNode = normalizeGridNode(product);
+    if (type === QUEUE_END || type === QUEUE_START || type === QUEUE_STEP_IN || type === QUEUE_STEP_OUT) {
+      queue = normalizeQueue(payload[0]);
+    }
   } else if (isRiew(product)) {
-    riew = normalizeRiew(product, payload[1]);
+    riew = normalizeRiew(product, payload[0]);
   }
 
   return Object.assign(
     {},
-    state,
-    effect,
-    gridNode,
-    riew
+    state && { state },
+    effect && { effect },
+    gridNode && { gridNode },
+    riew && { riew },
+    queue && { queue }
   );
 }
 
@@ -88,15 +80,18 @@ function Logger() {
   const api = {};
   let events = [];
 
-  api.log = (type, payload) => {
-    if (Array.isArray(payload[0])) {
-      payload[0].forEach(x => api.log(type, [ x ]));
+  api.log = (type, ...args) => {
+    return;
+    const [ product, ...payload ] = args;
+
+    if (Array.isArray(product)) {
+      product.forEach(x => api.log(type, x));
       return;
     };
-    const normalizedPayload = normalize(payload);
+    const normalizedProduct = normalize(product, type, payload);
 
-    if (normalizedPayload) {
-      events.push({ type, ...normalizedPayload });
+    if (normalizedProduct) {
+      events.push({ type, ...normalizedProduct });
     }
   };
   api.reset = () => {

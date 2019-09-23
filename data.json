@@ -1,0 +1,165 @@
+[
+  {
+    "type": "RIEW_CREATED",
+    "riew": {
+      "id": "r_5",
+      "name": "MyView",
+      "active": false,
+      "props": {}
+    }
+  },
+  {
+    "type": "RIEW_RENDER",
+    "riew": {
+      "id": "r_5",
+      "name": "MyView",
+      "active": true,
+      "props": {
+        "s1": "a"
+      }
+    }
+  },
+  {
+    "type": "EFFECT_START",
+    "effect": {
+      "id": "e_4",
+      "items": [
+        "mutate"
+      ],
+      "state": {
+        "id": "s_1",
+        "value": "a",
+        "queues": [
+          {
+            "id": "q_42",
+            "result": "a",
+            "items": [
+              "mutate"
+            ],
+            "index": 0,
+            "currentItem": "mutate"
+          }
+        ]
+      }
+    },
+    "queue": {
+      "id": "q_42",
+      "result": "a",
+      "items": [
+        "mutate"
+      ],
+      "index": 0,
+      "currentItem": "mutate"
+    }
+  },
+  {
+    "type": "QUEUE_STEP_IN",
+    "effect": {
+      "id": "e_4",
+      "items": [
+        "mutate"
+      ],
+      "state": {
+        "id": "s_1",
+        "value": "a",
+        "queues": [
+          {
+            "id": "q_42",
+            "result": "a",
+            "items": [
+              "mutate"
+            ],
+            "index": 0,
+            "currentItem": "mutate"
+          }
+        ]
+      }
+    },
+    "queue": {
+      "id": "q_42",
+      "result": "a",
+      "items": [
+        "mutate"
+      ],
+      "index": 0,
+      "currentItem": "mutate"
+    }
+  },
+  {
+    "type": "RIEW_RENDER",
+    "riew": {
+      "id": "r_5",
+      "name": "MyView",
+      "active": true,
+      "props": {
+        "s1": "foo"
+      }
+    }
+  },
+  {
+    "type": "QUEUE_STEP_OUT",
+    "effect": {
+      "id": "e_4",
+      "items": [
+        "mutate"
+      ],
+      "state": {
+        "id": "s_1",
+        "value": "foo",
+        "queues": [
+          {
+            "id": "q_42",
+            "result": "foo",
+            "items": [
+              "mutate"
+            ],
+            "index": 0,
+            "currentItem": "mutate"
+          }
+        ]
+      }
+    },
+    "queue": {
+      "id": "q_42",
+      "result": "foo",
+      "items": [
+        "mutate"
+      ],
+      "index": 0,
+      "currentItem": "mutate"
+    }
+  },
+  {
+    "type": "EFFECT_END",
+    "effect": {
+      "id": "e_4",
+      "items": [
+        "mutate"
+      ],
+      "state": {
+        "id": "s_1",
+        "value": "foo",
+        "queues": []
+      }
+    },
+    "queue": {
+      "id": "q_42",
+      "result": "foo",
+      "items": [
+        "mutate"
+      ],
+      "index": null
+    }
+  },
+  {
+    "type": "RIEW_RENDER",
+    "riew": {
+      "id": "r_5",
+      "name": "MyView",
+      "active": true,
+      "props": {
+        "s1": "FOOBAR"
+      }
+    }
+  }
+]

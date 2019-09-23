@@ -13,9 +13,9 @@ describe('Given the logger', () => {
 
       r.mount();
       setState1('foo');
+      s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
       console.log(JSON.stringify(logger.events(), null, 2));
 
-      // s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
       // r.update({ x: 'y' });
 
       // expect(logger.data.events()).toStrictEqual(loggerEvents);

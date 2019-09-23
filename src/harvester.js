@@ -1,18 +1,11 @@
 import equal from 'fast-deep-equal';
 
 import { State } from './state';
-import createEffect, { isEffect } from './effect';
 import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
 import createEventBus from './eventBus';
-import {
-  STATE_DESTROY,
-  EFFECT_EXPORTED,
-  EFFECT_START,
-  EFFECT_END
-} from './constants';
-import { implementLoggableInterface } from './interfaces';
+import { STATE_DESTROY, EFFECT_EXPORTED } from './constants';
 
 function Harvester() {
   const api = {};
@@ -53,30 +46,21 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     'state',
     (initialValue, loggable) => {
       const emit = createEventBus({
-        [ STATE_DESTROY ]: (effect) => {
-          const removed = grid.remove(state); /* eslint-disable-line */
-
-          state.destroy();
-          if ('__exportedAs' in effect) {
-            h.undefineProduct(effect.__exportedAs);
-          }
+        [ STATE_DESTROY ]: () => {
+          state.effects().forEach(e => {
+            if ('__exportedAs' in effect) {
+              h.undefineProduct(effect.__exportedAs);
+            }
+          });
+          grid.remove(state);
         },
         [ EFFECT_EXPORTED ]: (effect, name) => {
           effect.__exportedAs = name;
           h.defineProduct(name, () => effect);
-        },
-        [ EFFECT_START ]: (effect) => {
-          grid.add(effect, effect.state.id);
-        },
-        [ EFFECT_END ]: (effect) => {
-          grid.remove(effect);
         }
       });
-      const state = State(initialValue, emit);
-
-      implementLoggableInterface(state, loggable);
-
-      const effect = createEffect(state, [], emit);
+      const state = State(initialValue, emit, loggable);
+      const effect = state.createEffect([]);
 
       grid.add(state);
       return effect;
@@ -91,10 +75,10 @@ const defineHarvesterBuiltInCapabilities = function (h) {
       result[key] = s();
       return result;
     }, {});
-    const effect = h.produce('state');
+    const [ effect, , , sInstance ] = h.produce('state');
 
-    effect.state.get = fetchSourceValues;
-    effect.state.set = newValue => {
+    sInstance.get = fetchSourceValues;
+    sInstance.set = newValue => {
       if (typeof newValue !== 'object') {
         throw new Error('Wrong merged state value. Must be key-value pairs.');
       }
@@ -111,7 +95,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     };
 
     Object.keys(statesMap).forEach(key => {
-      statesMap[key].pipe(effect.state.triggerListeners).subscribe();
+      statesMap[key].pipe(sInstance.triggerListeners).subscribe();
     });
 
     return effect;

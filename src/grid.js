@@ -1,13 +1,4 @@
-import createEventBus from './eventBus';
-import { GRID_ADD, GRID_REMOVE } from './constants';
 import { getId } from './utils';
-import { implementLoggableInterface } from './interfaces';
-
-const emit = createEventBus();
-
-export function isGridNode(node) {
-  return node && node.is && node.hasParent;
-};
 
 function Node(product, parentId) {
   const node = {
@@ -21,8 +12,6 @@ function Node(product, parentId) {
       return this.parentId === parentId;
     }
   };
-
-  implementLoggableInterface(node, product.loggable);
 
   return node;
 }
@@ -50,7 +39,6 @@ function Grid() {
     let node = Node(product, parentId);
 
     nodes.push(node);
-    emit(GRID_ADD, node);
     return api;
   };
   const remove = (product) => {
@@ -65,7 +53,6 @@ function Grid() {
       removed.push(n.product);
       return false;
     });
-    emit(GRID_REMOVE, removed);
     return removed;
   };
   const get = (identifier) => {

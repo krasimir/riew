@@ -281,7 +281,7 @@ describe('Given the state', () => {
       expect(spy).toBeCalledWith(30);
     });
     it('should allow us to fork streams', () => {
-      const [ s, setState ] = state(10);
+      const [ s, setState, , sInstance ] = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
       const spyC = jest.fn();
@@ -293,7 +293,7 @@ describe('Given the state', () => {
 
       setState(100);
 
-      expect(s.state.listeners().map(({ id }) => id)).toStrictEqual([ subscription.id, t1.id, t2.id ]);
+      expect(sInstance.listeners().map(({ id }) => id)).toStrictEqual([ subscription.id, t1.id, t2.id ]);
       expect(spyA).toBeCalledTimes(3);
       expect(spyA.mock.calls[0]).toStrictEqual([ 200 ]);
       expect(spyA.mock.calls[1]).toStrictEqual([ 200 ]);
@@ -473,9 +473,9 @@ describe('Given the state', () => {
       );
     });
   });
-  describe('when we have two triggers that are subscribed', () => {
+  describe('when we have two effects that are subscribed', () => {
     it('should run a fresh queue every time', () => {
-      const [ s, setState ] = state(0);
+      const [ s, setState, , sInstance ] = state(0);
       const spyA = jest.fn();
       const spyB = jest.fn();
 
@@ -485,9 +485,9 @@ describe('Given the state', () => {
         .pipe(spyA)
         .subscribe();
 
-      expect(s.state.listeners().length).toBe(1);
-      expect(s.state.listeners()[0].items.map(({ type }) => type))
-        .toStrictEqual([ 'filter', 'map', 'pipe' ]);
+      expect(sInstance.listeners().length).toBe(1);
+      expect(sInstance.listeners()[0].items.map(({ type }) => type))
+        .toStrictEqual([ 'map', 'filter', 'map', 'pipe' ]);
 
       s
         .filter((value) => {
@@ -507,17 +507,17 @@ describe('Given the state', () => {
   });
   describe('when the queue finishes', () => {
     it('should remove it from the state\'s queues array', async () => {
-      const [ s ] = state(10);
+      const [ s, , , sInstance ] = state(10);
       const m = s.mutate(async (value) => {
         await delay(5);
         return value * 5;
       }).map(value => value - 2);
 
       m();
-      expect(m.state.queues()).toHaveLength(1);
+      expect(sInstance.queues()).toHaveLength(1);
       await delay(10);
       expect(s()).toBe(50);
-      expect(m.state.queues()).toHaveLength(0);
+      expect(sInstance.queues()).toHaveLength(0);
     });
   });
   describe('when we use a trigger as a beginning of new queue', () => {
@@ -607,7 +607,7 @@ describe('Given the state', () => {
   /* Iterable */
   describe('when we destruct a state', () => {
     it('should give us getter, setter which are actually effects and the state cancel method', () => {
-      const [ get, set, cancel ] = state('foo');
+      const [ get, set, cancel, sInstance ] = state('foo');
       const spy = jest.fn();
 
       get.map(value => value.toUpperCase()).pipe(spy).subscribe(true);
@@ -616,7 +616,7 @@ describe('Given the state', () => {
       expect(get()).toBe('bar');
       expect(get.map(value => value + 'zar')()).toBe('barzar');
       expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
-      expect(cancel).toBe(get.state.cancel);
+      expect(cancel).toBe(sInstance.cancel);
     });
   });
 
@@ -687,7 +687,7 @@ describe('Given the state', () => {
         );
       });
     });
-    describe('when we define a method, export the trigger and fork it after that', () => {
+    describe('when we define a method, export the effect and fork it after that', () => {
       it('should still work', () => {
         const [ s ] = state('foo').export('hey');
 
