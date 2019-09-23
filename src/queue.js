@@ -1,4 +1,4 @@
-import { getFuncName, getId, isPromise } from './utils';
+import { getId, isPromise } from './utils';
 import pipe from './queueMethods/pipe';
 import map from './queueMethods/map';
 import mapToKey from './queueMethods/mapToKey';
@@ -41,7 +41,7 @@ export function createQueue(state, effect, lifecycle) {
     result: getStateValue(),
     items: [],
     add(type, func) {
-      this.items.push({ type, func, name: func.map(getFuncName) });
+      this.items.push({ type, func });
     },
     process(...payload) {
       q.index = 0;

@@ -6,6 +6,10 @@ describe('Given the logger', () => {
   });
   describe('when we want to see what happened', () => {
     fit('should show us the events that were emitted', () => {
+      const spy = jest.fn();
+
+      // logger.on(spy);
+
       const view = function MyView() {};
       const [ s1, setState1 ] = state('a');
       const controller = function myController() {};
@@ -13,12 +17,13 @@ describe('Given the logger', () => {
 
       r.mount();
       setState1('foo');
-      s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
-      console.log(JSON.stringify(logger.events(), null, 2));
-
+      // s1.map(value => value.toUpperCase()).mutate(value => value + 'BAR')();
       // r.update({ x: 'y' });
 
-      // expect(logger.data.events()).toStrictEqual(loggerEvents);
+      logger.toConsole();
+
+      // console.log(JSON.stringify(spy.mock.calls, null, 2));
+      // console.log(JSON.stringify(spy.mock.calls[spy.mock.calls.length - 1][1], null, 2));
     });
   });
   xdescribe('when we want to see the grid', () => {

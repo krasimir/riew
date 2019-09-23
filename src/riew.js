@@ -1,8 +1,7 @@
 import { state, use } from './index';
 import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
-import createEventBus from './eventBus';
-import { RIEW_RENDER, RIEW_UNMOUNT, RIEW_CREATED } from './constants';
+import { RIEW_RENDER, RIEW_UNMOUNT } from './constants';
 import { implementLoggableInterface } from './interfaces';
 
 export function isRiew(riew) {
@@ -26,9 +25,8 @@ function normalizeExternalsMap(arr) {
   }, {});
 }
 const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
-const emit = createEventBus();
 
-export default function createRiew(viewFunc, ...controllers) {
+export default function createRiew(emit, viewFunc, ...controllers) {
   const instance = { id: getId('r'), name: getFuncName(viewFunc) };
   let active = false;
   let internalStates = [];
@@ -145,21 +143,20 @@ export default function createRiew(viewFunc, ...controllers) {
     emit(RIEW_UNMOUNT, instance, output());
     return instance;
   };
-  instance.__setExternals = (maps) => {
-    externals = { ...externals, ...normalizeExternalsMap(maps) };
-  };
-
   instance.with = (...maps) => {
     instance.__setExternals(maps);
     return instance;
   };
   instance.test = (map) => {
-    const newInstance = createRiew(viewFunc, ...controllers);
+    const newInstance = createRiew(emit, viewFunc, ...controllers);
 
     newInstance.__setExternals([ map ]);
     return newInstance;
   };
+  instance.__setExternals = (maps) => {
+    externals = { ...externals, ...normalizeExternalsMap(maps) };
+  };
+  instance.__output = output;
 
-  emit(RIEW_CREATED, instance, output());
   return instance;
 };

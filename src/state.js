@@ -2,7 +2,7 @@ import equal from 'fast-deep-equal';
 
 import { getId } from './utils';
 import { createQueueAPI, createQueue } from './queue';
-import { QUEUE_START, QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT, EFFECT_EXPORTED, STATE_DESTROY } from './constants';
+import { QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT, EFFECT_EXPORTED, STATE_DESTROY } from './constants';
 import { implementLoggableInterface } from './interfaces';
 
 export function isState(state) {
@@ -53,18 +53,16 @@ export function State(initialValue, emit, loggable) {
       state,
       effect,
       {
-        start(q) {
-          emit(QUEUE_START, effect, q);
-        },
-        end(q) {
-          queues = queues.filter(({ id }) => id !== q.id);
-          emit(QUEUE_END, effect, q);
-        },
+        start(q) {},
         stepIn(q) {
-          emit(QUEUE_STEP_IN, effect, q);
+          emit(QUEUE_STEP_IN, effect);
         },
         stepOut(q) {
-          emit(QUEUE_STEP_OUT, effect, q);
+          emit(QUEUE_STEP_OUT, effect);
+        },
+        end(q) {
+          emit(QUEUE_END, effect);
+          queues = queues.filter(({ id }) => id !== q.id);
         }
       }
     );

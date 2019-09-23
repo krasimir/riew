@@ -5,7 +5,25 @@ import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
 import createEventBus from './eventBus';
-import { STATE_DESTROY, EFFECT_EXPORTED } from './constants';
+import { STATE_DESTROY, EFFECT_EXPORTED, HARVESTER_PRODUCE, RIEW_UNMOUNT } from './constants';
+
+const emit = createEventBus({
+  [ STATE_DESTROY ]: (state) => {
+    state.effects().forEach(e => {
+      if ('__exportedAs' in e) {
+        h.undefineProduct(e.__exportedAs);
+      }
+    });
+    grid.remove(state);
+  },
+  [ EFFECT_EXPORTED ]: (effect, name) => {
+    effect.__exportedAs = name;
+    h.defineProduct(name, () => effect);
+  },
+  [ RIEW_UNMOUNT ]: (riew) => {
+    grid.remove(riew);
+  }
+});
 
 function Harvester() {
   const api = {};
@@ -29,6 +47,7 @@ function Harvester() {
     }
     const product = products[type](...args);
 
+    emit(HARVESTER_PRODUCE, product);
     return product;
   };
   api.reset = () => {
@@ -45,20 +64,6 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   h.defineProduct(
     'state',
     (initialValue, loggable) => {
-      const emit = createEventBus({
-        [ STATE_DESTROY ]: () => {
-          state.effects().forEach(e => {
-            if ('__exportedAs' in effect) {
-              h.undefineProduct(effect.__exportedAs);
-            }
-          });
-          grid.remove(state);
-        },
-        [ EFFECT_EXPORTED ]: (effect, name) => {
-          effect.__exportedAs = name;
-          h.defineProduct(name, () => effect);
-        }
-      });
       const state = State(initialValue, emit, loggable);
       const effect = state.createEffect([]);
 
@@ -103,7 +108,10 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
   // ------------------------------------------------------------------ riew
   h.defineProduct('riew', (viewFunc, ...controllers) => {
-    return createRiew(viewFunc, ...controllers);
+    const riew = createRiew(emit, viewFunc, ...controllers);
+
+    grid.add(riew);
+    return riew;
   });
 
   // ------------------------------------------------------------------ reactRiew
