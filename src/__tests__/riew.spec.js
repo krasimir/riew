@@ -103,7 +103,7 @@ describe('Given the `riew` factory function', () => {
   });
   describe('when we send an external state to the view and the view is unmounted', () => {
     it('should initially subscribe and then unsubscribe', () => {
-      const [ s, setState ] = state('foo');
+      const [ s, setState, , sInstance ] = state('foo');
       const view = jest.fn();
       const se = function ({ render }) {
         render({ s });
@@ -112,19 +112,19 @@ describe('Given the `riew` factory function', () => {
 
       r.mount();
       setState('baz');
-      expect(s.state.listeners()).toHaveLength(1);
+      expect(sInstance.listeners()).toHaveLength(1);
       r.unmount();
-      expect(s.state.listeners()).toHaveLength(0);
+      expect(sInstance.listeners()).toHaveLength(0);
       expect(view).toBeCalledWithArgs(
         [ { s: 'foo' } ],
         [ { s: 'baz' } ]
       );
     });
   });
-  describe('when we send a trigger to the view', () => {
+  describe('when we send a effect to the view', () => {
     it(`should
-      * run the trigger and pass the value if the trigger is not mutating
-      * subscribe to state changes if the trigger is not mutating`, () => {
+      * run the effect and pass the value if the effect is not mutating
+      * subscribe to state changes if the effect is not mutating`, () => {
       const view = jest.fn().mockImplementation(({ s, change }) => {
         if (s !== 'BAR') {
           change();

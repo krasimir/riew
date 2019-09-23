@@ -41,7 +41,7 @@ export default function createRiew(viewFunc, ...controllers) {
   const [ api ] = state({}, false);
 
   const isActive = () => active;
-  const isSubscribed = s => !!subscriptions.find(effect => effect.state.id === s.id);
+  const isSubscribedTo = id => subscriptions.find(({ stateId }) => (id === stateId));
 
   implementLoggableInterface(instance);
 
@@ -52,14 +52,15 @@ export default function createRiew(viewFunc, ...controllers) {
     if (newStuff) {
       Object.keys(newStuff).forEach(key => {
         if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
-          const [ effect ] = newStuff[key];
+          const [ effect, , , sInstance ] = newStuff[key];
 
           effect.loggability(false);
           result[key] = effect();
-          if (!isSubscribed(effect.state)) {
-            subscriptions.push(
-              effect.pipe(() => render({ [key]: effect() })).subscribe()
-            );
+          if (!isSubscribedTo(sInstance.id)) {
+            subscriptions.push({
+              stateId: sInstance.id,
+              effect: effect.pipe(() => render({ [key]: effect() })).subscribe()
+            });
           }
         } else {
           result[key] = newStuff[key];
@@ -139,7 +140,7 @@ export default function createRiew(viewFunc, ...controllers) {
     internalStates = [];
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
-    subscriptions.forEach(s => s.unsubscribe());
+    subscriptions.forEach(s => s.effect.unsubscribe());
     subscriptions = [];
     emit(RIEW_UNMOUNT, instance, output());
     return instance;

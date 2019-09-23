@@ -6,30 +6,29 @@ describe('Given the grid', () => {
     reset();
   });
   describe('when we use the grid', () => {
-    it('should store stuff for us and let us free resources', () => {
+    it('should store products and let us free resources', () => {
       const obj = { id: 'foo', something: 'else' };
       const obj2 = { id: 'bar' };
       const obj3 = { id: 'moo' };
 
       grid.add(obj);
-      grid.add(obj2, obj.id);
-      grid.add(obj3, obj2.id);
-      expect(grid.get('foo')).toStrictEqual(obj);
+      grid.add(obj2);
+      grid.add(obj3);
+      expect(grid.nodes()).toHaveLength(3);
       grid.remove(obj);
-      expect(() => grid.get('foo')).toThrowError('A node with identifier "foo" is missing in the grid.');
-      expect(() => grid.get('bar')).toThrowError('A node with identifier "bar" is missing in the grid.');
-      expect(() => grid.get('moo')).toThrowError('A node with identifier "moo" is missing in the grid.');
-      expect(() => grid.get('something')).toThrowError('A node with identifier "something" is missing in the grid.');
+      grid.remove(obj2);
+      grid.remove(obj3);
+      expect(grid.nodes()).toHaveLength(0);
     });
   });
   describe('when we create a state', () => {
     it('should store the state as a node in the grid and remove it when we teardown the state', () => {
-      const s1 = state('foo');
-      const s2 = state('bar');
+      const [ s1, , , sInstance1 ] = state('foo');
+      const [ s2, , , sInstance2 ] = state('bar');
 
       expect(grid.nodes()).toStrictEqual([
-        expect.objectContaining({ product: expect.objectContaining({ id: s1.state.id }) }),
-        expect.objectContaining({ product: expect.objectContaining({ id: s2.state.id }) })
+        expect.objectContaining({ id: sInstance1.id }),
+        expect.objectContaining({ id: sInstance2.id })
       ]);
       s1.destroy();
       s2.destroy();
