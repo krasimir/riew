@@ -51,6 +51,7 @@ export function State(initialValue, emit, loggable) {
     if (!active) return value;
     const queue = createQueue(
       state,
+      effect,
       {
         start(q) {
           emit(QUEUE_START, effect, q);
@@ -68,7 +69,6 @@ export function State(initialValue, emit, loggable) {
       }
     );
 
-    effect.items.forEach(({ type, func }) => queue.add(type, func));
     queues.push(queue);
     return queue.process(...payload);
   };
@@ -110,6 +110,15 @@ export function State(initialValue, emit, loggable) {
     effect.destroy = () => {
       state.destroy();
       return effect;
+    };
+    effect.cancel = () => {
+      queues = queues.filter(q => {
+        if (q.causedBy === effect.id) {
+          q.cancel();
+          return false;
+        }
+        return true;
+      });
     };
     effect.export = name => {
       emit(EFFECT_EXPORTED, effect, name);
@@ -163,7 +172,7 @@ export function State(initialValue, emit, loggable) {
   function implementIterableProtocol(effect) {
     if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
       effect[Symbol.iterator] = function () {
-        const values = [ effect.map(), effect.mutate(), state.cancel, state ];
+        const values = [ effect.map(), effect.mutate(), state ];
         let i = 0;
 
         return {

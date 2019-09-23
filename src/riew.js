@@ -52,7 +52,7 @@ export default function createRiew(viewFunc, ...controllers) {
     if (newStuff) {
       Object.keys(newStuff).forEach(key => {
         if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
-          const [ effect, , , sInstance ] = newStuff[key];
+          const [ effect, , sInstance ] = newStuff[key];
 
           effect.loggability(false);
           result[key] = effect();

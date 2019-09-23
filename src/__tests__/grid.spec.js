@@ -23,8 +23,8 @@ describe('Given the grid', () => {
   });
   describe('when we create a state', () => {
     it('should store the state as a node in the grid and remove it when we teardown the state', () => {
-      const [ s1, , , sInstance1 ] = state('foo');
-      const [ s2, , , sInstance2 ] = state('bar');
+      const [ s1, , sInstance1 ] = state('foo');
+      const [ s2, , sInstance2 ] = state('bar');
 
       expect(grid.nodes()).toStrictEqual([
         expect.objectContaining({ id: sInstance1.id }),

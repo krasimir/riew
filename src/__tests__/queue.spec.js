@@ -14,7 +14,7 @@ describe('Given the createQueue helper', () => {
       };
       const setValue = jest.fn();
       const getValue = jest.fn().mockImplementation(() => 42);
-      const q = createQueue({ set: setValue, get: getValue, queueAPI }, {
+      const q = createQueue({ set: setValue, get: getValue, queueAPI }, { id: 'effect', items: [] }, {
         start() {
           steps.push([ 'start', q.result ]);
         },

@@ -103,7 +103,7 @@ describe('Given the `riew` factory function', () => {
   });
   describe('when we send an external state to the view and the view is unmounted', () => {
     it('should initially subscribe and then unsubscribe', () => {
-      const [ s, setState, , sInstance ] = state('foo');
+      const [ s, setState, sInstance ] = state('foo');
       const view = jest.fn();
       const se = function ({ render }) {
         render({ s });

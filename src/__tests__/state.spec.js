@@ -202,11 +202,11 @@ describe('Given the state', () => {
   });
 
   /* cancel */
-  describe('when we use the `cancel` method', () => {
+  describe('when we use the state `cancel` method', () => {
     it('should stop the currently running queues (if any)', async () => {
       const [ s ] = state(10);
       const spy = jest.fn();
-      const [ m, , cancel ] = s.pipe(async (value, nDelay) => {
+      const [ m, , sInstance ] = s.pipe(async (value, nDelay) => {
         await delay(nDelay);
       }).mutate((value) => {
         return value + 5;
@@ -215,7 +215,25 @@ describe('Given the state', () => {
       m(5);
       m(6);
       m(7);
-      cancel();
+      sInstance.cancel();
+
+      await delay(15);
+      expect(s()).toBe(10);
+      expect(spy).not.toBeCalled();
+    });
+  });
+  describe('when we use the effect `cancel` method', () => {
+    it('should stop the currently running queues (if any)', async () => {
+      const [ s ] = state(10);
+      const spy = jest.fn();
+      const m = s.pipe(async (value, nDelay) => {
+        await delay(nDelay);
+      }).mutate((value) => {
+        return value + 5;
+      }).pipe(spy);
+
+      m(5);
+      m.cancel();
 
       await delay(15);
       expect(s()).toBe(10);
@@ -281,7 +299,7 @@ describe('Given the state', () => {
       expect(spy).toBeCalledWith(30);
     });
     it('should allow us to fork streams', () => {
-      const [ s, setState, , sInstance ] = state(10);
+      const [ s, setState, sInstance ] = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
       const spyC = jest.fn();
@@ -475,7 +493,7 @@ describe('Given the state', () => {
   });
   describe('when we have two effects that are subscribed', () => {
     it('should run a fresh queue every time', () => {
-      const [ s, setState, , sInstance ] = state(0);
+      const [ s, setState, sInstance ] = state(0);
       const spyA = jest.fn();
       const spyB = jest.fn();
 
@@ -507,7 +525,7 @@ describe('Given the state', () => {
   });
   describe('when the queue finishes', () => {
     it('should remove it from the state\'s queues array', async () => {
-      const [ s, , , sInstance ] = state(10);
+      const [ s, , sInstance ] = state(10);
       const m = s.mutate(async (value) => {
         await delay(5);
         return value * 5;
@@ -606,8 +624,8 @@ describe('Given the state', () => {
 
   /* Iterable */
   describe('when we destruct a state', () => {
-    it('should give us getter, setter which are actually effects and the state cancel method', () => {
-      const [ get, set, cancel, sInstance ] = state('foo');
+    it('should give us getter, setter which are actually effects and the state', () => {
+      const [ get, set, sInstance ] = state('foo');
       const spy = jest.fn();
 
       get.map(value => value.toUpperCase()).pipe(spy).subscribe(true);
@@ -616,7 +634,7 @@ describe('Given the state', () => {
       expect(get()).toBe('bar');
       expect(get.map(value => value + 'zar')()).toBe('barzar');
       expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
-      expect(cancel).toBe(sInstance.cancel);
+      expect(sInstance).toBeDefined();
     });
   });
 

@@ -75,7 +75,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
       result[key] = s();
       return result;
     }, {});
-    const [ effect, , , sInstance ] = h.produce('state');
+    const [ effect, , sInstance ] = h.produce('state');
 
     sInstance.get = fetchSourceValues;
     sInstance.set = newValue => {

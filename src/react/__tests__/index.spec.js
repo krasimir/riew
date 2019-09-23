@@ -40,7 +40,7 @@ describe('Given the React riew function', () => {
         * render with the given state data
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, async () => {
-        const [ s, setState, , sInstance ] = state('foo');
+        const [ s, setState, sInstance ] = state('foo');
         const R = riew(
           ({ state }) => <p>{ state }</p>,
           async function ({ state }) {

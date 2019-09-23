@@ -28,13 +28,14 @@ export function createQueueAPI() {
   return { ...queueAPI };
 };
 
-export function createQueue(state, lifecycle) {
+export function createQueue(state, effect, lifecycle) {
   const setStateValue = state.set;
   const getStateValue = state.get;
   const queueAPI = state.queueAPI;
   const q = {
     id: getId('q'),
     index: null,
+    causedBy: effect.id,
     setStateValue,
     getStateValue,
     result: getStateValue(),
@@ -82,6 +83,8 @@ export function createQueue(state, lifecycle) {
       q.items = [];
     }
   };
+
+  effect.items.forEach(({ type, func }) => q.add(type, func));
 
   return q;
 }
