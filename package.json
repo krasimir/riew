@@ -55,12 +55,12 @@
     "redux": "4.0.0",
     "regenerator-runtime": "0.12.1",
     "riew-debugger": "0.1.0",
-    "terser": "4.2.1"
+    "terser": "4.2.1",
+    "browserify-swap": "0.2.2"
   },
   "dependencies": {
-    "browserify-swap": "0.2.2",
-    "cli-table3": "0.5.1",
-    "fast-deep-equal": "2.0.1"
+    "fast-deep-equal": "2.0.1",
+    "table": "5.4.6"
   },
   "browserify": {
     "transform": [
