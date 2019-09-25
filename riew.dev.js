@@ -21,9 +21,9 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = createEventBus;
 
-var _logger = require('./logger');
+var _grid = require('./grid');
 
-var _logger2 = _interopRequireDefault(_logger);
+var _grid2 = _interopRequireDefault(_grid);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -37,7 +37,7 @@ function createEventBus() {
       payload[_key - 1] = arguments[_key];
     }
 
-    if (true) _logger2.default.__log.apply(_logger2.default, [type].concat(payload));
+    if (true) _grid2.default.dispatch.apply(_grid2.default, [type].concat(payload));
     if (events[type]) {
       return events[type].apply(events, payload);
     }
@@ -47,7 +47,7 @@ function createEventBus() {
 } /* eslint-disable consistent-return */
 ;
 
-},{"./logger":7}],3:[function(require,module,exports){
+},{"./grid":3}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -56,27 +56,38 @@ Object.defineProperty(exports, "__esModule", {
 function Grid() {
   var api = {};
   var nodes = [];
+  var listeners = [];
 
-  var add = function add(product) {
+  api.add = function (product) {
     if (!product || !product.id) {
       throw new Error("Each node in the grid must be an object with \"id\" field. Instead \"" + product + "\" given.");
     }
     nodes.push(product);
-  };
-  var remove = function remove(product) {
+  };;
+  api.remove = function (product) {
     nodes = nodes.filter(function (_ref) {
       var id = _ref.id;
       return id !== product.id;
     });
-  };
-
-  api.add = add;
-  api.remove = remove;
+  };;
   api.reset = function () {
-    return nodes = [];
+    nodes = [];
+    listeners = [];
   };
   api.nodes = function () {
     return nodes;
+  };
+  api.on = function (listener) {
+    return listeners.push(listener);
+  };
+  api.dispatch = function () {
+    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    return listeners.forEach(function (l) {
+      return l.apply(undefined, args);
+    });
   };
 
   return api;
@@ -303,13 +314,13 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./constants":1,"./eventBus":2,"./grid":3,"./react":17,"./riew":18,"./state":19,"fast-deep-equal":21}],5:[function(require,module,exports){
+},{"./constants":1,"./eventBus":2,"./grid":3,"./react":13,"./riew":14,"./state":15,"fast-deep-equal":17}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.logger = exports.harvester = exports.parallel = exports.serial = exports.compose = exports.reset = exports.register = exports.use = exports.react = exports.riew = exports.merge = exports.state = undefined;
+exports.grid = exports.harvester = exports.parallel = exports.serial = exports.compose = exports.reset = exports.register = exports.use = exports.react = exports.riew = exports.merge = exports.state = undefined;
 
 var _utils = require('./utils');
 
@@ -335,10 +346,6 @@ Object.defineProperty(exports, 'parallel', {
 var _harvester = require('./harvester');
 
 var _harvester2 = _interopRequireDefault(_harvester);
-
-var _logger = require('./logger');
-
-var _logger2 = _interopRequireDefault(_logger);
 
 var _grid = require('./grid');
 
@@ -385,15 +392,14 @@ var register = exports.register = function register(name, whatever) {
   });
 };
 var reset = exports.reset = function reset() {
-  _logger2.default.reset();
   _harvester2.default.reset();
   _grid2.default.reset();
 };
 
 var harvester = exports.harvester = _harvester2.default;
-var logger = exports.logger = _logger2.default;
+var grid = exports.grid = _grid2.default;
 
-},{"./grid":3,"./harvester":4,"./logger":7,"./utils":20}],6:[function(require,module,exports){
+},{"./grid":3,"./harvester":4,"./utils":16}],6:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -411,512 +417,6 @@ function implementLoggableInterface(obj) {
 }
 
 },{}],7:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _extends = Object.assign || function (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];for (var key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key];
-      }
-    }
-  }return target;
-}; /* eslint-disable consistent-return */
-// const { table } = require('table');
-
-var _sanitize = require('./sanitize');
-
-var _sanitize2 = _interopRequireDefault(_sanitize);
-
-var _utils = require('../utils');
-
-var _state = require('../state');
-
-var _riew = require('../riew');
-
-var _grid = require('../grid');
-
-var _grid2 = _interopRequireDefault(_grid);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-var INDENT = 12;
-
-function normalizeState(state) {
-  var queues = state.queues();
-
-  return {
-    id: state.id,
-    value: (0, _sanitize2.default)(state.get()),
-    effects: state.effects().filter(function (_ref) {
-      var loggable = _ref.loggable;
-      return loggable;
-    }).map(function (e) {
-      var effectQueues = queues.filter(function (_ref2) {
-        var causedBy = _ref2.causedBy;
-
-        return causedBy === e.id;
-      });
-
-      if (effectQueues.length === 0) {
-        return false;
-      }
-
-      return _extends({}, normalizeEffect(e), {
-        queues: effectQueues.map(normalizeQueue)
-      });
-    }).filter(function (e) {
-      return e !== false;
-    })
-  };
-}
-function normalizeEffect(effect) {
-  return {
-    id: effect.id
-  };
-}
-function normalizeQueue(q) {
-  return {
-    id: q.id,
-    index: q.index,
-    result: q.result,
-    items: q.items.map(function (_ref3) {
-      var type = _ref3.type,
-          func = _ref3.func;
-
-      return type;
-    })
-  };
-}
-function normalizeRiew(riew) {
-  return {
-    id: riew.id,
-    name: riew.name,
-    props: (0, _sanitize2.default)(riew.__output())
-  };
-}
-
-function Logger() {
-  var api = {};
-  var listeners = [];
-
-  api.__log = function (type, product) {
-    if (!product.loggable) return;
-    listeners.forEach(function (l) {
-      return l(type, api.report());
-    });
-  };
-  api.on = function (listener) {
-    listeners.push(listener);
-  };
-  api.reset = function () {
-    listeners = [];
-  };
-  api.report = function () {
-    var gridSnapshot = {
-      states: [],
-      riews: []
-    };
-    var gridNodes = _grid2.default.nodes();
-
-    gridNodes.forEach(function (node) {
-      if ((0, _state.isState)(node)) {
-        if (node.loggable) {
-          gridSnapshot.states.push(normalizeState(node));
-        }
-      } else if ((0, _riew.isRiew)(node)) {
-        gridSnapshot.riews.push(normalizeRiew(node));
-      } else {
-        console.log('Unrecognizable node in the grid!', node);
-      }
-    });
-
-    return gridSnapshot;
-  };
-  api.toConsole = function () {
-    var report = api.report();
-    var rows = [];
-    var innerTableBorders = {
-      topBody: '',
-      topJoin: '',
-      topLeft: '',
-      topRight: '',
-
-      bottomBody: '',
-      bottomJoin: '',
-      bottomLeft: '',
-      bottomRight: '',
-
-      bodyLeft: '',
-      bodyRight: '',
-      bodyJoin: '│',
-
-      joinBody: '─',
-      joinLeft: '├',
-      joinRight: '┤',
-      joinJoin: '┼'
-    };
-    var table = function table() {};
-
-    rows.push(['ID', 'value', 'effects']);
-
-    report.states.forEach(function (_ref4) {
-      var id = _ref4.id,
-          value = _ref4.value,
-          effects = _ref4.effects;
-
-      rows.push([id, JSON.stringify(value, null, 2), effects.length > 0 ? table(effects.reduce(function (rows, effect) {
-        effect.queues.forEach(function (q) {
-          rows.push([effect.id, q.items.map(function (type, i) {
-            return '' + type + (i === q.index ? '*' : '');
-          }).join('\n'), q.result]);
-        });
-        return rows;
-      }, [['id', 'Qs', 'Q result']]), { border: innerTableBorders }) : 'none']);
-    });
-    // console.log(JSON.stringify(report.states, null, 2));
-    console.log(table(rows));
-  };
-
-  return api;
-}
-
-var logger = Logger();
-
-exports.default = logger;
-
-},{"../grid":3,"../riew":18,"../state":19,"../utils":20,"./sanitize":8}],8:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = sanitize;
-
-var _CircularJSON = require('./vendor/CircularJSON');
-
-var _CircularJSON2 = _interopRequireDefault(_CircularJSON);
-
-var _SerializeError = require('./vendor/SerializeError');
-
-var _SerializeError2 = _interopRequireDefault(_SerializeError);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function sanitize(something) {
-  var showErrorInConsole = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-
-  var result;
-
-  if (typeof something === 'undefined') {
-    return undefined;
-  }
-
-  try {
-    result = JSON.parse(_CircularJSON2.default.stringify(something, function (key, value) {
-      if (typeof value === 'function') {
-        return value.name === '' ? '<anonymous>' : 'function ' + value.name + '()';
-      }
-      if (value instanceof Error) {
-        return (0, _SerializeError2.default)(value);
-      }
-      return value;
-    }, undefined, true));
-  } catch (error) {
-    if (showErrorInConsole) {
-      console.log(error);
-    }
-    result = null;
-  }
-  return result;
-}
-
-},{"./vendor/CircularJSON":9,"./vendor/SerializeError":10}],9:[function(require,module,exports){
-'use strict';
-
-var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
-
-/* eslint-disable */
-/*!
-Copyright (C) 2013-2017 by Andrea Giammarchi - @WebReflection
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-*/
-var
-// should be a not so common char
-// possibly one JSON does not encode
-// possibly one encodeURIComponent does not encode
-// right now this char is '~' but this might change in the future
-specialChar = '~',
-    safeSpecialChar = '\\x' + ('0' + specialChar.charCodeAt(0).toString(16)).slice(-2),
-    escapedSafeSpecialChar = '\\' + safeSpecialChar,
-    specialCharRG = new RegExp(safeSpecialChar, 'g'),
-    safeSpecialCharRG = new RegExp(escapedSafeSpecialChar, 'g'),
-    safeStartWithSpecialCharRG = new RegExp('(?:^|([^\\\\]))' + escapedSafeSpecialChar),
-    indexOf = [].indexOf || function (v) {
-  for (var i = this.length; i-- && this[i] !== v;) {}
-  return i;
-},
-    $String = String // there's no way to drop warnings in JSHint
-// about new String ... well, I need that here!
-// faked, and happy linter!
-;
-
-function generateReplacer(value, replacer, resolve) {
-  var inspect = !!replacer,
-      path = [],
-      all = [value],
-      seen = [value],
-      mapp = [resolve ? specialChar : '<circular>'],
-      last = value,
-      lvl = 1,
-      i,
-      fn;
-  if (inspect) {
-    fn = (typeof replacer === 'undefined' ? 'undefined' : _typeof(replacer)) === 'object' ? function (key, value) {
-      return key !== '' && replacer.indexOf(key) < 0 ? void 0 : value;
-    } : replacer;
-  }
-  return function (key, value) {
-    // the replacer has rights to decide
-    // if a new object should be returned
-    // or if there's some key to drop
-    // let's call it here rather than "too late"
-    if (inspect) value = fn.call(this, key, value);
-
-    // did you know ? Safari passes keys as integers for arrays
-    // which means if (key) when key === 0 won't pass the check
-    if (key !== '') {
-      if (last !== this) {
-        i = lvl - indexOf.call(all, this) - 1;
-        lvl -= i;
-        all.splice(lvl, all.length);
-        path.splice(lvl - 1, path.length);
-        last = this;
-      }
-      // console.log(lvl, key, path);
-      if ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && value) {
-        // if object isn't referring to parent object, add to the
-        // object path stack. Otherwise it is already there.
-        if (indexOf.call(all, value) < 0) {
-          all.push(last = value);
-        }
-        lvl = all.length;
-        i = indexOf.call(seen, value);
-        if (i < 0) {
-          i = seen.push(value) - 1;
-          if (resolve) {
-            // key cannot contain specialChar but could be not a string
-            path.push(('' + key).replace(specialCharRG, safeSpecialChar));
-            mapp[i] = specialChar + path.join(specialChar);
-          } else {
-            mapp[i] = mapp[0];
-          }
-        } else {
-          value = mapp[i];
-        }
-      } else {
-        if (typeof value === 'string' && resolve) {
-          // ensure no special char involved on deserialization
-          // in this case only first char is important
-          // no need to replace all value (better performance)
-          value = value.replace(safeSpecialChar, escapedSafeSpecialChar).replace(specialChar, safeSpecialChar);
-        }
-      }
-    }
-    return value;
-  };
-}
-
-function retrieveFromPath(current, keys) {
-  for (var i = 0, length = keys.length; i < length; current = current[
-  // keys should be normalized back here
-  keys[i++].replace(safeSpecialCharRG, specialChar)]) {}
-  return current;
-}
-
-function generateReviver(reviver) {
-  return function (key, value) {
-    var isString = typeof value === 'string';
-    if (isString && value.charAt(0) === specialChar) {
-      return new $String(value.slice(1));
-    }
-    if (key === '') value = regenerate(value, value, {});
-    // again, only one needed, do not use the RegExp for this replacement
-    // only keys need the RegExp
-    if (isString) value = value.replace(safeStartWithSpecialCharRG, '$1' + specialChar).replace(escapedSafeSpecialChar, safeSpecialChar);
-    return reviver ? reviver.call(this, key, value) : value;
-  };
-}
-
-function regenerateArray(root, current, retrieve) {
-  for (var i = 0, length = current.length; i < length; i++) {
-    current[i] = regenerate(root, current[i], retrieve);
-  }
-  return current;
-}
-
-function regenerateObject(root, current, retrieve) {
-  for (var key in current) {
-    if (current.hasOwnProperty(key)) {
-      current[key] = regenerate(root, current[key], retrieve);
-    }
-  }
-  return current;
-}
-
-function regenerate(root, current, retrieve) {
-  return current instanceof Array ?
-  // fast Array reconstruction
-  regenerateArray(root, current, retrieve) : current instanceof $String ?
-  // root is an empty string
-  current.length ? retrieve.hasOwnProperty(current) ? retrieve[current] : retrieve[current] = retrieveFromPath(root, current.split(specialChar)) : root : current instanceof Object ?
-  // dedicated Object parser
-  regenerateObject(root, current, retrieve) :
-  // value as it is
-  current;
-}
-
-function stringifyRecursion(value, replacer, space, doNotResolve) {
-  return JSON.stringify(value, generateReplacer(value, replacer, !doNotResolve), space);
-}
-
-function parseRecursion(text, reviver) {
-  return JSON.parse(text, generateReviver(reviver));
-}
-
-exports.default = {
-  stringify: stringifyRecursion,
-  parse: parseRecursion
-};
-
-},{}],10:[function(require,module,exports){
-/* eslint-disable */
-// Credits: https://github.com/sindresorhus/serialize-error
-
-'use strict';
-
-var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-	return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-	return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
-
-module.exports = function (value) {
-	if ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
-		return destroyCircular(value, []);
-	}
-
-	// People sometimes throw things besides Error objects, so…
-
-	if (typeof value === 'function') {
-		// JSON.stringify discards functions. We do too, unless a function is thrown directly.
-		return '[Function: ' + (value.name || 'anonymous') + ']';
-	}
-
-	return value;
-};
-
-// https://www.npmjs.com/package/destroy-circular
-function destroyCircular(from, seen) {
-	var to = Array.isArray(from) ? [] : {};
-
-	seen.push(from);
-
-	var _iteratorNormalCompletion = true;
-	var _didIteratorError = false;
-	var _iteratorError = undefined;
-
-	try {
-		for (var _iterator = Object.keys(from)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-			var key = _step.value;
-
-			var value = from[key];
-
-			if (typeof value === 'function') {
-				continue;
-			}
-
-			if (!value || (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
-				to[key] = value;
-				continue;
-			}
-
-			if (seen.indexOf(from[key]) === -1) {
-				to[key] = destroyCircular(from[key], seen.slice(0));
-				continue;
-			}
-
-			to[key] = '[Circular]';
-		}
-	} catch (err) {
-		_didIteratorError = true;
-		_iteratorError = err;
-	} finally {
-		try {
-			if (!_iteratorNormalCompletion && _iterator.return) {
-				_iterator.return();
-			}
-		} finally {
-			if (_didIteratorError) {
-				throw _iteratorError;
-			}
-		}
-	}
-
-	if (typeof from.name === 'string') {
-		to.name = from.name;
-	}
-
-	if (typeof from.message === 'string') {
-		to.message = from.message;
-	}
-
-	if (typeof from.stack === 'string') {
-		to.stack = from.stack;
-	}
-
-	return to;
-}
-
-},{}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1067,7 +567,7 @@ function createQueue(state, effect, lifecycle) {
   return q;
 }
 
-},{"./queueMethods/filter":12,"./queueMethods/map":13,"./queueMethods/mapToKey":14,"./queueMethods/mutate":15,"./queueMethods/pipe":16,"./utils":20}],12:[function(require,module,exports){
+},{"./queueMethods/filter":8,"./queueMethods/map":9,"./queueMethods/mapToKey":10,"./queueMethods/mutate":11,"./queueMethods/pipe":12,"./utils":16}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1106,7 +606,7 @@ function filter(func) {
   };
 }
 
-},{"../utils":20}],13:[function(require,module,exports){
+},{"../utils":16}],9:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1132,7 +632,7 @@ function map(func) {
   };
 };
 
-},{}],14:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1168,7 +668,7 @@ function mapToKey(key) {
   };
 };
 
-},{}],15:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1205,7 +705,7 @@ function mutate(func) {
   };
 };
 
-},{"../utils":20}],16:[function(require,module,exports){
+},{"../utils":16}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1238,7 +738,7 @@ function pipe(func) {
   };
 };
 
-},{"../utils":20}],17:[function(require,module,exports){
+},{"../utils":16}],13:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1365,7 +865,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":5,"../utils":20}],18:[function(require,module,exports){
+},{"../index":5,"../utils":16}],14:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1416,7 +916,6 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 };
 
-exports.isRiew = isRiew;
 exports.default = createRiew;
 
 var _index = require('./index');
@@ -1435,10 +934,6 @@ function _defineProperty(obj, key, value) {
   } else {
     obj[key] = value;
   }return obj;
-}
-
-function isRiew(riew) {
-  return riew && riew.mount && riew.unmount;
 }
 
 function ensureObject(value, context) {
@@ -1636,13 +1131,12 @@ function createRiew(emit, viewFunc) {
   return instance;
 };
 
-},{"./constants":1,"./index":5,"./interfaces":6,"./state":19,"./utils":20}],19:[function(require,module,exports){
+},{"./constants":1,"./index":5,"./interfaces":6,"./state":15,"./utils":16}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.isState = isState;
 exports.isEffect = isEffect;
 exports.State = State;
 
@@ -1672,9 +1166,6 @@ function _toConsumableArray(arr) {
   }
 }
 
-function isState(state) {
-  return state && state.id && state.id.split('_').shift() === 's';
-}
 function isEffect(effect) {
   return effect && effect.id && effect.id.split('_').shift() === 'e';
 }
@@ -1898,7 +1389,7 @@ function State(initialValue, emit, loggable) {
   return state;
 };
 
-},{"./constants":1,"./interfaces":6,"./queue":11,"./utils":20,"fast-deep-equal":21}],20:[function(require,module,exports){
+},{"./constants":1,"./interfaces":6,"./queue":7,"./utils":16,"fast-deep-equal":17}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2029,7 +1520,7 @@ var getId = exports.getId = function getId(prefix) {
   return prefix + '_' + ++ids;
 };
 
-},{}],21:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 var isArray = Array.isArray;
