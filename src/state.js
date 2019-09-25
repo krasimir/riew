@@ -9,7 +9,7 @@ export function isEffect(effect) {
   return effect && effect.id && effect.id.split('_').shift() === 'e';
 }
 
-export function State(initialValue, emit, loggable) {
+export function State(initialValue, emit, loggable, name) {
   const state = {};
   let value = initialValue;
   let listeners = [];
@@ -20,6 +20,7 @@ export function State(initialValue, emit, loggable) {
   implementLoggableInterface(state, loggable);
 
   state.id = getId('s');
+  state.name = name;
   state.queues = () => queues;
   state.effects = () => effects;
   state.queueAPI = createQueueAPI();
@@ -58,8 +59,8 @@ export function State(initialValue, emit, loggable) {
           emit(QUEUE_STEP_OUT, effect);
         },
         end(q) {
-          emit(QUEUE_END, effect);
           queues = queues.filter(({ id }) => id !== q.id);
+          emit(QUEUE_END, effect);
         }
       }
     );

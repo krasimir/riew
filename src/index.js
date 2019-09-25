@@ -1,9 +1,10 @@
 import h from './harvester';
 import g from './grid';
+import { implementStateProxyInterface } from './interfaces';
 
-export const state = (initialValue, loggable = true) => {
-  return h.produce('state', initialValue, loggable);
-};
+export const state = implementStateProxyInterface((initialValue, loggable = true, name = 'unknown') => {
+  return h.produce('state', initialValue, loggable, name);
+});
 export const merge = (statesMap) => {
   return h.produce('mergeStates', statesMap);
 };

@@ -9,9 +9,9 @@ describe('Given the logger', () => {
   describe('when we want to see what happened', () => {
     fit('should show us the events that were emitted', async () => {
       logger.setup(grid);
-      // logger.on((type) => {
-      //   logger.toConsole();
-      // });
+      logger.on((type) => {
+        logger.toConsole();
+      });
 
       const view = function MyView() {};
       const [ s1, setState1 ] = state('a');
@@ -32,8 +32,8 @@ describe('Given the logger', () => {
       op2();
       r.update({ x: 'y' });
 
-      // await delay(10);
-      logger.toConsole();
+      await delay(10);
+      // logger.toConsole();
 
       // console.log(JSON.stringify(spy.mock.calls, null, 2));
       // console.log(JSON.stringify(spy.mock.calls[spy.mock.calls.length - 1][1], null, 2));

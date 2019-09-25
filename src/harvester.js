@@ -63,8 +63,8 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   // ------------------------------------------------------------------ state
   h.defineProduct(
     'state',
-    (initialValue, loggable) => {
-      const state = State(initialValue, emit, loggable);
+    (initialValue, loggable, name) => {
+      const state = State(initialValue, emit, loggable, name);
       const effect = state.createEffect([]);
 
       grid.add(state);

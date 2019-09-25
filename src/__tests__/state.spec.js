@@ -16,6 +16,16 @@ describe('Given the state', () => {
     });
   });
 
+  /* get & set */
+  describe('when we name the state', () => {
+    fit('should have a user-defined string associated with the state', () => {
+      const [ get, set ] = state.hellYeah('foo');
+
+      set('bar');
+      expect(get()).toBe('bar');
+    });
+  });
+
   /* pipe */
   describe('when we use the `pipe` method', () => {
     it('should create a queue of functions and run them one after each other', () => {
