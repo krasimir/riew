@@ -7,9 +7,9 @@ describe('Given the logger', () => {
   });
   describe('when we want to see what happened', () => {
     fit('should show us the events that were emitted', async () => {
-      const spy = jest.fn();
-
-      // logger.on(spy);
+      // logger.on((type) => {
+      //   logger.toConsole();
+      // });
 
       const view = function MyView() {};
       const [ s1, setState1 ] = state('a');
@@ -26,11 +26,11 @@ describe('Given the logger', () => {
       r.mount();
       setState1('foo');
       op1();
-      // op1();
+      op1();
       op2();
-      // r.update({ x: 'y' });
+      r.update({ x: 'y' });
 
-      // await delay(10);
+      await delay(10);
       logger.toConsole();
 
       // console.log(JSON.stringify(spy.mock.calls, null, 2));

@@ -74,7 +74,7 @@
   },
   "browserify-swap": {
     "prod": {
-      "logger.js$": "./src/__swap__/logger.js"
+      "logger/index.js$": "./src/__swap__/logger.js"
     }
   },
   "jest": {

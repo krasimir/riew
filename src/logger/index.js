@@ -2,7 +2,6 @@
 const { table } = require('table');
 
 import sanitize from './sanitize';
-// import Table from 'cli-table3';
 import { getFuncName } from '../utils';
 import { isState } from '../state';
 import { isRiew } from '../riew';
@@ -93,6 +92,26 @@ function Logger() {
   api.toConsole = () => {
     const report = api.report();
     const rows = [];
+    const innerTableBorders = {
+      topBody: '',
+      topJoin: '',
+      topLeft: '',
+      topRight: '',
+
+      bottomBody: '',
+      bottomJoin: '',
+      bottomLeft: '',
+      bottomRight: '',
+
+      bodyLeft: '',
+      bodyRight: '',
+      bodyJoin: '│',
+
+      joinBody: '─',
+      joinLeft: '├',
+      joinRight: '┤',
+      joinJoin: '┼'
+    };
 
     rows.push(['ID', 'value', 'effects']);
 
@@ -100,94 +119,22 @@ function Logger() {
       rows.push([
         id,
         JSON.stringify(value, null, 2),
-        table(effects.reduce((rows, effect) => {
-          // ?
+        effects.length > 0 ? table(effects.reduce((rows, effect) => {
+          effect.queues.forEach(q => {
+            rows.push([
+              effect.id,
+              q.items.map((type, i) => {
+                return `${ type }${ i === q.index ? '*' : ''}`;
+              }).join('\n'),
+              q.result
+            ]);
+          });
           return rows;
-        }, [['id', 'Qs', 'Q result']]))
+        }, [['id', 'Qs', 'Q result']]), { border: innerTableBorders }) : 'none'
       ]);
     });
-
+    // console.log(JSON.stringify(report.states, null, 2));
     console.log(table(rows));
-    /*
-    const statesTable = new Table({
-      head: ['ID', 'value', 'effects', 'Qs', 'Q result'],
-      colWidths: [6, 19, 10, 10, 19]
-    });
-    const riewsTable = new Table({
-      head: ['ID', 'name', 'props'],
-      colWidths: [6, 11, 60]
-    });
-    const printQueueSteps = q => {
-      return q.items.map((type, i) => {
-        if (i === q.index) return `${ type }*`;
-        return type;
-      }).join('\n');
-    };
-    const statesRows = [];
-
-    report.states.forEach(({ id, value, effects }) => {
-      const rowSpan = effects.length + effects.reduce((n, effect, i) => {
-        if (effect.queues.length > 1) {
-          n += effect.queues.length - 1;
-        }
-        return n;
-      }, 0);
-
-      if (effects.length === 0) {
-        statesRows.push([
-          { rowSpan, content: id },
-          { rowSpan, content: JSON.stringify(value, null, 2) }
-        ]);
-      } else {
-        effects.forEach((effect, i) => {
-          if (i === 0) {
-            statesRows.push([
-              { rowSpan, content: id },
-              { rowSpan, content: JSON.stringify(value, null, 2) },
-              effect.queues.length > 1 ?
-                { rowSpan: effect.queues.length > 0 ? effect.queues.length : 1, content: effect.id } :
-                effect.id,
-              effect.queues.length > 0 ? printQueueSteps(effect.queues[0]) : '',
-              effect.queues.length > 0 ? JSON.stringify(effect.queues[0].result, null, 2) : ''
-            ]);
-            effect.queues.forEach((q, i) => {
-              if (i > 0) {
-                statesRows.push([
-                  printQueueSteps(q),
-                  JSON.stringify(q.result, null, 2)
-                ]);
-              }
-            });
-          } else {
-            statesRows.push([
-              effect.queues.length > 1 ?
-                { rowSpan: effect.queues.length > 0 ? effect.queues.length : 1, content: effect.id } :
-                effect.id,
-              effect.queues.length > 0 ? printQueueSteps(effect.queues[0]) : '',
-              effect.queues.length > 0 ? JSON.stringify(effect.queues[0].result, null, 2) : ''
-            ]);
-            effect.queues.forEach((q, i) => {
-              if (i > 0) {
-                statesRows.push([
-                  printQueueSteps(q),
-                  JSON.stringify(q.result, null, 2)
-                ]);
-              }
-            });
-          }
-        });
-      }
-    });
-    report.riews.forEach(({ id, name, props }) => {
-      riewsTable.push([ id, name, JSON.stringify(props, null, 2) ]);
-    });
-    console.log(JSON.stringify(statesRows, null, 2));
-    statesRows.forEach(r => statesTable.push(r));
-
-    // console.log(JSON.stringify(report, null, 2));
-
-    console.log(`${ statesTable.toString() }\n${ riewsTable.toString() }`);
-    */
   };
 
   return api;
