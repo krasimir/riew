@@ -4,10 +4,6 @@ import { isPromise, parallel, getFuncName, getId } from './utils';
 import { RIEW_RENDER, RIEW_UNMOUNT } from './constants';
 import { implementLoggableInterface } from './interfaces';
 
-export function isRiew(riew) {
-  return riew && riew.mount && riew.unmount;
-}
-
 function ensureObject(value, context) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
     throw new Error(`${ context } must be called with a key-value object. Instead "${ value }" passed.`);

@@ -5,9 +5,6 @@ import { createQueueAPI, createQueue } from './queue';
 import { QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT, EFFECT_EXPORTED, STATE_DESTROY } from './constants';
 import { implementLoggableInterface } from './interfaces';
 
-export function isState(state) {
-  return state && state.id && state.id.split('_').shift() === 's';
-}
 export function isEffect(effect) {
   return effect && effect.id && effect.id.split('_').shift() === 'e';
 }

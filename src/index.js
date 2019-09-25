@@ -28,3 +28,4 @@ export const reset = () => {
 
 export { compose, serial, parallel } from './utils';
 export const harvester = h;
+export const grid = g;
