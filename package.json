@@ -54,28 +54,20 @@
     "react-dom": "16.9.0",
     "redux": "4.0.0",
     "regenerator-runtime": "0.12.1",
-    "riew-debugger": "0.1.0",
-    "terser": "4.2.1",
-    "browserify-swap": "0.2.2"
+    "riew-logger": "0.1.2",
+    "terser": "4.2.1"
   },
   "dependencies": {
-    "fast-deep-equal": "2.0.1",
-    "table": "5.4.6"
+    "fast-deep-equal": "2.0.1"
   },
   "browserify": {
     "transform": [
       "babelify",
-      "browserify-shim",
-      "browserify-swap"
+      "browserify-shim"
     ]
   },
   "browserify-shim": {
     "react": "global:React"
-  },
-  "browserify-swap": {
-    "prod": {
-      "logger/index.js$": "./src/__swap__/logger.js"
-    }
   },
   "jest": {
     "setupTestFrameworkScriptFile": "./jest/index.js",

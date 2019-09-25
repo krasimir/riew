@@ -1,5 +1,4 @@
 import h from './harvester';
-import l from './logger';
 import g from './grid';
 
 export const state = (initialValue, loggable = true) => {
@@ -23,11 +22,9 @@ export const register = (name, whatever) => {
   return h.defineProduct(name, () => whatever);
 };
 export const reset = () => {
-  l.reset();
   h.reset();
   g.reset();
 };
 
 export { compose, serial, parallel } from './utils';
 export const harvester = h;
-export const logger = l;
