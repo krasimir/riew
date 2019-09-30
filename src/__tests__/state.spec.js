@@ -1,5 +1,6 @@
 import { state, merge, use, reset } from '../index';
 import { delay } from '../__helpers__';
+import { getFuncName } from 'riew-logger/lib/utils';
 
 describe('Given the state', () => {
   beforeEach(() => {
@@ -17,11 +18,12 @@ describe('Given the state', () => {
   });
 
   /* get & set */
-  xdescribe('when we name the state', () => {
+  fdescribe('when we name the state', () => {
     it('should have a user-defined string associated with the state', () => {
-      const [ get, set ] = state.hellYeah('foo');
+      const [ get, set ] = state('foo');
 
       set('bar');
+      console.log(getFuncName(get));
       expect(get()).toBe('bar');
     });
   });
