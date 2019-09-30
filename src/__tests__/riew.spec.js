@@ -157,14 +157,14 @@ describe('Given the `riew` factory function', () => {
           change('bar');
         }
       });
-      const se = function ({ render, state }) {
+      const controller = function ({ render, state }) {
         const [ getter, setter ] = state('foo');
 
         render({ s: getter, change: setter });
         render({ s: getter, change: setter });
         render({ s: getter, change: setter });
       };
-      const r = riew(view, se);
+      const r = riew(view, controller);
 
       r.mount();
       expect(view).toBeCalledWithArgs(

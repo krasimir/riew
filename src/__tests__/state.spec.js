@@ -17,8 +17,8 @@ describe('Given the state', () => {
   });
 
   /* get & set */
-  describe('when we name the state', () => {
-    fit('should have a user-defined string associated with the state', () => {
+  xdescribe('when we name the state', () => {
+    it('should have a user-defined string associated with the state', () => {
       const [ get, set ] = state.hellYeah('foo');
 
       set('bar');

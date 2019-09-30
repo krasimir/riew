@@ -6,8 +6,8 @@ describe('Given the logger', () => {
   beforeEach(() => {
     reset();
   });
-  describe('when we want to see what happened', () => {
-    fit('should show us the events that were emitted', async () => {
+  xdescribe('when we want to see what happened', () => {
+    it('should show us the events that were emitted', async () => {
       logger.setup(grid);
       logger.on((type) => {
         logger.toConsole();
