@@ -4,6 +4,8 @@ import map from './queueMethods/map';
 import mapToKey from './queueMethods/mapToKey';
 import mutate from './queueMethods/mutate';
 import filter from './queueMethods/filter';
+import { implementObservableInterface } from './interfaces';
+import { QUEUE_START, QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT, QUEUE_SET_STATE_VALUE, CANCEL_EVENT } from './constants';
 
 export const QueueAPI = {
   define(methodName, func) {
@@ -24,22 +26,19 @@ QueueAPI.define('mapToKey', mapToKey);
 QueueAPI.define('mutate', mutate);
 QueueAPI.define('filter', filter);
 
-export function createQueue(state, effect, lifecycle) {
-  const setStateValue = state.set;
-  const getStateValue = state.get;
+export function createQueue(initialStateValue, event) {
   const q = {
     id: getId('q'),
     index: null,
-    causedBy: effect.id,
-    setStateValue,
-    getStateValue,
-    result: null,
+    setStateValue(value) {
+      this.emit(QUEUE_SET_STATE_VALUE, value);
+    },
+    result: initialStateValue,
     items: [],
     add(type, func) {
       this.items.push({ type, func });
     },
     process(...payload) {
-      q.result = getStateValue();
       q.index = 0;
 
       function next() {
@@ -47,18 +46,18 @@ export function createQueue(state, effect, lifecycle) {
           return loop();
         }
         q.index = null;
-        lifecycle.end(q);
+        q.emit(QUEUE_END).off();
         return q.result;
       };
       function loop() {
-        lifecycle.stepIn(q);
+        q.emit(QUEUE_STEP_IN);
         const { type, func } = q.items[q.index];
         const logic = QueueAPI[type];
 
         if (logic) {
           const r = logic(q, func, payload, (lastResult) => {
             q.result = lastResult;
-            lifecycle.stepOut(q);
+            q.emit(QUEUE_STEP_OUT);
             q.index++;
             return next();
           });
@@ -68,11 +67,11 @@ export function createQueue(state, effect, lifecycle) {
         throw new Error(`Unsupported method "${ type }".`);
       };
 
-      lifecycle.start(q);
+      q.emit(QUEUE_START);
       if (q.items.length > 0) {
         return loop();
       }
-      lifecycle.end(q);
+      q.emit(QUEUE_END).off();
       return q.result;
     },
     cancel() {
@@ -80,7 +79,12 @@ export function createQueue(state, effect, lifecycle) {
     }
   };
 
-  effect.items.forEach(({ type, func }) => q.add(type, func));
+  implementObservableInterface(q);
+
+  event.items.forEach(({ type, func }) => q.add(type, func));
+  event.on(CANCEL_EVENT, () => {
+    q.cancel();
+  });
 
   return q;
 }

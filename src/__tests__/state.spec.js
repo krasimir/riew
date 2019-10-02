@@ -1,4 +1,4 @@
-import { state, merge, use, reset } from '../index';
+import { state, merge, use, reset, cancelEvent } from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given the state', () => {
@@ -8,7 +8,7 @@ describe('Given the state', () => {
 
   /* get & set */
   describe('when we use `get` and `set`', () => {
-    fit('should get and set the current value', () => {
+    it('should get and set the current value', () => {
       const s = state('foo');
       const set = s.mutate(() => 'bar');
       const get = s.map();
@@ -206,9 +206,9 @@ describe('Given the state', () => {
   /* cancel */
   describe('when we use the state `cancel` method', () => {
     it('should stop the currently running queues (if any)', async () => {
-      const [ s ] = state(10);
+      const s = state(10);
       const spy = jest.fn();
-      const [ m, , sInstance ] = s.pipe(async (value, nDelay) => {
+      const [ m ] = s.pipe(async (value, nDelay) => {
         await delay(nDelay);
       }).mutate((value) => {
         return value + 5;
@@ -217,25 +217,7 @@ describe('Given the state', () => {
       m(5);
       m(6);
       m(7);
-      sInstance.cancel();
-
-      await delay(15);
-      expect(s()).toBe(10);
-      expect(spy).not.toBeCalled();
-    });
-  });
-  describe('when we use the effect `cancel` method', () => {
-    it('should stop the currently running queues (if any)', async () => {
-      const [ s ] = state(10);
-      const spy = jest.fn();
-      const m = s.pipe(async (value, nDelay) => {
-        await delay(nDelay);
-      }).mutate((value) => {
-        return value + 5;
-      }).pipe(spy);
-
-      m(5);
-      m.cancel();
+      cancelEvent(m);
 
       await delay(15);
       expect(s()).toBe(10);
@@ -301,19 +283,18 @@ describe('Given the state', () => {
       expect(spy).toBeCalledWith(30);
     });
     it('should allow us to fork streams', () => {
-      const [ s, setState, sInstance ] = state(10);
+      const [ s, setState ] = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
       const spyC = jest.fn();
 
-      const subscription = s.map(value => value * 2).pipe(function A(...args) { spyA(...args); }).subscribe();
+      const subscribedEvent = s.map(value => value * 2).pipe(function A(...args) { spyA(...args); }).subscribe();
 
-      const t1 = subscription.map(value => value + 'B').pipe(function B(...args) { spyB(...args); }).subscribe();
-      const t2 = subscription.map(value => value + 'C').pipe(function C(...args) { spyC(...args); }).subscribe();
+      subscribedEvent.map(value => value + 'B').pipe(function B(...args) { spyB(...args); }).subscribe();
+      subscribedEvent.map(value => value + 'C').pipe(function C(...args) { spyC(...args); }).subscribe();
 
       setState(100);
 
-      expect(sInstance.listeners().map(({ id }) => id)).toStrictEqual([ subscription.id, t1.id, t2.id ]);
       expect(spyA).toBeCalledTimes(3);
       expect(spyA.mock.calls[0]).toStrictEqual([ 200 ]);
       expect(spyA.mock.calls[1]).toStrictEqual([ 200 ]);
@@ -323,7 +304,7 @@ describe('Given the state', () => {
       expect(spyC).toBeCalledTimes(1);
       expect(spyC).toBeCalledWith('200C');
     });
-    it('should allow us to unsubscribe from the stream', () => {
+    fit('should allow us to unsubscribe from the stream', () => {
       const [ s, setState ] = state(10);
       const spy = jest.fn();
       const subscription = s.map(value => value * 3).pipe(spy).subscribe(true);

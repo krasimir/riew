@@ -1,5 +1,6 @@
 import { reset } from '../index';
 import { createQueue } from '../queue';
+import { QUEUE_START, QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT } from '../constants';
 
 describe('Given the createQueue helper', () => {
   beforeEach(() => {
@@ -8,34 +9,22 @@ describe('Given the createQueue helper', () => {
   describe('when we create a queue', () => {
     it('should cycle over the items and call the appropriate callbacks', () => {
       const steps = [];
-      const queueAPI = {
-        foo: jest.fn().mockImplementation((q, func, payload, next) => next(func[0](q.result))),
-        bar: jest.fn().mockImplementation((q, func, payload, next) => next(func[0](q.result)))
-      };
       const setValue = jest.fn();
       const getValue = jest.fn().mockImplementation(() => 42);
-      const q = createQueue({ set: setValue, get: getValue, queueAPI }, { id: 'effect', items: [] }, {
-        start() {
-          steps.push([ 'start', q.result ]);
-        },
-        end() {
-          steps.push([ 'end', q.result ]);
-        },
-        stepIn() {
-          steps.push([ 'stepIn', q.result ]);
-        },
-        stepOut() {
-          steps.push([ 'stepOut', q.result ]);
-        }
-      });
+      const q = createQueue({ set: setValue, get: getValue, on: () => {} }, { id: 'effect', items: [] });
 
-      q.add('foo', [(value) => {
+      q.on(QUEUE_START, () => steps.push([ 'start', q.result ]));
+      q.on(QUEUE_END, () => steps.push([ 'end', q.result ]));
+      q.on(QUEUE_STEP_IN, () => steps.push([ 'stepIn', q.result ]));
+      q.on(QUEUE_STEP_OUT, () => steps.push([ 'stepOut', q.result ]));
+
+      q.add('map', [(value) => {
         return value + 10;
       }]);
-      q.add('foo', [(value) => {
+      q.add('map', [(value) => {
         return value + 5;
       }]);
-      q.add('bar', [(value) => {
+      q.add('map', [(value) => {
         return value + 18;
       }]);
 
@@ -50,6 +39,25 @@ describe('Given the createQueue helper', () => {
         [ 'stepOut', 75 ],
         [ 'end', 75 ]
       ]);
+    });
+  });
+  describe('when we cancel the state', () => {
+    it('should cancel the queue', () => {
+      let callback;
+      const q = createQueue(
+        {
+          set: () => {},
+          get: () => 'foo',
+          on: (type, c) => (callback = c)
+        },
+        { id: 'effect', items: [] }
+      );
+
+      q.add('map', [() => {}]);
+
+      expect(q.items).toHaveLength(1);
+      callback();
+      expect(q.items).toHaveLength(0);
     });
   });
 });

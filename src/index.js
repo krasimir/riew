@@ -1,5 +1,6 @@
 import h from './harvester';
 import g from './grid';
+import { CANCEL_EVENT } from './constants';
 
 export const state = (initialValue, loggable = true) => {
   return h.produce('state', initialValue, loggable);
@@ -24,6 +25,9 @@ export const register = (name, whatever) => {
 export const reset = () => {
   h.reset();
   g.reset();
+};
+export const cancelEvent = event => {
+  g.emit(CANCEL_EVENT, event);
 };
 
 export { compose, serial, parallel } from './utils';

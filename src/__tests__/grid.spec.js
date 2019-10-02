@@ -1,5 +1,5 @@
 import grid from '../grid';
-import { state, reset } from '../index';
+import { reset } from '../index';
 
 describe('Given the grid', () => {
   beforeEach(() => {
@@ -21,18 +21,28 @@ describe('Given the grid', () => {
       expect(grid.nodes()).toHaveLength(0);
     });
   });
-  describe('when we create a state', () => {
-    it('should store the state as a node in the grid and remove it when we teardown the state', () => {
-      const [ s1, , sInstance1 ] = state('foo');
-      const [ s2, , sInstance2 ] = state('bar');
+  describe('when we want to observe events', () => {
+    it('should allow us to listen and emit events', () => {
+      const spy = jest.fn();
+      const source = 'XXX';
 
-      expect(grid.nodes()).toStrictEqual([
-        expect.objectContaining({ id: sInstance1.id }),
-        expect.objectContaining({ id: sInstance2.id })
-      ]);
-      s1.destroy();
-      s2.destroy();
-      expect(grid.nodes()).toHaveLength(0);
+      grid.on('foo', spy);
+      grid.emit('foo', source, 'a', 'b');
+
+      expect(spy).toBeCalledWithArgs(
+        [source, 'a', 'b']
+      );
+    });
+    it('should allow us to remove the listener', () => {
+      const spy = jest.fn();
+      const source = 'XXX';
+
+      const unsubscribe = grid.on('foo', spy);
+
+      unsubscribe();
+      grid.emit('foo', source, 'a', 'b');
+
+      expect(spy).not.toBeCalled();
     });
   });
 });

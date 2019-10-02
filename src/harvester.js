@@ -5,6 +5,7 @@ import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
 import { STATE_DESTROY, EFFECT_EXPORTED, HARVESTER_PRODUCE, RIEW_UNMOUNT } from './constants';
+import Event from './event';
 
 grid.on(STATE_DESTROY, (state) => {
   state.events().forEach(e => {
@@ -61,7 +62,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     'state',
     (initialValue, loggable) => {
       const state = State(initialValue, loggable);
-      const event = state.createEvent([]);
+      const event = Event(state, []);
 
       grid.add(state);
       return event;
