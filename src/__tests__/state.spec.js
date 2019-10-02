@@ -8,10 +8,12 @@ describe('Given the state', () => {
 
   /* get & set */
   describe('when we use `get` and `set`', () => {
-    it('should get and set the current value', () => {
-      const [ get, set ] = state('foo');
+    fit('should get and set the current value', () => {
+      const s = state('foo');
+      const set = s.mutate(() => 'bar');
+      const get = s.map();
 
-      set('bar');
+      set();
       expect(get()).toBe('bar');
     });
   });

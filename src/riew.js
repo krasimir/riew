@@ -136,7 +136,7 @@ export default function createRiew(emit, viewFunc, ...controllers) {
     onUnmountCallbacks = [];
     subscriptions.forEach(s => s.effect.unsubscribe());
     subscriptions = [];
-    emit(RIEW_UNMOUNT, instance, output());
+    emit(RIEW_UNMOUNT, output());
     return instance;
   };
   instance.with = (...maps) => {

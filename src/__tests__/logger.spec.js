@@ -2,12 +2,12 @@ import { state, riew, reset, grid } from '../index';
 import { delay } from '../__helpers__';
 import logger from 'riew-logger';
 
-describe('Given the logger', () => {
+xdescribe('Given the logger', () => {
   beforeEach(() => {
     reset();
   });
   describe('when we want to see what happened', () => {
-    fit('should show us the events that were emitted', async () => {
+    it('should show us the events that were emitted', async () => {
       logger.setup(grid);
       // logger.on((type) => {
       //   logger.toConsole();
@@ -39,7 +39,7 @@ describe('Given the logger', () => {
       // console.log(JSON.stringify(spy.mock.calls[spy.mock.calls.length - 1][1], null, 2));
     });
   });
-  xdescribe('when we want to see the grid', () => {
+  describe('when we want to see the grid', () => {
     it('should shows us the grid', () => {
       const view = function MyView() {};
       const [ s1, setState1 ] = state('a');

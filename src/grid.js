@@ -1,7 +1,7 @@
 function Grid() {
   const api = {};
   let nodes = [];
-  let listeners = [];
+  let listeners = {};
 
   api.add = (product) => {
     if (!product || !product.id) {
@@ -17,8 +17,15 @@ function Grid() {
     listeners = [];
   };
   api.nodes = () => nodes;
-  api.on = (listener) => listeners.push(listener);
-  api.dispatch = (...args) => listeners.forEach(l => l(...args));
+  api.on = (type, callback) => {
+    if (!listeners[type]) listeners[type] = [];
+    listeners[type].push(callback);
+    return () => (listeners[type] = listeners[type].filter(c => c !== callback));
+  };
+  api.emit = (type, source, ...args) => {
+    if (!listeners[type]) return;
+    listeners[type].forEach(l => l(source, ...args));
+  };
 
   return api;
 }

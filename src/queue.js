@@ -5,7 +5,7 @@ import mapToKey from './queueMethods/mapToKey';
 import mutate from './queueMethods/mutate';
 import filter from './queueMethods/filter';
 
-const queueAPI = {
+export const QueueAPI = {
   define(methodName, func) {
     this[methodName] = function (q, args, payload, next) {
       const result = func(...args)(q.result, payload, q);
@@ -18,32 +18,28 @@ const queueAPI = {
   }
 };
 
-queueAPI.define('pipe', pipe);
-queueAPI.define('map', map);
-queueAPI.define('mapToKey', mapToKey);
-queueAPI.define('mutate', mutate);
-queueAPI.define('filter', filter);
-
-export function createQueueAPI() {
-  return { ...queueAPI };
-};
+QueueAPI.define('pipe', pipe);
+QueueAPI.define('map', map);
+QueueAPI.define('mapToKey', mapToKey);
+QueueAPI.define('mutate', mutate);
+QueueAPI.define('filter', filter);
 
 export function createQueue(state, effect, lifecycle) {
   const setStateValue = state.set;
   const getStateValue = state.get;
-  const queueAPI = state.queueAPI;
   const q = {
     id: getId('q'),
     index: null,
     causedBy: effect.id,
     setStateValue,
     getStateValue,
-    result: getStateValue(),
+    result: null,
     items: [],
     add(type, func) {
       this.items.push({ type, func });
     },
     process(...payload) {
+      q.result = getStateValue();
       q.index = 0;
 
       function next() {
@@ -57,7 +53,7 @@ export function createQueue(state, effect, lifecycle) {
       function loop() {
         lifecycle.stepIn(q);
         const { type, func } = q.items[q.index];
-        const logic = queueAPI[type];
+        const logic = QueueAPI[type];
 
         if (logic) {
           const r = logic(q, func, payload, (lastResult) => {
