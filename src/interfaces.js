@@ -2,7 +2,7 @@ import { QueueAPI } from './queue';
 import grid from './grid';
 
 export function implementObservableInterface(obj) {
-  const subscriptions = [];
+  let subscriptions = [];
 
   obj.on = (type, callback) => {
     const unsubscribe = grid.on(type, (source, ...args) => {
@@ -16,11 +16,10 @@ export function implementObservableInterface(obj) {
   };
   obj.emit = (type, ...args) => {
     grid.emit(type, obj, ...args);
-    return obj;
   };
   obj.off = () => {
     subscriptions.forEach(s => s());
-    return obj;
+    subscriptions = [];
   };
 }
 

@@ -4,8 +4,9 @@ import { State } from './state';
 import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
-import { STATE_DESTROY, EFFECT_EXPORTED, HARVESTER_PRODUCE, RIEW_UNMOUNT } from './constants';
-import Event from './event';
+import { STATE_DESTROY, EFFECT_EXPORTED, HARVESTER_PRODUCE, RIEW_UNMOUNT, STATE_VALUE_CHANGE } from './constants';
+import Effect from './effect';
+import { subscribe } from './index';
 
 grid.on(STATE_DESTROY, (state) => {
   state.events().forEach(e => {
@@ -14,9 +15,9 @@ grid.on(STATE_DESTROY, (state) => {
     }
   });
 });
-grid.on(EFFECT_EXPORTED, (event, name) => {
-  event.__exportedAs = name;
-  h.defineProduct(name, () => event);
+grid.on(EFFECT_EXPORTED, (effect, name) => {
+  effect.__exportedAs = name;
+  h.defineProduct(name, () => effect);
 });
 grid.on(RIEW_UNMOUNT, (riew) => {
   grid.remove(riew);
@@ -62,10 +63,10 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     'state',
     (initialValue, loggable) => {
       const state = State(initialValue, loggable);
-      const event = Event(state, []);
+      const effect = Effect(state, []);
 
       grid.add(state);
-      return event;
+      return effect;
     }
   );
 
@@ -77,7 +78,8 @@ const defineHarvesterBuiltInCapabilities = function (h) {
       result[key] = s();
       return result;
     }, {});
-    const [ effect, , sInstance ] = h.produce('state');
+    const effect = h.produce('state');
+    const sInstance = effect.state;
 
     sInstance.get = fetchSourceValues;
     sInstance.set = newValue => {
@@ -97,7 +99,9 @@ const defineHarvesterBuiltInCapabilities = function (h) {
     };
 
     Object.keys(statesMap).forEach(key => {
-      statesMap[key].pipe(sInstance.triggerListeners).subscribe();
+      subscribe(statesMap[key].pipe(() => {
+        sInstance.emit(STATE_VALUE_CHANGE, sInstance.get());
+      }));
     });
 
     return effect;

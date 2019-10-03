@@ -46,7 +46,8 @@ export function createQueue(initialStateValue, event) {
           return loop();
         }
         q.index = null;
-        q.emit(QUEUE_END).off();
+        q.emit(QUEUE_END);
+        q.off();
         return q.result;
       };
       function loop() {
@@ -71,7 +72,8 @@ export function createQueue(initialStateValue, event) {
       if (q.items.length > 0) {
         return loop();
       }
-      q.emit(QUEUE_END).off();
+      q.emit(QUEUE_END);
+      q.off();
       return q.result;
     },
     cancel() {
