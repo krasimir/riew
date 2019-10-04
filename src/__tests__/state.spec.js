@@ -1,4 +1,17 @@
-import { state, merge, use, reset, cancel, subscribe, unsubscribe, destroy } from '../index';
+import {
+  state,
+  merge,
+  use,
+  reset,
+  cancel,
+  subscribe,
+  unsubscribe,
+  destroy,
+  register,
+  grid,
+  defineEffectMethod,
+  test
+} from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given the state', () => {
@@ -226,15 +239,20 @@ describe('Given the state', () => {
   });
 
   /* destroy */
-  describe('when we use the `destroy` method', () => {
-    it('should cancel all the queues and teardown the state', () => {
+  describe('when we use the `destroy` function', () => {
+    it(`should
+      * cancel all the queues
+      * teardown the state
+      * remove state and effects from the grid`, () => {
       const [ s ] = state(10);
       const spyA = jest.fn();
       const spyB = jest.fn();
       const m = s.mutate((value) => value + 5).pipe(spyA);
       const n = s.pipe(() => {}).pipe(spyB);
 
+      expect(grid.nodes()).toHaveLength(8);
       destroy(s);
+      expect(grid.nodes()).toHaveLength(0);
       expect(m()).toBe(10);
       expect(m()).toBe(10);
       expect(m()).toBe(10);
@@ -479,29 +497,14 @@ describe('Given the state', () => {
       );
     });
   });
-  fdescribe('when we have two effects that are subscribed', () => {
+  describe('when we have two effects that are subscribed', () => {
     it('should run a fresh queue every time', () => {
       const [ s, setState ] = state(0);
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      subscribe(
-        s
-          .filter((value) => value < 2)
-          .map(value => `value is ${ value }`)
-          .pipe(spyA)
-      );
-
-      expect(sInstance.listeners().length).toBe(1);
-      expect(sInstance.listeners()[0].items.map(({ type }) => type))
-        .toStrictEqual([ 'map', 'filter', 'map', 'pipe' ]);
-
-      s
-        .filter((value) => {
-          return value >= 2;
-        })
-        .pipe(spyB)
-        .subscribe();
+      subscribe(s.filter((value) => value < 2).map(value => `value is ${ value }`).pipe(spyA));
+      subscribe(s.filter((value) => { return value >= 2; }).pipe(spyB));
 
       setState(1);
       setState(5);
@@ -510,21 +513,6 @@ describe('Given the state', () => {
       expect(spyA.mock.calls[0]).toStrictEqual(['value is 1']);
       expect(spyB).toBeCalledTimes(1);
       expect(spyB.mock.calls[0]).toStrictEqual([5]);
-    });
-  });
-  describe('when the queue finishes', () => {
-    it('should remove it from the state\'s queues array', async () => {
-      const [ s, , sInstance ] = state(10);
-      const m = s.mutate(async (value) => {
-        await delay(5);
-        return value * 5;
-      }).map(value => value - 2);
-
-      m();
-      expect(sInstance.queues()).toHaveLength(1);
-      await delay(10);
-      expect(s()).toBe(50);
-      expect(sInstance.queues()).toHaveLength(0);
     });
   });
   describe('when we use a trigger as a beginning of new queue', () => {
@@ -554,22 +542,22 @@ describe('Given the state', () => {
         .mutate(({ index }) => ({ flag: true, index: index + 1 }))
         .pipe(() => {});
 
-      expect(increment.test(({ setValue }) => {
+      expect(test(increment, ({ setValue }) => {
         setValue({ flag: true, index: 11 });
       })()).toStrictEqual({ flag: true, index: 12 });
 
-      increment.test(({ setValue, swap }) => {
+      test(increment, ({ setValue, swap }) => {
         setValue({ flag: false, index: 100 });
         swap(1, spy);
       })();
       expect(spy).toBeCalledTimes(1);
       expect(spy).toBeCalledWith({ flag: false, index: 100 });
 
-      expect(increment.test(({ swapFirst }) => {
+      expect(test(increment, ({ swapFirst }) => {
         swapFirst(() => ({ flag: true, index: -10}), 'map');
       })()).toStrictEqual({ flag: true, index: -9 });
 
-      expect(increment.test(({ setValue, swapLast }) => {
+      expect(test(increment, ({ setValue, swapLast }) => {
         setValue({ flag: true, index: 42 });
         swapLast(({ flag }) => ({ flag, index: 5000 }), 'map');
       })()).toStrictEqual({ flag: true, index: 5000 });
@@ -579,7 +567,7 @@ describe('Given the state', () => {
   /* harvester/grid */
   describe('when we export the state', () => {
     it('should allow us to use it later', () => {
-      state(10).export('my state');
+      register('my state', state(10));
       const [ getState, setState ] = use('my state');
 
       expect(getState()).toBe(10);
@@ -589,10 +577,12 @@ describe('Given the state', () => {
       expect(getState()).toBe(42);
     });
     it('should free the resource in the grid if we destroy the state', () => {
-      const effect = state(0).export('my state');
+      const effect = state(0);
 
-      effect.destroy();
+      register('my state', effect);
+      destroy(effect);
       expect(() => use('my state')).toThrowError('There is no product with type "my state"');
+      expect(grid.nodes()).toHaveLength(0);
     });
   });
 
@@ -613,17 +603,16 @@ describe('Given the state', () => {
 
   /* Iterable */
   describe('when we destruct a state', () => {
-    it('should give us getter, setter which are actually effects and the state', () => {
-      const [ get, set, sInstance ] = state('foo');
+    it('should give us getter, setter which are actually effects', () => {
+      const [ get, set ] = state('foo');
       const spy = jest.fn();
 
-      get.map(value => value.toUpperCase()).pipe(spy).subscribe(true);
+      subscribe(get.map(value => value.toUpperCase()).pipe(spy), true);
 
       set('bar');
       expect(get()).toBe('bar');
       expect(get.map(value => value + 'zar')()).toBe('barzar');
       expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
-      expect(sInstance).toBeDefined();
     });
   });
 
@@ -640,11 +629,11 @@ describe('Given the state', () => {
         return spy2;
       });
 
-      s.define('bar', spy);
+      defineEffectMethod('bar', spy);
 
       let trigger = s.map(value => value * 2).bar('a', 'b').pipe(spy3);
 
-      trigger.subscribe(true);
+      subscribe(trigger, true);
 
       expect(trigger(8, 2)).toBe(14);
 
@@ -664,9 +653,8 @@ describe('Given the state', () => {
         const s = state();
         const spy = jest.fn();
         const spy2 = jest.fn();
-        const m = s.mutate((current, payload) => payload.toUpperCase());
 
-        m.define('gamble', (args) => {
+        defineEffectMethod('gamble', (args) => {
           return async (word, payload) => {
             spy2(word, payload);
             await delay(5);
@@ -675,6 +663,7 @@ describe('Given the state', () => {
           };
         });
 
+        const m = s.mutate((current, payload) => payload.toUpperCase());
         const play = m.gamble().pipe(spy);
 
         // this shouldn't throw
@@ -696,13 +685,15 @@ describe('Given the state', () => {
     });
     describe('when we define a method, export the effect and fork it after that', () => {
       it('should still work', () => {
-        const [ s ] = state('foo').export('hey');
-
-        s.define('toUpperCase', () => {
+        defineEffectMethod('toUpperCase', () => {
           return (intermediateValue, payload, q) => {
             return intermediateValue.toUpperCase();
           };
         });
+
+        const [ s ] = state('foo');
+
+        register('hey', s);
 
         expect(s.toUpperCase().map()()).toBe('FOO');
 

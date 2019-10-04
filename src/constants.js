@@ -1,10 +1,10 @@
-export const STATE_DESTROY = 'STATE_DESTROY';
 export const STATE_VALUE_CHANGE = 'STATE_VALUE_CHANGE';
-export const EFFECT_EXPORTED = 'EFFECT_EXPORTED';
 export const HARVESTER_PRODUCE = 'HARVESTER_PRODUCE';
 export const RIEW_RENDER = 'RIEW_RENDER';
 export const RIEW_UNMOUNT = 'RIEW_UNMOUNT';
 export const CANCEL_EVENT = 'CANCEL_EVENT';
+
+export const EFFECT_RUN = 'EFFECT_RUN';
 
 export const QUEUE_START = 'QUEUE_START';
 export const QUEUE_END = 'QUEUE_END';

@@ -17,6 +17,7 @@ function Grid() {
     listeners = [];
   };
   api.nodes = () => nodes;
+  api.getNodeById = (nodeId) => nodes.find(({ id }) => id === nodeId);
   api.on = (type, callback) => {
     if (!listeners[type]) listeners[type] = [];
     listeners[type].push(callback);

@@ -4,24 +4,8 @@ import { State } from './state';
 import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
-import { STATE_DESTROY, EFFECT_EXPORTED, HARVESTER_PRODUCE, RIEW_UNMOUNT, STATE_VALUE_CHANGE } from './constants';
-import Effect from './effect';
+import { HARVESTER_PRODUCE, RIEW_UNMOUNT, STATE_VALUE_CHANGE } from './constants';
 import { subscribe } from './index';
-
-grid.on(STATE_DESTROY, (state) => {
-  state.events().forEach(e => {
-    if ('__exportedAs' in e) {
-      h.undefineProduct(e.__exportedAs);
-    }
-  });
-});
-grid.on(EFFECT_EXPORTED, (effect, name) => {
-  effect.__exportedAs = name;
-  h.defineProduct(name, () => effect);
-});
-grid.on(RIEW_UNMOUNT, (riew) => {
-  grid.remove(riew);
-});
 
 function Harvester() {
   const api = {};
@@ -57,15 +41,28 @@ function Harvester() {
 };
 
 const defineHarvesterBuiltInCapabilities = function (h) {
+  grid.on(RIEW_UNMOUNT, (riew) => {
+    grid.remove(riew);
+  });
 
   // ------------------------------------------------------------------ state
   h.defineProduct(
     'state',
-    (initialValue, loggable) => {
-      const state = State(initialValue, loggable);
-      const effect = Effect(state, []);
+    (initialValue) => {
+      const state = State(initialValue);
 
       grid.add(state);
+      return h.produce('effect', state);
+    }
+  );
+
+  // ------------------------------------------------------------------ effect
+  h.defineProduct(
+    'effect',
+    (state, items = []) => {
+      const effect = state.createEffect(items);
+
+      grid.add(effect);
       return effect;
     }
   );
@@ -79,7 +76,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
       return result;
     }, {});
     const effect = h.produce('state');
-    const sInstance = effect.state;
+    const sInstance = grid.getNodeById(effect.stateId);
 
     sInstance.get = fetchSourceValues;
     sInstance.set = newValue => {

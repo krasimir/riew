@@ -1,4 +1,3 @@
-import { QueueAPI } from './queue';
 import grid from './grid';
 
 export function implementObservableInterface(obj) {
@@ -29,12 +28,6 @@ export function implementLoggableInterface(obj, initialValue = true) {
     obj.loggable = value;
     return obj;
   };
-}
-
-export function implementQueueProtocol(event) {
-  Object.keys(QueueAPI).forEach(m => {
-    event[m] = (...methodArgs) => event.fork({ type: m, func: methodArgs });
-  });
 }
 
 export function implementIterableProtocol(event) {

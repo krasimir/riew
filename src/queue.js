@@ -26,7 +26,7 @@ QueueAPI.define('mapToKey', mapToKey);
 QueueAPI.define('mutate', mutate);
 QueueAPI.define('filter', filter);
 
-export function createQueue(initialStateValue, event) {
+export function createQueue(initialStateValue, effect) {
   const q = {
     id: getId('q'),
     index: null,
@@ -83,8 +83,8 @@ export function createQueue(initialStateValue, event) {
 
   implementObservableInterface(q);
 
-  event.items.forEach(({ type, func }) => q.add(type, func));
-  event.on(CANCEL_EVENT, () => {
+  effect.items.forEach(({ type, func }) => q.add(type, func));
+  effect.on(CANCEL_EVENT, () => {
     q.cancel();
   });
 
