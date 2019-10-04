@@ -1,8 +1,6 @@
 import h from './harvester';
 import g from './grid';
 import { CANCEL_EVENT, STATE_VALUE_CHANGE } from './constants';
-import { QueueAPI } from './queue';
-import { isEffect } from './state';
 
 export const state = (initialValue) => {
   return h.produce('state', initialValue);
@@ -60,9 +58,6 @@ export const destroy = (effect) => {
         h.undefineProduct(node.__exportedAs);
       }
     });
-};
-export const defineEffectMethod = (methodName, func) => {
-  QueueAPI.define(methodName, func);
 };
 export const test = function (effect, callback) {
   const state = grid.getNodeById(effect.stateId);

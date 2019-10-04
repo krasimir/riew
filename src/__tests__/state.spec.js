@@ -9,7 +9,6 @@ import {
   destroy,
   register,
   grid,
-  defineEffectMethod,
   test
 } from '../index';
 import { delay } from '../__helpers__';
@@ -613,98 +612,6 @@ describe('Given the state', () => {
       expect(get()).toBe('bar');
       expect(get.map(value => value + 'zar')()).toBe('barzar');
       expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
-    });
-  });
-
-  /* define (custom methods) */
-  describe('when we define a custom method', () => {
-    it('should be able to use it as a normal queue method', () => {
-      const [ s, setState ] = state(2);
-      const [ y ] = state({ hello: 'world' });
-      const spy3 = jest.fn();
-      const spy2 = jest.fn().mockImplementation((value, arg1) => {
-        return value + arg1.reduce((v, n) => v + n, 0);
-      });
-      const spy = jest.fn().mockImplementation(() => {
-        return spy2;
-      });
-
-      defineEffectMethod('bar', spy);
-
-      let trigger = s.map(value => value * 2).bar('a', 'b').pipe(spy3);
-
-      subscribe(trigger, true);
-
-      expect(trigger(8, 2)).toBe(14);
-
-      setState(10);
-
-      expect(spy).toBeCalledWithArgs([ 'a', 'b' ], [ 'a', 'b'], [ 'a', 'b' ]);
-      expect(spy2).toBeCalledWithArgs(
-        [ 4, [], expect.any(Object) ],
-        [ 4, [8, 2], expect.any(Object) ],
-        [ 20, [], expect.any(Object) ]
-      );
-      expect(s()).toBe(10);
-      expect(y()).toStrictEqual({ hello: 'world' });
-    });
-    describe('and we use an async function', () => {
-      it('should keep the queue working properly', async () => {
-        const s = state();
-        const spy = jest.fn();
-        const spy2 = jest.fn();
-
-        defineEffectMethod('gamble', (args) => {
-          return async (word, payload) => {
-            spy2(word, payload);
-            await delay(5);
-            if (word === 'BAR') return 'JACKPOT';
-            return 'Nope';
-          };
-        });
-
-        const m = s.mutate((current, payload) => payload.toUpperCase());
-        const play = m.gamble().pipe(spy);
-
-        // this shouldn't throw
-        s.pipe().gamble().pipe();
-
-        await play('foo');
-        await play('bar');
-        await play('baz');
-
-        expect(spy).toBeCalledWithArgs(
-          ['Nope', 'foo'], ['JACKPOT', 'bar'], ['Nope', 'baz']
-        );
-        expect(spy2).toBeCalledWithArgs(
-          ['FOO', ['foo']],
-          ['BAR', ['bar']],
-          ['BAZ', ['baz']]
-        );
-      });
-    });
-    describe('when we define a method, export the effect and fork it after that', () => {
-      it('should still work', () => {
-        defineEffectMethod('toUpperCase', () => {
-          return (intermediateValue, payload, q) => {
-            return intermediateValue.toUpperCase();
-          };
-        });
-
-        const [ s ] = state('foo');
-
-        register('hey', s);
-
-        expect(s.toUpperCase().map()()).toBe('FOO');
-
-        const exported = use('hey');
-
-        expect('toUpperCase' in exported).toBe(true);
-
-        const m = exported.mutate(() => 'bar');
-
-        expect(m.toUpperCase()()).toBe('BAR');
-      });
     });
   });
 });
