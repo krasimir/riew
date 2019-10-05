@@ -1,8 +1,8 @@
 {
   "name": "riew",
-  "version": "0.89.0",
+  "version": "0.90.0",
   "description": "Reactive view-controller architecture",
-  "main": "./riew.js",
+  "main": "./lib/index.js",
   "scripts": {
     "clean": "rm -rf ./lib/* && rm -f ./riew.dev.js && rm -f ./riew.production.js",
     "build-dev": "browserify ./lib/index.js -o ./riew.dev.js --standalone Riew --external react && node ./scripts/replaceInFile.js ./riew.dev.js __DEV__ true",
