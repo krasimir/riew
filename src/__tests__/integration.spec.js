@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset } from '../index';
+import { reset, subscribe } from '../index';
 
 import { react, state } from '../index';
 
@@ -116,7 +116,7 @@ describe('Given the Riew library', () => {
       const FetchTime = riew(
         ({ location }) => location ? <p>{ location }</p> : null,
         async ({ render, props }) => {
-          props.map(({ city }) => ({ location: city })).pipe(render).subscribe(true);
+          subscribe(props.map(({ city }) => ({ location: city })).pipe(render), true);
         }
       );
       const App = function () {

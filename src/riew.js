@@ -23,16 +23,19 @@ function normalizeExternalsMap(arr) {
 const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
 
 export default function createRiew(viewFunc, ...controllers) {
-  const instance = { id: getId('r'), name: getFuncName(viewFunc) };
+  const instance = {
+    id: getId('r'),
+    name: getFuncName(viewFunc)
+  };
   let active = false;
   let internalStates = [];
   let onUnmountCallbacks = [];
   let subscriptions = {};
   let externals = {};
 
-  const [ input ] = state({}, false);
-  const [ output ] = state({}, false);
-  const [ api ] = state({}, false);
+  const input = state({}, false);
+  const output = state({}, false);
+  const api = state({}, false);
 
   const isActive = () => active;
   const generateSubscriptionName = (stateId) => `${ stateId }_${ instance.id }`;
@@ -53,12 +56,10 @@ export default function createRiew(viewFunc, ...controllers) {
           grid.subscribe(
             state,
             STATE_VALUE_CHANGE,
-            () => {
-              render(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
-                effectsResult[key] = subscriptions[effect.stateId][key]();
-                return effectsResult;
-              }, {}));
-            },
+            () => render(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
+              effectsResult[key] = subscriptions[effect.stateId][key]();
+              return effectsResult;
+            }, {})),
             generateSubscriptionName(state.id)
           );
         } else {
@@ -68,14 +69,12 @@ export default function createRiew(viewFunc, ...controllers) {
     }
     return result;
   });
-  const render = updateOutput.filter(isActive).pipe(value => {
-    viewFunc(value);
-  });
-  const updateAPI = api.mutate(accumulate);
+  const render = updateOutput.filter(isActive).pipe(value => viewFunc(value));
+  const updateControllerAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
 
   // defining the controller api
-  updateAPI({
+  updateControllerAPI({
     state(...args) {
       const s = state(...args);
 
@@ -102,7 +101,7 @@ export default function createRiew(viewFunc, ...controllers) {
       }
 
       updateOutput({ [key]: external });
-      updateAPI({ [key]: external });
+      updateControllerAPI({ [key]: external });
     });
   }
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../../__helpers__';
 import riew from '../index';
-import { state, reset } from '../../index';
+import { state, reset, register, subscribe } from '../../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
@@ -40,7 +40,7 @@ describe('Given the React riew function', () => {
         * render with the given state data
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, async () => {
-        const [ s, setState, sInstance ] = state('foo');
+        const [ s, setState ] = state('foo');
         const R = riew(
           ({ state }) => <p>{ state }</p>,
           async function ({ state }) {
@@ -50,16 +50,17 @@ describe('Given the React riew function', () => {
         ).with({ state: s });
         const { container, unmount } = render(<R />);
 
-        expect(sInstance.listeners()).toHaveLength(1);
         exerciseHTML(container, '<p>foo</p>');
         await delay(7);
         exerciseHTML(container, '<p>bar</p>');
         unmount();
-        expect(sInstance.listeners()).toHaveLength(0);
       });
       describe('and we use a state that is exported into the grid', () => {
         it('should receive the state value and subscribe for changes', async () => {
-          const [ , setState ] = state(42).export('hello');
+          const [ s, setState ] = state(42);
+
+          register('hello', s);
+
           const View = ({ state, hello }) => {
             return <p>{ state + hello }</p>;
           };
@@ -93,7 +94,7 @@ describe('Given the React riew function', () => {
         * have be able to subscribe to props change`, () => {
         const propsSpy = jest.fn();
         const I = riew(() => null, function ({ props }) {
-          props.pipe(propsSpy).subscribe(true);
+          subscribe(props.pipe(propsSpy), true);
         });
 
         const { rerender } = render(<I foo='bar' />);
