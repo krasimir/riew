@@ -38,7 +38,6 @@ export default function createRiew(viewFunc, ...controllers) {
   const api = state({}, false);
 
   const isActive = () => active;
-  const generateSubscriptionName = (stateId) => `${ stateId }_${ instance.id }`;
 
   // effects
   const updateOutput = output.mutate((current, newStuff) => {
@@ -53,14 +52,12 @@ export default function createRiew(viewFunc, ...controllers) {
           result[key] = effect();
           if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
           subscriptions[effect.stateId][key] = effect;
-          grid.subscribe(
-            state,
+          grid.subscribe(instance).to(state).when(
             STATE_VALUE_CHANGE,
             () => render(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
               effectsResult[key] = subscriptions[effect.stateId][key]();
               return effectsResult;
-            }, {})),
-            generateSubscriptionName(state.id)
+            }, {}))
           );
         } else {
           result[key] = newStuff[key];
@@ -137,9 +134,7 @@ export default function createRiew(viewFunc, ...controllers) {
     internalStates = [];
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
-    Object.keys(subscriptions).forEach(stateId => {
-      grid.unsubscribe(grid.getNodeById(stateId), STATE_VALUE_CHANGE, generateSubscriptionName(stateId));
-    });
+    Object.keys(subscriptions).forEach(stateId => grid.unsubscribe(instance).from(grid.getNodeById(stateId)));
     subscriptions = {};
     return instance;
   };

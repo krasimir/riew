@@ -8,56 +8,90 @@ function Subscription(name, callback) {
 }
 
 function Grid() {
-  const api = {};
+  const gridAPI = {};
   let nodes = [];
   let s11s = {};
 
+  function getSubscriptionName(target, source) {
+    return `${ target ? target.id : getId('target') }_${ source ? source.id : getId('source') }`;
+  }
   function getSourceSubscriptions(source, type) {
+    if (!source) {
+      return Object.keys(s11s).reduce((ss, sourceId) => {
+        ss = ss.concat(s11s[sourceId][type] || []);
+        return ss;
+      }, []);
+    }
     if (!s11s[source.id]) s11s[source.id] = {};
     if (!s11s[source.id][type]) s11s[source.id][type] = [];
     return s11s[source.id][type];
   }
-  function unsubscribe(source, type, subscriptionName) {
-    if (!s11s[source.id] || !s11s[source.id][type]) {
-      return;
-    }
-    s11s[source.id][type] = s11s[source.id][type].filter(({ name }) => name !== subscriptionName);
-  }
-  function off(source) {
-    s11s[source.id] = {};
-  }
 
-  api.add = (product) => {
+  gridAPI.add = (product) => {
     if (!product || !product.id) {
       throw new Error(`Each node in the grid must be an object with "id" field. Instead "${ product }" given.`);
     }
     nodes.push(product);
   };;
-  api.remove = (product) => {
+  gridAPI.remove = (product) => {
     nodes = nodes.filter(({ id }) => id !== product.id);
   };;
-  api.reset = () => {
+  gridAPI.reset = () => {
     nodes = [];
     s11s = {};
   };
-  api.nodes = () => nodes;
-  api.getNodeById = (nodeId) => nodes.find(({ id }) => id === nodeId);
-  api.subscribe = (source, type, callback, subscriptionName) => {
-    const ss = getSourceSubscriptions(source, type);
-    let subscription = ss.find(s => (s.name === subscriptionName || s.callback === callback));
+  gridAPI.nodes = () => nodes;
+  gridAPI.getNodeById = (nodeId) => nodes.find(({ id }) => id === nodeId);
+  gridAPI.subscribe = (target) => {
+    const api = {};
+    let source;
 
-    if (!subscription) {
-      ss.push(subscription = Subscription(subscriptionName, callback));
+    api.to = x => (source = x, api);
+    api.when = (type, callback) => {
+      const subscriptionSource = source ? source : { id: getId('sub_actor') };
+      const ss = getSourceSubscriptions(subscriptionSource, type);
+      const subscriptionName = getSubscriptionName(target, subscriptionSource);
+      let subscription = ss.find(s => (s.name === subscriptionName));
+
+      if (!subscription) {
+        ss.push(subscription = Subscription(subscriptionName, callback));
+      }
+      return api;
+    };
+
+    return api;
+  };
+  gridAPI.emit = (type) => {
+    const api = {};
+    let source;
+
+    api.from = x => (source = x, api);
+    api.with = (...args) => {
+      getSourceSubscriptions(source, type).forEach(s => s.callback(...args));
+    };
+
+    return api;
+  };
+  gridAPI.unsubscribe = (target) => ({
+    from(source) {
+      const subscriptionName = getSubscriptionName(target, source);
+
+      if (s11s[source.id]) {
+        Object.keys(s11s[source.id]).forEach(type => {
+          if (target) {
+            s11s[source.id][type] = s11s[source.id][type].filter(({ name }) => name !== subscriptionName);
+          } else {
+            s11s[source.id][type] = [];
+          }
+        });
+      }
     }
-    return () => unsubscribe(source, type, subscription.name);
+  });
+  gridAPI.off = (source) => {
+    s11s[source.id] = {};
   };
-  api.emit = (source, type, ...args) => {
-    getSourceSubscriptions(source, type).forEach(s => s.callback(...args));
-  };
-  api.off = off;
-  api.unsubscribe = unsubscribe;
 
-  return api;
+  return gridAPI;
 }
 
 const grid = Grid();

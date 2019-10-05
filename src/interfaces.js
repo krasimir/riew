@@ -1,8 +1,8 @@
 import grid from './grid';
 
 export function implementObservableInterface(obj) {
-  obj.on = (type, callback) => grid.subscribe(obj, type, callback);
-  obj.emit = (type, ...args) => grid.emit(obj, type, ...args);
+  obj.on = (type, callback) => grid.subscribe().to(obj).when(type, callback);
+  obj.emit = (type, ...args) => grid.emit(type).from(obj).with(...args);
   obj.off = () => grid.off(obj);
 }
 

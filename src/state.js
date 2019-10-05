@@ -4,7 +4,7 @@ import { getId } from './utils';
 import { createQueue, QueueAPI } from './queue';
 import { STATE_VALUE_CHANGE, CANCEL_EFFECT } from './constants';
 import { implementObservableInterface, implementIterableProtocol } from './interfaces';
-import { cancel, _fork } from './index';
+import { cancel, _fork, grid } from './index';
 
 export function isEffect(effect) {
   return effect && effect.id && effect.id.substr(0, 1) === 'e';
@@ -33,7 +33,7 @@ export function State(initialValue, loggable) {
       if (active === false) return value;
       const q = createQueue(state.get(), state.set);
 
-      effect.on(CANCEL_EFFECT, q.cancel);
+      grid.subscribe().to(effect).when(CANCEL_EFFECT, q.cancel);
       effect.items.forEach(({ type, func }) => q.add(type, func));
       return q.process(...payload);
     };
@@ -43,14 +43,13 @@ export function State(initialValue, loggable) {
     effect.items = items;
 
     implementIterableProtocol(effect);
-    implementObservableInterface(effect);
 
     effect.isMutating = () => {
       return !!effect.items.find(({ type }) => type === 'mutate');
     };
     effect.destroy = () => {
       cancel(effect);
-      effect.off();
+      grid.unsubscribe().from(effect);
     };
 
     Object.keys(QueueAPI).forEach(m => {

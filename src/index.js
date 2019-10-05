@@ -27,7 +27,7 @@ export const register = (name, whatever) => {
   return h.defineProduct(name, () => whatever);
 };
 export const reset = () => (g.reset(), h.reset());
-export const cancel = effect => effect.emit(CANCEL_EFFECT);
+export const cancel = effect => grid.emit(CANCEL_EFFECT).from(effect).with();
 export const subscribe = (effect, initialCall) => {
   if (effect.isMutating()) {
     throw new Error('You should not subscribe an effect that mutates the state. This will lead to endless recursion.');
@@ -39,21 +39,12 @@ export const subscribe = (effect, initialCall) => {
   if (initialCall) effect();
   const state = grid.getNodeById(effect.stateId);
 
-  return grid.subscribe(
-    state,
-    STATE_VALUE_CHANGE,
-    () => effect(),
-    `${ state.id }_${ effect.id }`
-  );
+  return grid.subscribe(effect).to(state).when(STATE_VALUE_CHANGE, () => effect());
 };
 export const unsubscribe = (effect) => {
   const state = grid.getNodeById(effect.stateId);
 
-  return grid.unsubscribe(
-    state,
-    STATE_VALUE_CHANGE,
-    `${ state.id }_${ effect.id }`
-  );
+  grid.unsubscribe(effect).from(state);
 };
 export const destroy = (effect) => {
   grid

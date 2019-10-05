@@ -24,25 +24,55 @@ describe('Given the grid', () => {
   describe('when we want to observe events', () => {
     it('should allow us to subscribe and emit events', () => {
       const spy = jest.fn();
+      const type = 'foo';
+      const target = { id: 'YYY' };
       const source = { id: 'XXX' };
 
-      grid.subscribe(source, 'foo', spy);
-      grid.emit(source, 'foo', 'a', 'b');
+      grid.subscribe(target).to(source).when(type, spy);
+      grid.emit(type).from(source).with('a', 'b');
 
       expect(spy).toBeCalledWithArgs(
         [ 'a', 'b' ]
       );
     });
-    it('should allow us to remove the listener', () => {
+    it('should allow us unsubscribe', () => {
       const spy = jest.fn();
+      const target = { id: 'YYY' };
       const source = { id: 'XXX' };
 
-      const unsubscribe = grid.subscribe(source, 'foo', spy);
-
-      unsubscribe();
+      grid.subscribe(target).to(source).when('foo', spy).unsubscribe;
+      grid.unsubscribe(target).from(source);
       grid.emit(source, 'foo', 'a', 'b');
 
       expect(spy).not.toBeCalled();
+    });
+    it('should subscribe only once when we use the same target and source', () => {
+      const spy = jest.fn();
+      const type = 'foo';
+      const target = { id: 'YYY' };
+      const source = { id: 'XXX' };
+
+      grid.subscribe(target).to(source).when(type, spy);
+      grid.subscribe(target).to(source).when(type, spy);
+      grid.subscribe(target).to(source).when(type, spy);
+      grid.subscribe(target).to(source).when(type, spy);
+
+      grid.emit(type).from(source).with('a', 'b');
+
+      expect(spy).toBeCalledWithArgs(
+        ['a', 'b']
+      );
+    });
+    it('should allow us to subscribe without target and source', () => {
+      const type = 'foo';
+      const spy = jest.fn();
+
+      grid.subscribe().when(type, spy);
+      grid.emit(type).with('a', 'b');
+
+      expect(spy).toBeCalledWithArgs(
+        ['a', 'b']
+      );
     });
   });
 });
