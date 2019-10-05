@@ -576,8 +576,6 @@ var _filter = require('./queueMethods/filter');
 
 var _filter2 = _interopRequireDefault(_filter);
 
-var _constants = require('./constants');
-
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -667,7 +665,7 @@ function createQueue(initialStateValue, setStateValue) {
   return q;
 }
 
-},{"./constants":1,"./queueMethods/filter":7,"./queueMethods/map":8,"./queueMethods/mapToKey":9,"./queueMethods/mutate":10,"./queueMethods/pipe":11,"./utils":15}],7:[function(require,module,exports){
+},{"./queueMethods/filter":7,"./queueMethods/map":8,"./queueMethods/mapToKey":9,"./queueMethods/mutate":10,"./queueMethods/pipe":11,"./utils":15}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
