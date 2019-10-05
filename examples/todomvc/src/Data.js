@@ -1,4 +1,4 @@
-import { state } from 'riew';
+import { state, register, subscribe } from 'riew';
 
 export const ToDo = (label) => ({ label, completed: false, editing: false });
 
@@ -10,6 +10,8 @@ const saveTodosData = (todos) => {
   localStorage.setItem('todos', JSON.stringify(todos));
 };
 
-export const todos = state(JSON.parse(localStorage.getItem('todos') || initialValue)).export('todos');
+export const todos = state(JSON.parse(localStorage.getItem('todos') || initialValue));
 
-todos.pipe(saveTodosData).subscribe();
+register('todos', todos);
+
+subscribe(todos.pipe(saveTodosData));
