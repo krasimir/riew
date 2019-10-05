@@ -2,7 +2,7 @@ import equal from 'fast-deep-equal';
 
 import { getId } from './utils';
 import { createQueue, QueueAPI } from './queue';
-import { QUEUE_SET_STATE_VALUE, STATE_VALUE_CHANGE } from './constants';
+import { STATE_VALUE_CHANGE, CANCEL_EFFECT } from './constants';
 import { implementObservableInterface, implementIterableProtocol } from './interfaces';
 import { cancel, _fork } from './index';
 
@@ -31,9 +31,10 @@ export function State(initialValue, loggable) {
   state.createEffect = (items = []) => {
     const effect = function (...payload) {
       if (active === false) return value;
-      const q = createQueue(state.get(), effect);
+      const q = createQueue(state.get(), state.set);
 
-      q.on(QUEUE_SET_STATE_VALUE, state.set);
+      effect.on(CANCEL_EFFECT, q.cancel);
+      effect.items.forEach(({ type, func }) => q.add(type, func));
       return q.process(...payload);
     };
 

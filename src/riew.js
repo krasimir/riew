@@ -1,8 +1,9 @@
 import { state, use, subscribe, unsubscribe } from './index';
 import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
-import { RIEW_RENDER, RIEW_UNMOUNT } from './constants';
+import { RIEW_RENDER, RIEW_UNMOUNT, STATE_VALUE_CHANGE } from './constants';
 import { implementObservableInterface } from './interfaces';
+import grid from './grid';
 
 function ensureObject(value, context) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
@@ -27,7 +28,7 @@ export default function createRiew(viewFunc, ...controllers) {
   let active = false;
   let internalStates = [];
   let onUnmountCallbacks = [];
-  let subscriptions = [];
+  let subscriptions = {};
   let externals = {};
 
   const [ input ] = state({}, false);
@@ -35,6 +36,7 @@ export default function createRiew(viewFunc, ...controllers) {
   const [ api ] = state({}, false);
 
   const isActive = () => active;
+  const generateSubscriptionName = (stateId) => `${ stateId }_${ instance.id }`;
 
   implementObservableInterface(instance);
 
@@ -46,11 +48,22 @@ export default function createRiew(viewFunc, ...controllers) {
       Object.keys(newStuff).forEach(key => {
         if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
           const effect = newStuff[key];
+          const state = grid.getNodeById(effect.stateId);
 
           result[key] = effect();
-          // const updateEffect = effect.pipe(() => render({ [key]: effect() }));
-
-          // subscribe(updateEffect);
+          if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
+          subscriptions[effect.stateId][key] = effect;
+          grid.subscribe(
+            state,
+            STATE_VALUE_CHANGE,
+            () => {
+              render(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
+                effectsResult[key] = subscriptions[effect.stateId][key]();
+                return effectsResult;
+              }, {}));
+            },
+            generateSubscriptionName(state.id)
+          );
         } else {
           result[key] = newStuff[key];
         }
@@ -129,8 +142,10 @@ export default function createRiew(viewFunc, ...controllers) {
     internalStates = [];
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
-    subscriptions.forEach(s => unsubscribe(s.effect));
-    subscriptions = [];
+    Object.keys(subscriptions).forEach(stateId => {
+      grid.unsubscribe(grid.getNodeById(stateId), STATE_VALUE_CHANGE, generateSubscriptionName(stateId));
+    });
+    subscriptions = {};
     instance.emit(RIEW_UNMOUNT, output());
     return instance;
   };

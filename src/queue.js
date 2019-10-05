@@ -4,8 +4,7 @@ import map from './queueMethods/map';
 import mapToKey from './queueMethods/mapToKey';
 import mutate from './queueMethods/mutate';
 import filter from './queueMethods/filter';
-import { implementObservableInterface } from './interfaces';
-import { QUEUE_START, QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT, QUEUE_SET_STATE_VALUE, CANCEL_EFFECT } from './constants';
+import { CANCEL_EFFECT } from './constants';
 
 export const QueueAPI = {
   define(methodName, func) {
@@ -26,13 +25,11 @@ QueueAPI.define('mapToKey', mapToKey);
 QueueAPI.define('mutate', mutate);
 QueueAPI.define('filter', filter);
 
-export function createQueue(initialStateValue, effect) {
+export function createQueue(initialStateValue, setStateValue) {
   const q = {
     id: getId('q'),
     index: null,
-    setStateValue(value) {
-      this.emit(QUEUE_SET_STATE_VALUE, value);
-    },
+    setStateValue,
     result: initialStateValue,
     items: [],
     add(type, func) {
@@ -46,19 +43,15 @@ export function createQueue(initialStateValue, effect) {
           return loop();
         }
         q.index = null;
-        q.emit(QUEUE_END);
-        q.off();
         return q.result;
       };
       function loop() {
-        q.emit(QUEUE_STEP_IN);
         const { type, func } = q.items[q.index];
         const logic = QueueAPI[type];
 
         if (logic) {
           const r = logic(q, func, payload, (lastResult) => {
             q.result = lastResult;
-            q.emit(QUEUE_STEP_OUT);
             q.index++;
             return next();
           });
@@ -68,25 +61,15 @@ export function createQueue(initialStateValue, effect) {
         throw new Error(`Unsupported method "${ type }".`);
       };
 
-      q.emit(QUEUE_START);
       if (q.items.length > 0) {
         return loop();
       }
-      q.emit(QUEUE_END);
-      q.off();
       return q.result;
     },
     cancel() {
       q.items = [];
     }
   };
-
-  implementObservableInterface(q);
-
-  effect.items.forEach(({ type, func }) => q.add(type, func));
-  effect.on(CANCEL_EFFECT, () => {
-    q.cancel();
-  });
 
   return q;
 }

@@ -1,6 +1,6 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { state, register, riew, reset } from '../index';
+import { state, register, riew, reset, subscribe } from '../index';
 
 describe('Given the `riew` factory function', () => {
   beforeEach(() => {
@@ -101,9 +101,9 @@ describe('Given the `riew` factory function', () => {
       );
     });
     describe('when we have multiple effects produced by the same state', () => {
-      fit('should still subscribe all of them', async () => {
+      it('should still subscribe all of them', async () => {
         const view = jest.fn();
-        const se = async function ({ state, render }) {
+        const controller = async function ({ state, render }) {
           const message = state('Hello World');
           const up = message.map(value => value.toUpperCase());
           const lower = message.map(value => value.toLowerCase());
@@ -115,34 +115,71 @@ describe('Given the `riew` factory function', () => {
           await delay(1);
           render({ a: 10 });
         };
-        const r = riew(view, se);
+        const r = riew(view, controller);
 
         r.mount();
         await delay(10);
         expect(view).toBeCalledWithArgs(
           [ { up: 'HELLO WORLD', lower: 'hello world' } ],
-          [ { up: 'CHAO', lower: 'chao' } ]
+          [ { up: 'CHAO', lower: 'chao' } ],
+          [ { up: 'CHAO', lower: 'chao', a: 10 } ]
         );
       });
     });
-  });
-  describe('when we send an external state to the view and the view is unmounted', () => {
-    it('should initially subscribe and then unsubscribe', () => {
-      const [ s, setState, sInstance ] = state('foo');
+    it('should unsubscribe the effects if we unmount', async () => {
       const view = jest.fn();
-      const se = function ({ render }) {
+      const spy = jest.fn();
+      const controller = async function ({ state, render }) {
+        const message = state('Hello World');
+        const up = message.map(value => value.toUpperCase()).pipe(spy);
+        const lower = message.map(value => value.toLowerCase()).pipe(spy);
+        const update = message.mutate(() => 'Chao');
+
+        render({ up, lower });
+        await delay(3);
+        update();
+      };
+      const r = riew(view, controller);
+
+      r.mount();
+      r.unmount();
+      await delay(10);
+      expect(view).toBeCalledWithArgs(
+        [ { up: 'HELLO WORLD', lower: 'hello world' } ]
+      );
+      expect(spy).toBeCalledWithArgs(
+        [ 'HELLO WORLD' ],
+        [ 'hello world' ]
+      );
+    });
+  });
+  describe('when we send an external state(effect) to the view and the view is unmounted', () => {
+    it(`should
+      * initially subscribe and then unsubscribe
+      * keep the external subscriptions`, () => {
+      const spy = jest.fn();
+      const [ s, setState ] = state('foo');
+      const external = s.pipe(spy);
+      const view = jest.fn();
+      const controller = function ({ render }) {
         render({ s });
       };
-      const r = riew(view, se);
+      const r = riew(view, controller);
+
+      subscribe(external, true);
 
       r.mount();
       setState('baz');
-      expect(sInstance.listeners()).toHaveLength(1);
       r.unmount();
-      expect(sInstance.listeners()).toHaveLength(0);
+      setState('zoo');
       expect(view).toBeCalledWithArgs(
         [ { s: 'foo' } ],
         [ { s: 'baz' } ]
+      );
+      expect(spy).toBeCalledWithArgs(
+        [ 'foo' ],
+        [ 'baz' ],
+        [ 'zoo' ]
       );
     });
   });
@@ -213,12 +250,12 @@ describe('Given the `riew` factory function', () => {
         [{ foo: 'bar', baz: 'moo', x: 'y' }]
       );
     });
-    it('should deliver the riew input to the side effects', () => {
+    it('should deliver the riew input to the controller', () => {
       const spy = jest.fn();
-      const se = function ({ props }) {
-        props.pipe(spy).subscribe(true);
+      const controller = function ({ props }) {
+        subscribe(props.pipe(spy), true);
       };
-      const r = riew(() => {}, se);
+      const r = riew(() => {}, controller);
 
       r.mount({ foo: 'bar' });
       r.update({ baz: 'moo' });
@@ -291,7 +328,7 @@ describe('Given the `riew` factory function', () => {
         const r = riew(
           view,
           ({ firstName }) => {
-            firstName.pipe(spy).subscribe(true);
+            subscribe(firstName.pipe(spy), true);
           }
         ).with({ firstName: getFirstName });
 
@@ -310,7 +347,9 @@ describe('Given the `riew` factory function', () => {
     });
     describe('when we want to an exported state', () => {
       it('should recognize it and pass it down to the controller', () => {
-        const [ , setState ] = state('foo').export('xxx');
+        const [ s, setState ] = state('foo');
+
+        register('xxx', s);
 
         const view = jest.fn();
         const effect = jest.fn();
