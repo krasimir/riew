@@ -3,30 +3,28 @@ import equal from 'fast-deep-equal';
 import { getId } from './utils';
 import { createQueue, QueueAPI } from './queue';
 import { STATE_VALUE_CHANGE, CANCEL_EFFECT } from './constants';
-import { implementObservableInterface, implementIterableProtocol } from './interfaces';
+import { implementIterableProtocol } from './interfaces';
 import { cancel, _fork, grid } from './index';
 
 export function isEffect(effect) {
   return effect && effect.id && effect.id.substr(0, 1) === 'e';
 }
 
-export function State(initialValue, loggable) {
+export function State(initialValue) {
   const state = {};
   let value = initialValue;
   let active = true;
-
-  implementObservableInterface(state);
 
   state.id = getId('s');
   state.get = () => value;
   state.set = (newValue) => {
     if (equal(value, newValue) || active === false) return;
     value = newValue;
-    state.emit(STATE_VALUE_CHANGE, value);
+    grid.emit(STATE_VALUE_CHANGE).from(state).with(value);
   };
   state.destroy = () => {
     active = false;
-    state.off();
+    grid.unsubscribe().from(state);
   };
   state.createEffect = (items = []) => {
     const effect = function (...payload) {

@@ -89,7 +89,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
     Object.keys(statesMap).forEach(key => {
       subscribe(statesMap[key].pipe(() => {
-        sInstance.emit(STATE_VALUE_CHANGE, fetchSourceValues());
+        grid.emit(STATE_VALUE_CHANGE).from(sInstance).with(fetchSourceValues());
       }));
     });
 

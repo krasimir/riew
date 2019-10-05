@@ -24,79 +24,117 @@ function Subscription(name, callback) {
 }
 
 function Grid() {
-  var api = {};
+  var gridAPI = {};
   var nodes = [];
   var s11s = {};
 
+  function getSubscriptionName(target, source) {
+    return (target ? target.id : (0, _utils.getId)('target')) + '_' + (source ? source.id : (0, _utils.getId)('source'));
+  }
   function getSourceSubscriptions(source, type) {
+    if (!source) {
+      return Object.keys(s11s).reduce(function (ss, sourceId) {
+        ss = ss.concat(s11s[sourceId][type] || []);
+        return ss;
+      }, []);
+    }
     if (!s11s[source.id]) s11s[source.id] = {};
     if (!s11s[source.id][type]) s11s[source.id][type] = [];
     return s11s[source.id][type];
   }
-  function unsubscribe(source, type, subscriptionName) {
-    if (!s11s[source.id] || !s11s[source.id][type]) {
-      return;
-    }
-    s11s[source.id][type] = s11s[source.id][type].filter(function (_ref) {
-      var name = _ref.name;
-      return name !== subscriptionName;
-    });
-  }
-  function off(source) {
-    s11s[source.id] = {};
-  }
 
-  api.add = function (product) {
+  gridAPI.add = function (product) {
     if (!product || !product.id) {
       throw new Error('Each node in the grid must be an object with "id" field. Instead "' + product + '" given.');
     }
     nodes.push(product);
   };;
-  api.remove = function (product) {
-    nodes = nodes.filter(function (_ref2) {
-      var id = _ref2.id;
+  gridAPI.remove = function (product) {
+    nodes = nodes.filter(function (_ref) {
+      var id = _ref.id;
       return id !== product.id;
     });
   };;
-  api.reset = function () {
+  gridAPI.reset = function () {
     nodes = [];
     s11s = {};
   };
-  api.nodes = function () {
+  gridAPI.nodes = function () {
     return nodes;
   };
-  api.getNodeById = function (nodeId) {
-    return nodes.find(function (_ref3) {
-      var id = _ref3.id;
+  gridAPI.getNodeById = function (nodeId) {
+    return nodes.find(function (_ref2) {
+      var id = _ref2.id;
       return id === nodeId;
     });
   };
-  api.subscribe = function (source, type, callback, subscriptionName) {
-    var ss = getSourceSubscriptions(source, type);
-    var subscription = ss.find(function (s) {
-      return s.name === subscriptionName || s.callback === callback;
-    });
+  gridAPI.subscribe = function (target) {
+    var api = {};
+    var source = void 0;
 
-    if (!subscription) {
-      ss.push(subscription = Subscription(subscriptionName, callback));
-    }
-    return function () {
-      return unsubscribe(source, type, subscription.name);
+    api.to = function (x) {
+      return source = x, api;
+    };
+    api.when = function (type, callback) {
+      var subscriptionSource = source ? source : { id: (0, _utils.getId)('sub_actor') };
+      var ss = getSourceSubscriptions(subscriptionSource, type);
+      var subscriptionName = getSubscriptionName(target, subscriptionSource);
+      var subscription = ss.find(function (s) {
+        return s.name === subscriptionName;
+      });
+
+      if (!subscription) {
+        ss.push(subscription = Subscription(subscriptionName, callback));
+      }
+      return api;
+    };
+
+    return api;
+  };
+  gridAPI.emit = function (type) {
+    var api = {};
+    var source = void 0;
+
+    api.from = function (x) {
+      return source = x, api;
+    };
+    api.with = function () {
+      for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      getSourceSubscriptions(source, type).forEach(function (s) {
+        return s.callback.apply(s, args);
+      });
+    };
+
+    return api;
+  };
+  gridAPI.unsubscribe = function (target) {
+    return {
+      from: function from(source) {
+        var subscriptionName = getSubscriptionName(target, source);
+
+        if (s11s[source.id]) {
+          Object.keys(s11s[source.id]).forEach(function (type) {
+            if (target) {
+              s11s[source.id][type] = s11s[source.id][type].filter(function (_ref3) {
+                var name = _ref3.name;
+                return name !== subscriptionName;
+              });
+            } else {
+              s11s[source.id][type] = [];
+            }
+          });
+        }
+      }
     };
   };
-  api.emit = function (source, type) {
-    for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-      args[_key - 2] = arguments[_key];
-    }
-
-    getSourceSubscriptions(source, type).forEach(function (s) {
-      return s.callback.apply(s, args);
-    });
+  gridAPI.off = function (source) {
+    s11s[source.id] = {};
   };
-  api.off = off;
-  api.unsubscribe = unsubscribe;
 
-  return api;
+  return gridAPI;
 }
 
 var grid = Grid();
@@ -259,7 +297,7 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
 
     Object.keys(statesMap).forEach(function (key) {
       (0, _index.subscribe)(statesMap[key].pipe(function () {
-        sInstance.emit(_constants.STATE_VALUE_CHANGE, fetchSourceValues());
+        _grid2.default.emit(_constants.STATE_VALUE_CHANGE).from(sInstance).with(fetchSourceValues());
       }));
     });
 
@@ -398,7 +436,7 @@ var reset = exports.reset = function reset() {
   return _grid2.default.reset(), _harvester2.default.reset();
 };
 var cancel = exports.cancel = function cancel(effect) {
-  return effect.emit(_constants.CANCEL_EFFECT);
+  return grid.emit(_constants.CANCEL_EFFECT).from(effect).with();
 };
 var subscribe = exports.subscribe = function subscribe(effect, initialCall) {
   if (effect.isMutating()) {
@@ -411,14 +449,14 @@ var subscribe = exports.subscribe = function subscribe(effect, initialCall) {
   if (initialCall) effect();
   var state = grid.getNodeById(effect.stateId);
 
-  return grid.subscribe(state, _constants.STATE_VALUE_CHANGE, function () {
+  return grid.subscribe(effect).to(state).when(_constants.STATE_VALUE_CHANGE, function () {
     return effect();
-  }, state.id + '_' + effect.id);
+  });
 };
 var unsubscribe = exports.unsubscribe = function unsubscribe(effect) {
   var state = grid.getNodeById(effect.stateId);
 
-  return grid.unsubscribe(state, _constants.STATE_VALUE_CHANGE, state.id + '_' + effect.id);
+  grid.unsubscribe(effect).from(state);
 };
 var destroy = exports.destroy = function destroy(effect) {
   grid.nodes().filter(function (node) {
@@ -477,34 +515,8 @@ var grid = exports.grid = _grid2.default;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.implementObservableInterface = implementObservableInterface;
 exports.implementLoggableInterface = implementLoggableInterface;
 exports.implementIterableProtocol = implementIterableProtocol;
-
-var _grid = require('./grid');
-
-var _grid2 = _interopRequireDefault(_grid);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function implementObservableInterface(obj) {
-  obj.on = function (type, callback) {
-    return _grid2.default.subscribe(obj, type, callback);
-  };
-  obj.emit = function (type) {
-    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
-    }
-
-    return _grid2.default.emit.apply(_grid2.default, [obj, type].concat(args));
-  };
-  obj.off = function () {
-    return _grid2.default.off(obj);
-  };
-}
-
 function implementLoggableInterface(obj) {
   var initialValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
@@ -533,7 +545,7 @@ function implementIterableProtocol(event) {
   }
 };
 
-},{"./grid":2}],6:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1046,9 +1058,6 @@ function createRiew(viewFunc) {
   var isActive = function isActive() {
     return active;
   };
-  var generateSubscriptionName = function generateSubscriptionName(stateId) {
-    return stateId + '_' + instance.id;
-  };
 
   // effects
   var updateOutput = output.mutate(function (current, newStuff) {
@@ -1063,12 +1072,12 @@ function createRiew(viewFunc) {
           result[key] = effect();
           if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
           subscriptions[effect.stateId][key] = effect;
-          _grid2.default.subscribe(_state, _constants.STATE_VALUE_CHANGE, function () {
+          _grid2.default.subscribe(instance).to(_state).when(_constants.STATE_VALUE_CHANGE, function () {
             return _render(Object.keys(subscriptions[effect.stateId]).reduce(function (effectsResult, key) {
               effectsResult[key] = subscriptions[effect.stateId][key]();
               return effectsResult;
             }, {}));
-          }, generateSubscriptionName(_state.id));
+          });
         } else {
           result[key] = newStuff[key];
         }
@@ -1158,7 +1167,7 @@ function createRiew(viewFunc) {
     });
     onUnmountCallbacks = [];
     Object.keys(subscriptions).forEach(function (stateId) {
-      _grid2.default.unsubscribe(_grid2.default.getNodeById(stateId), _constants.STATE_VALUE_CHANGE, generateSubscriptionName(stateId));
+      return _grid2.default.unsubscribe(instance).from(_grid2.default.getNodeById(stateId));
     });
     subscriptions = {};
     return instance;
@@ -1216,12 +1225,10 @@ function isEffect(effect) {
   return effect && effect.id && effect.id.substr(0, 1) === 'e';
 }
 
-function State(initialValue, loggable) {
+function State(initialValue) {
   var state = {};
   var value = initialValue;
   var active = true;
-
-  (0, _interfaces.implementObservableInterface)(state);
 
   state.id = (0, _utils.getId)('s');
   state.get = function () {
@@ -1230,11 +1237,11 @@ function State(initialValue, loggable) {
   state.set = function (newValue) {
     if ((0, _fastDeepEqual2.default)(value, newValue) || active === false) return;
     value = newValue;
-    state.emit(_constants.STATE_VALUE_CHANGE, value);
+    _index.grid.emit(_constants.STATE_VALUE_CHANGE).from(state).with(value);
   };
   state.destroy = function () {
     active = false;
-    state.off();
+    _index.grid.unsubscribe().from(state);
   };
   state.createEffect = function () {
     var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
@@ -1243,7 +1250,7 @@ function State(initialValue, loggable) {
       if (active === false) return value;
       var q = (0, _queue.createQueue)(state.get(), state.set);
 
-      effect.on(_constants.CANCEL_EFFECT, q.cancel);
+      _index.grid.subscribe().to(effect).when(_constants.CANCEL_EFFECT, q.cancel);
       effect.items.forEach(function (_ref) {
         var type = _ref.type,
             func = _ref.func;
@@ -1257,7 +1264,6 @@ function State(initialValue, loggable) {
     effect.items = items;
 
     (0, _interfaces.implementIterableProtocol)(effect);
-    (0, _interfaces.implementObservableInterface)(effect);
 
     effect.isMutating = function () {
       return !!effect.items.find(function (_ref2) {
@@ -1267,7 +1273,7 @@ function State(initialValue, loggable) {
     };
     effect.destroy = function () {
       (0, _index.cancel)(effect);
-      effect.off();
+      _index.grid.unsubscribe().from(effect);
     };
 
     Object.keys(_queue.QueueAPI).forEach(function (m) {

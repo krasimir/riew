@@ -4,7 +4,6 @@ import map from './queueMethods/map';
 import mapToKey from './queueMethods/mapToKey';
 import mutate from './queueMethods/mutate';
 import filter from './queueMethods/filter';
-import { CANCEL_EFFECT } from './constants';
 
 export const QueueAPI = {
   define(methodName, func) {
