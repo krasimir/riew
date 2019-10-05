@@ -4,7 +4,7 @@ import { State } from './state';
 import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
-import { HARVESTER_PRODUCE, RIEW_UNMOUNT, STATE_VALUE_CHANGE } from './constants';
+import { STATE_VALUE_CHANGE } from './constants';
 import { subscribe } from './index';
 
 function Harvester() {
@@ -27,10 +27,7 @@ function Harvester() {
     if (!products[type]) {
       throw new Error(`There is no product with type "${ type }".`);
     }
-    const product = products[type](...args);
-
-    grid.emit(HARVESTER_PRODUCE, product);
-    return product;
+    return products[type](...args);
   };
   api.reset = () => {
     products = {};
@@ -41,9 +38,6 @@ function Harvester() {
 };
 
 const defineHarvesterBuiltInCapabilities = function (h) {
-  grid.on(RIEW_UNMOUNT, (riew) => {
-    grid.remove(riew);
-  });
 
   // ------------------------------------------------------------------ state
   h.defineProduct(
@@ -87,17 +81,15 @@ const defineHarvesterBuiltInCapabilities = function (h) {
         if (!statesMap[key]) {
           throw new Error(`There is no state with key "${ key }".`);
         }
-        const [ getChildState, setChildState ] = statesMap[key];
+        const [ , setChildState ] = statesMap[key];
 
-        if (!equal(newValue[key], getChildState())) {
-          setChildState(newValue[key]);
-        }
+        setChildState(newValue[key]);
       }, {});
     };
 
     Object.keys(statesMap).forEach(key => {
       subscribe(statesMap[key].pipe(() => {
-        sInstance.emit(STATE_VALUE_CHANGE, sInstance.get());
+        sInstance.emit(STATE_VALUE_CHANGE, fetchSourceValues());
       }));
     });
 
@@ -106,7 +98,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
   // ------------------------------------------------------------------ riew
   h.defineProduct('riew', (viewFunc, ...controllers) => {
-    const riew = createRiew(emit, viewFunc, ...controllers);
+    const riew = createRiew(viewFunc, ...controllers);
 
     grid.add(riew);
     return riew;

@@ -22,25 +22,25 @@ describe('Given the grid', () => {
     });
   });
   describe('when we want to observe events', () => {
-    it('should allow us to listen and emit events', () => {
+    it('should allow us to subscribe and emit events', () => {
       const spy = jest.fn();
-      const source = 'XXX';
+      const source = { id: 'XXX' };
 
-      grid.on('foo', spy);
-      grid.emit('foo', source, 'a', 'b');
+      grid.subscribe(source, 'foo', spy);
+      grid.emit(source, 'foo', 'a', 'b');
 
       expect(spy).toBeCalledWithArgs(
-        [source, 'a', 'b']
+        [ 'a', 'b' ]
       );
     });
     it('should allow us to remove the listener', () => {
       const spy = jest.fn();
-      const source = 'XXX';
+      const source = { id: 'XXX' };
 
-      const unsubscribe = grid.on('foo', spy);
+      const unsubscribe = grid.subscribe(source, 'foo', spy);
 
       unsubscribe();
-      grid.emit('foo', source, 'a', 'b');
+      grid.emit(source, 'foo', 'a', 'b');
 
       expect(spy).not.toBeCalled();
     });

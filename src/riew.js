@@ -1,8 +1,8 @@
-import { state, use } from './index';
+import { state, use, subscribe, unsubscribe } from './index';
 import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 import { RIEW_RENDER, RIEW_UNMOUNT } from './constants';
-import { implementLoggableInterface } from './interfaces';
+import { implementObservableInterface } from './interfaces';
 
 function ensureObject(value, context) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
@@ -22,12 +22,12 @@ function normalizeExternalsMap(arr) {
 }
 const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
 
-export default function createRiew(emit, viewFunc, ...controllers) {
+export default function createRiew(viewFunc, ...controllers) {
   const instance = { id: getId('r'), name: getFuncName(viewFunc) };
   let active = false;
   let internalStates = [];
-  let subscriptions = [];
   let onUnmountCallbacks = [];
+  let subscriptions = [];
   let externals = {};
 
   const [ input ] = state({}, false);
@@ -35,9 +35,8 @@ export default function createRiew(emit, viewFunc, ...controllers) {
   const [ api ] = state({}, false);
 
   const isActive = () => active;
-  const isSubscribedTo = id => subscriptions.find(({ stateId }) => (id === stateId));
 
-  implementLoggableInterface(instance);
+  implementObservableInterface(instance);
 
   // effects
   const updateOutput = output.mutate((current, newStuff) => {
@@ -46,16 +45,12 @@ export default function createRiew(emit, viewFunc, ...controllers) {
     if (newStuff) {
       Object.keys(newStuff).forEach(key => {
         if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
-          const [ effect, , sInstance ] = newStuff[key];
+          const effect = newStuff[key];
 
-          effect.loggability(false);
           result[key] = effect();
-          if (!isSubscribedTo(sInstance.id)) {
-            subscriptions.push({
-              stateId: sInstance.id,
-              effect: effect.pipe(() => render({ [key]: effect() })).subscribe()
-            });
-          }
+          // const updateEffect = effect.pipe(() => render({ [key]: effect() }));
+
+          // subscribe(updateEffect);
         } else {
           result[key] = newStuff[key];
         }
@@ -65,7 +60,7 @@ export default function createRiew(emit, viewFunc, ...controllers) {
   });
   const render = updateOutput.filter(isActive).pipe(value => {
     viewFunc(value);
-    emit(RIEW_RENDER, instance, value);
+    instance.emit(RIEW_RENDER, value);
   });
   const updateAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
@@ -134,9 +129,9 @@ export default function createRiew(emit, viewFunc, ...controllers) {
     internalStates = [];
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
-    subscriptions.forEach(s => s.effect.unsubscribe());
+    subscriptions.forEach(s => unsubscribe(s.effect));
     subscriptions = [];
-    emit(RIEW_UNMOUNT, output());
+    instance.emit(RIEW_UNMOUNT, output());
     return instance;
   };
   instance.with = (...maps) => {
@@ -144,7 +139,7 @@ export default function createRiew(emit, viewFunc, ...controllers) {
     return instance;
   };
   instance.test = (map) => {
-    const newInstance = createRiew(emit, viewFunc, ...controllers);
+    const newInstance = createRiew(viewFunc, ...controllers);
 
     newInstance.__setExternals([ map ]);
     return newInstance;

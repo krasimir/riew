@@ -216,7 +216,7 @@ describe('Given the state', () => {
   });
 
   /* cancel */
-  describe('when we use the state `cancel` method', () => {
+  describe('when we use the `cancel` function', () => {
     it('should stop the currently running queues (if any)', async () => {
       const s = state(10);
       const spy = jest.fn();
@@ -263,7 +263,7 @@ describe('Given the state', () => {
   });
 
   /* subscribe */
-  describe('when we use the `subscribe` method', () => {
+  describe('when we use the `subscribe` function', () => {
     it('should trigger the queue on a state change', () => {
       const s = state(10);
       const spyA = jest.fn();
@@ -347,6 +347,20 @@ describe('Given the state', () => {
     });
     it('should throw an error if we subscribe for mutating trigger', () => {
       expect(() => state(10).mutate(value => value + 1).subscribe()).toThrowError();
+    });
+    it('should subscribe just once if we pass the same effect', () => {
+      const spy = jest.fn();
+      const [ get, update ] = state('foo');
+      const selector = get.pipe(spy);
+
+      subscribe(selector);
+      subscribe(selector);
+      subscribe(selector);
+      update('bar');
+
+      expect(spy).toBeCalledWithArgs(
+        [ 'bar' ]
+      );
     });
   });
 

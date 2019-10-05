@@ -7,7 +7,7 @@ import { implementObservableInterface, implementIterableProtocol } from './inter
 import { cancel, _fork } from './index';
 
 export function isEffect(effect) {
-  return effect && effect.id.substr(0, 1) === 'e';
+  return effect && effect.id && effect.id.substr(0, 1) === 'e';
 }
 
 export function State(initialValue, loggable) {

@@ -1,25 +1,9 @@
 import grid from './grid';
 
 export function implementObservableInterface(obj) {
-  let subscriptions = [];
-
-  obj.on = (type, callback) => {
-    const unsubscribe = grid.on(type, (source, ...args) => {
-      if (source === obj) {
-        callback(...args);
-      }
-    });
-
-    subscriptions.push(unsubscribe);
-    return unsubscribe;
-  };
-  obj.emit = (type, ...args) => {
-    grid.emit(type, obj, ...args);
-  };
-  obj.off = () => {
-    subscriptions.forEach(s => s());
-    subscriptions = [];
-  };
+  obj.on = (type, callback) => grid.subscribe(obj, type, callback);
+  obj.emit = (type, ...args) => grid.emit(obj, type, ...args);
+  obj.off = () => grid.off(obj);
 }
 
 export function implementLoggableInterface(obj, initialValue = true) {

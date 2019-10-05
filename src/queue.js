@@ -5,7 +5,7 @@ import mapToKey from './queueMethods/mapToKey';
 import mutate from './queueMethods/mutate';
 import filter from './queueMethods/filter';
 import { implementObservableInterface } from './interfaces';
-import { QUEUE_START, QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT, QUEUE_SET_STATE_VALUE, CANCEL_EVENT } from './constants';
+import { QUEUE_START, QUEUE_END, QUEUE_STEP_IN, QUEUE_STEP_OUT, QUEUE_SET_STATE_VALUE, CANCEL_EFFECT } from './constants';
 
 export const QueueAPI = {
   define(methodName, func) {
@@ -84,7 +84,7 @@ export function createQueue(initialStateValue, effect) {
   implementObservableInterface(q);
 
   effect.items.forEach(({ type, func }) => q.add(type, func));
-  effect.on(CANCEL_EVENT, () => {
+  effect.on(CANCEL_EFFECT, () => {
     q.cancel();
   });
 

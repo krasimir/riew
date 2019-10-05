@@ -1,6 +1,7 @@
 import h from './harvester';
 import g from './grid';
-import { CANCEL_EVENT, STATE_VALUE_CHANGE } from './constants';
+import { CANCEL_EFFECT, STATE_VALUE_CHANGE } from './constants';
+import { isEffect } from './state';
 
 export const state = (initialValue) => {
   return h.produce('state', initialValue);
@@ -21,31 +22,38 @@ export const use = (name, ...args) => {
 };
 export const register = (name, whatever) => {
   if (typeof whatever === 'object' || typeof whatever === 'function') {
-    whatever.__exportedAs = name;
+    whatever.__registered = name;
   }
   return h.defineProduct(name, () => whatever);
 };
-export const reset = () => {
-  g.reset();
-  h.reset();
-};
-export const cancel = effect => {
-  g.emit(CANCEL_EVENT, effect);
-};
+export const reset = () => (g.reset(), h.reset());
+export const cancel = effect => effect.emit(CANCEL_EFFECT);
 export const subscribe = (effect, initialCall) => {
   if (effect.isMutating()) {
     throw new Error('You should not subscribe an effect that mutates the state. This will lead to endless recursion.');
   }
+  if (!isEffect(effect)) {
+    throw new Error('You must pass an effect to the subscribe function.');
+  }
 
   if (initialCall) effect();
-  return effect.unsubscribe = grid.getNodeById(effect.stateId).on(STATE_VALUE_CHANGE, () => effect());
+  const state = grid.getNodeById(effect.stateId);
+
+  return grid.subscribe(
+    state,
+    STATE_VALUE_CHANGE,
+    () => effect(),
+    `${ state.id }_${ effect.id }`
+  );
 };
 export const unsubscribe = (effect) => {
-  if (effect.unsubscribe) {
-    effect.unsubscribe();
-  } else {
-    console.warn(`Not subscribed yet. (${ effect.id })`);
-  }
+  const state = grid.getNodeById(effect.stateId);
+
+  return grid.unsubscribe(
+    state,
+    STATE_VALUE_CHANGE,
+    `${ state.id }_${ effect.id }`
+  );
 };
 export const destroy = (effect) => {
   grid
@@ -54,8 +62,8 @@ export const destroy = (effect) => {
     .forEach(node => {
       node.destroy();
       grid.remove(node);
-      if ('__exportedAs' in node) { // in case of exported effect
-        h.undefineProduct(node.__exportedAs);
+      if ('__registered' in node) { // in case of exported effect
+        h.undefineProduct(node.__registered);
       }
     });
 };

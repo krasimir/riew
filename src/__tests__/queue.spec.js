@@ -9,9 +9,14 @@ describe('Given the createQueue helper', () => {
   describe('when we create a queue', () => {
     it('should cycle over the items and call the appropriate callbacks', () => {
       const steps = [];
-      const setValue = jest.fn();
-      const getValue = jest.fn().mockImplementation(() => 42);
-      const q = createQueue({ set: setValue, get: getValue, on: () => {} }, { id: 'effect', items: [] });
+      const q = createQueue(
+        42,
+        {
+          id: 'effect',
+          items: [],
+          on() {}
+        }
+      );
 
       q.on(QUEUE_START, () => steps.push([ 'start', q.result ]));
       q.on(QUEUE_END, () => steps.push([ 'end', q.result ]));
@@ -45,12 +50,8 @@ describe('Given the createQueue helper', () => {
     it('should cancel the queue', () => {
       let callback;
       const q = createQueue(
-        {
-          set: () => {},
-          get: () => 'foo',
-          on: (type, c) => (callback = c)
-        },
-        { id: 'effect', items: [] }
+        'foo',
+        { id: 'effect', items: [], on(type, c) { callback = c; } }
       );
 
       q.add('map', [() => {}]);

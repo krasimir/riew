@@ -51,12 +51,12 @@ describe('Given the `riew` factory function', () => {
       );
     });
   });
-  describe('when we create a state in the side effect', () => {
-    it('should teardown the effect if the riew is unmounted', () => {
+  describe('when we create a state in the controller', () => {
+    it('should teardown the state if the riew is unmounted', () => {
       let ss;
       const view = jest.fn();
       const controller = function ({ state, render }) {
-        const [ s, set ] = state('foo').subscribe();
+        const [ s, set ] = state('foo');
 
         render({ s });
         ss = set;
@@ -99,6 +99,31 @@ describe('Given the `riew` factory function', () => {
         [ { s: 'foo' } ],
         [ { s: 'bar' } ]
       );
+    });
+    describe('when we have multiple effects produced by the same state', () => {
+      fit('should still subscribe all of them', async () => {
+        const view = jest.fn();
+        const se = async function ({ state, render }) {
+          const message = state('Hello World');
+          const up = message.map(value => value.toUpperCase());
+          const lower = message.map(value => value.toLowerCase());
+          const update = message.mutate(() => 'Chao');
+
+          render({ up, lower });
+          await delay(3);
+          update();
+          await delay(1);
+          render({ a: 10 });
+        };
+        const r = riew(view, se);
+
+        r.mount();
+        await delay(10);
+        expect(view).toBeCalledWithArgs(
+          [ { up: 'HELLO WORLD', lower: 'hello world' } ],
+          [ { up: 'CHAO', lower: 'chao' } ]
+        );
+      });
     });
   });
   describe('when we send an external state to the view and the view is unmounted', () => {

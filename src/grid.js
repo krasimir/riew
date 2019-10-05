@@ -1,7 +1,31 @@
+import { getId } from './utils';
+
+function Subscription(name, callback) {
+  return {
+    name: name || getId('sub'),
+    callback
+  };
+}
+
 function Grid() {
   const api = {};
   let nodes = [];
-  let listeners = {};
+  let s11s = {};
+
+  function getSourceSubscriptions(source, type) {
+    if (!s11s[source.id]) s11s[source.id] = {};
+    if (!s11s[source.id][type]) s11s[source.id][type] = [];
+    return s11s[source.id][type];
+  }
+  function unsubscribe(source, type, subscriptionName) {
+    if (!s11s[source.id] || !s11s[source.id][type]) {
+      return;
+    }
+    s11s[source.id][type] = s11s[source.id][type].filter(({ name }) => name !== subscriptionName);
+  }
+  function off(source) {
+    s11s[source.id] = {};
+  }
 
   api.add = (product) => {
     if (!product || !product.id) {
@@ -14,19 +38,24 @@ function Grid() {
   };;
   api.reset = () => {
     nodes = [];
-    listeners = [];
+    s11s = {};
   };
   api.nodes = () => nodes;
   api.getNodeById = (nodeId) => nodes.find(({ id }) => id === nodeId);
-  api.on = (type, callback) => {
-    if (!listeners[type]) listeners[type] = [];
-    listeners[type].push(callback);
-    return () => (listeners[type] = listeners[type].filter(c => c !== callback));
+  api.subscribe = (source, type, callback, subscriptionName) => {
+    const ss = getSourceSubscriptions(source, type);
+    let subscription = ss.find(s => (s.name === subscriptionName || s.callback === callback));
+
+    if (!subscription) {
+      ss.push(subscription = Subscription(subscriptionName, callback));
+    }
+    return () => unsubscribe(source, type, subscription.name);
   };
-  api.emit = (type, source, ...args) => {
-    if (!listeners[type]) return;
-    listeners[type].forEach(l => l(source, ...args));
+  api.emit = (source, type, ...args) => {
+    getSourceSubscriptions(source, type).forEach(s => s.callback(...args));
   };
+  api.off = off;
+  api.unsubscribe = unsubscribe;
 
   return api;
 }
