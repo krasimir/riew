@@ -1220,7 +1220,7 @@ function _interopRequireDefault(obj) {
 }
 
 function isEffect(effect) {
-  return effect && effect.id && effect.id.substr(0, 1) === 'e';
+  return effect && effect.__riewEffect === true;
 }
 
 function State(initialValue) {
@@ -1257,6 +1257,7 @@ function State(initialValue) {
       return q.process.apply(q, arguments);
     };
 
+    effect.__riewEffect = true;
     effect.id = (0, _utils.getId)('e');
     effect.stateId = state.id;
     effect.items = items;

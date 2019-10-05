@@ -7,7 +7,7 @@ import { implementIterableProtocol } from './interfaces';
 import { cancel, _fork, grid } from './index';
 
 export function isEffect(effect) {
-  return effect && effect.id && effect.id.substr(0, 1) === 'e';
+  return effect && effect.__riewEffect === true;
 }
 
 export function State(initialValue) {
@@ -36,6 +36,7 @@ export function State(initialValue) {
       return q.process(...payload);
     };
 
+    effect.__riewEffect = true;
     effect.id = getId('e');
     effect.stateId = state.id;
     effect.items = items;
