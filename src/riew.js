@@ -1,8 +1,7 @@
-import { state, use, subscribe, unsubscribe } from './index';
+import { state, use } from './index';
 import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
-import { RIEW_RENDER, RIEW_UNMOUNT, STATE_VALUE_CHANGE } from './constants';
-import { implementObservableInterface } from './interfaces';
+import { STATE_VALUE_CHANGE } from './constants';
 import grid from './grid';
 
 function ensureObject(value, context) {
@@ -38,8 +37,6 @@ export default function createRiew(viewFunc, ...controllers) {
   const isActive = () => active;
   const generateSubscriptionName = (stateId) => `${ stateId }_${ instance.id }`;
 
-  implementObservableInterface(instance);
-
   // effects
   const updateOutput = output.mutate((current, newStuff) => {
     const result = { ...current };
@@ -73,7 +70,6 @@ export default function createRiew(viewFunc, ...controllers) {
   });
   const render = updateOutput.filter(isActive).pipe(value => {
     viewFunc(value);
-    instance.emit(RIEW_RENDER, value);
   });
   const updateAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
@@ -146,7 +142,6 @@ export default function createRiew(viewFunc, ...controllers) {
       grid.unsubscribe(grid.getNodeById(stateId), STATE_VALUE_CHANGE, generateSubscriptionName(stateId));
     });
     subscriptions = {};
-    instance.emit(RIEW_UNMOUNT, output());
     return instance;
   };
   instance.with = (...maps) => {

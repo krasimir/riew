@@ -1,4 +1,2 @@
 export const STATE_VALUE_CHANGE = 'STATE_VALUE_CHANGE';
-export const RIEW_RENDER = 'RIEW_RENDER';
-export const RIEW_UNMOUNT = 'RIEW_UNMOUNT';
 export const CANCEL_EFFECT = 'CANCEL_EFFECT';
