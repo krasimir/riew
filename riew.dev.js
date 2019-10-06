@@ -236,6 +236,11 @@ function Harvester() {
     products = {};
     defineHarvesterBuiltInCapabilities(api);
   };
+  api.debug = function () {
+    return {
+      productNames: Object.keys(products)
+    };
+  };
 
   return api;
 };
