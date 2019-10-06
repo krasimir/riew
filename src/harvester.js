@@ -1,5 +1,3 @@
-import equal from 'fast-deep-equal';
-
 import { State } from './state';
 import createRiew from './riew';
 import reactRiew from './react';

@@ -24,7 +24,8 @@ export const register = (name, whatever) => {
   if (typeof whatever === 'object' || typeof whatever === 'function') {
     whatever.__registered = name;
   }
-  return h.defineProduct(name, () => whatever);
+  h.defineProduct(name, () => whatever);
+  return whatever;
 };
 export const reset = () => (g.reset(), h.reset());
 export const cancel = effect => grid.emit(CANCEL_EFFECT).from(effect).with();

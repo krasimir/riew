@@ -182,10 +182,6 @@ var _slicedToArray = function () {
   };
 }();
 
-var _fastDeepEqual = require('fast-deep-equal');
-
-var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
-
 var _state = require('./state');
 
 var _riew = require('./riew');
@@ -332,7 +328,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./constants":1,"./grid":2,"./index":4,"./react":12,"./riew":13,"./state":14,"fast-deep-equal":16}],4:[function(require,module,exports){
+},{"./constants":1,"./grid":2,"./index":4,"./react":12,"./riew":13,"./state":14}],4:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -428,9 +424,10 @@ var register = exports.register = function register(name, whatever) {
   if ((typeof whatever === 'undefined' ? 'undefined' : _typeof(whatever)) === 'object' || typeof whatever === 'function') {
     whatever.__registered = name;
   }
-  return _harvester2.default.defineProduct(name, function () {
+  _harvester2.default.defineProduct(name, function () {
     return whatever;
   });
+  return whatever;
 };
 var reset = exports.reset = function reset() {
   return _grid2.default.reset(), _harvester2.default.reset();
