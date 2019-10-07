@@ -54,10 +54,12 @@ export default function createRiew(viewFunc, ...controllers) {
           subscriptions[effect.stateId][key] = effect;
           grid.subscribe(instance).to(state).when(
             STATE_VALUE_CHANGE,
-            () => render(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
-              effectsResult[key] = subscriptions[effect.stateId][key]();
-              return effectsResult;
-            }, {}))
+            () => {
+              render(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
+                effectsResult[key] = subscriptions[effect.stateId][key]();
+                return effectsResult;
+              }, {}));
+            }
           );
         } else {
           result[key] = newStuff[key];
@@ -66,7 +68,9 @@ export default function createRiew(viewFunc, ...controllers) {
     }
     return result;
   });
-  const render = updateOutput.filter(isActive).pipe(value => viewFunc(value));
+  const render = updateOutput.filter(isActive).pipe(value => {
+    viewFunc(value);
+  });
   const updateControllerAPI = api.mutate(accumulate);
   const updateInput = input.mutate(accumulate);
 

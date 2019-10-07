@@ -1,3 +1,4 @@
+/* eslint-disable no-new-func */
 import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
 import { riew as createRiew } from '../index';
@@ -16,13 +17,15 @@ export default function riew(View, ...controllers) {
       // mounting
       useEffect(() => {
         instance = createRiew(
-          (props) => {
-            if (props === null) {
-              setContent(null);
-            } else {
-              setContent(<View {...props}/>);
+          (new Function('React', 'setContent', 'View', `
+            return function Riew_${ getFuncName(View) }(props) {
+              if (props === null) {
+                setContent(null);
+              } else {
+                setContent(React.createElement(View, props));
+              }
             }
-          },
+          `)(React, setContent, View)),
           ...controllers
         );
 
@@ -41,7 +44,7 @@ export default function riew(View, ...controllers) {
       return content;
     };
 
-    comp.displayName = `Riew(${ getFuncName(View) })`;
+    comp.displayName = `Riew_${ getFuncName(View) }`;
     comp.with = (...maps) => {
       return createBridge(maps);
     };

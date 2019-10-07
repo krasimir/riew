@@ -34,7 +34,11 @@ function Grid() {
     nodes.push(product);
   };;
   gridAPI.remove = (product) => {
-    nodes = nodes.filter(({ id }) => id !== product.id);
+    let idx = nodes.findIndex(({ id }) => id === product.id);
+
+    if (idx >= 0) {
+      nodes.splice(idx, 1);
+    }
   };;
   gridAPI.reset = () => {
     nodes = [];
@@ -79,7 +83,11 @@ function Grid() {
       if (s11s[source.id]) {
         Object.keys(s11s[source.id]).forEach(type => {
           if (target) {
-            s11s[source.id][type] = s11s[source.id][type].filter(({ name }) => name !== subscriptionName);
+            let idx = s11s[source.id][type].findIndex(({ name }) => name === subscriptionName);
+
+            if (idx >= 0) {
+              s11s[source.id][type].splice(idx, 1);
+            }
           } else {
             s11s[source.id][type] = [];
           }

@@ -50,10 +50,14 @@ function Grid() {
     nodes.push(product);
   };;
   gridAPI.remove = function (product) {
-    nodes = nodes.filter(function (_ref) {
+    var idx = nodes.findIndex(function (_ref) {
       var id = _ref.id;
-      return id !== product.id;
+      return id === product.id;
     });
+
+    if (idx >= 0) {
+      nodes.splice(idx, 1);
+    }
   };;
   gridAPI.reset = function () {
     nodes = [];
@@ -118,10 +122,14 @@ function Grid() {
         if (s11s[source.id]) {
           Object.keys(s11s[source.id]).forEach(function (type) {
             if (target) {
-              s11s[source.id][type] = s11s[source.id][type].filter(function (_ref3) {
+              var idx = s11s[source.id][type].findIndex(function (_ref3) {
                 var name = _ref3.name;
-                return name !== subscriptionName;
+                return name === subscriptionName;
               });
+
+              if (idx >= 0) {
+                s11s[source.id][type].splice(idx, 1);
+              }
             } else {
               s11s[source.id][type] = [];
             }
@@ -870,7 +878,7 @@ var _slicedToArray = function () {
       throw new TypeError("Invalid attempt to destructure non-iterable instance");
     }
   };
-}();
+}(); /* eslint-disable no-new-func */
 
 exports.default = riew;
 
@@ -924,13 +932,7 @@ function riew(View) {
 
       // mounting
       (0, _react.useEffect)(function () {
-        instance = _index.riew.apply(undefined, [function (props) {
-          if (props === null) {
-            setContent(null);
-          } else {
-            setContent(_react2.default.createElement(View, props));
-          }
-        }].concat(controllers));
+        instance = _index.riew.apply(undefined, [new Function('React', 'setContent', 'View', '\n            return function Riew_' + (0, _utils.getFuncName)(View) + '(props) {\n              if (props === null) {\n                setContent(null);\n              } else {\n                setContent(React.createElement(View, props));\n              }\n            }\n          ')(_react2.default, setContent, View)].concat(controllers));
 
         if (externals && externals.length > 0) {
           var _instance;
@@ -949,7 +951,7 @@ function riew(View) {
       return content;
     };
 
-    comp.displayName = 'Riew(' + (0, _utils.getFuncName)(View) + ')';
+    comp.displayName = 'Riew_' + (0, _utils.getFuncName)(View);
     comp.with = function () {
       for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
         maps[_key2] = arguments[_key2];
@@ -1073,7 +1075,7 @@ function createRiew(viewFunc) {
           if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
           subscriptions[effect.stateId][key] = effect;
           _grid2.default.subscribe(instance).to(_state).when(_constants.STATE_VALUE_CHANGE, function () {
-            return _render(Object.keys(subscriptions[effect.stateId]).reduce(function (effectsResult, key) {
+            _render(Object.keys(subscriptions[effect.stateId]).reduce(function (effectsResult, key) {
               effectsResult[key] = subscriptions[effect.stateId][key]();
               return effectsResult;
             }, {}));
@@ -1086,7 +1088,7 @@ function createRiew(viewFunc) {
     return result;
   });
   var _render = updateOutput.filter(isActive).pipe(function (value) {
-    return viewFunc(value);
+    viewFunc(value);
   });
   var updateControllerAPI = api.mutate(accumulate);
   var updateInput = input.mutate(accumulate);

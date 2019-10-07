@@ -187,4 +187,39 @@ describe('Given the Riew library', () => {
       `);
     });
   });
+  describe('when we have a forked effect passed to a React component', () => {
+    describe('and we update the main effect', () => {
+      it('should re-render the react component with the forked effect data', () => {
+        const [ repos, setRepos ] = state([ 15, 4, 12 ]);
+        const moreThen10 = repos.map(nums => nums.filter(n => n > 10));
+        const Component = jest.fn().mockImplementation(() => null);
+        const R = riew(Component).with({ moreThen10 });
+
+        render(<R />);
+        act(() => {
+          setRepos([ 5, 6, 7, 120 ]);
+        });
+
+        expect(Component).toBeCalledWithArgs(
+          [ { moreThen10: [15, 12] }, {} ],
+          [ { moreThen10: [120] }, {} ],
+        );
+      });
+    });
+  });
+  describe('when we have a an effect passed to two React component', () => {
+    describe('and unmount then update the state', () => {
+      it('should not produce an error', async () => {
+        const s = state({ flag: true });
+        const changeToFalse = s.mutate(() => false);
+        const Component = riew(function Component() { return null; }).with({ s });
+        const Parent = riew(function Parent({ s }) { return s ? <Component /> : null; }).with({ s });
+
+        render(<Parent />);
+        // This is not wrapped in act in purpose.
+        // It proves that we clear subscriptions properly.
+        changeToFalse();
+      });
+    });
+  });
 });
