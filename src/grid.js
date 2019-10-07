@@ -37,6 +37,7 @@ function Grid() {
     let idx = nodes.findIndex(({ id }) => id === product.id);
 
     if (idx >= 0) {
+      // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach
       nodes.splice(idx, 1);
     }
   };;
@@ -86,6 +87,7 @@ function Grid() {
             let idx = s11s[source.id][type].findIndex(({ name }) => name === subscriptionName);
 
             if (idx >= 0) {
+              // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach
               s11s[source.id][type].splice(idx, 1);
             }
           } else {
