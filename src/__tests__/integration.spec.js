@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset, subscribe } from '../index';
+import { reset, subscribe, register } from '../index';
 
 import { react, state } from '../index';
 
@@ -210,15 +210,26 @@ describe('Given the Riew library', () => {
   describe('when we have a an effect passed to two React component', () => {
     describe('and unmount then update the state', () => {
       it('should not produce an error', async () => {
-        const s = state({ flag: true });
+        const s = state(true);
         const changeToFalse = s.mutate(() => false);
-        const Component = riew(function Component() { return null; }).with({ s });
-        const Parent = riew(function Parent({ s }) { return s ? <Component /> : null; }).with({ s });
 
-        render(<Parent />);
-        // This is not wrapped in act in purpose.
-        // It proves that we clear subscriptions properly.
-        changeToFalse();
+        register('whee', s);
+
+        const ParentParent = riew(function ParentParent({ whee }) {
+          return whee ? <Parent /> : 'boo';
+        }).with('whee');
+        const Parent = riew(function Parent() {
+          return <Component />;
+        });
+        const Component = riew(function Component({ whee }) {
+          return `Whee is ${ whee }`;
+        }).with('whee');
+
+        const { container } = render(<ParentParent />);
+
+        exerciseHTML(container, 'Whee is true');
+        act(() => { changeToFalse(); });
+        exerciseHTML(container, 'boo');
       });
     });
   });
