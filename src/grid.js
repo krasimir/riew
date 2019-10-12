@@ -72,7 +72,11 @@ function Grid() {
 
     api.from = x => (source = x, api);
     api.with = (...args) => {
-      getSourceSubscriptions(source, type).forEach(s => s.callback(...args));
+      const arr = getSourceSubscriptions(source, type);
+
+      arr.forEach(s => {
+        s.callback(...args);
+      });
     };
 
     return api;

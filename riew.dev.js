@@ -108,8 +108,10 @@ function Grid() {
         args[_key] = arguments[_key];
       }
 
-      getSourceSubscriptions(source, type).forEach(function (s) {
-        return s.callback.apply(s, args);
+      var arr = getSourceSubscriptions(source, type);
+
+      arr.forEach(function (s) {
+        s.callback.apply(s, args);
       });
     };
 
@@ -925,9 +927,9 @@ function riew(View) {
           content = _useState4[0],
           setContent = _useState4[1];
 
-      var componentIsMounted = (0, _react.useRef)(true);
-
       // updating props
+
+
       (0, _react.useEffect)(function () {
         if (instance) {
           instance.update(outerProps);
@@ -936,14 +938,7 @@ function riew(View) {
 
       // mounting
       (0, _react.useEffect)(function () {
-        instance = _index.riew.apply(undefined, [function (props) {
-          if (!componentIsMounted.current) return;
-          if (props === null) {
-            setContent(null);
-          } else {
-            setContent(_react2.default.createElement(View, props));
-          }
-        }].concat(controllers));
+        instance = _index.riew.apply(undefined, [new Function('React', 'setContent', 'View', '\n          return function Riew_' + (0, _utils.getFuncName)(View) + '(props) {\n            if (props === null) {\n              setContent(null);\n            } else {\n              setContent(props);\n            }\n          }\n          ')(_react2.default, setContent, View)].concat(controllers));
 
         if (externals && externals.length > 0) {
           var _instance;
@@ -955,12 +950,11 @@ function riew(View) {
         instance.mount(outerProps);
 
         return function () {
-          componentIsMounted.current = false;
           instance.unmount();
         };
       }, []);
 
-      return content;
+      return content === null ? null : _react2.default.createElement(View, content);
     };
 
     comp.displayName = 'Riew_' + (0, _utils.getFuncName)(View);

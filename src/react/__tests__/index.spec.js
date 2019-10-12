@@ -31,7 +31,7 @@ describe('Given the React riew function', () => {
       await delay(7);
 
       expect(view).toBeCalledWithArgs(
-        [ {}, {}],
+        [ {}, {} ],
         [ { foo: 'bar' }, {}]
       );
     });

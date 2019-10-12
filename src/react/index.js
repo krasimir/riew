@@ -1,5 +1,5 @@
 /* eslint-disable no-new-func */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getFuncName } from '../utils';
 import { riew as createRiew } from '../index';
 
@@ -8,7 +8,6 @@ export default function riew(View, ...controllers) {
     const comp = function (outerProps) {
       let [ instance, setInstance ] = useState(null);
       let [ content, setContent ] = useState(null);
-      const componentIsMounted = useRef(true);
 
       // updating props
       useEffect(() => {
@@ -20,14 +19,15 @@ export default function riew(View, ...controllers) {
       // mounting
       useEffect(() => {
         instance = createRiew(
-          (props) => {
-            if (!componentIsMounted.current) return;
+          (new Function('React', 'setContent', 'View', `
+          return function Riew_${ getFuncName(View) }(props) {
             if (props === null) {
               setContent(null);
             } else {
-              setContent(React.createElement(View, props));
+              setContent(props);
             }
-          },
+          }
+          `)(React, setContent, View)),
           ...controllers
         );
 
@@ -39,12 +39,11 @@ export default function riew(View, ...controllers) {
         instance.mount(outerProps);
 
         return function () {
-          componentIsMounted.current = false;
           instance.unmount();
         };
       }, []);
 
-      return content;
+      return content === null ? null : React.createElement(View, content);
     };
 
     comp.displayName = `Riew_${ getFuncName(View) }`;

@@ -215,6 +215,9 @@ describe('Given the Riew library', () => {
 
         register('whee', s);
 
+        const ParentParentParent = riew(function ParentParentParent({ whee }) {
+          return whee ? <ParentParent /> : 'boo';
+        }).with('whee');
         const ParentParent = riew(function ParentParent({ whee }) {
           return whee ? <Parent /> : 'boo';
         }).with('whee');
@@ -225,10 +228,11 @@ describe('Given the Riew library', () => {
           return `Whee is ${ whee }`;
         }).with('whee');
 
-        const { container } = render(<ParentParent />);
+        const { container } = render(<ParentParentParent />);
 
         exerciseHTML(container, 'Whee is true');
         act(() => { changeToFalse(); });
+        changeToFalse();
         exerciseHTML(container, 'boo');
       });
     });
