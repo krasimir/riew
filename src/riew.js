@@ -32,18 +32,16 @@ export default function createRiew(viewFunc, ...controllers) {
   let onUnmountCallbacks = [];
   let subscriptions = {};
   let externals = {};
-
-  const input = state({}, false);
-  const output = state({}, false);
-  const api = state({}, false);
+  let data = {};
+  let api = {};
+  let props, updateProps;
 
   const isActive = () => active;
 
-  // effects
-  const updateOutput = output.mutate((current, newStuff) => {
-    const result = { ...current };
-
+  const updateData = newStuff => {
     if (newStuff) {
+      let result = {};
+
       Object.keys(newStuff).forEach(key => {
         if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
           const effect = newStuff[key];
@@ -65,14 +63,16 @@ export default function createRiew(viewFunc, ...controllers) {
           result[key] = newStuff[key];
         }
       });
+      data = accumulate(data, result);
     }
-    return result;
-  });
-  const render = updateOutput.filter(isActive).pipe(value => {
-    viewFunc(value);
-  });
-  const updateControllerAPI = api.mutate(accumulate);
-  const updateInput = input.mutate(accumulate);
+  };
+  const render = (newData) => {
+    updateData(newData);
+    if (isActive()) {
+      viewFunc(data);
+    }
+  };
+  const updateControllerAPI = newMethods => (api = accumulate(api, newMethods));
 
   // defining the controller api
   updateControllerAPI({
@@ -86,8 +86,14 @@ export default function createRiew(viewFunc, ...controllers) {
       ensureObject(newProps, 'The `render` method');
       return render(newProps);
     },
-    isActive,
-    props: input
+    props: () => {
+      if (!props) {
+        props = state(data);
+        updateProps = props.mutate(accumulate);
+      }
+      return props;
+    },
+    isActive
   });
 
   function processExternals() {
@@ -101,7 +107,7 @@ export default function createRiew(viewFunc, ...controllers) {
         external = externals[key];
       }
 
-      updateOutput({ [key]: external });
+      updateData({ [key]: external });
       updateControllerAPI({ [key]: external });
     });
   }
@@ -109,11 +115,10 @@ export default function createRiew(viewFunc, ...controllers) {
   instance.isActive = isActive;
   instance.mount = (initialProps = {}) => {
     ensureObject(initialProps, 'The `mount` method');
-    updateInput(initialProps);
-    updateOutput(initialProps);
+    updateData(initialProps);
     processExternals();
 
-    let controllersResult = parallel(...controllers)(api());
+    let controllersResult = parallel(...controllers)(api);
     let done = (result) => (onUnmountCallbacks = result || []);
 
     if (isPromise(controllersResult)) {
@@ -127,13 +132,11 @@ export default function createRiew(viewFunc, ...controllers) {
     return instance;
   };
   instance.update = (newProps) => {
+    if (updateProps) updateProps(newProps);
     render(newProps);
-    updateInput(newProps);
   };
   instance.unmount = () => {
     active = false;
-    output.destroy();
-    api.destroy();
     internalStates.forEach(s => s.destroy());
     internalStates = [];
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
@@ -155,7 +158,7 @@ export default function createRiew(viewFunc, ...controllers) {
   instance.__setExternals = (maps) => {
     externals = { ...externals, ...normalizeExternalsMap(maps) };
   };
-  instance.__output = output;
+  instance.__data = data;
 
   return instance;
 };

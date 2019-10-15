@@ -94,7 +94,7 @@ describe('Given the React riew function', () => {
         * have be able to subscribe to props change`, () => {
         const propsSpy = jest.fn();
         const I = riew(() => null, function ({ props }) {
-          subscribe(props.pipe(propsSpy), true);
+          subscribe(props().pipe(propsSpy), true);
         });
 
         const { rerender } = render(<I foo='bar' />);

@@ -116,7 +116,7 @@ describe('Given the Riew library', () => {
       const FetchTime = riew(
         ({ location }) => location ? <p>{ location }</p> : null,
         async ({ render, props }) => {
-          subscribe(props.map(({ city }) => ({ location: city })).pipe(render), true);
+          subscribe(props().map(({ city }) => ({ location: city })).pipe(render), true);
         }
       );
       const App = function () {

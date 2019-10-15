@@ -253,7 +253,7 @@ describe('Given the `riew` factory function', () => {
     it('should deliver the riew input to the controller', () => {
       const spy = jest.fn();
       const controller = function ({ props }) {
-        subscribe(props.pipe(spy), true);
+        subscribe(props().pipe(spy), true);
       };
       const r = riew(() => {}, controller);
 

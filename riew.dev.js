@@ -1067,20 +1067,19 @@ function createRiew(viewFunc) {
   var onUnmountCallbacks = [];
   var subscriptions = {};
   var externals = {};
-
-  var input = (0, _index.state)({}, false);
-  var output = (0, _index.state)({}, false);
-  var api = (0, _index.state)({}, false);
+  var data = {};
+  var api = {};
+  var _props = void 0,
+      updateProps = void 0;
 
   var isActive = function isActive() {
     return active;
   };
 
-  // effects
-  var updateOutput = output.mutate(function (current, newStuff) {
-    var result = _extends({}, current);
-
+  var updateData = function updateData(newStuff) {
     if (newStuff) {
+      var result = {};
+
       Object.keys(newStuff).forEach(function (key) {
         if ((0, _state3.isEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
           var effect = newStuff[key];
@@ -1099,14 +1098,18 @@ function createRiew(viewFunc) {
           result[key] = newStuff[key];
         }
       });
+      data = accumulate(data, result);
     }
-    return result;
-  });
-  var _render = updateOutput.filter(isActive).pipe(function (value) {
-    viewFunc(value);
-  });
-  var updateControllerAPI = api.mutate(accumulate);
-  var updateInput = input.mutate(accumulate);
+  };
+  var _render = function _render(newData) {
+    updateData(newData);
+    if (isActive()) {
+      viewFunc(data);
+    }
+  };
+  var updateControllerAPI = function updateControllerAPI(newMethods) {
+    return api = accumulate(api, newMethods);
+  };
 
   // defining the controller api
   updateControllerAPI({
@@ -1121,8 +1124,14 @@ function createRiew(viewFunc) {
       return _render(newProps);
     },
 
-    isActive: isActive,
-    props: input
+    props: function props() {
+      if (!_props) {
+        _props = (0, _index.state)(data);
+        updateProps = _props.mutate(accumulate);
+      }
+      return _props;
+    },
+    isActive: isActive
   });
 
   function processExternals() {
@@ -1136,7 +1145,7 @@ function createRiew(viewFunc) {
         external = externals[key];
       }
 
-      updateOutput(_defineProperty({}, key, external));
+      updateData(_defineProperty({}, key, external));
       updateControllerAPI(_defineProperty({}, key, external));
     });
   }
@@ -1146,11 +1155,10 @@ function createRiew(viewFunc) {
     var initialProps = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     ensureObject(initialProps, 'The `mount` method');
-    updateInput(initialProps);
-    updateOutput(initialProps);
+    updateData(initialProps);
     processExternals();
 
-    var controllersResult = _utils.parallel.apply(undefined, controllers)(api());
+    var controllersResult = _utils.parallel.apply(undefined, controllers)(api);
     var done = function done(result) {
       return onUnmountCallbacks = result || [];
     };
@@ -1166,13 +1174,11 @@ function createRiew(viewFunc) {
     return instance;
   };
   instance.update = function (newProps) {
+    if (updateProps) updateProps(newProps);
     _render(newProps);
-    updateInput(newProps);
   };
   instance.unmount = function () {
     active = false;
-    output.destroy();
-    api.destroy();
     internalStates.forEach(function (s) {
       return s.destroy();
     });
@@ -1206,7 +1212,7 @@ function createRiew(viewFunc) {
   instance.__setExternals = function (maps) {
     externals = _extends({}, externals, normalizeExternalsMap(maps));
   };
-  instance.__output = output;
+  instance.__data = data;
 
   return instance;
 };
