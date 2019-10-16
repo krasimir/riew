@@ -15,10 +15,10 @@ describe('Given the Riew library', () => {
   });
   describe('when we use an async effect', () => {
     it('should allow us to render multiple times', async () => {
-      const A = riew(DummyComponent, async ({ render }) => {
-        act(() => { render({ text: 'Hello' }); });
+      const A = riew(DummyComponent, async ({ data }) => {
+        act(() => { data({ text: 'Hello' }); });
         await delay(20);
-        act(() => { render({ text: 'world' }); });
+        act(() => { data({ text: 'world' }); });
       });
 
       const { queryByText, getByText } = render(<A />);
@@ -30,9 +30,9 @@ describe('Given the Riew library', () => {
     });
     it('should not try to re-render if the bridge is unmounted', async () => {
       const spy = jest.spyOn(console, 'error');
-      const A = riew(DummyComponent, async ({ render }) => {
+      const A = riew(DummyComponent, async ({ data }) => {
         await delay(10);
-        act(() => { render({ text: 'world' }); });
+        act(() => { data({ text: 'world' }); });
       });
 
       const { unmount } = render(<A/>);
@@ -65,28 +65,6 @@ describe('Given the Riew library', () => {
       `);
     });
   });
-  describe('when we use the `isActive` method', () => {
-    it('should say if the view is mounted or not', async () => {
-      const spy = jest.fn();
-      const A = riew(() => null, async ({ isActive }) => {
-        await delay(10);
-        spy(isActive());
-        await delay(30);
-        spy(isActive());
-      });
-
-      const { unmount } = render(<A />);
-
-      await delay(12);
-      unmount();
-      await delay(40);
-
-      expect(spy).toBeCalledWithArgs(
-        [true],
-        [false]
-      );
-    });
-  });
   describe('when using riew with a hook', () => {
     it('should keep the hook working', async () => {
       const Input = function () {
@@ -115,8 +93,8 @@ describe('Given the Riew library', () => {
     it('should get props callback fired every time when we update the state', async () => {
       const FetchTime = riew(
         ({ location }) => location ? <p>{ location }</p> : null,
-        async ({ render, props }) => {
-          subscribe(props.map(({ city }) => ({ location: city })).pipe(render), true);
+        async ({ data, props }) => {
+          subscribe(props.map(({ city }) => ({ location: city })).pipe(data), true);
         }
       );
       const App = function () {

@@ -37,10 +37,11 @@ export const subscribe = (effect, initialCall) => {
     throw new Error('You must pass an effect to the subscribe function.');
   }
 
-  if (initialCall) effect();
   const state = grid.getNodeById(effect.stateId);
+  const res = grid.subscribe(effect).to(state).when(STATE_VALUE_CHANGE, () => effect());
 
-  return grid.subscribe(effect).to(state).when(STATE_VALUE_CHANGE, () => effect());
+  if (initialCall) effect();
+  return res;
 };
 export const unsubscribe = (effect) => {
   const state = grid.getNodeById(effect.stateId);

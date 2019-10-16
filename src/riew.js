@@ -1,15 +1,9 @@
-import { state, use } from './index';
+import { state, use, subscribe, unsubscribe } from './index';
 import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 import { STATE_VALUE_CHANGE } from './constants';
 import grid from './grid';
 
-function ensureObject(value, context) {
-  if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
-    throw new Error(`A key-value object expected. Instead "${ value }" passed.`);
-  }
-  return value;
-}
 function normalizeExternalsMap(arr) {
   return arr.reduce((map, item) => {
     if (typeof item === 'string') {
@@ -20,7 +14,6 @@ function normalizeExternalsMap(arr) {
     return map;
   }, {});
 }
-const accumulate = (current, newStuff) => ({ ...current, ...newStuff });
 
 export default function createRiew(viewFunc, ...controllers) {
   const instance = {
@@ -32,27 +25,15 @@ export default function createRiew(viewFunc, ...controllers) {
   let onUnmountCallbacks = [];
   let subscriptions = {};
   let externals = {};
+  let data = state({});
 
-  /*
-
-  what if the controller has a central state and we accumulate all the sources in there
-  * props go there
-  * externals
-  * render calls
-
-  And the View is bound to it. If it changes we re-render (if active=true)
-
-  */
-
-  let [ props, updateProps ] = state({});
-  let data = {};
-  let api = {};
-
-  const isActive = () => active;
-
-  const updateData = newStuff => {
-    ensureObject(newStuff);
-
+  const updateData = data.mutate((current, newStuff) => {
+    if (newStuff === null || (typeof newStuff !== 'undefined' && typeof newStuff !== 'object')) {
+      throw new Error(`A key-value object expected. Instead "${ newStuff }" passed.`);
+    }
+    return { ...current, ...newStuff };
+  });
+  const render = data.map(newStuff => {
     let result = {};
 
     Object.keys(newStuff).forEach(key => {
@@ -70,37 +51,14 @@ export default function createRiew(viewFunc, ...controllers) {
               effectsResult[key] = subscriptions[effect.stateId][key]();
               return effectsResult;
             }, {}));
-            render();
           }
         );
       } else {
         result[key] = newStuff[key];
       }
     });
-    data = accumulate(data, result);
-  };
-  const render = () => {
-    if (isActive()) {
-      viewFunc(data);
-    }
-  };
-  const updateControllerAPI = newMethods => (api = accumulate(api, newMethods));
-
-  // defining the controller api
-  updateControllerAPI({
-    state(...args) {
-      const s = state(...args);
-
-      internalStates.push(s);
-      return s;
-    },
-    render(newData) {
-      if (newData) updateData(newData);
-      return render();
-    },
-    isActive,
-    props
-  });
+    return result;
+  }).filter(() => active).pipe(viewFunc);
 
   function processExternals() {
     Object.keys(externals).forEach(key => {
@@ -114,18 +72,24 @@ export default function createRiew(viewFunc, ...controllers) {
       }
 
       updateData({ [key]: external });
-      updateControllerAPI({ [key]: external });
     });
   }
 
-  instance.isActive = isActive;
   instance.mount = (initialData = {}) => {
     updateData(initialData);
-    updateProps(initialData);
     processExternals();
-    props.mutate()(initialData);
 
-    let controllersResult = parallel(...controllers)(api);
+    let controllersResult = parallel(...controllers)({
+      ...data(),
+      data: updateData,
+      props: data,
+      state(...args) {
+        const s = state(...args);
+
+        internalStates.push(s);
+        return s;
+      }
+    });
     let done = (result) => (onUnmountCallbacks = result || []);
 
     if (isPromise(controllersResult)) {
@@ -135,22 +99,22 @@ export default function createRiew(viewFunc, ...controllers) {
     }
 
     active = true;
-    render();
+    subscribe(render, true);
     return instance;
   };
   instance.update = (newData) => {
     updateData(newData);
-    updateProps(newData);
-    render();
   };
   instance.unmount = () => {
     active = false;
+    unsubscribe(render);
     internalStates.forEach(s => s.destroy());
     internalStates = [];
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
     Object.keys(subscriptions).forEach(stateId => grid.unsubscribe(instance).from(grid.getNodeById(stateId)));
     subscriptions = {};
+    data.destroy();
     return instance;
   };
   instance.with = (...maps) => {
