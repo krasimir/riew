@@ -45,7 +45,7 @@ export default function riew(View, ...controllers) {
         };
       }, []);
 
-      return content === null ? null : React.createElement(View, content);
+      return content === null ? null : React.createElement(View, Object.assign({}, outerProps, content));
     };
 
     comp.displayName = `Riew_${ getFuncName(View) }`;

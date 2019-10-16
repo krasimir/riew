@@ -253,7 +253,7 @@ describe('Given the `riew` factory function', () => {
     it('should deliver the riew input to the controller', () => {
       const spy = jest.fn();
       const controller = function ({ props }) {
-        subscribe(props().pipe(spy), true);
+        subscribe(props.pipe(spy), true);
       };
       const r = riew(() => {}, controller);
 
@@ -261,7 +261,7 @@ describe('Given the `riew` factory function', () => {
       r.update({ baz: 'moo' });
       expect(spy).toBeCalledWithArgs(
         [{ foo: 'bar' }],
-        [{ foo: 'bar', baz: 'moo' }]
+        [{ baz: 'moo' }]
       );
     });
   });
@@ -287,10 +287,10 @@ describe('Given the `riew` factory function', () => {
   describe('and when we use non object as initial props or for render method', () => {
     it('should throw an error', () => {
       expect(() => riew(() => {}).mount('foo')).toThrowError(
-        'The `mount` method must be called with a key-value object. Instead "foo" passed'
+        'A key-value object expected. Instead "foo" passed'
       );
       expect(() => riew(() => {}, ({ render }) => { render('foo'); }, () => {}).mount()).toThrowError(
-        'The `render` method must be called with a key-value object. Instead "foo" passed'
+        'A key-value object expected. Instead "foo" passed'
       );
     });
   });

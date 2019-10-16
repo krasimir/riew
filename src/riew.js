@@ -6,7 +6,7 @@ import grid from './grid';
 
 function ensureObject(value, context) {
   if (value === null || (typeof value !== 'undefined' && typeof value !== 'object')) {
-    throw new Error(`${ context } must be called with a key-value object. Instead "${ value }" passed.`);
+    throw new Error(`A key-value object expected. Instead "${ value }" passed.`);
   }
   return value;
 }
@@ -32,42 +32,54 @@ export default function createRiew(viewFunc, ...controllers) {
   let onUnmountCallbacks = [];
   let subscriptions = {};
   let externals = {};
+
+  /*
+
+  what if the controller has a central state and we accumulate all the sources in there
+  * props go there
+  * externals
+  * render calls
+
+  And the View is bound to it. If it changes we re-render (if active=true)
+
+  */
+
+  let [ props, updateProps ] = state({});
   let data = {};
   let api = {};
-  let props, updateProps;
 
   const isActive = () => active;
 
   const updateData = newStuff => {
-    if (newStuff) {
-      let result = {};
+    ensureObject(newStuff);
 
-      Object.keys(newStuff).forEach(key => {
-        if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
-          const effect = newStuff[key];
-          const state = grid.getNodeById(effect.stateId);
+    let result = {};
 
-          result[key] = effect();
-          if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
-          subscriptions[effect.stateId][key] = effect;
-          grid.subscribe(instance).to(state).when(
-            STATE_VALUE_CHANGE,
-            () => {
-              render(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
-                effectsResult[key] = subscriptions[effect.stateId][key]();
-                return effectsResult;
-              }, {}));
-            }
-          );
-        } else {
-          result[key] = newStuff[key];
-        }
-      });
-      data = accumulate(data, result);
-    }
+    Object.keys(newStuff).forEach(key => {
+      if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
+        const effect = newStuff[key];
+        const state = grid.getNodeById(effect.stateId);
+
+        result[key] = effect();
+        if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
+        subscriptions[effect.stateId][key] = effect;
+        grid.subscribe(instance).to(state).when(
+          STATE_VALUE_CHANGE,
+          () => {
+            updateData(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
+              effectsResult[key] = subscriptions[effect.stateId][key]();
+              return effectsResult;
+            }, {}));
+            render();
+          }
+        );
+      } else {
+        result[key] = newStuff[key];
+      }
+    });
+    data = accumulate(data, result);
   };
-  const render = (newData) => {
-    updateData(newData);
+  const render = () => {
     if (isActive()) {
       viewFunc(data);
     }
@@ -82,18 +94,12 @@ export default function createRiew(viewFunc, ...controllers) {
       internalStates.push(s);
       return s;
     },
-    render(newProps) {
-      ensureObject(newProps, 'The `render` method');
-      return render(newProps);
+    render(newData) {
+      if (newData) updateData(newData);
+      return render();
     },
-    props: () => {
-      if (!props) {
-        props = state(data);
-        updateProps = props.mutate(accumulate);
-      }
-      return props;
-    },
-    isActive
+    isActive,
+    props
   });
 
   function processExternals() {
@@ -113,10 +119,11 @@ export default function createRiew(viewFunc, ...controllers) {
   }
 
   instance.isActive = isActive;
-  instance.mount = (initialProps = {}) => {
-    ensureObject(initialProps, 'The `mount` method');
-    updateData(initialProps);
+  instance.mount = (initialData = {}) => {
+    updateData(initialData);
+    updateProps(initialData);
     processExternals();
+    props.mutate()(initialData);
 
     let controllersResult = parallel(...controllers)(api);
     let done = (result) => (onUnmountCallbacks = result || []);
@@ -131,9 +138,10 @@ export default function createRiew(viewFunc, ...controllers) {
     render();
     return instance;
   };
-  instance.update = (newProps) => {
-    if (updateProps) updateProps(newProps);
-    render(newProps);
+  instance.update = (newData) => {
+    updateData(newData);
+    updateProps(newData);
+    render();
   };
   instance.unmount = () => {
     active = false;

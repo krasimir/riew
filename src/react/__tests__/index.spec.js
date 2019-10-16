@@ -93,17 +93,23 @@ describe('Given the React riew function', () => {
         * have access to the props
         * have be able to subscribe to props change`, () => {
         const propsSpy = jest.fn();
-        const I = riew(() => null, function ({ props }) {
-          subscribe(props().pipe(propsSpy), true);
+        const view = jest.fn().mockImplementation(() => null);
+        const I = riew(view, function ({ props }) {
+          subscribe(props.pipe(propsSpy), true);
         });
 
         const { rerender } = render(<I foo='bar' />);
 
         rerender(<I zoo='mar' />);
 
+        expect(view).toBeCalledWithArgs(
+          [ { foo: 'bar' }, {} ],
+          [ { foo: 'bar', zoo: 'mar' }, {} ],
+          [ { foo: 'bar', zoo: 'mar' }, {} ]
+        );
         expect(propsSpy).toBeCalledWithArgs(
           [ { foo: 'bar' } ],
-          [ { foo: 'bar', zoo: 'mar' } ]
+          [ { zoo: 'mar' } ]
         );
       });
     });
