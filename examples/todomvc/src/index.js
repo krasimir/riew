@@ -8,10 +8,10 @@ import Footer from './Footer';
 import { ToDo } from './Data';
 import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
 
-const controller = function ({ render, state, todos }) {
+const controller = function ({ data, state, todos }) {
   let filter = state(ALL);
 
-  render({
+  data({
     filter,
     viewAll: filter.mutate(() => ALL),
     viewActive: filter.mutate(() => ACTIVE),
