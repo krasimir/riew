@@ -4,7 +4,7 @@ import { getId } from './utils';
 import { QueueAPI, createQueue } from './queue';
 import { STATE_VALUE_CHANGE, CANCEL_EFFECT } from './constants';
 import { implementIterableProtocol } from './interfaces';
-import { cancel, _fork, grid, destroy } from './index';
+import { cancel, _fork, grid } from './index';
 
 export function isEffect(effect) {
   return effect && effect.__riewEffect === true;
@@ -30,9 +30,12 @@ export function State(initialValue) {
     let queuesRunning = 0;
     const effect = function (...payload) {
       if (active === false) return value;
-      const q = createQueue(state.get(), state.set, () => (queuesRunning -= 1));
+      const q = createQueue(state.get(), state.set, () => {
+        queuesRunning -= 1;
+        grid.unsubscribe(q).from(effect);
+      });
 
-      grid.subscribe().to(effect).when(CANCEL_EFFECT, q.cancel);
+      grid.subscribe(q).to(effect).when(CANCEL_EFFECT, q.cancel);
       effect.items.forEach(({ type, func }) => q.add(type, func));
       queuesRunning += 1;
       return q.process(...payload);

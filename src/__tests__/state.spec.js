@@ -184,6 +184,15 @@ describe('Given the state', () => {
 
       expect(s()).toBe('bar');
     });
+    it('should work even if we subscribe a mutating effect', async () => {
+      const [ s, set ] = state(10);
+      const m = s.mutate((old) => old + 1);
+
+      subscribe(m);
+      set(20);
+
+      expect(s()).toBe(21);
+    });
   });
 
   /* filter */

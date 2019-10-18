@@ -30,11 +30,8 @@ export const register = (name, whatever) => {
 export const reset = () => (g.reset(), h.reset());
 export const cancel = effect => grid.emit(CANCEL_EFFECT).from(effect).with();
 export const subscribe = (effect, initialCall) => {
-  if (effect.isMutating()) {
-    throw new Error('You should not subscribe an effect that mutates the state. This will lead to endless recursion.');
-  }
   if (!isEffect(effect)) {
-    throw new Error('You must pass an effect to the subscribe function.');
+    throw new Error('You must pass an `effect` to the subscribe function.');
   }
 
   const state = grid.getNodeById(effect.stateId);
