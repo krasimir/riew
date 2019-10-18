@@ -456,11 +456,8 @@ var cancel = exports.cancel = function cancel(effect) {
   return grid.emit(_constants.CANCEL_EFFECT).from(effect).with();
 };
 var subscribe = exports.subscribe = function subscribe(effect, initialCall) {
-  if (effect.isMutating()) {
-    throw new Error('You should not subscribe an effect that mutates the state. This will lead to endless recursion.');
-  }
   if (!(0, _state.isEffect)(effect)) {
-    throw new Error('You must pass an effect to the subscribe function.');
+    throw new Error('You must pass an `effect` to the subscribe function.');
   }
 
   var state = grid.getNodeById(effect.stateId);
@@ -1240,10 +1237,11 @@ function State(initialValue) {
     var effect = function effect() {
       if (active === false) return value;
       var q = (0, _queue.createQueue)(state.get(), state.set, function () {
-        return queuesRunning -= 1;
+        queuesRunning -= 1;
+        _index.grid.unsubscribe(q).from(effect);
       });
 
-      _index.grid.subscribe().to(effect).when(_constants.CANCEL_EFFECT, q.cancel);
+      _index.grid.subscribe(q).to(effect).when(_constants.CANCEL_EFFECT, q.cancel);
       effect.items.forEach(function (_ref) {
         var type = _ref.type,
             func = _ref.func;
