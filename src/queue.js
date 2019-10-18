@@ -24,7 +24,7 @@ QueueAPI.define('mapToKey', mapToKey);
 QueueAPI.define('mutate', mutate);
 QueueAPI.define('filter', filter);
 
-export function createQueue(initialStateValue, setStateValue) {
+export function createQueue(initialStateValue, setStateValue, onDone) {
   const q = {
     id: getId('q'),
     index: null,
@@ -42,6 +42,7 @@ export function createQueue(initialStateValue, setStateValue) {
           return loop();
         }
         q.index = null;
+        onDone();
         return q.result;
       };
       function loop() {

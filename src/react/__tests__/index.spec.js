@@ -17,15 +17,15 @@ describe('Given the React riew function', () => {
       exerciseHTML(container, '<p>Hello</p>');
     });
     it(`should
-      * run the effect function
+      * run the controller function
       * render once by default
       * render every time when we call the "render" method`, async () => {
-      const effect = jest.fn().mockImplementation(async ({ render }) => {
+      const controller = jest.fn().mockImplementation(async ({ data }) => {
         await delay(5);
-        act(() => { render({ foo: 'bar' }); });
+        act(() => { data({ foo: 'bar' }); });
       });
       const view = jest.fn().mockImplementation(() => null);
-      const R = riew(view, effect);
+      const R = riew(view, controller);
 
       render(<R />);
       await delay(7);
@@ -109,7 +109,7 @@ describe('Given the React riew function', () => {
         );
         expect(propsSpy).toBeCalledWithArgs(
           [ { foo: 'bar' } ],
-          [ { zoo: 'mar' } ]
+          [ { foo: 'bar', zoo: 'mar' } ]
         );
       });
     });
@@ -130,13 +130,13 @@ describe('Given the React riew function', () => {
   });
   describe('when we render state and mutation made out of it', () => {
     it('when firing the mutation should re-render with a new value', () => {
-      const effect = ({ state, render }) => {
+      const effect = ({ state, data }) => {
         const [ value ] = state([
           { value: 2, selected: true },
           { value: 67, selected: true }
         ]);
 
-        render({
+        data({
           value,
           change: value.mutate((current, payload) => {
             return current.map(item => {

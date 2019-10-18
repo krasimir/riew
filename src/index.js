@@ -38,7 +38,11 @@ export const subscribe = (effect, initialCall) => {
   }
 
   const state = grid.getNodeById(effect.stateId);
-  const res = grid.subscribe(effect).to(state).when(STATE_VALUE_CHANGE, () => effect());
+  const res = grid.subscribe(effect).to(state).when(
+    STATE_VALUE_CHANGE,
+    () => effect(),
+    () => !effect.isRunning()
+  );
 
   if (initialCall) effect();
   return res;

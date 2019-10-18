@@ -16,10 +16,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _utils = require('./utils');
 
-function Subscription(name, callback) {
+function Subscription(name, callback, guard) {
   return {
     name: name || (0, _utils.getId)('sub'),
-    callback: callback
+    callback: callback,
+    guard: guard
   };
 }
 
@@ -80,7 +81,7 @@ function Grid() {
     api.to = function (x) {
       return source = x, api;
     };
-    api.when = function (type, callback) {
+    api.when = function (type, callback, guard) {
       var subscriptionSource = source ? source : { id: (0, _utils.getId)('sub_actor') };
       var ss = getSourceSubscriptions(subscriptionSource, type);
       var subscriptionName = getSubscriptionName(target, subscriptionSource);
@@ -89,7 +90,7 @@ function Grid() {
       });
 
       if (!subscription) {
-        ss.push(subscription = Subscription(subscriptionName, callback));
+        ss.push(subscription = Subscription(subscriptionName, callback, guard));
       }
       return api;
     };
@@ -111,7 +112,9 @@ function Grid() {
       var arr = getSourceSubscriptions(source, type);
 
       arr.forEach(function (s) {
-        s.callback.apply(s, args);
+        if (!s.guard || s.guard()) {
+          s.callback.apply(s, args);
+        }
       });
     };
 
@@ -460,12 +463,15 @@ var subscribe = exports.subscribe = function subscribe(effect, initialCall) {
     throw new Error('You must pass an effect to the subscribe function.');
   }
 
-  if (initialCall) effect();
   var state = grid.getNodeById(effect.stateId);
-
-  return grid.subscribe(effect).to(state).when(_constants.STATE_VALUE_CHANGE, function () {
+  var res = grid.subscribe(effect).to(state).when(_constants.STATE_VALUE_CHANGE, function () {
     return effect();
+  }, function () {
+    return !effect.isRunning();
   });
+
+  if (initialCall) effect();
+  return res;
 };
 var unsubscribe = exports.unsubscribe = function unsubscribe(effect) {
   var state = grid.getNodeById(effect.stateId);
@@ -623,7 +629,7 @@ QueueAPI.define('mapToKey', _mapToKey2.default);
 QueueAPI.define('mutate', _mutate2.default);
 QueueAPI.define('filter', _filter2.default);
 
-function createQueue(initialStateValue, setStateValue) {
+function createQueue(initialStateValue, setStateValue, onDone) {
   var q = {
     id: (0, _utils.getId)('q'),
     index: null,
@@ -645,6 +651,7 @@ function createQueue(initialStateValue, setStateValue) {
           return loop();
         }
         q.index = null;
+        onDone();
         return q.result;
       };
       function loop() {
@@ -963,7 +970,7 @@ function riew(View) {
         };
       }, []);
 
-      return content === null ? null : _react2.default.createElement(View, content);
+      return content === null ? null : _react2.default.createElement(View, Object.assign({}, outerProps, content));
     };
 
     comp.displayName = 'Riew_' + (0, _utils.getFuncName)(View);
@@ -991,6 +998,12 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
+
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
     var source = arguments[i];for (var key in source) {
@@ -999,12 +1012,6 @@ var _extends = Object.assign || function (target) {
       }
     }
   }return target;
-};
-
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 };
 
 exports.default = createRiew;
@@ -1017,14 +1024,6 @@ var _utils = require('./utils');
 
 var _constants = require('./constants');
 
-var _grid = require('./grid');
-
-var _grid2 = _interopRequireDefault(_grid);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
 function _defineProperty(obj, key, value) {
   if (key in obj) {
     Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
@@ -1033,12 +1032,6 @@ function _defineProperty(obj, key, value) {
   }return obj;
 }
 
-function ensureObject(value, context) {
-  if (value === null || typeof value !== 'undefined' && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
-    throw new Error(context + ' must be called with a key-value object. Instead "' + value + '" passed.');
-  }
-  return value;
-}
 function normalizeExternalsMap(arr) {
   return arr.reduce(function (map, item) {
     if (typeof item === 'string') {
@@ -1049,9 +1042,6 @@ function normalizeExternalsMap(arr) {
     return map;
   }, {});
 }
-var accumulate = function accumulate(current, newStuff) {
-  return _extends({}, current, newStuff);
-};
 
 function createRiew(viewFunc) {
   for (var _len = arguments.length, controllers = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
@@ -1067,72 +1057,40 @@ function createRiew(viewFunc) {
   var onUnmountCallbacks = [];
   var subscriptions = {};
   var externals = {};
-  var data = {};
-  var api = {};
-  var _props = void 0,
-      updateProps = void 0;
+  var data = (0, _index.state)({});
 
-  var isActive = function isActive() {
-    return active;
-  };
-
-  var updateData = function updateData(newStuff) {
-    if (newStuff) {
-      var result = {};
-
-      Object.keys(newStuff).forEach(function (key) {
-        if ((0, _state3.isEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
-          var effect = newStuff[key];
-          var _state = _grid2.default.getNodeById(effect.stateId);
-
-          result[key] = effect();
-          if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
-          subscriptions[effect.stateId][key] = effect;
-          _grid2.default.subscribe(instance).to(_state).when(_constants.STATE_VALUE_CHANGE, function () {
-            _render(Object.keys(subscriptions[effect.stateId]).reduce(function (effectsResult, key) {
-              effectsResult[key] = subscriptions[effect.stateId][key]();
-              return effectsResult;
-            }, {}));
-          });
-        } else {
-          result[key] = newStuff[key];
-        }
-      });
-      data = accumulate(data, result);
+  var updateData = data.mutate(function (current, newStuff) {
+    if (newStuff === null || typeof newStuff !== 'undefined' && (typeof newStuff === 'undefined' ? 'undefined' : _typeof(newStuff)) !== 'object') {
+      throw new Error('A key-value object expected. Instead "' + newStuff + '" passed.');
     }
-  };
-  var _render = function _render(newData) {
-    updateData(newData);
-    if (isActive()) {
-      viewFunc(data);
-    }
-  };
-  var updateControllerAPI = function updateControllerAPI(newMethods) {
-    return api = accumulate(api, newMethods);
-  };
-
-  // defining the controller api
-  updateControllerAPI({
-    state: function state() {
-      var s = _index.state.apply(undefined, arguments);
-
-      internalStates.push(s);
-      return s;
-    },
-    render: function render(newProps) {
-      ensureObject(newProps, 'The `render` method');
-      return _render(newProps);
-    },
-
-    props: function props() {
-      if (!_props) {
-        _props = (0, _index.state)(data);
-        updateProps = _props.mutate(accumulate);
-      }
-      return _props;
-    },
-    isActive: isActive
+    // console.log('updateData', newStuff);
+    return _extends({}, current, newStuff);
   });
+  var render = data.map(function (newStuff) {
+    var result = {};
+
+    Object.keys(newStuff).forEach(function (key) {
+      if ((0, _state3.isEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
+        var effect = newStuff[key];
+        var _state = _index.grid.getNodeById(effect.stateId);
+
+        result[key] = effect();
+        if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
+        subscriptions[effect.stateId][key] = effect;
+        _index.grid.subscribe(instance).to(_state).when(_constants.STATE_VALUE_CHANGE, function () {
+          updateData(Object.keys(subscriptions[effect.stateId]).reduce(function (effectsResult, key) {
+            effectsResult[key] = subscriptions[effect.stateId][key]();
+            return effectsResult;
+          }, {}));
+        });
+      } else {
+        result[key] = newStuff[key];
+      }
+    });
+    return result;
+  }).filter(function () {
+    return active;
+  }).pipe(viewFunc);
 
   function processExternals() {
     Object.keys(externals).forEach(function (key) {
@@ -1146,19 +1104,29 @@ function createRiew(viewFunc) {
       }
 
       updateData(_defineProperty({}, key, external));
-      updateControllerAPI(_defineProperty({}, key, external));
     });
   }
 
-  instance.isActive = isActive;
   instance.mount = function () {
-    var initialProps = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var initialData = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
-    ensureObject(initialProps, 'The `mount` method');
-    updateData(initialProps);
+    if (active) {
+      updateData(initialData);
+      return instance;
+    }
+    updateData(initialData);
     processExternals();
 
-    var controllersResult = _utils.parallel.apply(undefined, controllers)(api);
+    var controllersResult = _utils.parallel.apply(undefined, controllers)(_extends({}, data(), {
+      data: updateData,
+      props: data,
+      state: function state() {
+        var s = _index.state.apply(undefined, arguments);
+
+        internalStates.push(s);
+        return s;
+      }
+    }));
     var done = function done(result) {
       return onUnmountCallbacks = result || [];
     };
@@ -1170,19 +1138,15 @@ function createRiew(viewFunc) {
     }
 
     active = true;
-    _render();
+    (0, _index.subscribe)(render, true);
     return instance;
   };
-  instance.update = function (newProps) {
-    if (updateProps) updateProps(newProps);
-    _render(newProps);
+  instance.update = function (newData) {
+    updateData(newData);
   };
   instance.unmount = function () {
     active = false;
-    internalStates.forEach(function (s) {
-      return s.destroy();
-    });
-    internalStates = [];
+    (0, _index.unsubscribe)(render);
     onUnmountCallbacks.filter(function (f) {
       return typeof f === 'function';
     }).forEach(function (f) {
@@ -1190,9 +1154,12 @@ function createRiew(viewFunc) {
     });
     onUnmountCallbacks = [];
     Object.keys(subscriptions).forEach(function (stateId) {
-      return _grid2.default.unsubscribe(instance).from(_grid2.default.getNodeById(stateId));
+      return _index.grid.unsubscribe(instance).from(_index.grid.getNodeById(stateId));
     });
     subscriptions = {};
+    data.destroy();
+    internalStates.forEach(_index.destroy);
+    internalStates = [];
     return instance;
   };
   instance.with = function () {
@@ -1217,7 +1184,7 @@ function createRiew(viewFunc) {
   return instance;
 };
 
-},{"./constants":1,"./grid":2,"./index":4,"./state":14,"./utils":15}],14:[function(require,module,exports){
+},{"./constants":1,"./index":4,"./state":14,"./utils":15}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1269,9 +1236,12 @@ function State(initialValue) {
   state.createEffect = function () {
     var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
 
+    var queuesRunning = 0;
     var effect = function effect() {
       if (active === false) return value;
-      var q = (0, _queue.createQueue)(state.get(), state.set);
+      var q = (0, _queue.createQueue)(state.get(), state.set, function () {
+        return queuesRunning -= 1;
+      });
 
       _index.grid.subscribe().to(effect).when(_constants.CANCEL_EFFECT, q.cancel);
       effect.items.forEach(function (_ref) {
@@ -1279,6 +1249,7 @@ function State(initialValue) {
             func = _ref.func;
         return q.add(type, func);
       });
+      queuesRunning += 1;
       return q.process.apply(q, arguments);
     };
 
@@ -1298,6 +1269,9 @@ function State(initialValue) {
     effect.destroy = function () {
       (0, _index.cancel)(effect);
       _index.grid.unsubscribe().from(effect);
+    };
+    effect.isRunning = function () {
+      return queuesRunning > 0;
     };
 
     Object.keys(_queue.QueueAPI).forEach(function (m) {

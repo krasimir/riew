@@ -1,9 +1,10 @@
 import { getId } from './utils';
 
-function Subscription(name, callback) {
+function Subscription(name, callback, guard) {
   return {
     name: name || getId('sub'),
-    callback
+    callback,
+    guard
   };
 }
 
@@ -52,14 +53,14 @@ function Grid() {
     let source;
 
     api.to = x => (source = x, api);
-    api.when = (type, callback) => {
+    api.when = (type, callback, guard) => {
       const subscriptionSource = source ? source : { id: getId('sub_actor') };
       const ss = getSourceSubscriptions(subscriptionSource, type);
       const subscriptionName = getSubscriptionName(target, subscriptionSource);
       let subscription = ss.find(s => (s.name === subscriptionName));
 
       if (!subscription) {
-        ss.push(subscription = Subscription(subscriptionName, callback));
+        ss.push(subscription = Subscription(subscriptionName, callback, guard));
       }
       return api;
     };
@@ -75,7 +76,9 @@ function Grid() {
       const arr = getSourceSubscriptions(source, type);
 
       arr.forEach(s => {
-        s.callback(...args);
+        if (!s.guard || s.guard()) {
+          s.callback(...args);
+        }
       });
     };
 

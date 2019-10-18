@@ -1,8 +1,7 @@
-import { state, use, subscribe, unsubscribe } from './index';
+import { state, use, subscribe, unsubscribe, destroy, grid } from './index';
 import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 import { STATE_VALUE_CHANGE } from './constants';
-import grid from './grid';
 
 function normalizeExternalsMap(arr) {
   return arr.reduce((map, item) => {
@@ -31,6 +30,7 @@ export default function createRiew(viewFunc, ...controllers) {
     if (newStuff === null || (typeof newStuff !== 'undefined' && typeof newStuff !== 'object')) {
       throw new Error(`A key-value object expected. Instead "${ newStuff }" passed.`);
     }
+    // console.log('updateData', newStuff);
     return { ...current, ...newStuff };
   });
   const render = data.map(newStuff => {
@@ -76,6 +76,10 @@ export default function createRiew(viewFunc, ...controllers) {
   }
 
   instance.mount = (initialData = {}) => {
+    if (active) {
+      updateData(initialData);
+      return instance;
+    }
     updateData(initialData);
     processExternals();
 
@@ -108,13 +112,13 @@ export default function createRiew(viewFunc, ...controllers) {
   instance.unmount = () => {
     active = false;
     unsubscribe(render);
-    internalStates.forEach(s => s.destroy());
-    internalStates = [];
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
     Object.keys(subscriptions).forEach(stateId => grid.unsubscribe(instance).from(grid.getNodeById(stateId)));
     subscriptions = {};
     data.destroy();
+    internalStates.forEach(destroy);
+    internalStates = [];
     return instance;
   };
   instance.with = (...maps) => {

@@ -1,6 +1,6 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { state, register, riew, reset, subscribe } from '../index';
+import { state, register, riew, reset, subscribe, grid } from '../index';
 
 describe('Given the `riew` factory function', () => {
   beforeEach(() => {
@@ -52,7 +52,8 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we create a state in the controller', () => {
-    it('should teardown the state if the riew is unmounted', () => {
+    it(`should teardown the state if the riew is unmounted
+      and should remove the state from the grid`, () => {
       let ss;
       const view = jest.fn();
       const controller = function ({ state, data }) {
@@ -65,7 +66,13 @@ describe('Given the `riew` factory function', () => {
       const r = riew(view, controller);
 
       r.mount();
+
+      const stateId = grid.getNodeById(ss.id).stateId;
+
+      expect(grid.getNodeById(stateId)).toBeDefined();
+      expect(grid.nodes());
       r.unmount();
+      expect(grid.getNodeById(stateId)).not.toBeDefined();
       ss('moo');
       ss('boo');
       expect(view).toBeCalledWithArgs([ { s: 'bar' } ]);
@@ -188,11 +195,9 @@ describe('Given the `riew` factory function', () => {
   describe('when we send an effect to the view', () => {
     it(`should
       * run the effect and pass the value if the effect is not mutating
-      * subscribe to state changes if the effect is not mutating`, () => {
-      const view = jest.fn().mockImplementation(({ s, change }) => {
-        if (s !== 'BAR') {
-          change();
-        }
+      * subscribe to state changes if the effect is not mutating`, async () => {
+      const view = jest.fn().mockImplementation(async ({ s, change }) => {
+        setTimeout(() => change(), 10);
       });
       const controller = function ({ data, state }) {
         const s = state('foo');
@@ -208,6 +213,7 @@ describe('Given the `riew` factory function', () => {
       const r = riew(view, controller);
 
       r.mount();
+      await delay(20);
       expect(view).toBeCalledWithArgs(
         [ { s: 'FOO', change: expect.any(Function) } ],
         [ { s: 'BAR', change: expect.any(Function) } ]
@@ -217,22 +223,21 @@ describe('Given the `riew` factory function', () => {
   describe('when we send a getter or a setter to the view', () => {
     it(`should
       * run the getter and pass the value + also subscribe to state changes
-      * pass down the setter`, () => {
-      const view = jest.fn().mockImplementation(({ s, change }) => {
-        if (s !== 'bar') {
-          change('bar');
-        }
+      * pass down the setter`, async () => {
+      const view = jest.fn().mockImplementation(async ({ s, change }) => {
+        setTimeout(() => change('bar'), 10);
       });
-      const se = function ({ data, state }) {
+      const controller = function ({ data, state }) {
         const [ getter, setter ] = state('foo');
 
         data({ s: getter, change: setter });
         data({ s: getter, change: setter });
         data({ s: getter, change: setter });
       };
-      const r = riew(view, se);
+      const r = riew(view, controller);
 
       r.mount();
+      await delay(20);
       expect(view).toBeCalledWithArgs(
         [ { s: 'foo', change: expect.any(Function) } ],
         [ { s: 'bar', change: expect.any(Function) } ]
@@ -269,7 +274,7 @@ describe('Given the `riew` factory function', () => {
       );
     });
     describe('and we update the data as a result of props change', () => {
-      fit('should NOT end up in a recursion', () => {
+      it('should NOT end up in a maximum call stack exceeded', () => {
         const spy = jest.fn();
         const controller = function ({ props, data }) {
           subscribe(props.map(({ n }) => n + 5).pipe(n => data({ n })), true);
@@ -279,8 +284,9 @@ describe('Given the `riew` factory function', () => {
         r.mount({ n: 10 });
         r.update({ n: 20 });
         expect(spy).toBeCalledWithArgs(
-          [{ foo: 'bar' }],
-          [{ foo: 'bar', baz: 'moo' }]
+          [{ n: 15 }],
+          [{ n: 25 }],
+          [{ n: 25 }]
         );
       });
     });
@@ -411,14 +417,13 @@ describe('Given the `riew` factory function', () => {
       it('should add externals on top of the existing ones', () => {
         const spy = jest.fn();
         const r = riew(spy);
-        const ra = r.with({ foo: 'bar' });
-        const rb = r.with({ moo: 'noo' });
 
-        ra.mount({});
-        rb.mount({});
+        r.with({ foo: 'bar' });
+        r.with({ moo: 'noo' });
+
+        r.mount({});
 
         expect(spy).toBeCalledWithArgs(
-          [ { foo: 'bar', moo: 'noo' } ],
           [ { foo: 'bar', moo: 'noo' } ]
         );
       });

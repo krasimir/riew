@@ -6,14 +6,15 @@ describe('Given the createQueue helper', () => {
     reset();
   });
   describe('when we create a queue', () => {
-    it('should cycle over the items and call the appropriate callbacks', () => {
+    it('should cycle over the items, call the appropriate callbacks and fire onDone function when it finishes', () => {
+      const spy = jest.fn();
       const q = createQueue(
         42,
         {
           id: 'effect',
-          items: [],
-          on() {}
-        }
+          items: []
+        },
+        spy
       );
 
       q.add('map', [(value) => {
@@ -27,13 +28,15 @@ describe('Given the createQueue helper', () => {
       }]);
 
       expect(q.process()).toEqual(75);
+      expect(spy).toBeCalledTimes(1);
     });
   });
   describe('when we cancel queue', () => {
     it('should empty the items in the queue', () => {
       const q = createQueue(
         'foo',
-        { id: 'effect', items: [] }
+        { id: 'effect', items: [] },
+        () => {}
       );
 
       q.add('map', [() => {}]);

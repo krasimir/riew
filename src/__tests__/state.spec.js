@@ -628,4 +628,17 @@ describe('Given the state', () => {
       expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
     });
   });
+
+  /* Stack overflow */
+  describe('when we update the state from a subscribed effect', () => {
+    it('should deal with it', async () => {
+      let counter = 1;
+      const [ get, set ] = state(0);
+      const update = get.pipe(() => {
+        set(++counter);
+      });
+
+      subscribe(update, true);
+    });
+  });
 });
