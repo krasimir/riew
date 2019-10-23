@@ -67,7 +67,7 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   // ------------------------------------------------------------------ mergeStates
   h.defineProduct('mergeStates', (statesMap) => {
     const fetchSourceValues = () => Object.keys(statesMap).reduce((result, key) => {
-      const [ s ] = statesMap[key];
+      const s = statesMap[key];
 
       result[key] = s();
       return result;

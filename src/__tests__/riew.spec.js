@@ -455,4 +455,28 @@ describe('Given the `riew` factory function', () => {
       );
     });
   });
+  describe('when we send the same controller to different views', () => {
+    it('should re-render them if the state changes', () => {
+      const [ s, update ] = state('foo');
+      const controller = function ({ data }) {
+        data({ s });
+      };
+      const view1 = jest.fn();
+      const view2 = jest.fn();
+
+      riew(view1, controller).mount();
+      riew(view2, controller).mount();
+
+      update('bar');
+
+      expect(view1).toBeCalledWithArgs(
+        [ { s: 'foo' } ],
+        [ { s: 'bar' } ]
+      );
+      expect(view2).toBeCalledWithArgs(
+        [ { s: 'foo' } ],
+        [ { s: 'bar' } ]
+      );
+    });
+  });
 });
