@@ -1,4 +1,4 @@
-export default function FixedBuffer(size = 0) {
+export default function DroppingBuffer(size = 0) {
   const api = {};
   const value = [], puts = [], takes = [];
 
