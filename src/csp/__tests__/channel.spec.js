@@ -9,20 +9,31 @@ describe('Given a CSP channel', () => {
       ch.put('foo');
       expect(await ch.take()).toEqual('foo');
     });
-    it('should block the channel if there is no push but we want to take', async () => {
+    it('should block the channel if there is no puts but we want to take', async () => {
       const ch = chan('myChannel');
-      const f1 = jest.fn();
-      const f2 = jest.fn();
+      const happening = [];
 
-      ch.take().then(f1);
-      ch.take().then(f2);
-      ch.put('foo');
-      ch.put('bar');
+      ch.take().then(() => happening.push('a'));
+      ch.take().then(() => happening.push('b'));
+      ch.put('foo').then(() => happening.push('c'));
+      ch.put('bar').then(() => happening.push('d'));
 
       await delay(5);
 
-      expect(f1).toBeCalledWithArgs([ 'foo' ]);
-      expect(f2).toBeCalledWithArgs([ 'bar' ]);
+      expect(happening).toStrictEqual(['c', 'a', 'd', 'b']);
+    });
+    it('should block the channel if there is no takers but we want to put', async () => {
+      const ch = chan('myChannel');
+      const happening = [];
+
+      ch.put('foo').then(() => happening.push('a'));
+      ch.put('bar').then(() => happening.push('b'));
+      ch.take().then(() => happening.push('c'));
+      ch.take().then(() => happening.push('d'));
+
+      await delay(5);
+
+      expect(happening).toStrictEqual(['a', 'c', 'b', 'd']);
     });
   });
 });

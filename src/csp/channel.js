@@ -12,28 +12,41 @@ const BUFFER = {
 
 function Buffer(size = 1) {
   const api = {};
-  const queue = [];
+  const items = [];
   const puts = [];
   const takes = [];
 
+  api.isEmpty = () => items.length === 0;
   api.put = item => {
-    if (queue.length === size) {
-      // ...
+    if (takes.length === 0) {
+      return new Promise(resolve => {
+        puts.push([ resolve, item ]);
+      });
     };
-    queue.push(item);
-    if (takes.length > 0) {
-      takes.shift()(queue.shift());
-    }
+    items.push(item);
+    return new Promise(resolve => {
+      Promise.resolve().then(() => {
+        resolve();
+        takes.shift()(items.shift());
+      });
+    });
   };
   api.take = () => {
-    if (queue.length === 0) {
+    if (api.isEmpty()) {
+      if (puts.length > 0) {
+        const [ resolve, item ] = puts.shift();
+
+        items.push(item);
+        resolve();
+        return api.take();
+      }
       return new Promise(resolve => {
         takes.push(resolve);
       });
     };
-    return Promise.resolve(queue.shift());
+    return Promise.resolve(items.shift());
   };
-  api.size = () => queue.length;
+  api.size = () => items.length;
 
   return api;
 }
