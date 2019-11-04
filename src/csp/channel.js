@@ -1,14 +1,15 @@
 import { getId } from '../utils';
 import FixedBuffer from './buffers/FixedBuffer';
-import Dropping from './buffers/DroppingBuffer';
+import DroppingBuffer from './buffers/DroppingBuffer';
 
 export const buffer = {
   fixed: FixedBuffer,
-  dropping: Dropping
+  dropping: DroppingBuffer,
+  sliding: size => DroppingBuffer(size, true)
 };
 
 export function chan(...args) {
-  let id = getId('ch'), buff;
+  let id, buff;
   if (args.length === 2) {
     id = args[0];
     buff = args[1];
@@ -16,21 +17,19 @@ export function chan(...args) {
     id = args[0];
     buff = buffer.fixed();
   } else if (args.length === 1 && typeof args[0] === 'object') {
+    id = getId('ch');
     buff = args[0];
   } else {
+    id = getId('ch');
     buff = buffer.fixed();
   }
   const api = { id };
   const b = buff || buffer.fixed();
 
-  api.put = (item) => {
-    return b.put(item);
-  };
-  api.take = () => {
-    return b.take();
-  };
+  api.put = item => b.put(item);
+  api.take = () => b.take();
   api.__value = () => {
-    console.warn('Riew: you should not get the channel value directly! This method is here purely for testing purposes.');
+    console.warn('Riew: you should not get the channel\'s value directly! This method is here purely for testing purposes.');
     return buff.value();
   };
 

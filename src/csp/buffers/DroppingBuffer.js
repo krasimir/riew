@@ -1,41 +1,26 @@
-export default function DroppingBuffer(size = 0) {
+export default function DroppingBuffer(size = 1, sliding = false) {
   const api = {};
-  const value = [], puts = [], takes = [];
+  const value = [], takes = [];
 
   api.put = item => {
-    if (takes.length === 0) {
-      if (value.length < size) {
-        value.push(item);
-        return Promise.resolve();
-      }
-      return new Promise(resolve => {
-        puts.push(() => {
-          value.push(item);
-          resolve();
-        });
-      });
-    };
-    value.push(item);
-    return new Promise(resolve => {
-      resolve();
+    if (value.length < size) {
+      value.push(item);
+    } else if (sliding) {
+      value.shift();
+      value.push(item);
+    }
+    if (takes.length > 0) {
       takes.shift()(value.shift());
-    });
+    }
+    return Promise.resolve();
   };
   api.take = () => {
     if (value.length === 0) {
-      if (puts.length === 0) {
-        return new Promise(resolve => takes.push(resolve));
-      }
-      puts.shift()();
-      return api.take();
+      return new Promise(resolve => takes.push(resolve));
     };
     const v = value.shift();
-    if (value.length < size && puts.length > 0) {
-      puts.shift()();
-    }
     return Promise.resolve(v);
   };
-  api.size = () => value.length;
   api.value = () => value;
 
   return api;

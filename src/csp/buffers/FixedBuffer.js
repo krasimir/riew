@@ -35,7 +35,6 @@ export default function FixedBuffer(size = 0) {
     }
     return Promise.resolve(v);
   };
-  api.size = () => value.length;
   api.value = () => value;
 
   return api;
