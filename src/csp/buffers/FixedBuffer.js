@@ -6,18 +6,18 @@ export default function FixedBuffer(size = 0) {
     if (takes.length === 0) {
       if (value.length < size) {
         value.push(item);
-        return Promise.resolve();
+        return Promise.resolve(true);
       }
       return new Promise(resolve => {
         puts.push(() => {
           value.push(item);
-          resolve();
+          resolve(true);
         });
       });
     };
     value.push(item);
     return new Promise(resolve => {
-      resolve();
+      resolve(true);
       takes.shift()(value.shift());
     });
   };
@@ -36,6 +36,7 @@ export default function FixedBuffer(size = 0) {
     return Promise.resolve(v);
   };
   api.value = () => value;
+  api.isEmpty = () => value.length === 0 && puts.length === 0;
 
   return api;
 }

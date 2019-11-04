@@ -2,6 +2,55 @@ import { chan, buffer } from '../channel';
 import { delay } from '../../__helpers__';
 
 describe('Given a CSP channel', () => {
+  describe('and we have three channel states', () => {
+    describe('and we have OPEN state', () => {
+      it('should allow writing and reading', async () => {
+        const ch = chan();
+        const happening = [];
+
+        expect(ch.state()).toEqual(chan.OPEN);
+        ch.put('foo').then(v => happening.push(v));
+        ch.take().then(v => happening.push(v));
+
+        await delay(5);
+        expect(happening).toStrictEqual([true, 'foo']);
+        expect(ch.state()).toEqual(chan.OPEN);
+      });
+    });
+    describe('and we have CLOSED state', () => {
+      it('should allow only reading otherwise puts resolve to CLOSED', async () => {
+        const ch = chan();
+        const happening = [];
+
+        ch.put('foo').then(v => happening.push(v));
+        ch.close();
+        ch.put('bar').then(v => happening.push(v));
+        ch.put('zar').then(v => happening.push(v));
+        ch.take().then(v => happening.push(v));
+
+        await delay(5);
+        expect(happening).toStrictEqual([chan.CLOSED, chan.CLOSED, true, 'foo']);
+        expect(ch.state()).toEqual(chan.CLOSED);
+      });
+    });
+    describe('and we have ENDED state', () => {
+      it('should always resolve to ENDED', async () => {
+        const ch = chan();
+        const happening = [];
+
+        ch.put('foo').then(v => happening.push(v));
+        ch.close();
+        ch.put('bar').then(v => happening.push(v));
+        ch.take().then(v => happening.push(v));
+        ch.put('zar').then(v => happening.push(v));
+        ch.take().then(v => happening.push(v));
+
+        await delay(5);
+        expect(happening).toStrictEqual([chan.CLOSED, true, 'foo', chan.ENDED, chan.ENDED]);
+        expect(ch.state()).toEqual(chan.ENDED);
+      });
+    });
+  });
   describe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
     it('allow writing and reading', async () => {
       const ch = chan();

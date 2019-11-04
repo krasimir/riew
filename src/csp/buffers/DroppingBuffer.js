@@ -12,7 +12,7 @@ export default function DroppingBuffer(size = 1, sliding = false) {
     if (takes.length > 0) {
       takes.shift()(value.shift());
     }
-    return Promise.resolve();
+    return Promise.resolve(true);
   };
   api.take = () => {
     if (value.length === 0) {
@@ -22,6 +22,7 @@ export default function DroppingBuffer(size = 1, sliding = false) {
     return Promise.resolve(v);
   };
   api.value = () => value;
+  api.isEmpty = () => value.length === 0;
 
   return api;
 }
