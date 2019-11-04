@@ -3,7 +3,7 @@ import { delay } from '../../__helpers__';
 
 describe('Given a CSP channel', () => {
   describe('and we have three channel states', () => {
-    describe('and we have OPEN state', () => {
+    describe('and we have an OPEN state', () => {
       it('should allow writing and reading', async () => {
         const ch = chan();
         const happening = [];
@@ -17,7 +17,7 @@ describe('Given a CSP channel', () => {
         expect(ch.state()).toEqual(chan.OPEN);
       });
     });
-    describe('and we have CLOSED state', () => {
+    describe('and we have a CLOSED state', () => {
       it('should allow only reading otherwise puts resolve to CLOSED', async () => {
         const ch = chan();
         const happening = [];
@@ -30,10 +30,10 @@ describe('Given a CSP channel', () => {
 
         await delay(5);
         expect(happening).toStrictEqual([chan.CLOSED, chan.CLOSED, true, 'foo']);
-        expect(ch.state()).toEqual(chan.CLOSED);
+        expect(ch.state()).toEqual(chan.ENDED);
       });
     });
-    describe('and we have ENDED state', () => {
+    describe('and we have an ENDED state', () => {
       it('should always resolve to ENDED', async () => {
         const ch = chan();
         const happening = [];
@@ -48,6 +48,17 @@ describe('Given a CSP channel', () => {
         await delay(5);
         expect(happening).toStrictEqual([chan.CLOSED, true, 'foo', chan.ENDED, chan.ENDED]);
         expect(ch.state()).toEqual(chan.ENDED);
+      });
+    });
+    describe('and we wait for taking but close the channel', () => {
+      it('should resolve the taker with ENDED', async () => {
+        const ch = chan();
+        const happening = [];
+
+        ch.take().then(v => happening.push(v));
+        ch.close();
+        await delay(5);
+        expect(happening).toStrictEqual([chan.CLOSED]);
       });
     });
   });
@@ -115,9 +126,9 @@ describe('Given a CSP channel', () => {
         const happening = [];
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        ch.put('foo').then(() => happening.push('a'));
-        ch.put('bar').then(() => happening.push('b'));
-        ch.put('zar').then(() => happening.push('c'));
+        ch.put('foo').then((r) => happening.push('a', r));
+        ch.put('bar').then((r) => happening.push('b', r));
+        ch.put('zar').then((r) => happening.push('c', r));
         expect(ch.__value()).toStrictEqual(['foo']);
         ch.take().then(() => happening.push('d'));
         expect(ch.__value()).toStrictEqual([]);
@@ -127,7 +138,7 @@ describe('Given a CSP channel', () => {
         ch.put('mar').then(() => happening.push('f'));
 
         await delay(5);
-        expect(happening).toStrictEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+        expect(happening).toStrictEqual(['a', true, 'b', false, 'c', false, 'd', 'e', 'f']);
         spy.mockRestore();
       });
     });

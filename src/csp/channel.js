@@ -2,9 +2,9 @@ import { getId } from '../utils';
 import FixedBuffer from './buffers/FixedBuffer';
 import DroppingBuffer from './buffers/DroppingBuffer';
 
-const OPEN = 'OPEN';
-const CLOSED = 'CLOSED';
-const ENDED = 'ENDED';
+const OPEN = Symbol('OPEN');
+const CLOSED = Symbol('CLOSED');
+const ENDED = Symbol('ENDED');
 
 export const buffer = {
   fixed: FixedBuffer,
@@ -34,8 +34,8 @@ export function chan(...args) {
     if (isEnded()) return Promise.resolve(state);
     return buff.take();
   };
-  api.state = () => state;
-  api.close = () => (state = CLOSED);
+  api.state = () => (isEnded(), state);
+  api.close = () => (buff.close(CLOSED), state = CLOSED);
   api.open = () => (state = OPEN);
   api.__value = () => {
     console.warn('Riew: you should not get the channel\'s value directly! This method is here purely for testing purposes.');
@@ -44,9 +44,9 @@ export function chan(...args) {
 
   return api;
 };
-chan.OPEN = 'OPEN';
-chan.CLOSED = 'CLOSED';
-chan.ENDED = 'ENDED';
+chan.OPEN = OPEN;
+chan.CLOSED = CLOSED;
+chan.ENDED = ENDED;
 
 function normalizeChannelArguments(args) {
   let id, buff;

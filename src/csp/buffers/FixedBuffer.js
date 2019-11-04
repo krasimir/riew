@@ -37,6 +37,9 @@ export default function FixedBuffer(size = 0) {
   };
   api.value = () => value;
   api.isEmpty = () => value.length === 0 && puts.length === 0;
+  api.close = (v) => {
+    while (takes.length > 0) takes.shift()(v);
+  };
 
   return api;
 }
