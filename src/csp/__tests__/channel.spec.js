@@ -283,7 +283,7 @@ describe('Given a CSP channel', () => {
   // pipe, merge
 
   describe('when we pipe channels', () => {
-    fit('should pipe from one channel to another', async () => {
+    it('should pipe from one channel to another', async () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
       const ch3 = chan('ch3');
@@ -314,6 +314,36 @@ describe('Given a CSP channel', () => {
         'put zar',
         'take ch4 bar',
         'take ch4 zar'
+      ]);
+    });
+  });
+  describe('when we merge channels', () => {
+    it('should merge two and more into a single channel', async () => {
+      const ch1 = chan('ch1');
+      const ch2 = chan('ch2');
+      const ch3 = chan('ch3');
+      const ch4 = chan.merge(ch1, ch2, ch3);
+
+      log(ch1.put('foo'), 'put foo');
+      log(ch2.put('bar'), 'put bar');
+      log(ch3.put('zar'), 'put zar');
+      log(ch2.put('moo'), 'put moo');
+
+      log(ch4.take(), 'take ch4', true);
+      log(ch4.take(), 'take ch4', true);
+      log(ch4.take(), 'take ch4', true);
+      log(ch4.take(), 'take ch4', true);
+
+      await delay(5);
+      expect(log.dump()).toStrictEqual([
+        'put foo',
+        'put bar',
+        'put zar',
+        'take ch4 foo',
+        'take ch4 bar',
+        'put moo',
+        'take ch4 zar',
+        'take ch4 moo'
       ]);
     });
   });

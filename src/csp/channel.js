@@ -14,8 +14,8 @@ export const buffer = {
 
 export function chan(...args) {
   let state = OPEN;
-  const [id, buff] = normalizeChannelArguments(args);
-  const api = { id };
+  let [id, buff] = normalizeChannelArguments(args);
+  let api = { id };
 
   function isEnded() {
     if (state === ENDED) return true;
@@ -37,6 +37,7 @@ export function chan(...args) {
   api.state = () => (isEnded(), state);
   api.close = () => (buff.close(CLOSED), (state = CLOSED));
   api.open = () => (state = OPEN);
+  api.setBuffer = b => (buff = b);
 
   api.pipe = (...channels) => {
     (function pipe() {
@@ -59,6 +60,22 @@ export function chan(...args) {
 
   return api;
 }
+chan.merge = function (...channels) {
+  const newCh = chan();
+
+  channels.map(ch => {
+    (function merge() {
+      ch.take().then(v => {
+        if (newCh.state() === OPEN) {
+          newCh.put(v);
+          merge();
+        }
+      });
+    })();
+  });
+
+  return newCh;
+};
 chan.OPEN = OPEN;
 chan.CLOSED = CLOSED;
 chan.ENDED = ENDED;
