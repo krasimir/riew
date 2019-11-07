@@ -1,6 +1,8 @@
 export default function FixedBuffer(size = 0) {
   const api = {};
-  const value = [], puts = [], takes = [];
+  const value = [];
+  const puts = [];
+  const takes = [];
 
   api.put = item => {
     if (takes.length === 0) {
@@ -14,7 +16,7 @@ export default function FixedBuffer(size = 0) {
           resolve(true);
         });
       });
-    };
+    }
     value.push(item);
     return new Promise(resolve => {
       resolve(true);
@@ -28,7 +30,7 @@ export default function FixedBuffer(size = 0) {
       }
       puts.shift()();
       return api.take();
-    };
+    }
     const v = value.shift();
     if (value.length < size && puts.length > 0) {
       puts.shift()();
@@ -37,7 +39,7 @@ export default function FixedBuffer(size = 0) {
   };
   api.value = () => value;
   api.isEmpty = () => value.length === 0 && puts.length === 0;
-  api.close = (v) => {
+  api.close = v => {
     while (takes.length > 0) takes.shift()(v);
   };
 

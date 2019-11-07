@@ -14,7 +14,7 @@ export const buffer = {
 
 export function chan(...args) {
   let state = OPEN;
-  const [ id, buff ] = normalizeChannelArguments(args);
+  const [id, buff] = normalizeChannelArguments(args);
   const api = { id };
 
   function isEnded() {
@@ -27,23 +27,38 @@ export function chan(...args) {
   }
 
   api.put = item => {
-    if (isEnded()) return Promise.resolve(state);
-    return state === CLOSED ? Promise.resolve(state) : buff.put(item);
+    if (isEnded() || state === CLOSED) return Promise.resolve(state);
+    return buff.put(item);
   };
   api.take = () => {
     if (isEnded()) return Promise.resolve(state);
     return buff.take();
   };
   api.state = () => (isEnded(), state);
-  api.close = () => (buff.close(CLOSED), state = CLOSED);
+  api.close = () => (buff.close(CLOSED), (state = CLOSED));
   api.open = () => (state = OPEN);
+
+  api.pipe = (...channels) => {
+    (function pipe() {
+      api.take().then(v => {
+        channels.map(ch => ch.put(v));
+        if (state === OPEN) {
+          pipe();
+        }
+      });
+    })();
+    return channels[channels.length - 1];
+  };
+
   api.__value = () => {
-    console.warn('Riew: you should not get the channel\'s value directly! This method is here purely for testing purposes.');
+    console.warn(
+      "Riew: you should not get the channel's value directly! This method is here purely for testing purposes."
+    );
     return buff.value();
   };
 
   return api;
-};
+}
 chan.OPEN = OPEN;
 chan.CLOSED = CLOSED;
 chan.ENDED = ENDED;
@@ -63,5 +78,5 @@ function normalizeChannelArguments(args) {
     id = getId('ch');
     buff = buffer.fixed();
   }
-  return [ id, buff ];
-};
+  return [id, buff];
+}
