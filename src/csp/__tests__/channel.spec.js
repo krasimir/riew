@@ -224,7 +224,6 @@ describe('Given a CSP channel', () => {
     describe("and the buffer's size is 0", () => {
       it("shouldn't block", async () => {
         const ch = chan(buffer.sliding());
-
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         log(ch.put('foo'), 'a');
@@ -277,6 +276,29 @@ describe('Given a CSP channel', () => {
         ]);
         spy.mockRestore();
       });
+    });
+  });
+  describe('when we create a channel with a reducer buffer', () => {
+    it('should be non blocking and should allow us to provide a reducer function', async () => {
+      const reducerSpy = jest.fn();
+      const ch = chan(
+        buffer.reducer((current = 10, data) => {
+          reducerSpy(current);
+          return current + data;
+        })
+      );
+      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      log(ch.put(20), 'a');
+      log(ch.take(), 'take', true);
+      log(ch.take(), 'take', true);
+      log(ch.put(5), 'b');
+      log(ch.put(3), 'c');
+
+      await delay(5);
+      expect(log.dump()).toStrictEqual(['a', 'take 35', 'b', 'take 38', 'c']);
+      expect(reducerSpy).toBeCalledWithArgs([10], [30], [35]);
+      spy.mockRestore();
     });
   });
 

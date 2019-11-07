@@ -1,6 +1,7 @@
 import { getId } from '../utils';
 import FixedBuffer from './buffers/FixedBuffer';
 import DroppingBuffer from './buffers/DroppingBuffer';
+import ReducerBuffer from './buffers/ReducerBuffer';
 
 const OPEN = Symbol('OPEN');
 const CLOSED = Symbol('CLOSED');
@@ -9,7 +10,8 @@ const ENDED = Symbol('ENDED');
 export const buffer = {
   fixed: FixedBuffer,
   dropping: DroppingBuffer,
-  sliding: size => DroppingBuffer(size, true)
+  sliding: size => DroppingBuffer(size, true),
+  reducer: ReducerBuffer
 };
 
 export function chan(...args) {

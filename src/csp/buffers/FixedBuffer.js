@@ -38,7 +38,8 @@ export default function FixedBuffer(size = 0) {
     return Promise.resolve(v);
   };
   api.value = () => value;
-  api.isEmpty = () => value.length === 0 && puts.length === 0;
+  api.isEmpty = () =>
+    value.length === 0 && puts.length === 0 && takes.length === 0;
   api.close = v => {
     while (takes.length > 0) takes.shift()(v);
   };
