@@ -1,62 +1,55 @@
 import { chan, buffer } from '../channel';
 import { delay } from '../../__helpers__';
+import { getFuncName } from '../../utils';
 
-const createLog = () => {
-  let happenings = [];
-  let f = (p, value, keepOriginalV) => {
-    return p.then(v => {
-      if (typeof value !== 'undefined') {
-        if (keepOriginalV) {
-          happenings.push(value + ' ' + v);
-        } else {
-          happenings.push(value);
-        }
-      } else {
-        happenings.push(v);
-      }
-    });
-  };
-
-  f.print = () => console.log(JSON.stringify(happenings, null, 2));
-  f.dump = () => happenings;
-  return f;
-};
-let log;
+async function Test(...routines) {
+  const log = [];
+  await Promise.all(
+    routines.map(r => {
+      return new Promise(async resolve => {
+        const rName = getFuncName(r);
+        log.push(`>${rName}`);
+        await r(str => log.push(str));
+        log.push(`<${rName}`);
+        resolve(log);
+      });
+    })
+  );
+  return log;
+}
 
 describe('Given a CSP channel', () => {
-  beforeEach(() => {
-    log = createLog();
-  });
+  // States
 
-  // Statuses
-
-  describe('and we have an OPEN state', () => {
-    it('should allow writing and reading', async () => {
+  describe('and we have an the channel OPEN', () => {
+    it(`should
+      * allow writing and reading
+      * should block the put until take
+      * should block the take until put`, async () => {
       const ch = chan();
-
-      expect(ch.state()).toEqual(chan.OPEN);
-      log(ch.put('foo'));
-      log(ch.take());
-
-      await delay(5);
-      expect(log.dump()).toStrictEqual([true, 'foo']);
-      expect(ch.state()).toEqual(chan.OPEN);
+      const result = await Test(
+        async function A(log) {
+          await ch.put('foo');
+          log('put successful');
+        },
+        async function B(log) {
+          log(`take=${await ch.take()}`);
+        }
+      );
+      expect(result).toStrictEqual([
+        '>A',
+        '>B',
+        'put successful',
+        'take=foo',
+        '<A',
+        '<B'
+      ]);
     });
   });
-  describe('and we have a CLOSED state', () => {
-    it('should allow only reading otherwise puts resolve to CLOSED', async () => {
-      const ch = chan();
-
-      log(ch.put('foo'));
-      ch.close();
-      log(ch.put('bar'));
-      log(ch.put('zar'));
-      log(ch.take());
-
-      await delay(5);
-      expect(log.dump()).toStrictEqual([chan.CLOSED, chan.CLOSED, true, 'foo']);
-      expect(ch.state()).toEqual(chan.ENDED);
-    });
+  describe('and we close the channel', () => {
+    fit(`should
+      - resolve the pending puts with CLOSE
+      - resolve the future puts with ENDED`, async () => {});
   });
   describe('and we have an ENDED state', () => {
     it('should always resolve to ENDED', async () => {
@@ -279,7 +272,7 @@ describe('Given a CSP channel', () => {
     });
   });
   describe('when we create a channel with a reducer buffer', () => {
-    it('should be non blocking and should allow us to provide a reducer function', async () => {
+    it('should be blocking and should allow us to provide a reducer function', async () => {
       const reducerSpy = jest.fn();
       const ch = chan(
         buffer.reducer((current = 10, data) => {
@@ -302,7 +295,7 @@ describe('Given a CSP channel', () => {
     });
   });
 
-  // pipe, merge
+  // pipe, merge, alt
 
   describe('when we pipe channels', () => {
     it('should pipe from one channel to another', async () => {
@@ -367,6 +360,29 @@ describe('Given a CSP channel', () => {
         'take ch4 zar',
         'take ch4 moo'
       ]);
+    });
+  });
+  describe('when we use the alt method', () => {
+    xit('should block till one of the operations is resolved', async () => {
+      const ch1 = chan();
+      const ch2 = chan();
+
+      log(chan.alt(ch1.put('foo')));
+    });
+  });
+
+  // timeout
+
+  describe('when we use the timeout method', () => {
+    it('should create a channel that is self closing after X amount of time', async () => {
+      const ch = chan.timeout(30);
+      const spy = jest.fn();
+
+      ch.take().then(spy);
+      expect(ch.state()).toBe(chan.OPEN);
+      await delay(40);
+      expect(ch.state()).toBe(chan.ENDED);
+      expect(spy).toBeCalledWithArgs([chan.CLOSED]);
     });
   });
 });

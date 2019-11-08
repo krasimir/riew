@@ -2,10 +2,7 @@ import { getId } from '../utils';
 import FixedBuffer from './buffers/FixedBuffer';
 import DroppingBuffer from './buffers/DroppingBuffer';
 import ReducerBuffer from './buffers/ReducerBuffer';
-
-const OPEN = Symbol('OPEN');
-const CLOSED = Symbol('CLOSED');
-const ENDED = Symbol('ENDED');
+import { OPEN, CLOSED, ENDED } from './buffers/states';
 
 export const buffer = {
   fixed: FixedBuffer,
@@ -37,7 +34,9 @@ export function chan(...args) {
     return buff.take();
   };
   api.state = () => (isEnded(), state);
-  api.close = () => (buff.close(CLOSED), (state = CLOSED));
+  api.close = () => {
+    state = CLOSED;
+  };
   api.open = () => (state = OPEN);
   api.setBuffer = b => (buff = b);
 
@@ -77,6 +76,11 @@ chan.merge = function (...channels) {
   });
 
   return newCh;
+};
+chan.timeout = function (interval) {
+  const ch = chan();
+  setTimeout(() => ch.close(), interval);
+  return ch;
 };
 chan.OPEN = OPEN;
 chan.CLOSED = CLOSED;

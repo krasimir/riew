@@ -38,11 +38,10 @@ export default function FixedBuffer(size = 0) {
     return Promise.resolve(v);
   };
   api.value = () => value;
+  api.puts = () => puts;
+  api.takes = () => takes;
   api.isEmpty = () =>
     value.length === 0 && puts.length === 0 && takes.length === 0;
-  api.close = v => {
-    while (takes.length > 0) takes.shift()(v);
-  };
 
   return api;
 }

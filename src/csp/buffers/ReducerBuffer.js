@@ -5,15 +5,14 @@ export default function FixedBuffer(reducer) {
   let value;
 
   api.put = item => {
+    value = reducer(value, item);
     if (takes.length === 0) {
       return new Promise(resolve => {
         puts.push(() => {
-          value = reducer(value, item);
           resolve(true);
         });
       });
     }
-    value = reducer(value, item);
     return new Promise(resolve => {
       resolve(true);
       takes.shift()(value);
@@ -27,6 +26,8 @@ export default function FixedBuffer(reducer) {
     return api.take();
   };
   api.value = () => value;
+  api.puts = () => puts;
+  api.takes = () => takes;
   api.isEmpty = () => puts.length === 0 && takes.length === 0;
   api.close = v => {
     while (takes.length > 0) takes.shift()(v);

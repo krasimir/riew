@@ -26,6 +26,8 @@ export default function DroppingBuffer(size = 1, sliding = false) {
     return Promise.resolve(v);
   };
   api.value = () => value;
+  api.puts = () => [];
+  api.takes = () => takes;
   api.isEmpty = () => value.length === 0 && takes.length === 0;
   api.close = v => {
     while (takes.length > 0) takes.shift()(v);
