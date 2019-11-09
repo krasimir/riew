@@ -1,8 +1,8 @@
+import BufferInterface from './Interface';
+
 export default function FixedBuffer(size = 0) {
-  const api = {};
-  const value = [];
-  const puts = [];
-  const takes = [];
+  const api = BufferInterface();
+  const { value, takes, puts } = api;
 
   api.put = item => {
     if (takes.length === 0) {
@@ -11,9 +11,9 @@ export default function FixedBuffer(size = 0) {
         return Promise.resolve(true);
       }
       return new Promise(resolve => {
-        puts.push(() => {
+        puts.push(v => {
           value.push(item);
-          resolve(true);
+          resolve(v || true);
         });
       });
     }
@@ -37,11 +37,6 @@ export default function FixedBuffer(size = 0) {
     }
     return Promise.resolve(v);
   };
-  api.value = () => value;
-  api.puts = () => puts;
-  api.takes = () => takes;
-  api.isEmpty = () =>
-    value.length === 0 && puts.length === 0 && takes.length === 0;
 
   return api;
 }

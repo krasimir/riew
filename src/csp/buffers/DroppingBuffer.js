@@ -1,7 +1,8 @@
+import BufferInterface from './Interface';
+
 export default function DroppingBuffer(size = 1, sliding = false) {
-  const api = {};
-  const value = [];
-  const takes = [];
+  const api = BufferInterface();
+  const { value, takes } = api;
 
   api.put = item => {
     let r = Promise.resolve(true);
@@ -24,13 +25,6 @@ export default function DroppingBuffer(size = 1, sliding = false) {
     }
     const v = value.shift();
     return Promise.resolve(v);
-  };
-  api.value = () => value;
-  api.puts = () => [];
-  api.takes = () => takes;
-  api.isEmpty = () => value.length === 0 && takes.length === 0;
-  api.close = v => {
-    while (takes.length > 0) takes.shift()(v);
   };
 
   return api;

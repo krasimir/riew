@@ -1,11 +1,11 @@
+import BufferInterface from './Interface';
+
 export default function FixedBuffer(reducer) {
-  const api = {};
-  const puts = [];
-  const takes = [];
-  let value;
+  const api = BufferInterface();
+  const { value, takes, puts } = api;
 
   api.put = item => {
-    value = reducer(value, item);
+    value[0] = reducer(value[0], item);
     if (takes.length === 0) {
       return new Promise(resolve => {
         puts.push(() => {
@@ -15,7 +15,7 @@ export default function FixedBuffer(reducer) {
     }
     return new Promise(resolve => {
       resolve(true);
-      takes.shift()(value);
+      takes.shift()(value[0]);
     });
   };
   api.take = () => {
@@ -24,13 +24,6 @@ export default function FixedBuffer(reducer) {
     }
     puts.shift()();
     return api.take();
-  };
-  api.value = () => value;
-  api.puts = () => puts;
-  api.takes = () => takes;
-  api.isEmpty = () => puts.length === 0 && takes.length === 0;
-  api.close = v => {
-    while (takes.length > 0) takes.shift()(v);
   };
 
   return api;

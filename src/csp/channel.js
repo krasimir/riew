@@ -16,26 +16,36 @@ export function chan(...args) {
   let [id, buff] = normalizeChannelArguments(args);
   let api = { id };
 
-  function isEnded() {
-    if (state === ENDED) return true;
+  function calculateState() {
     if (state === CLOSED && buff.isEmpty()) {
       state = ENDED;
-      return true;
     }
-    return false;
+    return state;
+  }
+  function isAccepting() {
+    const s = calculateState();
+
+    return s !== CLOSED && s !== ENDED;
   }
 
   api.put = item => {
-    if (isEnded() || state === CLOSED) return Promise.resolve(state);
+    if (!isAccepting()) {
+      return Promise.resolve(state);
+    }
     return buff.put(item);
   };
   api.take = () => {
-    if (isEnded()) return Promise.resolve(state);
+    if (state === ENDED) return Promise.resolve(ENDED);
+    if (state === CLOSED && buff.isEmpty()) return Promise.resolve(ENDED);
     return buff.take();
   };
-  api.state = () => (isEnded(), state);
+  api.state = calculateState;
   api.close = () => {
     state = CLOSED;
+    buff.puts.forEach(put => put(CLOSED));
+    // We have a pending take only if the buffer is empty.
+    // So, closed buffer with no value => ENDED
+    buff.takes.forEach(put => put(ENDED));
   };
   api.open = () => (state = OPEN);
   api.setBuffer = b => (buff = b);
@@ -56,7 +66,7 @@ export function chan(...args) {
     console.warn(
       "Riew: you should not get the channel's value directly! This method is here purely for testing purposes."
     );
-    return buff.value();
+    return buff.value;
   };
 
   return api;

@@ -1,6 +1,7 @@
 import { chan, buffer } from '../channel';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
+import { CLOSED, ENDED } from '../buffers/states';
 
 async function Test(...routines) {
   const log = [];
@@ -17,6 +18,9 @@ async function Test(...routines) {
   );
   return log;
 }
+async function exercise(p, expectation) {
+  expect(await p).toStrictEqual(expectation);
+}
 
 describe('Given a CSP channel', () => {
   // States
@@ -27,31 +31,75 @@ describe('Given a CSP channel', () => {
       * should block the put until take
       * should block the take until put`, async () => {
       const ch = chan();
-      const result = await Test(
-        async function A(log) {
-          await ch.put('foo');
-          log('put successful');
-        },
-        async function B(log) {
-          log(`take=${await ch.take()}`);
-        }
+
+      await exercise(
+        Test(
+          async function A(log) {
+            await ch.put('foo');
+            log('put successful');
+          },
+          async function B(log) {
+            log(`take=${await ch.take()}`);
+          }
+        ),
+        ['>A', '>B', 'put successful', 'take=foo', '<A', '<B']
       );
-      expect(result).toStrictEqual([
-        '>A',
-        '>B',
-        'put successful',
-        'take=foo',
-        '<A',
-        '<B'
-      ]);
     });
   });
   describe('and we close the channel', () => {
-    fit(`should
+    it(`should
       - resolve the pending puts with CLOSE
-      - resolve the future puts with ENDED`, async () => {});
+      - resolve the future puts with CLOSE if the buffer is not empty
+      - resolve the future puts with ENDED if the buffer is empty
+      - allow takes if the buffer is not empty
+      - resolve the future takes with ENDED if the buffer is empty`, async () => {
+      const ch = chan();
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`p1=${(await ch.put('foo')).toString()}`);
+            log(`p2=${(await ch.put('bar')).toString()}`);
+            log(`p3=${(await ch.put('zar')).toString()}`);
+          },
+          async function B(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+            ch.close();
+            log(`take2=${(await ch.take()).toString()}`);
+            log(`take3=${(await ch.take()).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'p1=true',
+          'take1=foo',
+          'p2=Symbol(CLOSED)',
+          'take2=bar',
+          'p3=Symbol(ENDED)',
+          'take3=Symbol(ENDED)',
+          '<A',
+          '<B'
+        ]
+      );
+    });
+    it('should resolve the pending takes with ENDED', async () => {
+      const ch = chan();
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+          },
+          async function B() {
+            ch.close();
+          }
+        ),
+        ['>A', '>B', 'take1=Symbol(ENDED)', '<B', '<A']
+      );
+    });
   });
-  describe('and we have an ENDED state', () => {
+  xdescribe('and we have an ENDED state', () => {
     it('should always resolve to ENDED', async () => {
       const ch = chan();
 
@@ -73,7 +121,7 @@ describe('Given a CSP channel', () => {
       expect(ch.state()).toEqual(chan.ENDED);
     });
   });
-  describe('and we wait for taking but close the channel', () => {
+  xdescribe('and we wait for taking but close the channel', () => {
     it('should resolve the taker with ENDED', async () => {
       const ch = chan();
 
@@ -86,7 +134,7 @@ describe('Given a CSP channel', () => {
 
   // Types of buffers
 
-  describe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
+  xdescribe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
     it('allow writing and reading', async () => {
       const ch = chan();
 
@@ -116,7 +164,7 @@ describe('Given a CSP channel', () => {
       expect(log.dump()).toStrictEqual(['a', 'c', 'b', 'd']);
     });
   });
-  describe('when we create a channel with a fixed buffer with size > 0', () => {
+  xdescribe('when we create a channel with a fixed buffer with size > 0', () => {
     it('should allow as many puts as we have space', async () => {
       const ch = chan(buffer.fixed(2));
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -149,7 +197,7 @@ describe('Given a CSP channel', () => {
       spy.mockRestore();
     });
   });
-  describe('when we create a channel with a dropping buffer', () => {
+  xdescribe('when we create a channel with a dropping buffer', () => {
     describe("and the buffer's size is 0", () => {
       it("shouldn't block", async () => {
         const ch = chan(buffer.dropping());
@@ -213,7 +261,7 @@ describe('Given a CSP channel', () => {
       });
     });
   });
-  describe('when we create a channel with a sliding buffer', () => {
+  xdescribe('when we create a channel with a sliding buffer', () => {
     describe("and the buffer's size is 0", () => {
       it("shouldn't block", async () => {
         const ch = chan(buffer.sliding());
@@ -271,7 +319,7 @@ describe('Given a CSP channel', () => {
       });
     });
   });
-  describe('when we create a channel with a reducer buffer', () => {
+  xdescribe('when we create a channel with a reducer buffer', () => {
     it('should be blocking and should allow us to provide a reducer function', async () => {
       const reducerSpy = jest.fn();
       const ch = chan(
@@ -297,7 +345,7 @@ describe('Given a CSP channel', () => {
 
   // pipe, merge, alt
 
-  describe('when we pipe channels', () => {
+  xdescribe('when we pipe channels', () => {
     it('should pipe from one channel to another', async () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
@@ -332,7 +380,7 @@ describe('Given a CSP channel', () => {
       ]);
     });
   });
-  describe('when we merge channels', () => {
+  xdescribe('when we merge channels', () => {
     it('should merge two and more into a single channel', async () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
@@ -362,8 +410,8 @@ describe('Given a CSP channel', () => {
       ]);
     });
   });
-  describe('when we use the alt method', () => {
-    xit('should block till one of the operations is resolved', async () => {
+  xdescribe('when we use the alt method', () => {
+    it('should block till one of the operations is resolved', async () => {
       const ch1 = chan();
       const ch2 = chan();
 
@@ -373,7 +421,7 @@ describe('Given a CSP channel', () => {
 
   // timeout
 
-  describe('when we use the timeout method', () => {
+  xdescribe('when we use the timeout method', () => {
     it('should create a channel that is self closing after X amount of time', async () => {
       const ch = chan.timeout(30);
       const spy = jest.fn();
