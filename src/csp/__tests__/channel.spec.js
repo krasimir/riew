@@ -99,42 +99,10 @@ describe('Given a CSP channel', () => {
       );
     });
   });
-  xdescribe('and we have an ENDED state', () => {
-    it('should always resolve to ENDED', async () => {
-      const ch = chan();
-
-      log(ch.put('foo'));
-      ch.close();
-      log(ch.put('bar'));
-      log(ch.take());
-      log(ch.put('zar'));
-      log(ch.take());
-
-      await delay(5);
-      expect(log.dump()).toStrictEqual([
-        chan.CLOSED,
-        true,
-        'foo',
-        chan.ENDED,
-        chan.ENDED
-      ]);
-      expect(ch.state()).toEqual(chan.ENDED);
-    });
-  });
-  xdescribe('and we wait for taking but close the channel', () => {
-    it('should resolve the taker with ENDED', async () => {
-      const ch = chan();
-
-      log(ch.take());
-      ch.close();
-      await delay(5);
-      expect(log.dump()).toStrictEqual([chan.CLOSED]);
-    });
-  });
 
   // Types of buffers
 
-  xdescribe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
+  describe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
     it('allow writing and reading', async () => {
       const ch = chan();
 
@@ -144,144 +112,253 @@ describe('Given a CSP channel', () => {
     it('should block the channel if there is no puts but we want to take', async () => {
       const ch = chan();
 
-      log(ch.take(), 'a');
-      log(ch.take(), 'b');
-      log(ch.put('foo'), 'c');
-      log(ch.put('bar'), 'd');
-
-      await delay(5);
-      expect(log.dump()).toStrictEqual(['a', 'c', 'b', 'd']);
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+            log(`take2=${(await ch.take()).toString()}`);
+          },
+          async function B(log) {
+            log(`put1=${(await ch.put('foo')).toString()}`);
+            log(`put2=${(await ch.put('bar')).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'take1=foo',
+          'put1=true',
+          'take2=bar',
+          'put2=true',
+          '<A',
+          '<B'
+        ]
+      );
     });
     it('should block the channel if there is no takers but we want to put', async () => {
       const ch = chan();
 
-      log(ch.put('foo'), 'a');
-      log(ch.put('bar'), 'b');
-      log(ch.take(), 'c');
-      log(ch.take(), 'd');
-
-      await delay(5);
-      expect(log.dump()).toStrictEqual(['a', 'c', 'b', 'd']);
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await ch.put('foo')).toString()}`);
+            log(`put2=${(await ch.put('bar')).toString()}`);
+          },
+          async function B(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+            log(`take2=${(await ch.take()).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'put1=true',
+          'take1=foo',
+          'put2=true',
+          'take2=bar',
+          '<A',
+          '<B'
+        ]
+      );
     });
   });
-  xdescribe('when we create a channel with a fixed buffer with size > 0', () => {
+  describe('when we create a channel with a fixed buffer with size > 0', () => {
     it('should allow as many puts as we have space', async () => {
       const ch = chan(buffer.fixed(2));
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-      log(ch.put('foo'), 'a');
-      log(ch.put('bar'), 'b');
-      log(ch.put('zar'), 'c');
-      log(ch.put('mar'), 'd');
-      expect(ch.__value()).toStrictEqual(['foo', 'bar']);
-      log(ch.take(), 'e');
-      expect(ch.__value()).toStrictEqual(['bar', 'zar']);
-      log(ch.take(), 'f');
-      expect(ch.__value()).toStrictEqual(['zar', 'mar']);
-      log(ch.take(), 'g');
-      expect(ch.__value()).toStrictEqual(['mar']);
-      log(ch.take(), 'h');
-      expect(ch.__value()).toStrictEqual([]);
-
-      await delay(5);
-      expect(log.dump()).toStrictEqual([
-        'a',
-        'b',
-        'c',
-        'e',
-        'd',
-        'f',
-        'g',
-        'h'
-      ]);
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`value1=${ch.__value().toString()}`);
+            log(`put1=${(await ch.put('foo')).toString()}`);
+            log(`value2=${ch.__value().toString()}`);
+            log(`put2=${(await ch.put('bar')).toString()}`);
+            log(`value3=${ch.__value().toString()}`);
+            log(`put3=${(await ch.put('zar')).toString()}`);
+            log(`value4=${ch.__value().toString()}`);
+            log(`put4=${(await ch.put('mar')).toString()}`);
+            log(`value5=${ch.__value().toString()}`);
+          },
+          async function B(log) {
+            await delay(20);
+            log('end of waiting');
+            log(`take1=${(await ch.take()).toString()}`);
+            log(`take2=${(await ch.take()).toString()}`);
+            log(`take3=${(await ch.take()).toString()}`);
+            log(`take4=${(await ch.take()).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          'value1=',
+          '>B',
+          'put1=true',
+          'value2=foo',
+          'put2=true',
+          'value3=foo,bar',
+          'end of waiting',
+          'put3=true',
+          'value4=bar,zar',
+          'take1=foo',
+          'put4=true',
+          'value5=zar,mar',
+          'take2=bar',
+          '<A',
+          'take3=zar',
+          'take4=mar',
+          '<B'
+        ]
+      );
       spy.mockRestore();
     });
   });
-  xdescribe('when we create a channel with a dropping buffer', () => {
+  describe('when we create a channel with a dropping buffer', () => {
     describe("and the buffer's size is 0", () => {
-      it("shouldn't block", async () => {
+      it("shouldn't block the puts but only the takes", async () => {
         const ch = chan(buffer.dropping());
-
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        log(ch.put('foo'), 'a', true);
-        log(ch.put('bar'), 'b', true);
-        log(ch.put('zar'), 'c', true);
-        expect(ch.__value()).toStrictEqual(['foo']);
-        log(ch.take(), 'd');
-        expect(ch.__value()).toStrictEqual([]);
-        log(ch.take(), 'e');
-        log(ch.take(), 'g');
-        log(ch.take(), 'h');
-        log(ch.put('mar'), 'f');
-
-        await delay(5);
-        expect(log.dump()).toStrictEqual([
-          'a true',
-          'b false',
-          'c false',
-          'd',
-          'e',
-          'f'
-        ]);
+        await exercise(
+          Test(
+            async function A(log) {
+              log(`value=${ch.__value().toString()}`);
+              log(`put1=${(await ch.put('foo')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              log(`put2=${(await ch.put('bar')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              log(`put3=${(await ch.put('zar')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              await delay(10);
+              log(`put4=${(await ch.put('final')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+            },
+            async function B(log) {
+              await delay(5);
+              log('---');
+              log(`take1=${(await ch.take()).toString()}`);
+              log(`take2=${(await ch.take()).toString()}`);
+            }
+          ),
+          [
+            '>A',
+            'value=',
+            '>B',
+            'put1=true',
+            'value=foo',
+            'put2=false',
+            'value=foo',
+            'put3=false',
+            'value=foo',
+            '---',
+            'take1=foo',
+            'take2=final',
+            'put4=true',
+            'value=',
+            '<B',
+            '<A'
+          ]
+        );
         spy.mockRestore();
       });
     });
     describe("and the buffer's size is > 0", () => {
-      it("shouldn't block", async () => {
+      it("shouldn't block and it should buffer more values", async () => {
         const ch = chan(buffer.dropping(2));
-
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        log(ch.put('foo'), 'a');
-        log(ch.put('bar'), 'b');
-        log(ch.put('zar'), 'c');
-        log(ch.put('mar'), 'd');
-        expect(ch.__value()).toStrictEqual(['foo', 'bar']);
-        log(ch.take(), 'e');
-        expect(ch.__value()).toStrictEqual(['bar']);
-        log(ch.take(), 'f');
-        expect(ch.__value()).toStrictEqual([]);
-        log(ch.take(), 'g');
-        log(ch.put('mar'), 'h');
-        expect(ch.__value()).toStrictEqual([]);
-
-        await delay(5);
-        expect(log.dump()).toStrictEqual([
-          'a',
-          'b',
-          'c',
-          'd',
-          'e',
-          'f',
-          'g',
-          'h'
-        ]);
+        await exercise(
+          Test(
+            async function A(log) {
+              log(`value=${ch.__value().toString()}`);
+              log(`put1=${(await ch.put('foo')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              log(`put2=${(await ch.put('bar')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              log(`put3=${(await ch.put('zar')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              await delay(10);
+              log(`put4=${(await ch.put('final')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+            },
+            async function B(log) {
+              await delay(5);
+              log('---');
+              log(`take1=${(await ch.take()).toString()}`);
+              log(`take2=${(await ch.take()).toString()}`);
+              log(`take3=${(await ch.take()).toString()}`);
+            }
+          ),
+          [
+            '>A',
+            'value=',
+            '>B',
+            'put1=true',
+            'value=foo',
+            'put2=true',
+            'value=foo,bar',
+            'put3=false',
+            'value=foo,bar',
+            '---',
+            'take1=foo',
+            'take2=bar',
+            'take3=final',
+            'put4=true',
+            'value=',
+            '<B',
+            '<A'
+          ]
+        );
         spy.mockRestore();
       });
     });
   });
-  xdescribe('when we create a channel with a sliding buffer', () => {
+  describe('when we create a channel with a sliding buffer', () => {
     describe("and the buffer's size is 0", () => {
-      it("shouldn't block", async () => {
+      it("shouldn't block but keep the latest pushed value", async () => {
         const ch = chan(buffer.sliding());
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        log(ch.put('foo'), 'a');
-        expect(ch.__value()).toStrictEqual(['foo']);
-        log(ch.put('bar'), 'b');
-        expect(ch.__value()).toStrictEqual(['bar']);
-        log(ch.put('zar'), 'c');
-        expect(ch.__value()).toStrictEqual(['zar']);
-        log(ch.take(), 'd');
-        expect(ch.__value()).toStrictEqual([]);
-        log(ch.take(), 'e');
-        log(ch.take(), 'g');
-        log(ch.take(), 'h');
-        log(ch.put('mar'), 'f');
-
-        await delay(5);
-        expect(log.dump()).toStrictEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+        await exercise(
+          Test(
+            async function A(log) {
+              log(`value=${ch.__value().toString()}`);
+              log(`put1=${(await ch.put('foo')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              log(`put2=${(await ch.put('bar')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              log(`put3=${(await ch.put('zar')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              await delay(10);
+              log(`put4=${(await ch.put('final')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+            },
+            async function B(log) {
+              await delay(5);
+              log('---');
+              log(`take1=${(await ch.take()).toString()}`);
+              log(`take2=${(await ch.take()).toString()}`);
+            }
+          ),
+          [
+            '>A',
+            'value=',
+            '>B',
+            'put1=true',
+            'value=foo',
+            'put2=true',
+            'value=bar',
+            'put3=true',
+            'value=zar',
+            '---',
+            'take1=zar',
+            'take2=final',
+            'put4=true',
+            'value=',
+            '<B',
+            '<A'
+          ]
+        );
         spy.mockRestore();
       });
     });
@@ -290,36 +367,51 @@ describe('Given a CSP channel', () => {
         const ch = chan(buffer.sliding(2));
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        log(ch.put('foo'), 'a');
-        log(ch.put('bar'), 'b');
-        log(ch.put('zar'), 'c');
-        expect(ch.__value()).toStrictEqual(['bar', 'zar']);
-        log(ch.put('mar'), 'd');
-        expect(ch.__value()).toStrictEqual(['zar', 'mar']);
-        log(ch.take(), 'e');
-        expect(ch.__value()).toStrictEqual(['mar']);
-        log(ch.take(), 'f');
-        expect(ch.__value()).toStrictEqual([]);
-        log(ch.take(), 'g');
-        log(ch.put('boo'), 'h');
-        expect(ch.__value()).toStrictEqual([]);
-
-        await delay(5);
-        expect(log.dump()).toStrictEqual([
-          'a',
-          'b',
-          'c',
-          'd',
-          'e',
-          'f',
-          'g',
-          'h'
-        ]);
+        await exercise(
+          Test(
+            async function A(log) {
+              log(`value=${ch.__value().toString()}`);
+              log(`put1=${(await ch.put('foo')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              log(`put2=${(await ch.put('bar')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              log(`put3=${(await ch.put('zar')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+              await delay(10);
+              log(`put4=${(await ch.put('final')).toString()}`);
+              log(`value=${ch.__value().toString()}`);
+            },
+            async function B(log) {
+              await delay(5);
+              log('---');
+              log(`take1=${(await ch.take()).toString()}`);
+              log(`take2=${(await ch.take()).toString()}`);
+            }
+          ),
+          [
+            '>A',
+            'value=',
+            '>B',
+            'put1=true',
+            'value=foo',
+            'put2=true',
+            'value=foo,bar',
+            'put3=true',
+            'value=bar,zar',
+            '---',
+            'take1=bar',
+            'take2=zar',
+            '<B',
+            'put4=true',
+            'value=final',
+            '<A'
+          ]
+        );
         spy.mockRestore();
       });
     });
   });
-  xdescribe('when we create a channel with a reducer buffer', () => {
+  describe('when we create a channel with a reducer buffer', () => {
     it('should be blocking and should allow us to provide a reducer function', async () => {
       const reducerSpy = jest.fn();
       const ch = chan(
@@ -330,14 +422,32 @@ describe('Given a CSP channel', () => {
       );
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-      log(ch.put(20), 'a');
-      log(ch.take(), 'take', true);
-      log(ch.take(), 'take', true);
-      log(ch.put(5), 'b');
-      log(ch.put(3), 'c');
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await ch.put(20)).toString()}`);
+            log(`put2=${(await ch.put(5)).toString()}`);
+            log(`put3=${(await ch.put(3)).toString()}`);
+          },
+          async function B(log) {
+            await delay(5);
+            log(`take1=${(await ch.take()).toString()}`);
+            log(`take2=${(await ch.take()).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'put1=true',
+          'put2=true',
+          'put3=true',
+          '<A',
+          'take1=38',
+          'take2=38',
+          '<B'
+        ]
+      );
 
-      await delay(5);
-      expect(log.dump()).toStrictEqual(['a', 'take 35', 'b', 'take 38', 'c']);
       expect(reducerSpy).toBeCalledWithArgs([10], [30], [35]);
       spy.mockRestore();
     });
@@ -345,7 +455,7 @@ describe('Given a CSP channel', () => {
 
   // pipe, merge, alt
 
-  xdescribe('when we pipe channels', () => {
+  describe('when we pipe channels', () => {
     it('should pipe from one channel to another', async () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
@@ -359,55 +469,73 @@ describe('Given a CSP channel', () => {
         )
         .pipe(ch4);
 
-      log(ch1.put('foo'), 'put foo');
-      log(ch1.put('bar'), 'put bar');
-      log(ch1.put('zar'), 'put zar');
-
-      log(ch2.take(), 'take ch2', true);
-      log(ch4.take(), 'take ch4', true);
-      log(ch4.take(), 'take ch4', true);
-      log(ch4.take(), 'take ch4', true);
-
-      await delay(5);
-      expect(log.dump()).toStrictEqual([
-        'put foo',
-        'take ch2 foo',
-        'put bar',
-        'take ch4 foo',
-        'put zar',
-        'take ch4 bar',
-        'take ch4 zar'
-      ]);
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await ch1.put('foo')).toString()}`);
+            log(`put2=${(await ch1.put('bar')).toString()}`);
+            log(`put3=${(await ch1.put('zar')).toString()}`);
+          },
+          async function B(log) {
+            log(`take1=${(await ch2.take()).toString()}`);
+            log(`take2=${(await ch4.take()).toString()}`);
+            log(`take3=${(await ch4.take()).toString()}`);
+            log(`take4=${(await ch4.take()).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'put1=true',
+          'take1=foo',
+          'put2=true',
+          'take2=foo',
+          'put3=true',
+          'take3=bar',
+          '<A',
+          'take4=zar',
+          '<B'
+        ]
+      );
     });
   });
-  xdescribe('when we merge channels', () => {
+  describe('when we merge channels', () => {
     it('should merge two and more into a single channel', async () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
       const ch3 = chan('ch3');
       const ch4 = chan.merge(ch1, ch2, ch3);
 
-      log(ch1.put('foo'), 'put foo');
-      log(ch2.put('bar'), 'put bar');
-      log(ch3.put('zar'), 'put zar');
-      log(ch2.put('moo'), 'put moo');
-
-      log(ch4.take(), 'take ch4', true);
-      log(ch4.take(), 'take ch4', true);
-      log(ch4.take(), 'take ch4', true);
-      log(ch4.take(), 'take ch4', true);
-
-      await delay(5);
-      expect(log.dump()).toStrictEqual([
-        'put foo',
-        'put bar',
-        'put zar',
-        'take ch4 foo',
-        'take ch4 bar',
-        'put moo',
-        'take ch4 zar',
-        'take ch4 moo'
-      ]);
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await ch1.put('foo')).toString()}`);
+            log(`put2=${(await ch2.put('bar')).toString()}`);
+            log(`put3=${(await ch3.put('zar')).toString()}`);
+            log(`put4=${(await ch4.put('moo')).toString()}`);
+          },
+          async function B(log) {
+            log(`take1=${(await ch4.take()).toString()}`);
+            log(`take2=${(await ch4.take()).toString()}`);
+            log(`take3=${(await ch4.take()).toString()}`);
+            log(`take4=${(await ch4.take()).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'put1=true',
+          'take1=foo',
+          'put2=true',
+          'take2=bar',
+          'put3=true',
+          'take3=zar',
+          'put4=true',
+          'take4=moo',
+          '<A',
+          '<B'
+        ]
+      );
     });
   });
   xdescribe('when we use the alt method', () => {
