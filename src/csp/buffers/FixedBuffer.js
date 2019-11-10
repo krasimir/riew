@@ -2,38 +2,37 @@ import BufferInterface from './Interface';
 
 export default function FixedBuffer(size = 0) {
   const api = BufferInterface();
-  const { value, takes, puts } = api;
 
   api.put = item => {
-    if (takes.length === 0) {
-      if (value.length < size) {
-        value.push(item);
+    if (api.takes.length === 0) {
+      if (api.value.length < size) {
+        api.value.push(item);
         return Promise.resolve(true);
       }
       return new Promise(resolve => {
-        puts.push(v => {
-          value.push(item);
+        api.puts.push(v => {
+          api.value.push(item);
           resolve(v || true);
         });
       });
     }
-    value.push(item);
+    api.value.push(item);
     return new Promise(resolve => {
       resolve(true);
-      takes.shift()(value.shift());
+      api.takes.shift()(api.value.shift());
     });
   };
   api.take = () => {
-    if (value.length === 0) {
-      if (puts.length === 0) {
-        return new Promise(resolve => takes.push(resolve));
+    if (api.value.length === 0) {
+      if (api.puts.length === 0) {
+        return new Promise(resolve => api.takes.push(resolve));
       }
-      puts.shift()();
+      api.puts.shift()();
       return api.take();
     }
-    const v = value.shift();
-    if (value.length < size && puts.length > 0) {
-      puts.shift()();
+    const v = api.value.shift();
+    if (api.value.length < size && api.puts.length > 0) {
+      api.puts.shift()();
     }
     return Promise.resolve(v);
   };

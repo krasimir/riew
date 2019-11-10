@@ -1,7 +1,6 @@
 import { chan, buffer } from '../channel';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
-import { CLOSED, ENDED } from '../buffers/states';
 
 async function Test(...routines) {
   const log = [];
@@ -538,27 +537,117 @@ describe('Given a CSP channel', () => {
       );
     });
   });
-  xdescribe('when we use the alt method', () => {
-    it('should block till one of the operations is resolved', async () => {
-      const ch1 = chan();
-      const ch2 = chan();
-
-      log(chan.alt(ch1.put('foo')));
-    });
-  });
 
   // timeout
 
-  xdescribe('when we use the timeout method', () => {
+  describe('when we use the timeout method', () => {
     it('should create a channel that is self closing after X amount of time', async () => {
-      const ch = chan.timeout(30);
-      const spy = jest.fn();
+      const ch = chan.timeout(10);
 
-      ch.take().then(spy);
-      expect(ch.state()).toBe(chan.OPEN);
-      await delay(40);
-      expect(ch.state()).toBe(chan.ENDED);
-      expect(spy).toBeCalledWithArgs([chan.CLOSED]);
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await ch.put('foo')).toString()}`);
+            await delay(20);
+            log(`put2=${(await ch.put('bar')).toString()}`);
+          },
+          async function B(log) {
+            await delay(20);
+            log(`take1=${(await ch.take()).toString()}`);
+            log(`take2=${(await ch.take()).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'put1=Symbol(CLOSED)',
+          'take1=foo',
+          'take2=Symbol(ENDED)',
+          '<B',
+          'put2=Symbol(ENDED)',
+          '<A'
+        ]
+      );
+    });
+  });
+
+  // reset
+
+  describe('when we use the reset method', () => {
+    it('should put the channel in its initial state', async () => {
+      const ch = chan(buffer.sliding(2));
+      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await ch.put('foo')).toString()}`);
+            log(`value=${ch.__value().toString()}`);
+            log(`put2=${(await ch.put('bar')).toString()}`);
+            log(`value=${ch.__value().toString()}`);
+            log(`put3=${(await ch.put('zar')).toString()}`);
+            log(`value=${ch.__value().toString()}`);
+            await delay(10);
+            log(`put4=${(await ch.put('mar')).toString()}`);
+            log(`value=${ch.__value().toString()}`);
+          },
+          async function B(log) {
+            await delay(5);
+            ch.reset();
+            log('reset');
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'put1=true',
+          'value=foo',
+          'put2=true',
+          'value=foo,bar',
+          'put3=true',
+          'value=bar,zar',
+          'reset',
+          '<B',
+          'put4=true',
+          'value=mar',
+          '<A'
+        ]
+      );
+      spy.mockReset();
+    });
+  });
+
+  // withValue
+
+  describe('when we use the withValue method', () => {
+    it('should pre-set the value of the channel', async () => {
+      const ch = chan(buffer.fixed(2)).withValue('foo', 'bar');
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+            log(`take2=${(await ch.take()).toString()}`);
+            log(`take3=${(await ch.take()).toString()}`);
+          },
+          async function B(log) {
+            await delay(5);
+            log('B put');
+            log(`put=${(await ch.put('zar')).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'take1=foo',
+          'take2=bar',
+          'B put',
+          'take3=zar',
+          'put=true',
+          '<A',
+          '<B'
+        ]
+      );
     });
   });
 });

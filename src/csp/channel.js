@@ -49,7 +49,10 @@ export function chan(...args) {
   };
   api.open = () => (state = OPEN);
   api.setBuffer = b => (buff = b);
-
+  api.reset = () => {
+    state = OPEN;
+    buff.reset();
+  };
   api.pipe = (...channels) => {
     (function pipe() {
       api.take().then(v => {
@@ -60,6 +63,10 @@ export function chan(...args) {
       });
     })();
     return channels[channels.length - 1];
+  };
+  api.withValue = (...values) => {
+    buff.value = values;
+    return api;
   };
 
   api.__value = () => {

@@ -5,6 +5,11 @@ export default function BufferInterface() {
     takes: [],
     isEmpty() {
       return this.value.length === 0;
+    },
+    reset() {
+      this.value = [];
+      this.puts = [];
+      this.takes = [];
     }
   };
 }

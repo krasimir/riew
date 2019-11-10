@@ -2,28 +2,27 @@ import BufferInterface from './Interface';
 
 export default function DroppingBuffer(size = 1, sliding = false) {
   const api = BufferInterface();
-  const { value, takes } = api;
 
   api.put = item => {
     let r = Promise.resolve(true);
-    if (value.length < size) {
-      value.push(item);
+    if (api.value.length < size) {
+      api.value.push(item);
     } else if (sliding) {
-      value.shift();
-      value.push(item);
+      api.value.shift();
+      api.value.push(item);
     } else {
       r = Promise.resolve(false);
     }
-    if (takes.length > 0) {
-      takes.shift()(value.shift());
+    if (api.takes.length > 0) {
+      api.takes.shift()(api.value.shift());
     }
     return r;
   };
   api.take = () => {
-    if (value.length === 0) {
-      return new Promise(resolve => takes.push(resolve));
+    if (api.value.length === 0) {
+      return new Promise(resolve => api.takes.push(resolve));
     }
-    const v = value.shift();
+    const v = api.value.shift();
     return Promise.resolve(v);
   };
 
