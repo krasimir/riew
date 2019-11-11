@@ -3,6 +3,8 @@ import FixedBuffer from './buffers/FixedBuffer';
 import DroppingBuffer from './buffers/DroppingBuffer';
 import ReducerBuffer from './buffers/ReducerBuffer';
 import { OPEN, CLOSED, ENDED } from './buffers/states';
+import pipe from './ops/pipe';
+import filter from './ops/filter';
 
 export const buffer = {
   fixed: FixedBuffer,
@@ -15,7 +17,6 @@ export function chan(...args) {
   let state = OPEN;
   let [id, buff] = normalizeChannelArguments(args);
   let api = { id };
-  let pipes = [];
 
   function calculateState() {
     if (state === CLOSED && buff.isEmpty()) {
@@ -28,6 +29,9 @@ export function chan(...args) {
 
     return s !== CLOSED && s !== ENDED;
   }
+
+  pipe(api);
+  filter(api);
 
   api.put = item => {
     if (!isAccepting()) {
@@ -54,36 +58,9 @@ export function chan(...args) {
     state = OPEN;
     buff.reset();
   };
-  api.pipe = (...channels) => {
-    let firstTime = pipes.length === 0;
-    pipes = pipes.concat(channels);
-    if (firstTime) {
-      (async function listen() {
-        let v;
-        while (v !== CLOSED && v !== ENDED) {
-          v = await api.take();
-          pipes.forEach(ch => ch.put(v));
-        }
-      })();
-    }
-    return api;
-  };
   api.withValue = (...values) => {
     buff.value = values;
     return api;
-  };
-  api.filter = func => {
-    const newChan = chan();
-    (async function listen() {
-      let v;
-      while (v !== CLOSED && v !== ENDED) {
-        v = await api.take();
-        if (func(v)) {
-          newChan.put(v);
-        }
-      }
-    })();
-    return newChan;
   };
 
   api.__value = () => {
