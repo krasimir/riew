@@ -1,4 +1,4 @@
-import { CLOSED, ENDED } from '../buffers/states';
+import { CLOSED, ENDED, OPEN } from '../buffers/states';
 
 export default function pipe(api) {
   let pipes = [];
@@ -11,7 +11,11 @@ export default function pipe(api) {
         let v;
         while (v !== CLOSED && v !== ENDED) {
           v = await api.take();
-          pipes.forEach(ch => ch.put(v));
+          pipes.forEach(ch => {
+            if (ch.state() === OPEN) {
+              ch.put(v);
+            }
+          });
         }
       })();
     }

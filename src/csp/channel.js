@@ -76,13 +76,12 @@ chan.merge = function (...channels) {
   const newCh = chan();
 
   channels.map(ch => {
-    (function merge() {
-      ch.take().then(v => {
-        if (newCh.state() === OPEN) {
-          newCh.put(v);
-          merge();
-        }
-      });
+    (async function listen() {
+      let v;
+      while (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
+        v = await ch.take();
+        newCh.put(v);
+      }
     })();
   });
 
