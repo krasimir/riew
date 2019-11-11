@@ -452,47 +452,66 @@ describe('Given a CSP channel', () => {
     });
   });
 
-  // pipe, merge, alt
+  // pipe, merge
 
   describe('when we pipe channels', () => {
-    it('should pipe from one channel to another', async () => {
+    it('should distribute a single value to multiple channels', async () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const ch3 = chan();
+
+      ch1.pipe(ch2);
+      ch1.pipe(ch3);
+
+      await exercise(
+        Test(
+          async function A(log) {
+            ch2.take().then(v => log(`take_ch2=${v}`));
+            ch3.take().then(v => log(`take_ch3=${v}`));
+            await delay(5);
+          },
+          async function B() {
+            ch1.put('foo');
+          }
+        ),
+        ['>A', '>B', '<B', 'take_ch2=foo', 'take_ch3=foo', '<A']
+      );
+    });
+    it('should support nested piping', async () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
       const ch3 = chan('ch3');
       const ch4 = chan('ch4');
 
-      ch1
-        .pipe(
-          ch2,
-          ch3
-        )
-        .pipe(ch4);
+      ch1.pipe(
+        ch2,
+        ch3
+      );
+      ch2.pipe(ch4);
 
       await exercise(
         Test(
           async function A(log) {
-            log(`put1=${(await ch1.put('foo')).toString()}`);
-            log(`put2=${(await ch1.put('bar')).toString()}`);
-            log(`put3=${(await ch1.put('zar')).toString()}`);
+            await ch1.put('foo');
+            await ch1.put('bar');
+            await ch1.put('zar');
           },
           async function B(log) {
-            log(`take1=${(await ch2.take()).toString()}`);
-            log(`take2=${(await ch4.take()).toString()}`);
-            log(`take3=${(await ch4.take()).toString()}`);
-            log(`take4=${(await ch4.take()).toString()}`);
+            ch1.take().then(v => log(`take_ch1=${v}`));
+            ch2.take().then(v => log(`take_ch2=${v}`));
+            ch3.take().then(v => log(`take_ch3=${v}`));
+            ch4.take().then(v => log(`take_ch4=${v}`));
+            await delay(10);
           }
         ),
         [
           '>A',
           '>B',
-          'put1=true',
-          'take1=foo',
-          'put2=true',
-          'take2=foo',
-          'put3=true',
-          'take3=bar',
+          'take_ch3=foo',
+          'take_ch1=bar',
+          'take_ch4=foo',
+          'take_ch2=zar',
           '<A',
-          'take4=zar',
           '<B'
         ]
       );
@@ -644,6 +663,45 @@ describe('Given a CSP channel', () => {
           'B put',
           'take3=zar',
           'put=true',
+          '<A',
+          '<B'
+        ]
+      );
+    });
+  });
+
+  // filter
+
+  describe('when we use the filter method', () => {
+    it('should return a new channel that only receives the filtered data', async () => {
+      const ch1 = chan();
+      const ch2 = ch1.filter(v => v > 10);
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await ch1.put(5)).toString()}`);
+            log(`put2=${(await ch1.put(12)).toString()}`);
+            log(`put3=${(await ch1.put(20)).toString()}`);
+            log(`put4=${(await ch1.put(4)).toString()}`);
+          },
+          async function B(log) {
+            ch2.take().then(v => log(`take1=${v}`));
+            ch2.take().then(v => log(`take2=${v}`));
+            ch2.take().then(v => log(`take3=${v}`)); // not happening
+            ch2.take().then(v => log(`take4=${v}`)); // not happening
+            await delay(5);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'put1=true',
+          'put2=true',
+          'take1=12',
+          'put3=true',
+          'take2=20',
+          'put4=true',
           '<A',
           '<B'
         ]

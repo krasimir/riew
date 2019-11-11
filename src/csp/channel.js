@@ -15,6 +15,7 @@ export function chan(...args) {
   let state = OPEN;
   let [id, buff] = normalizeChannelArguments(args);
   let api = { id };
+  let pipes = [];
 
   function calculateState() {
     if (state === CLOSED && buff.isEmpty()) {
@@ -54,19 +55,35 @@ export function chan(...args) {
     buff.reset();
   };
   api.pipe = (...channels) => {
-    (function pipe() {
-      api.take().then(v => {
-        channels.map(ch => ch.put(v));
-        if (state === OPEN) {
-          pipe();
+    let firstTime = pipes.length === 0;
+    pipes = pipes.concat(channels);
+    if (firstTime) {
+      (async function listen() {
+        let v;
+        while (v !== CLOSED && v !== ENDED) {
+          v = await api.take();
+          pipes.forEach(ch => ch.put(v));
         }
-      });
-    })();
-    return channels[channels.length - 1];
+      })();
+    }
+    return api;
   };
   api.withValue = (...values) => {
     buff.value = values;
     return api;
+  };
+  api.filter = func => {
+    const newChan = chan();
+    (async function listen() {
+      let v;
+      while (v !== CLOSED && v !== ENDED) {
+        v = await api.take();
+        if (func(v)) {
+          newChan.put(v);
+        }
+      }
+    })();
+    return newChan;
   };
 
   api.__value = () => {
