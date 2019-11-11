@@ -1,10 +1,10 @@
-import { getId } from '../utils';
-import FixedBuffer from './buffers/FixedBuffer';
-import DroppingBuffer from './buffers/DroppingBuffer';
-import ReducerBuffer from './buffers/ReducerBuffer';
-import { OPEN, CLOSED, ENDED } from './buffers/states';
-import pipe from './ops/pipe';
-import filter from './ops/filter';
+import { getId } from "../utils";
+import FixedBuffer from "./buffers/FixedBuffer";
+import DroppingBuffer from "./buffers/DroppingBuffer";
+import ReducerBuffer from "./buffers/ReducerBuffer";
+import { OPEN, CLOSED, ENDED } from "./buffers/states";
+import pipe from "./ops/pipe";
+import filter from "./ops/filter";
 
 export const buffer = {
   fixed: FixedBuffer,
@@ -72,7 +72,7 @@ export function chan(...args) {
 
   return api;
 }
-chan.merge = function (...channels) {
+chan.merge = function(...channels) {
   const newCh = chan();
 
   channels.map(ch => {
@@ -87,7 +87,7 @@ chan.merge = function (...channels) {
 
   return newCh;
 };
-chan.timeout = function (interval) {
+chan.timeout = function(interval) {
   const ch = chan();
   setTimeout(() => ch.close(), interval);
   return ch;
@@ -101,14 +101,14 @@ function normalizeChannelArguments(args) {
   if (args.length === 2) {
     id = args[0];
     buff = args[1];
-  } else if (args.length === 1 && typeof args[0] === 'string') {
+  } else if (args.length === 1 && typeof args[0] === "string") {
     id = args[0];
     buff = buffer.fixed();
-  } else if (args.length === 1 && typeof args[0] === 'object') {
-    id = getId('ch');
+  } else if (args.length === 1 && typeof args[0] === "object") {
+    id = getId("ch");
     buff = args[0];
   } else {
-    id = getId('ch');
+    id = getId("ch");
     buff = buffer.fixed();
   }
   return [id, buff];
