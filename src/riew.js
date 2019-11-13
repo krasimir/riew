@@ -17,7 +17,7 @@ function normalizeExternalsMap(arr) {
 export default function createRiew(viewFunc, ...controllers) {
   const instance = {
     id: getId('r'),
-    name: getFuncName(viewFunc)
+    name: getFuncName(viewFunc),
   };
   let active = false;
   let internalStates = [];
@@ -27,38 +27,52 @@ export default function createRiew(viewFunc, ...controllers) {
   let data = state({});
 
   const updateData = data.mutate((current, newStuff) => {
-    if (newStuff === null || (typeof newStuff !== 'undefined' && typeof newStuff !== 'object')) {
-      throw new Error(`A key-value object expected. Instead "${ newStuff }" passed.`);
+    if (
+      newStuff === null ||
+      (typeof newStuff !== 'undefined' && typeof newStuff !== 'object')
+    ) {
+      throw new Error(
+        `A key-value object expected. Instead "${newStuff}" passed.`
+      );
     }
     // console.log('updateData', newStuff);
     return { ...current, ...newStuff };
   });
-  const render = data.map(newStuff => {
-    let result = {};
+  const render = data
+    .map(newStuff => {
+      let result = {};
 
-    Object.keys(newStuff).forEach(key => {
-      if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
-        const effect = newStuff[key];
-        const state = grid.getNodeById(effect.stateId);
+      Object.keys(newStuff).forEach(key => {
+        if (isEffect(newStuff[key]) && !newStuff[key].isMutating()) {
+          const effect = newStuff[key];
+          const state = grid.getNodeById(effect.stateId);
 
-        result[key] = effect();
-        if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
-        subscriptions[effect.stateId][key] = effect;
-        grid.subscribe(instance).to(state).when(
-          STATE_VALUE_CHANGE,
-          () => {
-            updateData(Object.keys(subscriptions[effect.stateId]).reduce((effectsResult, key) => {
-              effectsResult[key] = subscriptions[effect.stateId][key]();
-              return effectsResult;
-            }, {}));
-          }
-        );
-      } else {
-        result[key] = newStuff[key];
-      }
-    });
-    return result;
-  }).filter(() => active).pipe(viewFunc);
+          result[key] = effect();
+          if (!subscriptions[effect.stateId])
+            subscriptions[effect.stateId] = {};
+          subscriptions[effect.stateId][key] = effect;
+          grid
+            .subscribe(instance)
+            .to(state)
+            .when(STATE_VALUE_CHANGE, () => {
+              updateData(
+                Object.keys(subscriptions[effect.stateId]).reduce(
+                  (effectsResult, key) => {
+                    effectsResult[key] = subscriptions[effect.stateId][key]();
+                    return effectsResult;
+                  },
+                  {}
+                )
+              );
+            });
+        } else {
+          result[key] = newStuff[key];
+        }
+      });
+      return result;
+    })
+    .filter(() => active)
+    .pipe(viewFunc);
 
   function processExternals() {
     Object.keys(externals).forEach(key => {
@@ -92,9 +106,9 @@ export default function createRiew(viewFunc, ...controllers) {
 
         internalStates.push(s);
         return s;
-      }
+      },
     });
-    let done = (result) => (onUnmountCallbacks = result || []);
+    let done = result => (onUnmountCallbacks = result || []);
 
     if (isPromise(controllersResult)) {
       controllersResult.then(done);
@@ -106,7 +120,7 @@ export default function createRiew(viewFunc, ...controllers) {
     subscribe(render, true);
     return instance;
   };
-  instance.update = (newData) => {
+  instance.update = newData => {
     updateData(newData);
   };
   instance.unmount = () => {
@@ -114,7 +128,9 @@ export default function createRiew(viewFunc, ...controllers) {
     unsubscribe(render);
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
-    Object.keys(subscriptions).forEach(stateId => grid.unsubscribe(instance).from(grid.getNodeById(stateId)));
+    Object.keys(subscriptions).forEach(stateId =>
+      grid.unsubscribe(instance).from(grid.getNodeById(stateId))
+    );
     subscriptions = {};
     data.destroy();
     internalStates.forEach(destroy);
@@ -125,16 +141,16 @@ export default function createRiew(viewFunc, ...controllers) {
     instance.__setExternals(maps);
     return instance;
   };
-  instance.test = (map) => {
+  instance.test = map => {
     const newInstance = createRiew(viewFunc, ...controllers);
 
-    newInstance.__setExternals([ map ]);
+    newInstance.__setExternals([map]);
     return newInstance;
   };
-  instance.__setExternals = (maps) => {
+  instance.__setExternals = maps => {
     externals = { ...externals, ...normalizeExternalsMap(maps) };
   };
   instance.__data = data;
 
   return instance;
-};
+}

@@ -1,5 +1,6 @@
-import { CLOSED, ENDED, OPEN } from "../buffers/states";
-import { chan } from "../channel";
+import { CLOSED, ENDED, OPEN } from '../buffers/states';
+import { chan } from '../channel';
+import { chainOperations } from './index';
 
 export default function filter(api) {
   api.map = func => {
@@ -11,6 +12,6 @@ export default function filter(api) {
         newChan.put(func(v));
       }
     })();
-    return newChan;
+    return chainOperations(api);
   };
 }

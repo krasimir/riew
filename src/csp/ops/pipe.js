@@ -1,4 +1,5 @@
 import { CLOSED, ENDED, OPEN } from '../buffers/states';
+import { chainOperations } from './index';
 
 export default function pipe(api) {
   let pipes = [];
@@ -19,6 +20,6 @@ export default function pipe(api) {
         }
       })();
     }
-    return api;
+    return chainOperations(api);
   };
 }
