@@ -52,7 +52,10 @@
     "redux": "4.0.0",
     "regenerator-runtime": "0.12.1",
     "riew-logger": "0.1.2",
-    "terser": "4.2.1"
+    "terser": "4.2.1",
+    "eslint": "3.19.0",
+    "eslint-plugin-react": "3.16.1",
+    "babel-eslint": "9.0.0"
   },
   "dependencies": {
     "fast-deep-equal": "2.0.1"

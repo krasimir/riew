@@ -78,7 +78,7 @@ describe('Given a CSP channel', () => {
           'p3=Symbol(ENDED)',
           'take3=Symbol(ENDED)',
           '<A',
-          '<B',
+          '<B'
         ]
       );
     });
@@ -130,7 +130,7 @@ describe('Given a CSP channel', () => {
           'take2=bar',
           'put2=true',
           '<A',
-          '<B',
+          '<B'
         ]
       );
     });
@@ -156,7 +156,7 @@ describe('Given a CSP channel', () => {
           'put2=true',
           'take2=bar',
           '<A',
-          '<B',
+          '<B'
         ]
       );
     });
@@ -206,7 +206,7 @@ describe('Given a CSP channel', () => {
           '<A',
           'take3=zar',
           'take4=mar',
-          '<B',
+          '<B'
         ]
       );
       spy.mockRestore();
@@ -255,7 +255,7 @@ describe('Given a CSP channel', () => {
             'put4=true',
             'value=',
             '<B',
-            '<A',
+            '<A'
           ]
         );
         spy.mockRestore();
@@ -305,7 +305,7 @@ describe('Given a CSP channel', () => {
             'put4=true',
             'value=',
             '<B',
-            '<A',
+            '<A'
           ]
         );
         spy.mockRestore();
@@ -355,7 +355,7 @@ describe('Given a CSP channel', () => {
             'put4=true',
             'value=',
             '<B',
-            '<A',
+            '<A'
           ]
         );
         spy.mockRestore();
@@ -403,7 +403,7 @@ describe('Given a CSP channel', () => {
             '<B',
             'put4=true',
             'value=final',
-            '<A',
+            '<A'
           ]
         );
         spy.mockRestore();
@@ -443,7 +443,7 @@ describe('Given a CSP channel', () => {
           '<A',
           'take1=38',
           'take2=38',
-          '<B',
+          '<B'
         ]
       );
 
@@ -488,7 +488,7 @@ describe('Given a CSP channel', () => {
           'put4=true',
           'take4=moo',
           '<A',
-          '<B',
+          '<B'
         ]
       );
     });
@@ -497,27 +497,29 @@ describe('Given a CSP channel', () => {
   // pipe
 
   describe('when we pipe channels', () => {
-    fit('should distribute a single value to multiple channels', async () => {
+    it('should distribute a single value to multiple channels', async () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
-      const p1 = ch1.pipe(ch2);
-      const p2 = p1.pipe(ch3);
+      ch1.pipe(ch2);
+      ch2.pipe(ch3);
 
       await exercise(
         Test(
           async function A(log) {
             ch2.take().then(v => log(`take_ch2=${v}`));
             ch3.take().then(v => log(`take_ch3=${v}`));
+            ch3.take().then(v => log(`take_ch3=${v}`));
             await delay(5);
           },
           async function B() {
-            p1('foo');
-            p2('foo');
+            ch1.put('foo');
+            ch1.put('bar');
+            ch1.put('zar');
           }
         ),
-        ['>A', '>B', '<B', 'take_ch2=foo', 'take_ch3=foo', '<A']
+        ['>A', '>B', '<B', 'take_ch3=foo', 'take_ch2=bar', 'take_ch3=zar', '<A']
       );
     });
     it('should support nested piping', async () => {
@@ -526,7 +528,10 @@ describe('Given a CSP channel', () => {
       const ch3 = chan('ch3');
       const ch4 = chan('ch4');
 
-      ch1.pipe(ch2, ch3);
+      ch1.pipe(
+        ch2,
+        ch3
+      );
       ch2.pipe(ch4);
 
       await exercise(
@@ -552,7 +557,7 @@ describe('Given a CSP channel', () => {
           'take_ch4=foo',
           'take_ch2=zar',
           '<A',
-          '<B',
+          '<B'
         ]
       );
     });
@@ -585,7 +590,7 @@ describe('Given a CSP channel', () => {
           'take2=Symbol(ENDED)',
           '<B',
           'put2=Symbol(ENDED)',
-          '<A',
+          '<A'
         ]
       );
     });
@@ -630,7 +635,7 @@ describe('Given a CSP channel', () => {
           '<B',
           'put4=true',
           'value=mar',
-          '<A',
+          '<A'
         ]
       );
       spy.mockReset();
@@ -665,7 +670,7 @@ describe('Given a CSP channel', () => {
           'take3=zar',
           'put=true',
           '<A',
-          '<B',
+          '<B'
         ]
       );
     });
@@ -704,7 +709,7 @@ describe('Given a CSP channel', () => {
           'take2=20',
           'put4=true',
           '<A',
-          '<B',
+          '<B'
         ]
       );
     });
@@ -745,7 +750,7 @@ describe('Given a CSP channel', () => {
           'put4=true',
           'take4=8',
           '<A',
-          '<B',
+          '<B'
         ]
       );
     });
