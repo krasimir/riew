@@ -25,7 +25,6 @@ export function chan(...args) {
   }
   function isAccepting() {
     const s = calculateState();
-
     return s !== CLOSED && s !== ENDED;
   }
 
@@ -59,6 +58,7 @@ export function chan(...args) {
     buff.value = values;
     return api;
   };
+  api.setBuffer = b => (buff = b);
 
   api.__value = () => {
     console.warn(
@@ -69,7 +69,7 @@ export function chan(...args) {
 
   return api;
 }
-chan.merge = function(...channels) {
+export function merge(...channels) {
   const newCh = chan();
 
   channels.map(ch => {
@@ -83,7 +83,7 @@ chan.merge = function(...channels) {
   });
 
   return newCh;
-};
+}
 chan.timeout = function(interval) {
   const ch = chan();
   setTimeout(() => ch.close(), interval);

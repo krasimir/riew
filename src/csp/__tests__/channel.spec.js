@@ -1,4 +1,4 @@
-import { chan, buffer } from '../channel';
+import { chan, buffer, merge } from '../channel';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
 
@@ -496,7 +496,7 @@ describe('Given a CSP channel', () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
       const ch3 = chan('ch3');
-      const ch4 = chan.merge(ch1, ch2, ch3);
+      const ch4 = merge(ch1, ch2, ch3);
 
       await exercise(
         Test(
