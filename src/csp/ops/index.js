@@ -1,11 +1,13 @@
-import pipe from "./pipe";
-import filter from "./filter";
-import map from "./map";
+import pipe from './pipe';
+import filter from './filter';
+import map from './map';
+import takeEvery from './takeEvery';
 
 const ops = {
   pipe,
   filter,
-  map
+  map,
+  takeEvery
 };
 
 export function defineOperations(ch) {

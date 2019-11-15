@@ -9,7 +9,7 @@ export const buffer = {
   fixed: FixedBuffer,
   dropping: DroppingBuffer,
   sliding: size => DroppingBuffer(size, true),
-  reducer: ReducerBuffer,
+  reducer: ReducerBuffer
 };
 
 export function chan(...args) {
@@ -51,7 +51,6 @@ export function chan(...args) {
     buff.takes.forEach(put => put(ENDED));
   };
   api.open = () => (state = OPEN);
-  api.setBuffer = b => (buff = b);
   api.reset = () => {
     state = OPEN;
     buff.reset();

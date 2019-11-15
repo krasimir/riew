@@ -411,7 +411,7 @@ describe('Given a CSP channel', () => {
     });
   });
   describe('when we create a channel with a reducer buffer', () => {
-    it('should be blocking and should allow us to provide a reducer function', async () => {
+    it('should behave like a fixed buffer with size 0 but should accumulate state value', async () => {
       const reducerSpy = jest.fn();
       const ch = chan(
         buffer.reducer((current = 10, data) => {
@@ -419,7 +419,6 @@ describe('Given a CSP channel', () => {
           return current + data;
         })
       );
-      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       await exercise(
         Test(
@@ -432,23 +431,61 @@ describe('Given a CSP channel', () => {
             await delay(5);
             log(`take1=${(await ch.take()).toString()}`);
             log(`take2=${(await ch.take()).toString()}`);
+            log(`take3=${(await ch.take()).toString()}`);
           }
         ),
         [
           '>A',
           '>B',
           'put1=true',
+          'take1=30',
           'put2=true',
+          'take2=35',
           'put3=true',
+          'take3=38',
           '<A',
-          'take1=38',
-          'take2=38',
           '<B'
         ]
       );
 
       expect(reducerSpy).toBeCalledWithArgs([10], [30], [35]);
-      spy.mockRestore();
+    });
+  });
+
+  // takeEvery
+
+  describe('when using the `takeEvery` method', () => {
+    it('should provide an API for streamed values', async () => {
+      const ch = chan('ch1');
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await ch.put('foo')).toString()}`);
+            log(`put2=${(await ch.put('bar')).toString()}`);
+            log(`put3=${(await ch.put('zar')).toString()}`);
+            ch.close();
+          },
+          async function B(log) {
+            ch.takeEvery(value => {
+              log(`take=${value.toString()}`);
+            });
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'put1=true',
+          'take=foo',
+          '<B',
+          'put2=true',
+          'take=bar',
+          'put3=true',
+          'take=zar',
+          '<A',
+          'take=Symbol(ENDED)'
+        ]
+      );
     });
   });
 

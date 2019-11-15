@@ -1,24 +1,33 @@
 import BufferInterface from './Interface';
 
-export default function FixedBuffer(reducer) {
+export default function ReducerBuffer(reducer) {
   const api = BufferInterface();
+  let v;
 
   api.put = item => {
-    api.value[0] = reducer(api.value[0], item);
+    if (api.takes.length === 0) {
+      return new Promise(resolve => {
+        api.puts.push(() => {
+          api.value.push((v = reducer(v, item)));
+          resolve(true);
+        });
+      });
+    }
+    api.value.push((v = reducer(v, item)));
     return new Promise(resolve => {
       resolve(true);
-      if (api.takes.length > 0) {
-        api.takes.shift()(api.value[0]);
-      }
+      api.takes.shift()(api.value.shift());
     });
   };
   api.take = () => {
-    if (api.value.length > 0) {
-      return Promise.resolve(api.value[0]);
+    if (api.value.length === 0) {
+      if (api.puts.length === 0) {
+        return new Promise(resolve => api.takes.push(resolve));
+      }
+      api.puts.shift()();
+      return api.take();
     }
-    return new Promise(resolve => {
-      api.takes.push(v => resolve(v));
-    });
+    return Promise.resolve(api.value.shift());
   };
 
   return api;

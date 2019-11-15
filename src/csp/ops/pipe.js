@@ -1,5 +1,4 @@
-import { CLOSED, ENDED, OPEN } from "../buffers/states";
-import { chainOperations } from "./index";
+import { CLOSED, ENDED, OPEN } from '../buffers/states';
 
 export default function pipe(ch) {
   let pipes = [];
