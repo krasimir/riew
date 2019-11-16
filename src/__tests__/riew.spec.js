@@ -89,7 +89,7 @@ describe('Given the `riew` factory function', () => {
         ]
       );
     });
-    xit('should send the state value to the view', () => {
+    it('should send the state value to the view', async () => {
       const view = jest.fn();
       const se = function ({ state, data }) {
         data({ s: state('foo') });
@@ -97,9 +97,10 @@ describe('Given the `riew` factory function', () => {
       const r = riew(view, se);
 
       r.mount();
-      expect(view).toBeCalledWithArgs([ { s: 'foo' } ]);
+      await delay();
+      expect(view).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ]);
     });
-    xit('should subscribe (only once) for the changes in the state and re-render the view', async () => {
+    it('should subscribe (only once) for the changes in the state and re-render the view', async () => {
       const view = jest.fn();
       const se = async function ({ state, data }) {
         const [ s, setState ] = state('foo');
@@ -114,16 +115,16 @@ describe('Given the `riew` factory function', () => {
 
       r.mount();
       await delay(4);
-      expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
+      expect(view).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
-    describe('when we have multiple effects produced by the same state', () => {
-      xit('should still subscribe all of them', async () => {
+    describe('when we have multiple channels produced', () => {
+      fit('should still subscribe all of them', async () => {
         const view = jest.fn();
         const controller = async function ({ state, data }) {
           const message = state('Hello World');
           const up = message.map(value => value.toUpperCase());
           const lower = message.map(value => value.toLowerCase());
-          const update = message.mutate(() => 'Chao');
+          const update = () => message.put('chao');
 
           data({ up, lower });
           await delay(3);
@@ -134,8 +135,9 @@ describe('Given the `riew` factory function', () => {
         const r = riew(view, controller);
 
         r.mount();
-        await delay(10);
+        await delay();
         expect(view).toBeCalledWithArgs(
+          [ {} ],
           [ { up: 'HELLO WORLD', lower: 'hello world' } ],
           [ { up: 'CHAO', lower: 'chao' } ],
           [ { up: 'CHAO', lower: 'chao', a: 10 } ]

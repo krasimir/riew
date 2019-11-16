@@ -5,7 +5,11 @@ export default function pipe(ch) {
 
   ch.pipe = (...channels) => {
     let firstTime = pipes.length === 0;
-    pipes = pipes.concat(channels);
+    channels.forEach(c => {
+      if (!pipes.includes(c)) {
+        pipes.push(c);
+      }
+    });
     if (firstTime) {
       (async function listen() {
         let v;

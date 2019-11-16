@@ -8,7 +8,7 @@ export default function ReducerBuffer(reducer) {
     if (api.takes.length === 0) {
       return new Promise(resolve => {
         api.puts.push(() => {
-          api.value.push((v = reducer(v, item)));
+          api.value = [ (v = reducer(v, item)) ];
           resolve(true);
         });
       });
@@ -24,7 +24,8 @@ export default function ReducerBuffer(reducer) {
       if (api.puts.length === 0) {
         return new Promise(resolve => api.takes.push(resolve));
       }
-      api.puts.shift()();
+      api.puts.forEach(p => p());
+      api.puts = [];
       return api.take();
     }
     return Promise.resolve(api.value.shift());

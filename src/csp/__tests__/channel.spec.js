@@ -421,6 +421,37 @@ describe('Given a CSP channel', () => {
 
       expect(reducerSpy).toBeCalledWithArgs([ 10 ], [ 30 ], [ 35 ]);
     });
+    describe('and we fire multiple puts one after each other', () => {
+      it('...', async () => {
+        const reducerSpy = jest.fn();
+        const ch = chan(
+          buffer.reducer((current = 0, data) => {
+            reducerSpy(current);
+            return current + data;
+          })
+        );
+
+        await exercise(
+          Test(
+            async function A(log) {
+              ch.put(10);
+              ch.put(20);
+              ch.put(30);
+              await delay(7);
+              ch.put(40);
+            },
+            async function B(log) {
+              await delay(5);
+              log(`take1=${(await ch.take()).toString()}`);
+              log(`take2=${(await ch.take()).toString()}`);
+            }
+          ),
+          [ '>A', '>B', 'take1=60', 'take2=100', '<A', '<B' ]
+        );
+
+        expect(reducerSpy).toBeCalledWithArgs([ 0 ], [ 10 ], [ 30 ], [ 60 ]);
+      });
+    });
   });
 
   // takeEvery
@@ -493,7 +524,7 @@ describe('Given a CSP channel', () => {
   // pipe
 
   describe('when we pipe channels', () => {
-    it('should distribute a single value to multiple channels', async () => {
+    fit('should distribute a single value to multiple channels', async () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
@@ -547,6 +578,35 @@ describe('Given a CSP channel', () => {
         ),
         [ '>A', '>B', 'take_ch3=foo', 'take_ch1=bar', 'take_ch4=foo', 'take_ch2=zar', '<A', '<B' ]
       );
+    });
+    describe('and we pipe multiple times to the same channel', () => {
+      it('should consider only the first pipe call', async () => {
+        const ch1 = chan('ch1');
+        const ch2 = chan('ch2');
+
+        ch1.pipe(ch2);
+        ch1.pipe(ch2);
+        ch1.pipe(ch2);
+
+        await exercise(
+          Test(
+            async function A(log) {
+              await ch1.put('foo');
+              await ch1.put('bar');
+              await ch1.put('zar');
+            },
+            async function B(log) {
+              ch2.take().then(v => log(`take_ch1=${v}`));
+              ch2.take().then(v => log(`take_ch2=${v}`));
+              ch2.take().then(v => log(`take_ch3=${v}`));
+              ch2.take().then(v => log(`take_ch4=${v}`));
+              ch2.take().then(v => log(`take_ch4=${v}`));
+              await delay(10);
+            }
+          ),
+          [ '>A', '>B', 'take_ch1=foo', 'take_ch2=bar', 'take_ch3=zar', '<A', '<B' ]
+        );
+      });
     });
   });
 
@@ -739,40 +799,26 @@ describe('Given a CSP channel', () => {
   // map
 
   describe('when we use the map method', () => {
-    it('should return a new channel that only receives the filtered data', async () => {
+    it('should return a new channel that receives the mapped data', async () => {
       const ch1 = chan();
       const ch2 = ch1.map(v => v * 2);
+      const ch3 = ch1.map(v => v * 3);
 
       await exercise(
         Test(
           async function A(log) {
             log(`put1=${(await ch1.put(5)).toString()}`);
             log(`put2=${(await ch1.put(12)).toString()}`);
-            log(`put3=${(await ch1.put(20)).toString()}`);
-            log(`put4=${(await ch1.put(4)).toString()}`);
           },
           async function B(log) {
-            ch2.take().then(v => log(`take1=${v}`));
-            ch2.take().then(v => log(`take2=${v}`));
-            ch2.take().then(v => log(`take3=${v}`));
-            ch2.take().then(v => log(`take4=${v}`));
+            ch2.take().then(v => log(`take2_1=${v}`));
+            ch2.take().then(v => log(`take2_2=${v}`));
+            ch3.take().then(v => log(`take3_1=${v}`));
+            ch3.take().then(v => log(`take3_2=${v}`));
             await delay(5);
           }
         ),
-        [
-          '>A',
-          '>B',
-          'put1=true',
-          'take1=10',
-          'put2=true',
-          'take2=24',
-          'put3=true',
-          'take3=40',
-          'put4=true',
-          'take4=8',
-          '<A',
-          '<B'
-        ]
+        [ '>A', '>B', 'put1=true', 'take2_1=10', 'take3_1=15', 'put2=true', 'take2_2=24', 'take3_2=36', '<A', '<B' ]
       );
     });
   });
