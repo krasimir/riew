@@ -23,7 +23,9 @@
     "fit": false,
     "jest": false,
     "it": false,
-    "fdescribe": false
+    "fdescribe": false,
+    "xit": false,
+    "xdescribe": false
   },
 
   "parser": "babel-eslint",

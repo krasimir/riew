@@ -1,6 +1,6 @@
 import { state, use, subscribe, unsubscribe, destroy, grid } from './index';
 import { isEffect } from './state';
-import { isPromise, parallel, getFuncName, getId } from './utils';
+import { isObjectEmpty, isPromise, parallel, getFuncName, getId } from './utils';
 import { STATE_VALUE_CHANGE } from './constants';
 import { chan as Channel, buffer, isChannel } from './csp';
 import { isChannelTake } from './csp/channel';
@@ -39,18 +39,20 @@ export default function createRiew(viewFunc, ...controllers) {
         return c({
           props: chan().from(propsCh),
           data: value => {
-            dataCh.put(
-              Object.keys(value).reduce((obj, key) => {
-                if (isChannel(value[ key ])) {
-                  value[ key ].map(v => ({ [ key ]: v })).pipe(viewCh);
-                } else if (isChannelTake(value[ key ])) {
-                  value[ key ].ch.map(v => ({ [ key ]: v })).pipe(viewCh);
-                } else {
-                  obj[ key ] = value[ key ];
-                }
-                return obj;
-              }, {})
-            );
+            const normalizedRawData = Object.keys(value).reduce((obj, key) => {
+              if (isChannel(value[ key ])) {
+                value[ key ].map(v => ({ [ key ]: v })).pipe(viewCh);
+              } else if (isChannelTake(value[ key ])) {
+                value[ key ].ch.map(v => ({ [ key ]: v })).pipe(viewCh);
+              } else {
+                obj[ key ] = value[ key ];
+              }
+              return obj;
+            }, {});
+
+            if (!isObjectEmpty(normalizedRawData)) {
+              dataCh.put(normalizedRawData);
+            }
           },
           state: value => chan().from(value)
         });
