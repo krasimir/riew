@@ -1,4 +1,4 @@
-import { CLOSED, ENDED, OPEN } from '../buffers/states';
+import { ENDED } from '../buffer/states';
 
 export default function takeEvery(ch) {
   ch.takeEvery = callback => {

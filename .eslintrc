@@ -10,7 +10,20 @@
     "escape": false,
     "navigator": false,
     "unescape": false,
-    "window": false
+    "window": false,
+    "sinon": true,
+    "expect": true,
+    "beforeAll": true,
+    "afterAll": true,
+    "before": true,
+    "after": true,
+    "jestExpect": true,
+    "describe": false,
+    "beforeEach": false,
+    "fit": false,
+    "jest": false,
+    "it": false,
+    "fdescribe": false
   },
 
   "parser": "babel-eslint",
@@ -25,7 +38,7 @@
     }
   },
 
-  "plugins": ["flowtype", "react"],
+  "plugins": ["react"],
 
   "rules": {
     "array-bracket-spacing": [2, "always"],
@@ -45,12 +58,6 @@
     "dot-notation": 0,
     "eol-last": 2,
     "eqeqeq": [2, "allow-null"],
-    "flowtype/generic-spacing": 2,
-    "flowtype/no-dupe-keys": 2,
-    "flowtype/semi": 2,
-    "flowtype/space-after-type-colon": [2, "never"],
-    "flowtype/space-before-generic-bracket": 2,
-    "flowtype/space-before-type-colon": 2,
     "func-names": 0,
     "func-style": 0,
     "generator-star-spacing": [2, "both"],
@@ -141,7 +148,7 @@
     "no-regex-spaces": 2,
     "no-reserved-keys": 0,
     "no-restricted-modules": 0,
-    "no-return-assign": 2,
+    "no-return-assign": 0,
     "no-script-url": 0,
     "no-self-compare": 2,
     "no-sequences": 0,

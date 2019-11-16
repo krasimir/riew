@@ -2,7 +2,56 @@ import { state, use, subscribe, unsubscribe, destroy, grid } from './index';
 import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 import { STATE_VALUE_CHANGE } from './constants';
+import { chan, buffer } from './csp';
 
+export default function createRiew(viewFunc, ...controllers) {
+  const instance = {
+    id: getId('r'),
+    name: getFuncName(viewFunc)
+  };
+  const viewCh = chan(
+    buffer.reducer((current, newData) => {
+      return { ...current, ...newData };
+    })
+  );
+  const propsCh = chan().pipe(viewCh);
+  let onUnmountCallbacks = [];
+
+  viewCh.takeEvery(data => {
+    viewFunc(data);
+  });
+
+  instance.mount = initialData => {
+    propsCh.put(initialData);
+
+    let controllersResult = parallel(
+      ...controllers.map(c => () => {
+        const dataCh = chan().pipe(viewCh);
+        return c({
+          props: chan().from(propsCh),
+          data: value => dataCh.put(value)
+        });
+      })
+    )();
+    let done = result => (onUnmountCallbacks = result || []);
+
+    if (isPromise(controllersResult)) {
+      controllersResult.then(done);
+    } else {
+      done(controllersResult);
+    }
+
+    return instance;
+  };
+  instance.unmount = () => {
+    onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
+    onUnmountCallbacks = [];
+  };
+
+  return instance;
+}
+
+/*
 function normalizeExternalsMap(arr) {
   return arr.reduce((map, item) => {
     if (typeof item === 'string') {
@@ -154,3 +203,4 @@ export default function createRiew(viewFunc, ...controllers) {
 
   return instance;
 }
+*/

@@ -1,4 +1,4 @@
-import { CLOSED, ENDED, OPEN } from '../buffers/states';
+import { CLOSED, ENDED, OPEN } from '../buffer/states';
 import { chan } from '../channel';
 
 export default function filter(ch) {

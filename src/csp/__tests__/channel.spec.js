@@ -1,4 +1,4 @@
-import { chan, buffer, merge } from '../channel';
+import { chan, buffer, merge } from '../index';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
 
@@ -41,7 +41,7 @@ describe('Given a CSP channel', () => {
             log(`take=${await ch.take()}`);
           }
         ),
-        ['>A', '>B', 'put successful', 'take=foo', '<A', '<B']
+        [ '>A', '>B', 'put successful', 'take=foo', '<A', '<B' ]
       );
     });
   });
@@ -94,7 +94,7 @@ describe('Given a CSP channel', () => {
             ch.close();
           }
         ),
-        ['>A', '>B', 'take1=Symbol(ENDED)', '<B', '<A']
+        [ '>A', '>B', 'take1=Symbol(ENDED)', '<B', '<A' ]
       );
     });
   });
@@ -122,16 +122,7 @@ describe('Given a CSP channel', () => {
             log(`put2=${(await ch.put('bar')).toString()}`);
           }
         ),
-        [
-          '>A',
-          '>B',
-          'take1=foo',
-          'put1=true',
-          'take2=bar',
-          'put2=true',
-          '<A',
-          '<B'
-        ]
+        [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', 'put2=true', '<A', '<B' ]
       );
     });
     it('should block the channel if there is no takers but we want to put', async () => {
@@ -148,16 +139,7 @@ describe('Given a CSP channel', () => {
             log(`take2=${(await ch.take()).toString()}`);
           }
         ),
-        [
-          '>A',
-          '>B',
-          'put1=true',
-          'take1=foo',
-          'put2=true',
-          'take2=bar',
-          '<A',
-          '<B'
-        ]
+        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', 'take2=bar', '<A', '<B' ]
       );
     });
   });
@@ -434,21 +416,10 @@ describe('Given a CSP channel', () => {
             log(`take3=${(await ch.take()).toString()}`);
           }
         ),
-        [
-          '>A',
-          '>B',
-          'put1=true',
-          'take1=30',
-          'put2=true',
-          'take2=35',
-          'put3=true',
-          'take3=38',
-          '<A',
-          '<B'
-        ]
+        [ '>A', '>B', 'put1=true', 'take1=30', 'put2=true', 'take2=35', 'put3=true', 'take3=38', '<A', '<B' ]
       );
 
-      expect(reducerSpy).toBeCalledWithArgs([10], [30], [35]);
+      expect(reducerSpy).toBeCalledWithArgs([ 10 ], [ 30 ], [ 35 ]);
     });
   });
 
@@ -472,19 +443,7 @@ describe('Given a CSP channel', () => {
             });
           }
         ),
-        [
-          '>A',
-          '>B',
-          'put1=true',
-          'take=foo',
-          '<B',
-          'put2=true',
-          'take=bar',
-          'put3=true',
-          'take=zar',
-          '<A',
-          'take=Symbol(ENDED)'
-        ]
+        [ '>A', '>B', 'put1=true', 'take=foo', '<B', 'put2=true', 'take=bar', 'put3=true', 'take=zar', '<A', 'take=Symbol(ENDED)' ]
       );
     });
   });
@@ -556,7 +515,7 @@ describe('Given a CSP channel', () => {
             ch1.put('zar');
           }
         ),
-        ['>A', '>B', '<B', 'take_ch3=foo', 'take_ch2=bar', 'take_ch3=zar', '<A']
+        [ '>A', '>B', '<B', 'take_ch3=foo', 'take_ch2=bar', 'take_ch3=zar', '<A' ]
       );
     });
     it('should support nested piping', async () => {
@@ -586,16 +545,7 @@ describe('Given a CSP channel', () => {
             await delay(10);
           }
         ),
-        [
-          '>A',
-          '>B',
-          'take_ch3=foo',
-          'take_ch1=bar',
-          'take_ch4=foo',
-          'take_ch2=zar',
-          '<A',
-          '<B'
-        ]
+        [ '>A', '>B', 'take_ch3=foo', 'take_ch1=bar', 'take_ch4=foo', 'take_ch2=zar', '<A', '<B' ]
       );
     });
   });
@@ -619,16 +569,7 @@ describe('Given a CSP channel', () => {
             log(`take2=${(await ch.take()).toString()}`);
           }
         ),
-        [
-          '>A',
-          '>B',
-          'put1=Symbol(CLOSED)',
-          'take1=foo',
-          'take2=Symbol(ENDED)',
-          '<B',
-          'put2=Symbol(ENDED)',
-          '<A'
-        ]
+        [ '>A', '>B', 'put1=Symbol(CLOSED)', 'take1=foo', 'take2=Symbol(ENDED)', '<B', 'put2=Symbol(ENDED)', '<A' ]
       );
     });
   });
@@ -679,37 +620,50 @@ describe('Given a CSP channel', () => {
     });
   });
 
-  // withValue
+  // from
 
-  describe('when we use the withValue method', () => {
-    it('should pre-set the value of the channel', async () => {
-      const ch = chan(buffer.fixed(2)).withValue('foo', 'bar');
+  describe('when we use the from method', () => {
+    describe('and we pass an array of values', () => {
+      it('should pre-set the value of the channel', async () => {
+        const ch = chan(buffer.fixed(2)).from([ 'foo', 'bar' ]);
 
-      await exercise(
-        Test(
-          async function A(log) {
-            log(`take1=${(await ch.take()).toString()}`);
-            log(`take2=${(await ch.take()).toString()}`);
-            log(`take3=${(await ch.take()).toString()}`);
-          },
-          async function B(log) {
-            await delay(5);
-            log('B put');
-            log(`put=${(await ch.put('zar')).toString()}`);
-          }
-        ),
-        [
-          '>A',
-          '>B',
-          'take1=foo',
-          'take2=bar',
-          'B put',
-          'take3=zar',
-          'put=true',
-          '<A',
-          '<B'
-        ]
-      );
+        await exercise(
+          Test(
+            async function A(log) {
+              log(`take1=${(await ch.take()).toString()}`);
+              log(`take2=${(await ch.take()).toString()}`);
+              log(`take3=${(await ch.take()).toString()}`);
+            },
+            async function B(log) {
+              await delay(5);
+              log('B put');
+              log(`put=${(await ch.put('zar')).toString()}`);
+            }
+          ),
+          [ '>A', '>B', 'take1=foo', 'take2=bar', 'B put', 'take3=zar', 'put=true', '<A', '<B' ]
+        );
+      });
+    });
+    describe('and we pass another channel', () => {
+      it('should auto pipe', async () => {
+        const ch1 = chan();
+        const ch2 = chan().from(ch1);
+
+        await exercise(
+          Test(
+            async function A(log) {
+              log(`take1=${(await ch2.take()).toString()}`);
+              log(`take2=${(await ch2.take()).toString()}`);
+            },
+            async function B(log) {
+              await delay(5);
+              log(`put1=${(await ch1.put('foo')).toString()}`);
+              log(`put2=${(await ch1.put('bar')).toString()}`);
+            }
+          ),
+          [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', 'take2=bar', '<B', '<A' ]
+        );
+      });
     });
   });
 
@@ -736,18 +690,7 @@ describe('Given a CSP channel', () => {
             await delay(5);
           }
         ),
-        [
-          '>A',
-          '>B',
-          'put1=true',
-          'put2=true',
-          'take1=12',
-          'put3=true',
-          'take2=20',
-          'put4=true',
-          '<A',
-          '<B'
-        ]
+        [ '>A', '>B', 'put1=true', 'put2=true', 'take1=12', 'put3=true', 'take2=20', 'put4=true', '<A', '<B' ]
       );
     });
   });

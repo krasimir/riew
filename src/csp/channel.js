@@ -1,21 +1,11 @@
-import { getId } from '../utils';
-import FixedBuffer from './buffers/FixedBuffer';
-import DroppingBuffer from './buffers/DroppingBuffer';
-import ReducerBuffer from './buffers/ReducerBuffer';
-import { OPEN, CLOSED, ENDED } from './buffers/states';
-import { defineOperations } from './ops';
-
-export const buffer = {
-  fixed: FixedBuffer,
-  dropping: DroppingBuffer,
-  sliding: size => DroppingBuffer(size, true),
-  reducer: ReducerBuffer
-};
+import { OPEN, CLOSED, ENDED } from './buffer/states';
+import { defineOps } from './ops';
+import { normalizeChannelArguments } from './utils';
 
 export function chan(...args) {
   let state = OPEN;
-  let [id, buff] = normalizeChannelArguments(args);
-  let api = { id };
+  let [ id, buff ] = normalizeChannelArguments(args);
+  let api = { id, '@channel': true };
 
   function calculateState() {
     if (state === CLOSED && buff.isEmpty()) {
@@ -28,8 +18,10 @@ export function chan(...args) {
     return s !== CLOSED && s !== ENDED;
   }
 
-  defineOperations(api);
+  defineOps(api);
 
+  api.buff = buff;
+  api.state = calculateState;
   api.put = item => {
     if (!isAccepting()) {
       return Promise.resolve(state);
@@ -41,7 +33,6 @@ export function chan(...args) {
     if (state === CLOSED && buff.isEmpty()) return Promise.resolve(ENDED);
     return buff.take();
   };
-  api.state = calculateState;
   api.close = () => {
     state = CLOSED;
     buff.puts.forEach(put => put(CLOSED));
@@ -54,21 +45,25 @@ export function chan(...args) {
     state = OPEN;
     buff.reset();
   };
-  api.withValue = (...values) => {
-    buff.value = values;
-    return api;
-  };
-  api.setBuffer = b => (buff = b);
-
+  api.setBuffer = b => (buff = api.buff = b);
   api.__value = () => {
-    console.warn(
-      "Riew: you should not get the channel's value directly! This method is here purely for testing purposes."
-    );
+    console.warn("Riew: you should not get the channel's value directly! This method is here purely for testing purposes.");
     return buff.value;
   };
 
   return api;
 }
+chan.timeout = function (interval) {
+  const ch = chan();
+  setTimeout(() => ch.close(), interval);
+  return ch;
+};
+chan.OPEN = OPEN;
+chan.CLOSED = CLOSED;
+chan.ENDED = ENDED;
+
+// ------------------------------------------------
+
 export function merge(...channels) {
   const newCh = chan();
 
@@ -84,29 +79,7 @@ export function merge(...channels) {
 
   return newCh;
 }
-chan.timeout = function(interval) {
-  const ch = chan();
-  setTimeout(() => ch.close(), interval);
-  return ch;
-};
-chan.OPEN = OPEN;
-chan.CLOSED = CLOSED;
-chan.ENDED = ENDED;
 
-function normalizeChannelArguments(args) {
-  let id, buff;
-  if (args.length === 2) {
-    id = args[0];
-    buff = args[1];
-  } else if (args.length === 1 && typeof args[0] === 'string') {
-    id = args[0];
-    buff = buffer.fixed();
-  } else if (args.length === 1 && typeof args[0] === 'object') {
-    id = getId('ch');
-    buff = args[0];
-  } else {
-    id = getId('ch');
-    buff = buffer.fixed();
-  }
-  return [id, buff];
+export function isChannel(ch) {
+  return ch && ch[ '@channel' ] === true;
 }
