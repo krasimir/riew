@@ -665,6 +665,47 @@ describe('Given a CSP channel', () => {
         );
       });
     });
+    describe('and we pass only a single value that is not array', () => {
+      describe('and that value is undefined', () => {
+        it('should do nothing', async () => {
+          const ch = chan().from();
+
+          await exercise(
+            Test(
+              async function A(log) {
+                log(`take1=${(await ch.take()).toString()}`);
+                log(`take2=${(await ch.take()).toString()}`);
+              },
+              async function B(log) {
+                await delay(5);
+                log(`put1=${(await ch.put('foo')).toString()}`);
+                log(`put2=${(await ch.put('bar')).toString()}`);
+              }
+            ),
+            [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', 'put2=true', '<A', '<B' ]
+          );
+        });
+      });
+      describe('and that value is NOT undefined', () => {
+        it('should pass it as array of one item to the buffer', async () => {
+          const ch = chan().from('foo');
+
+          await exercise(
+            Test(
+              async function A(log) {
+                log(`take1=${(await ch.take()).toString()}`);
+                log(`take2=${(await ch.take()).toString()}`);
+              },
+              async function B(log) {
+                await delay(5);
+                log(`put2=${(await ch.put('bar')).toString()}`);
+              }
+            ),
+            [ '>A', '>B', 'take1=foo', 'take2=bar', 'put2=true', '<A', '<B' ]
+          );
+        });
+      });
+    });
   });
 
   // filter
@@ -732,6 +773,28 @@ describe('Given a CSP channel', () => {
           '<A',
           '<B'
         ]
+      );
+    });
+  });
+
+  // iterable protocol
+
+  describe('when we destruct a channel', () => {
+    it('should gives us access to the take and put methods', async () => {
+      const [ take, put ] = chan();
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`put1=${(await put('foo')).toString()}`);
+            log(`put2=${(await put('bar')).toString()}`);
+          },
+          async function B(log) {
+            log(`take1=${(await take()).toString()}`);
+            log(`take2=${(await take()).toString()}`);
+          }
+        ),
+        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', 'take2=bar', '<A', '<B' ]
       );
     });
   });

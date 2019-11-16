@@ -42,11 +42,11 @@ describe('Given the `riew` factory function', () => {
   describe('when we have an async controller', () => {
     it('should render the view without waiting the controller to finish', async () => {
       const view = jest.fn();
-      const se = async function ({ data }) {
+      const controller = async function ({ data }) {
         await delay(3);
         data({ hello: 'there' });
       };
-      const r = riew(view, se);
+      const r = riew(view, controller);
 
       r.mount({ a: 'b' });
 
@@ -55,29 +55,27 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we create a state in the controller', () => {
-    fit(`should teardown the state if the riew is unmounted
-      and should remove the state from the grid`, () => {
-      let ss;
+    fit(`should close the channel of the state if the riew is unmounted
+      and should remove the state from the grid`, async () => {
+      let sp;
       const view = jest.fn();
       const controller = function ({ state, data }) {
-        const [ s, set ] = state('foo');
-
-        data({ s });
-        ss = set;
-        set('bar');
+        const [ take, put ] = state('foo');
+        data({ s: take });
+        sp = put;
+        put('bar');
       };
       const r = riew(view, controller);
 
       r.mount();
 
-      const stateId = grid.getNodeById(ss.id).stateId;
+      await delay(4);
 
-      expect(grid.getNodeById(stateId)).toBeDefined();
-      expect(grid.nodes());
+      expect(grid.getNodeById(sp.ch.id)).toBeDefined();
       r.unmount();
-      expect(grid.getNodeById(stateId)).not.toBeDefined();
-      ss('moo');
-      ss('boo');
+      expect(grid.getNodeById(sp.ch.id)).not.toBeDefined();
+      await sp('moo');
+      await sp('boo');
       expect(view).toBeCalledWithArgs([ { s: 'bar' } ]);
     });
     it('should send the state value to the view', () => {

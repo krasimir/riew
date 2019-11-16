@@ -2,23 +2,32 @@ import { state, use, subscribe, unsubscribe, destroy, grid } from './index';
 import { isEffect } from './state';
 import { isPromise, parallel, getFuncName, getId } from './utils';
 import { STATE_VALUE_CHANGE } from './constants';
-import { chan, buffer } from './csp';
+import { chan as Channel, buffer, isChannel } from './csp';
+import { isChannelTake } from './csp/channel';
+
+const accumulate = () => buffer.reducer((current, newData) => ({ ...current, ...newData }));
 
 export default function createRiew(viewFunc, ...controllers) {
   const instance = {
     id: getId('r'),
     name: getFuncName(viewFunc)
   };
-  const viewCh = chan(
-    buffer.reducer((current, newData) => {
-      return { ...current, ...newData };
-    })
-  );
-  const propsCh = chan().pipe(viewCh);
+  let channels = [];
   let onUnmountCallbacks = [];
 
+  function chan(...args) {
+    const c = Channel(...args);
+    channels.push(c);
+    return c;
+  }
+
+  const viewCh = chan(accumulate());
+  const propsCh = chan().pipe(viewCh);
+
   viewCh.takeEvery(data => {
-    viewFunc(data);
+    if (data !== Channel.CLOSED && data !== Channel.ENDED) {
+      viewFunc(data);
+    }
   });
 
   instance.mount = initialData => {
@@ -29,7 +38,21 @@ export default function createRiew(viewFunc, ...controllers) {
         const dataCh = chan().pipe(viewCh);
         return c({
           props: chan().from(propsCh),
-          data: value => dataCh.put(value)
+          data: value => {
+            dataCh.put(
+              Object.keys(value).reduce((obj, key) => {
+                if (isChannel(value[ key ])) {
+                  value[ key ].map(v => ({ [ key ]: v })).pipe(viewCh);
+                } else if (isChannelTake(value[ key ])) {
+                  value[ key ].ch.map(v => ({ [ key ]: v })).pipe(viewCh);
+                } else {
+                  obj[ key ] = value[ key ];
+                }
+                return obj;
+              }, {})
+            );
+          },
+          state: value => chan().from(value)
         });
       })
     )();
@@ -46,6 +69,11 @@ export default function createRiew(viewFunc, ...controllers) {
   instance.unmount = () => {
     onUnmountCallbacks.filter(f => typeof f === 'function').forEach(f => f());
     onUnmountCallbacks = [];
+    channels.forEach(c => {
+      c.close();
+      grid.remove(c);
+    });
+    channels = [];
   };
 
   return instance;

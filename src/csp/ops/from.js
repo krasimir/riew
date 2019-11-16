@@ -1,13 +1,13 @@
 import { isChannel } from '../channel';
 
 export default function from(ch) {
-  ch.from = values => {
-    if (Array.isArray(values)) {
-      ch.buff.value = values;
-    } else if (isChannel(ch)) {
-      values.pipe(ch);
-    } else {
-      throw new Error('`from` accepts only an array of values or another channel.');
+  ch.from = value => {
+    if (Array.isArray(value)) {
+      ch.buff.value = value;
+    } else if (isChannel(value)) {
+      value.pipe(ch);
+    } else if (typeof value !== 'undefined') {
+      ch.buff.value = [ value ];
     }
     return ch;
   };
