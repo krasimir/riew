@@ -26,17 +26,21 @@ export default function createRiew(viewFunc, ...controllers) {
       subscriptions[ `${key}_${ch.id}` ] = ch.map(v => ({ [ key ]: v })).pipe(viewCh);
     }
   }
+  function requireObject(obj) {
+    if (obj === null || (typeof obj !== 'undefined' && typeof obj !== 'object')) {
+      throw new Error(`A key-value object expected. Instead "${obj}" passed.`);
+    }
+  }
 
   const viewCh = chan(accumulate());
   const propsCh = chan().pipe(viewCh);
 
   viewCh.takeLatest(data => {
-    if (data !== Channel.CLOSED && data !== Channel.ENDED) {
-      viewFunc(data);
-    }
+    viewFunc(data);
   });
 
   instance.mount = initialData => {
+    requireObject(initialData);
     propsCh.put(initialData);
 
     let controllersResult = parallel(
@@ -45,6 +49,7 @@ export default function createRiew(viewFunc, ...controllers) {
         return c({
           props: chan().from(propsCh),
           data: value => {
+            requireObject(value);
             const normalizedRawData = Object.keys(value).reduce((obj, key) => {
               if (isChannel(value[ key ])) {
                 subscribe(key, value[ key ]);
@@ -83,6 +88,9 @@ export default function createRiew(viewFunc, ...controllers) {
     channels = [];
     Object.keys(subscriptions).forEach(key => subscriptions[ key ].close());
     subscriptions = {};
+  };
+  instance.update = value => {
+    propsCh.put(value);
   };
 
   return instance;

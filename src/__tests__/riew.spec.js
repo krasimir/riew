@@ -218,10 +218,10 @@ describe('Given the `riew` factory function', () => {
       expect(view).toBeCalledWithArgs([ { s: 'FOO', change: expect.any(Function) } ], [ { s: 'BAR', change: expect.any(Function) } ]);
     });
   });
-  describe('when we send a getter or a setter to the view', () => {
-    xit(`should
-      * run the getter and pass the value + also subscribe to state changes
-      * pass down the setter`, async () => {
+  describe('when we send a putter or a taker to the view', () => {
+    it(`should
+      * run the taker and pass the value + also subscribe to channel values
+      * pass down the putter`, async () => {
       const view = jest.fn().mockImplementation(async ({ s, change }) => {
         setTimeout(() => change('bar'), 10);
       });
@@ -240,43 +240,46 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we update the riew', () => {
-    xit('should render the view with accumulated props', () => {
+    it('should render the view with accumulated props', async () => {
       const view = jest.fn();
       const r = riew(view);
 
       r.mount({ foo: 'bar' });
       r.update({ baz: 'moo' });
       r.update({ x: 'y' });
+      await delay();
 
       expect(view).toBeCalledWithArgs([ { foo: 'bar' } ], [ { foo: 'bar', baz: 'moo' } ], [ { foo: 'bar', baz: 'moo', x: 'y' } ]);
     });
-    xit('should deliver the riew input to the controller', () => {
+    it('should deliver the riew input to the controller', async () => {
       const spy = jest.fn();
       const controller = function ({ props }) {
-        subscribe(props.pipe(spy), true);
+        props.takeEvery(spy);
       };
       const r = riew(() => {}, controller);
 
       r.mount({ foo: 'bar' });
       r.update({ baz: 'moo' });
-      expect(spy).toBeCalledWithArgs([ { foo: 'bar' } ], [ { foo: 'bar', baz: 'moo' } ]);
+      await delay();
+      expect(spy).toBeCalledWithArgs([ { foo: 'bar' } ], [ { baz: 'moo' } ]);
     });
     describe('and we update the data as a result of props change', () => {
-      xit('should NOT end up in a maximum call stack exceeded', () => {
+      it('should NOT end up in a maximum call stack exceeded', async () => {
         const spy = jest.fn();
         const controller = function ({ props, data }) {
-          subscribe(props.map(({ n }) => n + 5).pipe(n => data({ n })), true);
+          props.map(({ n }) => n + 5).takeEvery(n => data({ n }));
         };
         const r = riew(spy, controller);
 
         r.mount({ n: 10 });
         r.update({ n: 20 });
-        expect(spy).toBeCalledWithArgs([ { n: 15 } ], [ { n: 25 } ], [ { n: 25 } ]);
+        await delay();
+        expect(spy).toBeCalledWithArgs([ { n: 10 } ], [ { n: 20 } ], [ { n: 15 } ], [ { n: 25 } ]);
       });
     });
   });
-  describe('and when we use non object as initial props or for render method', () => {
-    xit('should throw an error', () => {
+  describe('and when we use non object as initial props or for data method', () => {
+    it('should throw an error', () => {
       expect(() => riew(() => {}).mount('foo')).toThrowError('A key-value object expected. Instead "foo" passed');
       expect(() =>
         riew(
@@ -290,8 +293,8 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we use `with` method', () => {
-    describe('and we pass a state', () => {
-      xit(`should send the state to the controller`, () => {
+    describe('and we pass a channel', () => {
+      fit(`should send the state to the controller`, () => {
         const view = jest.fn();
         const [ s1, setState1 ] = state('a');
         const [ s2, setState2 ] = state('b');
