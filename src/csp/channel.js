@@ -3,7 +3,7 @@ import ops from './ops';
 import { normalizeChannelArguments } from './utils';
 import { grid } from '../index';
 
-export function chan(...args) {
+export default function chan(...args) {
   let state = OPEN;
   let [ id, buff ] = normalizeChannelArguments(args);
   let api = { id, '@channel': true };
@@ -60,40 +60,6 @@ chan.CLOSED = CLOSED;
 chan.ENDED = ENDED;
 
 // ------------------------------------------------
-
-export function timeout(interval) {
-  const ch = chan();
-  setTimeout(() => ch.close(), interval);
-  return ch;
-}
-
-export function merge(...channels) {
-  const newCh = chan();
-
-  channels.map(ch => {
-    (async function listen() {
-      let v;
-      while (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
-        v = await ch.take();
-        newCh.put(v);
-      }
-    })();
-  });
-
-  return newCh;
-}
-
-export function isChannel(ch) {
-  return ch && ch[ '@channel' ] === true;
-}
-
-export function isChannelPut(func) {
-  return func && func[ '@channel_put' ] === true;
-}
-
-export function isChannelTake(func) {
-  return func && func[ '@channel_take' ] === true;
-}
 
 function implementIterableProtocol(ch) {
   if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {

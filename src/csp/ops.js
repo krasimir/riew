@@ -1,5 +1,5 @@
 import { CLOSED, ENDED, OPEN } from './buffer/states';
-import { chan, isChannel } from './channel';
+import { chan, isChannel } from './index';
 
 export default function ops(ch) {
   let opsTaker = false;
