@@ -10,7 +10,7 @@ describe('Given the React riew function', () => {
     reset();
   });
   describe('when we use the riew Component', () => {
-    it('should always render the view at least once', () => {
+    fit('should always render the view at least once', () => {
       const R = riew(() => <p>Hello</p>);
       const { container } = render(<R />);
 
@@ -22,7 +22,9 @@ describe('Given the React riew function', () => {
       * render every time when we call the "render" method`, async () => {
       const controller = jest.fn().mockImplementation(async ({ data }) => {
         await delay(5);
-        act(() => { data({ foo: 'bar' }); });
+        act(() => {
+          data({ foo: 'bar' });
+        });
       });
       const view = jest.fn().mockImplementation(() => null);
       const R = riew(view, controller);
@@ -30,10 +32,7 @@ describe('Given the React riew function', () => {
       render(<R />);
       await delay(7);
 
-      expect(view).toBeCalledWithArgs(
-        [ {}, {} ],
-        [ { foo: 'bar' }, {}]
-      );
+      expect(view).toBeCalledWithArgs([ {}, {} ], [ { foo: 'bar' }, {} ]);
     });
     describe('and we use a state', () => {
       it(`should
@@ -41,13 +40,12 @@ describe('Given the React riew function', () => {
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, async () => {
         const [ s, setState ] = state('foo');
-        const R = riew(
-          ({ state }) => <p>{ state }</p>,
-          async function ({ state }) {
-            await delay(5);
-            act(() => { setState('bar'); });
-          }
-        ).with({ state: s });
+        const R = riew(({ state }) => <p>{ state }</p>, async function ({ state }) {
+          await delay(5);
+          act(() => {
+            setState('bar');
+          });
+        }).with({ state: s });
         const { container, unmount } = render(<R />);
 
         exerciseHTML(container, '<p>foo</p>');
@@ -68,7 +66,9 @@ describe('Given the React riew function', () => {
           const { container } = render(<R />);
 
           exerciseHTML(container, '<p>foo42</p>');
-          act(() => { setState('200'); });
+          act(() => {
+            setState('200');
+          });
           exerciseHTML(container, '<p>foo200</p>');
         });
       });
@@ -81,10 +81,7 @@ describe('Given the React riew function', () => {
         render(<RA />);
         render(<RB />);
 
-        expect(spy).toBeCalledWithArgs(
-          [ { state: { foo: 'a' } }, {}],
-          [ { state: { foo: 'b' } }, {}]
-        );
+        expect(spy).toBeCalledWithArgs([ { state: { foo: 'a' } }, {} ], [ { state: { foo: 'b' } }, {} ]);
         expect('with' in RA).toBe(true);
       });
     });
@@ -102,28 +99,15 @@ describe('Given the React riew function', () => {
 
         rerender(<I zoo='mar' />);
 
-        expect(view).toBeCalledWithArgs(
-          [ { foo: 'bar' }, {} ],
-          [ { foo: 'bar', zoo: 'mar' }, {} ],
-          [ { foo: 'bar', zoo: 'mar' }, {} ]
-        );
-        expect(propsSpy).toBeCalledWithArgs(
-          [ { foo: 'bar' } ],
-          [ { foo: 'bar', zoo: 'mar' } ]
-        );
+        expect(view).toBeCalledWithArgs([ { foo: 'bar' }, {} ], [ { foo: 'bar', zoo: 'mar' }, {} ], [ { foo: 'bar', zoo: 'mar' }, {} ]);
+        expect(propsSpy).toBeCalledWithArgs([ { foo: 'bar' } ], [ { foo: 'bar', zoo: 'mar' } ]);
       });
     });
   });
   describe('when we want to use the React children prop', () => {
     it('should work', () => {
       const R = riew(({ children }) => children('John'));
-      const { container } = render(
-        <R>
-          {
-            (name) => `Hello ${ name }!`
-          }
-        </R>
-      );
+      const { container } = render(<R>{ name => `Hello ${name}!` }</R>);
 
       exerciseHTML(container, 'Hello John!');
     });
@@ -131,10 +115,7 @@ describe('Given the React riew function', () => {
   describe('when we render state and mutation made out of it', () => {
     it('when firing the mutation should re-render with a new value', () => {
       const effect = ({ state, data }) => {
-        const [ value ] = state([
-          { value: 2, selected: true },
-          { value: 67, selected: true }
-        ]);
+        const [ value ] = state([ { value: 2, selected: true }, { value: 67, selected: true } ]);
 
         data({
           value,
@@ -151,7 +132,13 @@ describe('Given the React riew function', () => {
       const View = ({ value, change }) => {
         return (
           <div>
-            <div>value: { value.filter(({ selected }) => selected).map(({ value }) => value).join(', ') }</div>
+            <div>
+              value:{ ' ' }
+              { value
+                .filter(({ selected }) => selected)
+                .map(({ value }) => value)
+                .join(', ') }
+            </div>
             <button onClick={ () => change(67) }>click me</button>
           </div>
         );
