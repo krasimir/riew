@@ -31,6 +31,14 @@ export default function ops(ch) {
                   p.ch.put(v);
                 }
                 break;
+              case 'takeEvery':
+                p.func(v);
+                break;
+              case 'takeLatest':
+                if (ch.buff.puts.length === 0) {
+                  p.func(v);
+                }
+                break;
             }
           });
         }
@@ -73,17 +81,15 @@ export default function ops(ch) {
     return ch;
   };
 
-  ch.takeEvery = callback => {
-    (async function listen() {
-      let v;
-      while (true) {
-        v = await ch.take();
-        callback(v);
-        if (v === ENDED) {
-          break;
-        }
-      }
-    })();
+  ch.takeEvery = func => {
+    pipes.push({ func, type: 'takeEvery' });
+    taker();
+    return ch;
+  };
+
+  ch.takeLatest = func => {
+    pipes.push({ func, type: 'takeLatest' });
+    taker();
     return ch;
   };
 }

@@ -1,6 +1,7 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
 import { state, register, riew, reset, subscribe, grid } from '../index';
+import { chan } from '../csp';
 
 describe('Given the `riew` factory function', () => {
   beforeEach(() => {
@@ -139,9 +140,7 @@ describe('Given the `riew` factory function', () => {
         await delay(4);
         expect(view).toBeCalledWithArgs(
           [ {} ],
-          [ { up: 'HELLO WORLD' } ],
           [ { up: 'HELLO WORLD', lower: 'hello world' } ],
-          [ { up: 'CHAO', lower: 'hello world' } ],
           [ { up: 'CHAO', lower: 'chao' } ],
           [ { up: 'CHAO', lower: 'chao', a: 10 } ]
         );
@@ -167,45 +166,46 @@ describe('Given the `riew` factory function', () => {
       await delay();
       r.unmount();
       await delay(10);
-      expect(view).toBeCalledWithArgs([ {} ], [ { up: 'HELLO WORLD' } ], [ { up: 'HELLO WORLD', lower: 'hello world' } ]);
+      expect(view).toBeCalledWithArgs([ {} ], [ { up: 'HELLO WORLD', lower: 'hello world' } ]);
     });
   });
-  describe('when we send an external state(effect) to the view and the view is unmounted', () => {
-    xit(`should
+  describe('when we send an external channel to the view and the view is unmounted', () => {
+    it(`should
       * initially subscribe and then unsubscribe
-      * keep the external subscriptions`, () => {
+      * keep the external subscriptions`, async () => {
       const spy = jest.fn();
-      const [ s, setState ] = state('foo');
-      const external = s.pipe(spy);
+      const ch = chan().from('foo');
+      const [ s, setState ] = ch;
       const view = jest.fn();
       const controller = function ({ data }) {
         data({ s });
       };
       const r = riew(view, controller);
 
-      subscribe(external, true);
+      ch.takeEvery(spy);
 
       r.mount();
       setState('baz');
+      await delay();
       r.unmount();
       setState('zoo');
-      expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'baz' } ]);
+      await delay();
+      expect(ch.state()).toBe(chan.OPEN);
+      expect(view).toBeCalledWithArgs([ { s: 'baz' } ]);
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'baz' ], [ 'zoo' ]);
     });
   });
-  describe('when we send an effect to the view', () => {
-    xit(`should
-      * run the effect and pass the value if the effect is not mutating
-      * subscribe to state changes if the effect is not mutating`, async () => {
+  describe('when we send a channel to the view', () => {
+    it(`should
+      * pass the values from the channel to the view
+      * subscribe to the channel's values`, async () => {
       const view = jest.fn().mockImplementation(async ({ s, change }) => {
         setTimeout(() => change(), 10);
       });
       const controller = function ({ data, state }) {
         const s = state('foo');
         const up = s.map(value => value.toUpperCase());
-        const change = s.mutate(() => {
-          return 'bar';
-        });
+        const change = () => s.put('bar');
 
         data({ s: up, change });
         data({ s: up, change });

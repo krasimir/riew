@@ -530,8 +530,33 @@ describe('Given a CSP channel', () => {
             });
           }
         ),
-        [ '>A', '>B', 'put1=true', 'take=foo', '<B', 'put2=true', 'take=bar', 'put3=true', 'take=zar', '<A', 'take=Symbol(ENDED)' ]
+        [ '>A', '>B', 'put1=true', 'take=foo', '<B', 'put2=true', 'take=bar', 'put3=true', 'take=zar', '<A' ]
       );
+    });
+  });
+
+  // takeLatest
+
+  describe('when using takeLatest method', () => {
+    it('should fire the callback only if there are no more pending puts', async () => {
+      const reducerSpy = jest.fn();
+      const ch = chan(
+        buffer.reducer((current = '', data) => {
+          return current + data;
+        })
+      ).takeLatest(reducerSpy);
+      const data1 = chan()
+        .from('foo')
+        .pipe(ch);
+      const data2 = chan()
+        .from('bar')
+        .pipe(ch);
+
+      await data1.put('A');
+      await data2.put('B');
+      await delay();
+
+      expect(reducerSpy).toBeCalledWithArgs([ 'foobarAB' ]);
     });
   });
 

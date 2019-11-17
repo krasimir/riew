@@ -30,7 +30,7 @@ export default function createRiew(viewFunc, ...controllers) {
   const viewCh = chan(accumulate());
   const propsCh = chan().pipe(viewCh);
 
-  viewCh.takeEvery(data => {
+  viewCh.takeLatest(data => {
     if (data !== Channel.CLOSED && data !== Channel.ENDED) {
       viewFunc(data);
     }
