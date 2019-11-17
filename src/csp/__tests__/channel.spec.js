@@ -1,4 +1,4 @@
-import { chan, buffer, merge, timeout } from '../index';
+import { chan, buffer, merge, timeout, state } from '../index';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
 
@@ -21,7 +21,7 @@ async function exercise(p, expectation) {
   expect(await p).toStrictEqual(expectation);
 }
 
-describe('Given a CSP channel', () => {
+describe('Given a CSP', () => {
   // States
 
   describe('and we have an the channel OPEN', () => {
@@ -922,6 +922,27 @@ describe('Given a CSP channel', () => {
           }
         ),
         [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', 'take2=bar', '<A', '<B' ]
+      );
+    });
+  });
+
+  // iterable protocol
+
+  describe('when we use the state method', () => {
+    it('should create a unbuffered channel with a value inside', async () => {
+      const ch = state('foo');
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+            log(`take2=${(await ch.take()).toString()}`);
+          },
+          async function B(log) {
+            log(`put1=${(await ch.put('bar')).toString()}`);
+          }
+        ),
+        [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<B', '<A' ]
       );
     });
   });

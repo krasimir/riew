@@ -1,7 +1,7 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { state, register, riew, reset, subscribe, grid } from '../index';
-import { chan } from '../csp';
+import { register, riew, reset, grid } from '../index';
+import { chan, state } from '../csp';
 
 describe('Given the `riew` factory function', () => {
   beforeEach(() => {
@@ -336,7 +336,7 @@ describe('Given the `riew` factory function', () => {
       });
     });
     describe('when we want to use an exported state', () => {
-      xit('should recognize it and pass it down to the controller', () => {
+      it('should recognize it and pass it down to the controller', async () => {
         const [ s, setState ] = state('foo');
 
         register('xxx', s);
@@ -347,16 +347,17 @@ describe('Given the `riew` factory function', () => {
 
         r.mount();
         setState('bar');
+        await delay();
 
-        expect(view).toBeCalledWithArgs([ { xxx: 'foo' } ], [ { xxx: 'bar' } ]);
+        expect(view).toBeCalledWithArgs([ {} ], [ { xxx: 'foo' } ], [ { xxx: 'bar' } ]);
         expect(controller).toBeCalledWithArgs([
           expect.objectContaining({
-            xxx: expect.objectContaining({ id: expect.any(String) })
+            xxx: expect.any(Function)
           })
         ]);
       });
       describe('and when we have something else exported into the grid', () => {
-        xit('should pass it down as it is to the view and to the controller', () => {
+        it('should pass it down as it is to the view and to the controller', async () => {
           const something = { id: 'fff', a: 'b' };
 
           register('something', something);
@@ -366,6 +367,7 @@ describe('Given the `riew` factory function', () => {
           const r = riew(view, effect).with('something');
 
           r.mount();
+          await delay();
 
           expect(view).toBeCalledWithArgs([ { something: expect.objectContaining({ a: 'b' }) } ]);
           expect(effect).toBeCalledWithArgs([
@@ -377,65 +379,78 @@ describe('Given the `riew` factory function', () => {
       });
     });
     describe('and when we pass primitive values', () => {
-      xit('should just proxy them to the controller and view', () => {
+      it('should just proxy them to the controller and view', async () => {
         const spy = jest.fn();
-        const r = riew(({ foo, bar }) => foo(bar + 10), ({ foo, bar, data }) => (foo(bar), data())).with({ foo: spy, bar: 10 });
+        const r = riew(({ foo, bar }) => foo(bar + 10), ({ foo, bar }) => foo(bar)).with({
+          foo: spy,
+          bar: 10
+        });
 
         r.mount({});
+        await delay();
 
         expect(spy).toBeCalledWithArgs([ 10 ], [ 20 ]);
       });
     });
     describe('and when we use same instance with different externals', () => {
-      xit('should add externals on top of the existing ones', () => {
+      it('should add externals on top of the existing ones', async () => {
         const spy = jest.fn();
         const r = riew(spy);
 
         r.with({ foo: 'bar' });
         r.with({ moo: 'noo' });
 
-        r.mount({});
+        r.mount();
+        await delay();
 
         expect(spy).toBeCalledWithArgs([ { foo: 'bar', moo: 'noo' } ]);
       });
     });
   });
   describe('when we want to test the riew', () => {
-    xit('should allow us to pass custom one-shot externals and keep the old riew working', () => {
-      const [ s ] = state('foo');
+    it('should allow us to pass custom one-shot externals and keep the old riew working', async () => {
+      const s = state('foo');
+      const s2 = state('bar');
       const spy = jest.fn();
-      const effect = jest.fn().mockImplementation(({ s, data }) => (spy(s()), data({ s: s() })));
+      const controller = jest.fn().mockImplementation(({ s }) => {
+        s.takeEvery(spy);
+      });
       const view = jest.fn();
-      const r = riew(view, effect).with({ s });
-      const rTest = r.test({ s: state('bar') });
+      const r = riew(view, controller).with({ s });
+      const rTest = r.test({ s: s2 });
 
       r.mount();
       rTest.mount();
+      await delay();
 
-      expect(effect).toBeCalledWithArgs(
-        [ expect.objectContaining({ s: expect.any(Function) }) ],
-        [ expect.objectContaining({ s: expect.any(Function) }) ]
+      expect(controller).toBeCalledWithArgs(
+        [ expect.objectContaining({ s: expect.any(Object) }) ],
+        [ expect.objectContaining({ s: expect.any(Object) }) ]
       );
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
-      expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
+      expect(view).toBeCalledWithArgs([ {} ], [ {} ], [ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
   });
   describe('when we send the same controller to different views', () => {
-    xit('should re-render them if the state changes', () => {
-      const [ s, update ] = state('foo');
+    it('should re-render them if the state changes', async () => {
+      const [ s, update ] = state();
       const controller = function ({ data }) {
         data({ s });
       };
       const view1 = jest.fn();
       const view2 = jest.fn();
+      const r1 = riew(view1, controller);
+      const r2 = riew(view2, controller);
 
-      riew(view1, controller).mount();
-      riew(view2, controller).mount();
+      r1.mount();
+      r2.mount();
 
+      update('foo');
       update('bar');
+      await delay(5);
 
-      expect(view1).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
-      expect(view2).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
+      expect(view1).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ], [ { s: 'bar' } ]);
+      expect(view2).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
   });
 });

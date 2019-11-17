@@ -2,8 +2,7 @@ import { state, use, subscribe, unsubscribe, destroy, grid } from './index';
 import { isEffect } from './state';
 import { isObjectEmpty, isPromise, parallel, getFuncName, getId } from './utils';
 import { STATE_VALUE_CHANGE } from './constants';
-import { chan as Channel, buffer, isChannel } from './csp';
-import { isChannelTake } from './csp/channel';
+import { chan as Channel, buffer, isChannel, isChannelTake } from './csp';
 
 const accumulate = () => buffer.reducer((current, newData) => ({ ...current, ...newData }));
 
@@ -39,7 +38,7 @@ export default function createRiew(viewFunc, ...controllers) {
     }
   }
   function requireObject(obj) {
-    if (obj === null || (typeof obj !== 'undefined' && typeof obj !== 'object')) {
+    if (typeof obj === 'undefined' || obj === null || (typeof obj !== 'undefined' && typeof obj !== 'object')) {
       throw new Error(`A key-value object expected. Instead "${obj}" passed.`);
     }
   }
@@ -82,7 +81,7 @@ export default function createRiew(viewFunc, ...controllers) {
     viewFunc(data);
   });
 
-  instance.mount = initialData => {
+  instance.mount = (initialData = {}) => {
     requireObject(initialData);
     propsCh.put(initialData);
 
@@ -129,6 +128,12 @@ export default function createRiew(viewFunc, ...controllers) {
   };
   instance.__setExternals = maps => {
     externals = { ...externals, ...normalizeExternalsMap(maps) };
+  };
+  instance.test = map => {
+    const newInstance = createRiew(viewFunc, ...controllers);
+
+    newInstance.__setExternals([ map ]);
+    return newInstance;
   };
 
   return instance;
