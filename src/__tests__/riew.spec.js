@@ -108,17 +108,18 @@ describe('Given the `riew` factory function', () => {
         data({ s });
         data({ s });
         data({ s });
-        await delay(3);
+        data({ s });
+        await delay(4);
         setState('bar');
       };
       const r = riew(view, se);
 
       r.mount();
-      await delay(4);
+      await delay(10);
       expect(view).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
     describe('when we have multiple channels produced', () => {
-      fit('should still subscribe all of them', async () => {
+      it('should still subscribe all of them', async () => {
         const view = jest.fn();
         const controller = async function ({ state, data }) {
           const message = state('Hello World');
@@ -127,7 +128,7 @@ describe('Given the `riew` factory function', () => {
           const update = () => message.put('chao');
 
           data({ up, lower });
-          await delay(3);
+          await delay(1);
           update();
           await delay(1);
           data({ a: 10 });
@@ -135,24 +136,25 @@ describe('Given the `riew` factory function', () => {
         const r = riew(view, controller);
 
         r.mount();
-        await delay();
+        await delay(4);
         expect(view).toBeCalledWithArgs(
           [ {} ],
+          [ { up: 'HELLO WORLD' } ],
           [ { up: 'HELLO WORLD', lower: 'hello world' } ],
+          [ { up: 'CHAO', lower: 'hello world' } ],
           [ { up: 'CHAO', lower: 'chao' } ],
           [ { up: 'CHAO', lower: 'chao', a: 10 } ]
         );
       });
     });
-    xit('should unsubscribe the effects if we unmount', async () => {
+    it('should unsubscribe the channels if we unmount', async () => {
       const view = jest.fn();
-      const spy = jest.fn();
       const controller = async function ({ state, data }) {
         const message = state('Hello World');
-        const up = message.map(value => value.toUpperCase()).pipe(spy);
-        const lower = message.map(value => value.toLowerCase()).pipe(spy);
-        const update = message.mutate(() => 'Chao');
-        const update2 = message.mutate(() => 'Foo');
+        const up = message.map(value => value.toUpperCase());
+        const lower = message.map(value => value.toLowerCase());
+        const update = () => message.put('Chao');
+        const update2 = () => message.put('Foo');
 
         data({ up, lower });
         await delay(3);
@@ -162,10 +164,10 @@ describe('Given the `riew` factory function', () => {
       const r = riew(view, controller);
 
       r.mount();
+      await delay();
       r.unmount();
       await delay(10);
-      expect(view).toBeCalledWithArgs([ { up: 'HELLO WORLD', lower: 'hello world' } ]);
-      expect(spy).toBeCalledWithArgs([ 'HELLO WORLD' ], [ 'hello world' ]);
+      expect(view).toBeCalledWithArgs([ {} ], [ { up: 'HELLO WORLD' } ], [ { up: 'HELLO WORLD', lower: 'hello world' } ]);
     });
   });
   describe('when we send an external state(effect) to the view and the view is unmounted', () => {

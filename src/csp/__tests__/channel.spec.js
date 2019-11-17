@@ -1,4 +1,4 @@
-import { chan, buffer, merge } from '../index';
+import { chan, buffer, merge, timeout } from '../index';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
 
@@ -45,13 +45,12 @@ describe('Given a CSP channel', () => {
       );
     });
   });
-  describe('and we close the channel', () => {
+  describe('and we close a non-buffered channel', () => {
     it(`should
-      - resolve the pending puts with CLOSE
-      - resolve the future puts with CLOSE if the buffer is not empty
-      - resolve the future puts with ENDED if the buffer is empty
+      - resolve the pending puts with ENDED
+      - resolve the future puts with ENDED
       - allow takes if the buffer is not empty
-      - resolve the future takes with ENDED if the buffer is empty`, async () => {
+      - resolve the future takes with ENDED`, async () => {
       const ch = chan();
 
       await exercise(
@@ -73,9 +72,66 @@ describe('Given a CSP channel', () => {
           '>B',
           'p1=true',
           'take1=foo',
-          'p2=Symbol(CLOSED)',
-          'take2=bar',
+          'p2=Symbol(ENDED)',
+          'take2=Symbol(ENDED)',
           'p3=Symbol(ENDED)',
+          'take3=Symbol(ENDED)',
+          '<A',
+          '<B'
+        ]
+      );
+    });
+    it('should resolve the pending takes with ENDED', async () => {
+      const ch = chan();
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+          },
+          async function B() {
+            ch.close();
+          }
+        ),
+        [ '>A', '>B', 'take1=Symbol(ENDED)', '<B', '<A' ]
+      );
+    });
+  });
+  describe('and we close a buffered channel', () => {
+    it(`should
+      - resolve the pending puts with CLOSED
+      - resolve the future puts with CLOSED if the buffer is not empty
+      - resolve the future puts with ENDED if the buffer is empty
+      - allow takes if the buffer is not empty
+      - resolve the future takes with ENDED`, async () => {
+      const ch = chan(buffer.fixed(1));
+
+      await exercise(
+        Test(
+          async function A(log) {
+            log(`p1=${(await ch.put('foo')).toString()}`);
+            log(`p2=${(await ch.put('bar')).toString()}`);
+            ch.close();
+            log(`p3=${(await ch.put('zar')).toString()}`);
+            await delay();
+            log(`p4=${(await ch.put('moo')).toString()}`);
+          },
+          async function B(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+            await delay();
+            log(`take2=${(await ch.take()).toString()}`);
+            log(`take3=${(await ch.take()).toString()}`);
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          'p1=true',
+          'take1=foo',
+          'p2=true',
+          'p3=Symbol(CLOSED)',
+          'take2=bar',
+          'p4=Symbol(ENDED)',
           'take3=Symbol(ENDED)',
           '<A',
           '<B'
@@ -524,7 +580,7 @@ describe('Given a CSP channel', () => {
   // pipe
 
   describe('when we pipe channels', () => {
-    fit('should distribute a single value to multiple channels', async () => {
+    it('should distribute a single value to multiple channels', async () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
@@ -614,7 +670,7 @@ describe('Given a CSP channel', () => {
 
   describe('when we use the timeout method', () => {
     it('should create a channel that is self closing after X amount of time', async () => {
-      const ch = chan.timeout(10);
+      const ch = timeout(10);
 
       await exercise(
         Test(
@@ -624,12 +680,12 @@ describe('Given a CSP channel', () => {
             log(`put2=${(await ch.put('bar')).toString()}`);
           },
           async function B(log) {
-            await delay(20);
             log(`take1=${(await ch.take()).toString()}`);
+            await delay(20);
             log(`take2=${(await ch.take()).toString()}`);
           }
         ),
-        [ '>A', '>B', 'put1=Symbol(CLOSED)', 'take1=foo', 'take2=Symbol(ENDED)', '<B', 'put2=Symbol(ENDED)', '<A' ]
+        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=Symbol(ENDED)', 'take2=Symbol(ENDED)', '<A', '<B' ]
       );
     });
   });

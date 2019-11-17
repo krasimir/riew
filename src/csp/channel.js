@@ -1,5 +1,5 @@
 import { OPEN, CLOSED, ENDED } from './buffer/states';
-import { defineOps } from './ops';
+import ops from './ops';
 import { normalizeChannelArguments } from './utils';
 import { grid } from '../index';
 
@@ -8,41 +8,40 @@ export function chan(...args) {
   let [ id, buff ] = normalizeChannelArguments(args);
   let api = { id, '@channel': true };
 
-  function calculateState() {
-    if (state === CLOSED && buff.isEmpty()) {
-      state = ENDED;
-    }
-    return state;
-  }
-  function isAccepting() {
-    const s = calculateState();
-    return s !== CLOSED && s !== ENDED;
-  }
-
-  defineOps(api);
+  ops(api);
   implementIterableProtocol(api);
 
   api.buff = buff;
-  api.state = calculateState;
+  api.state = () => state;
   api.put = item => {
-    if (!isAccepting()) {
+    if (state === CLOSED || state === ENDED) {
       return Promise.resolve(state);
     }
     return buff.put(item);
   };
   api.take = () => {
     if (state === ENDED) return Promise.resolve(ENDED);
-    if (state === CLOSED && buff.isEmpty()) return Promise.resolve(ENDED);
-    return buff.take();
+    // When we close a channel we do check if the buffer is empty.
+    // If it is not then it is safe to take from it.
+    // If it is empty the state here will be ENDED, not CLOSED.
+    // So there is no way to reach this point with CLOSED state and an empty buffer.
+    let takeValue = buff.take();
+    if (state === CLOSED && buff.isEmpty()) {
+      state = ENDED;
+      grid.remove(api);
+    }
+    return takeValue;
   };
   api.close = () => {
-    state = CLOSED;
-    buff.puts.forEach(put => put(CLOSED));
+    state = buff.isEmpty() ? ENDED : CLOSED;
+    buff.puts.forEach(put => put(state));
     // We have a pending take only if the buffer is empty.
     // So, closed buffer with no value => ENDED
     buff.takes.forEach(put => put(ENDED));
+    if (state === ENDED) {
+      grid.remove(api);
+    }
   };
-  api.open = () => (state = OPEN);
   api.reset = () => {
     state = OPEN;
     buff.reset();
@@ -56,16 +55,17 @@ export function chan(...args) {
   grid.add(api);
   return api;
 }
-chan.timeout = function (interval) {
-  const ch = chan();
-  setTimeout(() => ch.close(), interval);
-  return ch;
-};
 chan.OPEN = OPEN;
 chan.CLOSED = CLOSED;
 chan.ENDED = ENDED;
 
 // ------------------------------------------------
+
+export function timeout(interval) {
+  const ch = chan();
+  setTimeout(() => ch.close(), interval);
+  return ch;
+}
 
 export function merge(...channels) {
   const newCh = chan();

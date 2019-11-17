@@ -13,12 +13,18 @@ export default function createRiew(viewFunc, ...controllers) {
     name: getFuncName(viewFunc)
   };
   let channels = [];
+  let subscriptions = {};
   let onUnmountCallbacks = [];
 
   function chan(...args) {
     const c = Channel(...args);
     channels.push(c);
     return c;
+  }
+  function subscribe(key, ch) {
+    if (!subscriptions[ `${key}_${ch.id}` ]) {
+      subscriptions[ `${key}_${ch.id}` ] = ch.map(v => ({ [ key ]: v })).pipe(viewCh);
+    }
   }
 
   const viewCh = chan(accumulate());
@@ -41,9 +47,9 @@ export default function createRiew(viewFunc, ...controllers) {
           data: value => {
             const normalizedRawData = Object.keys(value).reduce((obj, key) => {
               if (isChannel(value[ key ])) {
-                value[ key ].map(v => ({ [ key ]: v })).pipe(viewCh);
+                subscribe(key, value[ key ]);
               } else if (isChannelTake(value[ key ])) {
-                value[ key ].ch.map(v => ({ [ key ]: v })).pipe(viewCh);
+                subscribe(key, value[ key ].ch);
               } else {
                 obj[ key ] = value[ key ];
               }
@@ -73,9 +79,10 @@ export default function createRiew(viewFunc, ...controllers) {
     onUnmountCallbacks = [];
     channels.forEach(c => {
       c.close();
-      grid.remove(c);
     });
     channels = [];
+    Object.keys(subscriptions).forEach(key => subscriptions[ key ].close());
+    subscriptions = {};
   };
 
   return instance;
