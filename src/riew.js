@@ -7,6 +7,17 @@ import { isChannelTake } from './csp/channel';
 
 const accumulate = () => buffer.reducer((current, newData) => ({ ...current, ...newData }));
 
+function normalizeExternalsMap(arr) {
+  return arr.reduce((map, item) => {
+    if (typeof item === 'string') {
+      map = { ...map, [ '@' + item ]: true };
+    } else {
+      map = { ...map, ...item };
+    }
+    return map;
+  }, {});
+}
+
 export default function createRiew(viewFunc, ...controllers) {
   const instance = {
     id: getId('r'),
@@ -15,6 +26,7 @@ export default function createRiew(viewFunc, ...controllers) {
   let channels = [];
   let subscriptions = {};
   let onUnmountCallbacks = [];
+  let externals = {};
 
   function chan(...args) {
     const c = Channel(...args);
@@ -31,6 +43,37 @@ export default function createRiew(viewFunc, ...controllers) {
       throw new Error(`A key-value object expected. Instead "${obj}" passed.`);
     }
   }
+  function normalizeExternals() {
+    return Object.keys(externals).reduce((obj, key) => {
+      let o;
+      if (key.charAt(0) === '@') {
+        key = key.substr(1, key.length);
+        o = use(key);
+      } else {
+        o = externals[ key ];
+      }
+      obj[ key ] = o;
+      return obj;
+    }, {});
+  }
+  function normalizeDataMap(data, channelToPush) {
+    requireObject(data);
+    const normalizedData = Object.keys(data).reduce((obj, key) => {
+      let o = data[ key ];
+      if (isChannel(o)) {
+        subscribe(key, o);
+      } else if (isChannelTake(o)) {
+        subscribe(key, o.ch);
+      } else {
+        obj[ key ] = o;
+      }
+      return obj;
+    }, {});
+
+    if (!isObjectEmpty(normalizedData)) {
+      channelToPush.put(normalizedData);
+    }
+  }
 
   const viewCh = chan(accumulate());
   const propsCh = chan().pipe(viewCh);
@@ -43,28 +86,16 @@ export default function createRiew(viewFunc, ...controllers) {
     requireObject(initialData);
     propsCh.put(initialData);
 
+    let normalizedExternals = normalizeExternals();
+    normalizeDataMap(normalizedExternals, viewCh);
+
     let controllersResult = parallel(
       ...controllers.map(c => () => {
         const dataCh = chan().pipe(viewCh);
         return c({
+          ...normalizedExternals,
           props: chan().from(propsCh),
-          data: value => {
-            requireObject(value);
-            const normalizedRawData = Object.keys(value).reduce((obj, key) => {
-              if (isChannel(value[ key ])) {
-                subscribe(key, value[ key ]);
-              } else if (isChannelTake(value[ key ])) {
-                subscribe(key, value[ key ].ch);
-              } else {
-                obj[ key ] = value[ key ];
-              }
-              return obj;
-            }, {});
-
-            if (!isObjectEmpty(normalizedRawData)) {
-              dataCh.put(normalizedRawData);
-            }
-          },
+          data: value => normalizeDataMap(value, dataCh),
           state: value => chan().from(value)
         });
       })
@@ -91,6 +122,13 @@ export default function createRiew(viewFunc, ...controllers) {
   };
   instance.update = value => {
     propsCh.put(value);
+  };
+  instance.with = (...maps) => {
+    instance.__setExternals(maps);
+    return instance;
+  };
+  instance.__setExternals = maps => {
+    externals = { ...externals, ...normalizeExternalsMap(maps) };
   };
 
   return instance;

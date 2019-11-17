@@ -294,18 +294,20 @@ describe('Given the `riew` factory function', () => {
   });
   describe('when we use `with` method', () => {
     describe('and we pass a channel', () => {
-      fit(`should send the state to the controller`, () => {
+      it(`should send the state to the controller`, async () => {
         const view = jest.fn();
-        const [ s1, setState1 ] = state('a');
-        const [ s2, setState2 ] = state('b');
+        const [ s1, setState1 ] = chan().from('a');
+        const [ s2, setState2 ] = chan().from('b');
         const controller = jest.fn();
         const r = riew(view, controller).with({ s1, s2 });
 
         r.mount();
+        await delay(5);
         setState1('foo');
         setState2('bar');
+        await delay();
 
-        expect(view).toBeCalledWithArgs([ { s1: 'a', s2: 'b' } ], [ { s1: 'foo', s2: 'b' } ], [ { s1: 'foo', s2: 'bar' } ]);
+        expect(view).toBeCalledWithArgs([ {} ], [ { s1: 'a', s2: 'b' } ], [ { s1: 'foo', s2: 'bar' } ]);
         expect(controller).toBeCalledWithArgs([
           expect.objectContaining({
             data: expect.any(Function)
@@ -314,19 +316,22 @@ describe('Given the `riew` factory function', () => {
       });
     });
     describe('and when we pass something else', () => {
-      xit(`should pass the thing to the controller and view`, () => {
-        const [ s, setState ] = state({ firstName: 'John', lastName: 'Doe' });
-        const getFirstName = s.map(({ firstName }) => firstName);
+      it(`should pass the thing to the controller and view`, async () => {
+        const ch = chan().from({ firstName: 'John', lastName: 'Doe' });
+        const [ , setState ] = ch;
+        const getFirstName = ch.map(({ firstName }) => firstName);
         const view = jest.fn();
         const spy = jest.fn();
         const r = riew(view, ({ firstName }) => {
-          subscribe(firstName.pipe(spy), true);
+          firstName.takeEvery(spy);
         }).with({ firstName: getFirstName });
 
         r.mount();
+        await delay(5);
         setState({ firstName: 'Jon', lastName: 'Snow' });
+        await delay(5);
 
-        expect(view).toBeCalledWithArgs([ { firstName: 'John' } ], [ { firstName: 'Jon' } ]);
+        expect(view).toBeCalledWithArgs([ {} ], [ { firstName: 'John' } ], [ { firstName: 'Jon' } ]);
         expect(spy).toBeCalledWithArgs([ 'John' ], [ 'Jon' ]);
       });
     });
