@@ -3,154 +3,174 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../../__helpers__';
 import riew from '../index';
-import { state, reset, register, subscribe } from '../../index';
+import { state, reset, register, chan, buffer } from '../../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
     reset();
   });
   describe('when we use the riew Component', () => {
-    fit('should always render the view at least once', () => {
-      const R = riew(() => <p>Hello</p>);
-      const { container } = render(<R />);
+    it('should always render the view at least once', () => {
+      return act(async () => {
+        const R = riew(() => <p>Hello</p>);
+        const { container } = render(<R />);
 
-      exerciseHTML(container, '<p>Hello</p>');
+        await delay(10);
+        exerciseHTML(container, '<p>Hello</p>');
+      });
     });
     it(`should
       * run the controller function
       * render once by default
-      * render every time when we call the "render" method`, async () => {
-      const controller = jest.fn().mockImplementation(async ({ data }) => {
-        await delay(5);
-        act(() => {
+      * render every time when we call the "data" method`, () => {
+      return act(async () => {
+        const controller = jest.fn().mockImplementation(async ({ data }) => {
+          await delay(5);
           data({ foo: 'bar' });
         });
+        const view = jest.fn().mockImplementation(() => null);
+        const R = riew(view, controller);
+
+        render(<R />);
+        await delay(10);
+
+        expect(view).toBeCalledWithArgs([ {}, {} ], [ { foo: 'bar' }, {} ]);
       });
-      const view = jest.fn().mockImplementation(() => null);
-      const R = riew(view, controller);
-
-      render(<R />);
-      await delay(7);
-
-      expect(view).toBeCalledWithArgs([ {}, {} ], [ { foo: 'bar' }, {} ]);
     });
     describe('and we use a state', () => {
       it(`should
         * render with the given state data
         * re-render with a new value when we update the state
-        * teardown the state when the component is unmounted`, async () => {
-        const [ s, setState ] = state('foo');
-        const R = riew(({ state }) => <p>{ state }</p>, async function ({ state }) {
-          await delay(5);
-          act(() => {
+        * teardown the state when the component is unmounted`, () => {
+        return act(async () => {
+          const [ s, setState ] = state('foo');
+          const R = riew(({ state }) => <p>{ state }</p>, async function ({ state }) {
+            await delay(5);
             setState('bar');
-          });
-        }).with({ state: s });
-        const { container, unmount } = render(<R />);
+          }).with({ state: s });
+          const { container, unmount } = render(<R />);
 
-        exerciseHTML(container, '<p>foo</p>');
-        await delay(7);
-        exerciseHTML(container, '<p>bar</p>');
-        unmount();
+          await delay(3);
+          exerciseHTML(container, '<p>foo</p>');
+          await delay(10);
+          exerciseHTML(container, '<p>bar</p>');
+          unmount();
+        });
       });
       describe('and we use a state that is exported into the grid', () => {
-        it('should receive the state value and subscribe for changes', async () => {
-          const [ s, setState ] = state(42);
+        it('should receive the state value and subscribe for changes', () => {
+          return act(async () => {
+            const [ s, setState ] = state(42);
 
-          register('hello', s);
+            register('hello', s);
 
-          const View = ({ state, hello }) => {
-            return <p>{ state + hello }</p>;
-          };
-          const R = riew(View).with({ state: state('foo') }, 'hello');
-          const { container } = render(<R />);
+            const View = ({ state, hello }) => {
+              return <p>{ (state + hello).toString() }</p>;
+            };
+            const R = riew(View).with({ state: state('foo') }, 'hello');
+            const { container } = render(<R />);
 
-          exerciseHTML(container, '<p>foo42</p>');
-          act(() => {
+            await delay(3);
+            exerciseHTML(container, '<p>foo42</p>');
             setState('200');
+            await delay(3);
+            exerciseHTML(container, '<p>foo200</p>');
           });
-          exerciseHTML(container, '<p>foo200</p>');
         });
       });
       it('should allow us to use different statesMap', () => {
-        const spy = jest.fn().mockImplementation(() => null);
-        const R = riew(spy);
-        const RA = R.with({ state: { foo: 'a' } });
-        const RB = R.with({ state: { foo: 'b' } });
+        return act(async () => {
+          const spy = jest.fn().mockImplementation(() => null);
+          const R = riew(spy);
+          const RA = R.with({ state: { foo: 'a' } });
+          const RB = R.with({ state: { foo: 'b' } });
 
-        render(<RA />);
-        render(<RB />);
+          render(<RA />);
+          render(<RB />);
 
-        expect(spy).toBeCalledWithArgs([ { state: { foo: 'a' } }, {} ], [ { state: { foo: 'b' } }, {} ]);
-        expect('with' in RA).toBe(true);
+          await delay(5);
+          expect(spy).toBeCalledWithArgs([ { state: { foo: 'a' } }, {} ], [ { state: { foo: 'b' } }, {} ]);
+          expect('with' in RA).toBe(true);
+        });
       });
     });
     describe('and we use "props"', () => {
       it(`should
         * have access to the props
         * have be able to subscribe to props change`, () => {
-        const propsSpy = jest.fn();
-        const view = jest.fn().mockImplementation(() => null);
-        const I = riew(view, function ({ props }) {
-          subscribe(props.pipe(propsSpy), true);
+        return act(async () => {
+          const propsSpy = jest.fn();
+          const view = jest.fn().mockImplementation(() => null);
+          const I = riew(view, function ({ props }) {
+            props.takeEvery(propsSpy);
+          });
+
+          const { rerender } = render(<I foo='bar' />);
+
+          await delay(3);
+          rerender(<I zoo='mar' />);
+
+          await delay(5);
+          expect(view).toBeCalledWithArgs([ { foo: 'bar' }, {} ], [ { foo: 'bar' }, {} ], [ { zoo: 'mar', foo: 'bar' }, {} ]);
+          expect(propsSpy).toBeCalledWithArgs([ { foo: 'bar' } ], [ { zoo: 'mar' } ]);
         });
-
-        const { rerender } = render(<I foo='bar' />);
-
-        rerender(<I zoo='mar' />);
-
-        expect(view).toBeCalledWithArgs([ { foo: 'bar' }, {} ], [ { foo: 'bar', zoo: 'mar' }, {} ], [ { foo: 'bar', zoo: 'mar' }, {} ]);
-        expect(propsSpy).toBeCalledWithArgs([ { foo: 'bar' } ], [ { foo: 'bar', zoo: 'mar' } ]);
       });
     });
   });
   describe('when we want to use the React children prop', () => {
     it('should work', () => {
-      const R = riew(({ children }) => children('John'));
-      const { container } = render(<R>{ name => `Hello ${name}!` }</R>);
+      return act(async () => {
+        const R = riew(({ children }) => children('John'));
+        const { container } = render(<R>{ name => `Hello ${name}!` }</R>);
 
-      exerciseHTML(container, 'Hello John!');
+        await delay(5);
+        exerciseHTML(container, 'Hello John!');
+      });
     });
   });
-  describe('when we render state and mutation made out of it', () => {
-    it('when firing the mutation should re-render with a new value', () => {
-      const effect = ({ state, data }) => {
-        const [ value ] = state([ { value: 2, selected: true }, { value: 67, selected: true } ]);
+  describe('when we render a channel and pass a function to update the value of the channel', () => {
+    it('when firing the mutation func should re-render with a new value', () => {
+      return act(async () => {
+        const effect = ({ state, data }) => {
+          const value = chan(
+            buffer.reducer((current = [], payload) => {
+              return current.map(item => {
+                return {
+                  ...item,
+                  selected: item.value === payload ? false : item.selected
+                };
+              });
+            })
+          ).from([ { value: 2, selected: true }, { value: 67, selected: true } ]);
+          const change = payload => value.put(payload);
 
-        data({
-          value,
-          change: value.mutate((current, payload) => {
-            return current.map(item => {
-              return {
-                ...item,
-                selected: item.value === payload ? false : item.selected
-              };
-            });
-          })
-        });
-      };
-      const View = ({ value, change }) => {
-        return (
-          <div>
+          data({ value, change });
+        };
+        const View = ({ value, change }) => {
+          return (
             <div>
-              value:{ ' ' }
-              { value
-                .filter(({ selected }) => selected)
-                .map(({ value }) => value)
-                .join(', ') }
+              <div>
+                value:{ ' ' }
+                { value
+                  .filter(({ selected }) => selected)
+                  .map(({ value }) => value)
+                  .join(', ') }
+              </div>
+              <button onClick={ () => change(67) }>click me</button>
             </div>
-            <button onClick={ () => change(67) }>click me</button>
-          </div>
-        );
-      };
-      const R = riew(View, effect);
-      const { container, getByText } = render(<R />);
+          );
+        };
+        const R = riew(View, effect);
+        const { container, getByText } = render(<R />);
 
-      exerciseHTML(container, '<div><div>value: 2, 67</div><button>click me</button></div>');
+        await delay(5);
+        exerciseHTML(container, '<div><div>value: 2, 67</div><button>click me</button></div>');
 
-      fireEvent.click(getByText(/click me/));
+        fireEvent.click(getByText(/click me/));
 
-      exerciseHTML(container, '<div><div>value: 2</div><button>click me</button></div>');
+        await delay(10);
+        exerciseHTML(container, '<div><div>value: 2</div><button>click me</button></div>');
+      });
     });
   });
 });

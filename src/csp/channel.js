@@ -49,7 +49,7 @@ export default function chan(...args) {
   api.setBuffer = b => (buff = api.buff = b);
   api.__value = () => {
     console.warn("Riew: you should not get the channel's value directly! This method is here purely for testing purposes.");
-    return buff.value;
+    return buff.getValue();
   };
 
   grid.add(api);

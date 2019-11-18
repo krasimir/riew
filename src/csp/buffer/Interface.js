@@ -10,6 +10,12 @@ export default function BufferInterface() {
       this.value = [];
       this.puts = [];
       this.takes = [];
+    },
+    setValue(v) {
+      this.value = v;
+    },
+    getValue() {
+      return this.value;
     }
   };
 }

@@ -72,11 +72,11 @@ export default function ops(ch) {
 
   ch.from = value => {
     if (Array.isArray(value)) {
-      ch.buff.value = value;
+      ch.buff.setValue(value);
     } else if (isChannel(value)) {
       value.pipe(ch);
     } else if (typeof value !== 'undefined') {
-      ch.buff.value = [ value ];
+      ch.buff.setValue([ value ]);
     }
     return ch;
   };

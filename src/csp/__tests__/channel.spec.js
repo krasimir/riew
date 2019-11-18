@@ -478,7 +478,7 @@ describe('Given a CSP', () => {
       expect(reducerSpy).toBeCalledWithArgs([ 10 ], [ 30 ], [ 35 ]);
     });
     describe('and we fire multiple puts one after each other', () => {
-      it('...', async () => {
+      it('should flatten them', async () => {
         const reducerSpy = jest.fn();
         const ch = chan(
           buffer.reducer((current = 0, data) => {
@@ -506,6 +506,66 @@ describe('Given a CSP', () => {
         );
 
         expect(reducerSpy).toBeCalledWithArgs([ 0 ], [ 10 ], [ 30 ], [ 60 ]);
+      });
+    });
+    describe('and we have an array of items as value', () => {
+      it('should properly reduce value', async () => {
+        const reducerSpy = jest.fn();
+        const ch = chan(
+          buffer.reducer((current, data) => {
+            reducerSpy(current, data);
+            return current.map(item => {
+              return {
+                ...item,
+                selected: data === item.id
+              };
+            });
+          })
+        ).from([ { id: 10, selected: true }, { id: 20, selected: true } ]);
+
+        await exercise(
+          Test(
+            async function A(log) {
+              log(`take1=${(await ch.take()).filter(({ selected }) => selected).map(({ id }) => id)}`);
+              log(`take2=${(await ch.take()).filter(({ selected }) => selected).map(({ id }) => id)}`);
+              log(`take2=${(await ch.take()).filter(({ selected }) => selected).map(({ id }) => id)}`);
+            },
+            async function B(log) {
+              await ch.put(10);
+              await ch.put(20);
+            }
+          ),
+          [ '>A', '>B', 'take1=10,20', 'take2=10', 'take2=20', '<B', '<A' ]
+        );
+
+        expect(reducerSpy).toBeCalledWithArgs(
+          [
+            [
+              {
+                id: 10,
+                selected: true
+              },
+              {
+                id: 20,
+                selected: true
+              }
+            ],
+            10
+          ],
+          [
+            [
+              {
+                id: 10,
+                selected: true
+              },
+              {
+                id: 20,
+                selected: false
+              }
+            ],
+            20
+          ]
+        );
       });
     });
   });

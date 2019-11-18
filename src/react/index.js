@@ -19,17 +19,14 @@ export default function riew(View, ...controllers) {
 
       // mounting
       useEffect(() => {
-        instance = createRiew(
-          (props) => {
-            if (!mounted) return;
-            if (props === null) {
-              setContent(null);
-            } else {
-              setContent(props);
-            }
-          },
-          ...controllers
-        );
+        instance = createRiew(props => {
+          if (!mounted) return;
+          if (props === null) {
+            setContent(null);
+          } else {
+            setContent(props);
+          }
+        }, ...controllers);
 
         if (externals && externals.length > 0) {
           instance = instance.with(...externals);
@@ -45,10 +42,10 @@ export default function riew(View, ...controllers) {
         };
       }, []);
 
-      return content === null ? null : React.createElement(View, Object.assign({}, outerProps, content));
+      return content === null ? null : React.createElement(View, content);
     };
 
-    comp.displayName = `Riew_${ getFuncName(View) }`;
+    comp.displayName = `Riew_${getFuncName(View)}`;
     comp.with = (...maps) => {
       return createBridge(maps);
     };

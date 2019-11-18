@@ -4,6 +4,11 @@ export default function ReducerBuffer(reducer) {
   const api = BufferInterface();
   let v;
 
+  api.setValue = newValue => {
+    api.value = [ newValue ];
+    v = newValue;
+  };
+  api.getValue = () => v;
   api.put = item => {
     if (api.takes.length === 0) {
       return new Promise(resolve => {
