@@ -93,7 +93,7 @@ export default function createRiew(viewFunc, ...controllers) {
           ...normalizedExternals,
           props: chan().from(propsCh),
           data: value => normalizeDataMap(value, dataCh),
-          state: value => chan().from(value)
+          state: value => chan().from([ value ])
         });
       })
     )();

@@ -174,7 +174,7 @@ describe('Given the `riew` factory function', () => {
       * initially subscribe and then unsubscribe
       * keep the external subscriptions`, async () => {
       const spy = jest.fn();
-      const ch = chan().from('foo');
+      const ch = chan().from([ 'foo' ]);
       const [ s, setState ] = ch;
       const view = jest.fn();
       const controller = function ({ data }) {
@@ -296,8 +296,8 @@ describe('Given the `riew` factory function', () => {
     describe('and we pass a channel', () => {
       it(`should send the state to the controller`, async () => {
         const view = jest.fn();
-        const [ s1, setState1 ] = chan().from('a');
-        const [ s2, setState2 ] = chan().from('b');
+        const [ s1, setState1 ] = chan().from([ 'a' ]);
+        const [ s2, setState2 ] = chan().from([ 'b' ]);
         const controller = jest.fn();
         const r = riew(view, controller).with({ s1, s2 });
 
@@ -317,7 +317,7 @@ describe('Given the `riew` factory function', () => {
     });
     describe('and when we pass something else', () => {
       it(`should pass the thing to the controller and view`, async () => {
-        const ch = chan().from({ firstName: 'John', lastName: 'Doe' });
+        const ch = chan().from([ { firstName: 'John', lastName: 'Doe' } ]);
         const [ , setState ] = ch;
         const getFirstName = ch.map(({ firstName }) => firstName);
         const view = jest.fn();

@@ -5,7 +5,10 @@ export const buffer = b;
 export const chan = Channel;
 
 export function state(value) {
-  return Channel(b.fixed()).from([ value ]);
+  if (typeof value !== 'undefined') {
+    return Channel().from([ value ]);
+  }
+  return Channel();
 }
 
 export function timeout(interval) {
