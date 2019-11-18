@@ -3,6 +3,7 @@ import BufferInterface from './Interface';
 export default function DroppingBuffer(size = 1, sliding = false) {
   const api = BufferInterface();
 
+  api.setValue = v => (api.value = v);
   api.put = item => {
     let r = Promise.resolve(true);
     if (api.value.length < size) {

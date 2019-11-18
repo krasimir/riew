@@ -349,6 +349,21 @@ describe('Given a CSP', () => {
         spy.mockRestore();
       });
     });
+    describe('and we have a preset value', () => {
+      it('should allow a non-blocking take', async () => {
+        const ch = chan(buffer.dropping(2)).from([ 'a', 'b' ]);
+        const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        await exercise(
+          Test(async function A(log) {
+            log(`take1=${(await ch.take()).toString()}`);
+            log(`take2=${(await ch.take()).toString()}`);
+          }),
+          [ '>A', 'take1=a', 'take2=b', '<A' ]
+        );
+        spy.mockRestore();
+      });
+    });
   });
   describe('when we create a channel with a sliding buffer', () => {
     describe("and the buffer's size is 0", () => {
@@ -606,10 +621,10 @@ describe('Given a CSP', () => {
         })
       ).takeLatest(reducerSpy);
       const data1 = chan()
-        .from('foo')
+        .from([ 'foo' ])
         .pipe(ch);
       const data2 = chan()
-        .from('bar')
+        .from([ 'bar' ])
         .pipe(ch);
 
       await data1.put('A');
@@ -889,7 +904,7 @@ describe('Given a CSP', () => {
       });
       describe('and that value is NOT undefined', () => {
         it('should pass it as array of one item to the buffer', async () => {
-          const ch = chan().from('foo');
+          const ch = state('foo');
 
           await exercise(
             Test(

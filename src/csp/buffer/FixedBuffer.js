@@ -3,6 +3,7 @@ import BufferInterface from './Interface';
 export default function FixedBuffer(size = 0) {
   const api = BufferInterface();
 
+  api.setValue = v => (api.value = v);
   api.put = item => {
     if (api.takes.length === 0) {
       if (api.value.length < size) {
