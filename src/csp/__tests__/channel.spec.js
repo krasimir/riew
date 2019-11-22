@@ -1,47 +1,44 @@
-import { chan, buffer, merge, timeout, state } from '../index';
+import { chan, buffer, merge, timeout, state, go } from '../index';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
 
-async function Test(...routines) {
+function Test(...routines) {
   const log = [];
-  await Promise.all(
-    routines.map(r => {
-      return new Promise(async resolve => {
-        const rName = getFuncName(r);
-        log.push(`>${rName}`);
-        await r(str => log.push(str));
-        log.push(`<${rName}`);
-        resolve(log);
-      });
-    })
-  );
+  routines.map(routine => {
+    const rName = getFuncName(routine);
+    const logSomething = str => log.push(str);
+    log.push(`>${rName}`);
+    return go(routine, logSomething).then(() => {
+      log.push(`<${rName}`);
+    });
+  });
   return log;
 }
-async function exercise(p, expectation) {
-  expect(await p).toStrictEqual(expectation);
+function exercise(log, expectation) {
+  expect(log).toStrictEqual(expectation);
 }
 
 describe('Given a CSP', () => {
   // States
 
   describe('and we have an the channel OPEN', () => {
-    it(`should
+    fit(`should
       * allow writing and reading
       * should block the put until take
       * should block the take until put`, async () => {
       const ch = chan();
 
-      await exercise(
+      exercise(
         Test(
-          async function A(log) {
-            await ch.put('foo');
+          function * A(log) {
+            yield ch.put('foo');
             log('put successful');
           },
-          async function B(log) {
-            log(`take=${await ch.take()}`);
+          function * B(log) {
+            log(`take=${yield ch.take()}`);
           }
         ),
-        [ '>A', '>B', 'put successful', 'take=foo', '<A', '<B' ]
+        [ '>A', '>B', 'take=foo', '<B', 'put successful', '<A' ]
       );
     });
   });

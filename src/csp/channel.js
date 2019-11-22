@@ -3,6 +3,9 @@ import ops from './ops';
 import { normalizeChannelArguments } from './utils';
 import { grid } from '../index';
 
+export const PUT = 'PUT';
+export const TAKE = 'TAKE';
+
 export default function chan(...args) {
   let state = OPEN;
   let [ id, buff ] = normalizeChannelArguments(args);
@@ -13,14 +16,16 @@ export default function chan(...args) {
 
   api.buff = buff;
   api.state = () => state;
-  api.put = item => {
+  api.put = item => ({ ch: api, op: 'PUT', item });
+  api.putNow = item => {
     if (state === CLOSED || state === ENDED) {
-      return Promise.resolve(state);
+      return state;
     }
     return buff.put(item);
   };
-  api.take = () => {
-    if (state === ENDED) return Promise.resolve(ENDED);
+  api.take = () => ({ ch: api, op: 'TAKE' });
+  api.takeNow = () => {
+    if (state === ENDED) return ENDED;
     // When we close a channel we do check if the buffer is empty.
     // If it is not then it is safe to take from it.
     // If it is empty the state here will be ENDED, not CLOSED.

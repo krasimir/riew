@@ -8,7 +8,7 @@ export default function FixedBuffer(size = 0) {
     if (api.takes.length === 0) {
       if (api.value.length < size) {
         api.value.push(item);
-        return Promise.resolve(true);
+        return true;
       }
       return new Promise(resolve => {
         api.puts.push(v => {
@@ -35,7 +35,7 @@ export default function FixedBuffer(size = 0) {
     if (api.value.length < size && api.puts.length > 0) {
       api.puts.shift()();
     }
-    return Promise.resolve(v);
+    return v;
   };
 
   return api;

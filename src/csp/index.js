@@ -1,8 +1,10 @@
 import b from './buffer';
 import { default as Channel } from './channel';
+import { default as Go } from './go';
 
 export const buffer = b;
 export const chan = Channel;
+export const go = Go;
 
 export function state(value) {
   if (typeof value !== 'undefined') {

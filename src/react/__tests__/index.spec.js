@@ -173,4 +173,30 @@ describe('Given the React riew function', () => {
       });
     });
   });
+  describe('when we register a channel', () => {
+    it('should provide the value to the react component', async () => {
+      return act(async () => {
+        const s = state(true);
+        const changeToFalse = () => s.put(false);
+        const spy = jest.fn();
+
+        register('whee', s);
+
+        const Component = riew(function ParentParentParent({ whee }) {
+          spy(whee);
+          return whee ? 'foo' : 'bar';
+        }).with('whee');
+
+        const { container } = render(<Component />);
+
+        await delay(3);
+        exerciseHTML(container, 'foo');
+        expect(spy.mock.calls[ 0 ]).toBe(true);
+        // changeToFalse();
+        // changeToFalse();
+        // await delay(3);
+        // exerciseHTML(container, 'boo');
+      });
+    });
+  });
 });

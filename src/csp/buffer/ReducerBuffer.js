@@ -33,7 +33,7 @@ export default function ReducerBuffer(reducer) {
       api.puts = [];
       return api.take();
     }
-    return Promise.resolve(api.value.shift());
+    return api.value.shift();
   };
 
   return api;
