@@ -1,40 +1,55 @@
 import { PUT, TAKE } from './channel';
-
-const isPromise = obj => obj && typeof obj[ 'then' ] === 'function';
+import chan from './channel';
 
 export default function go(genFunc, ...args) {
-  return new Promise(resolve => {
-    const gen = genFunc(...args);
-    (function processGen(nextValue) {
-      const iteration = gen.next(nextValue);
-      if (iteration.done) {
-        resolve();
+  const gen = genFunc(...args);
+  const routine = {
+    type: 'routine',
+    next: value => {
+      const iteration = gen.next(value);
+      if (iteration.done === true) {
+        done();
       } else {
-        if (typeof iteration.value === 'object') {
-          const { ch, op, ...rest } = iteration.value;
-          let opResult;
-          switch (op) {
-            case PUT:
-              opResult = ch.putNow(rest.item);
-              if (isPromise(opResult)) {
-                opResult.then(processGen);
-              } else {
-                processGen();
+        const { ch, item, op } = iteration.value;
+        const state = ch.state();
+
+        switch (op) {
+          case PUT:
+            if (state === chan.CLOSED || state === chan.ENDED) {
+              routine.next(state);
+            } else {
+              ch.buff.put(item, result => routine.next(result));
+            }
+            break;
+          case TAKE:
+            if (state === chan.ENDED) {
+              routine.next(chan.ENDED);
+            } else {
+              // When we close a channel we do check if the buffer is empty.
+              // If it is not then it is safe to take from it.
+              // If it is empty the state here will be ENDED, not CLOSED.
+              // So there is no way to reach this point with CLOSED state and an empty buffer.
+              if (state === chan.CLOSED && ch.buff.isEmpty()) {
+                chan.state(chan.ENDED);
               }
-              break;
-            case TAKE:
-              opResult = ch.takeNow(rest.item);
-              if (isPromise(opResult)) {
-                opResult.then(processGen);
-              } else {
-                processGen(opResult);
-              }
-              break;
-            default:
-            // console.log('=>', iteration.value);
-          }
+              ch.buff.take(result => routine.next(result));
+            }
+            break;
+          default:
+            throw new Error('Unrecognized operation for a routine.');
         }
       }
-    })();
+    }
+  };
+  let isDone = false;
+  let done = () => (isDone = true);
+
+  routine.next();
+  return new Promise(resolve => {
+    if (isDone) {
+      resolve();
+    } else {
+      done = resolve;
+    }
   });
 }

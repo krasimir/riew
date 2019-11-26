@@ -2,20 +2,22 @@ import { chan, buffer, merge, timeout, state, go } from '../index';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
 
-function Test(...routines) {
+async function Test(...routines) {
   const log = [];
-  routines.map(routine => {
-    const rName = getFuncName(routine);
-    const logSomething = str => log.push(str);
-    log.push(`>${rName}`);
-    return go(routine, logSomething).then(() => {
-      log.push(`<${rName}`);
-    });
-  });
+  await Promise.all(
+    routines.map(routine => {
+      const rName = getFuncName(routine);
+      const logSomething = str => log.push(str);
+      log.push(`>${rName}`);
+      return go(routine, logSomething).then(() => {
+        log.push(`<${rName}`);
+      });
+    })
+  );
   return log;
 }
-function exercise(log, expectation) {
-  expect(log).toStrictEqual(expectation);
+async function exercise(log, expectation) {
+  expect(await log).toStrictEqual(expectation);
 }
 
 describe('Given a CSP', () => {
@@ -25,10 +27,10 @@ describe('Given a CSP', () => {
     fit(`should
       * allow writing and reading
       * should block the put until take
-      * should block the take until put`, async () => {
+      * should block the take until put`, () => {
       const ch = chan();
 
-      exercise(
+      return exercise(
         Test(
           function * A(log) {
             yield ch.put('foo');
@@ -38,7 +40,7 @@ describe('Given a CSP', () => {
             log(`take=${yield ch.take()}`);
           }
         ),
-        [ '>A', '>B', 'take=foo', '<B', 'put successful', '<A' ]
+        [ '>A', '>B', 'put successful', 'take=foo', '<A', '<B' ]
       );
     });
   });
@@ -52,16 +54,16 @@ describe('Given a CSP', () => {
 
       await exercise(
         Test(
-          async function A(log) {
-            log(`p1=${(await ch.put('foo')).toString()}`);
-            log(`p2=${(await ch.put('bar')).toString()}`);
-            log(`p3=${(await ch.put('zar')).toString()}`);
+          function * A(log) {
+            log(`p1=${(yield ch.put('foo')).toString()}`);
+            log(`p2=${(yield ch.put('bar')).toString()}`);
+            log(`p3=${(yield ch.put('zar')).toString()}`);
           },
-          async function B(log) {
-            log(`take1=${(await ch.take()).toString()}`);
+          function * B(log) {
+            log(`take1=${(yield ch.take()).toString()}`);
             ch.close();
-            log(`take2=${(await ch.take()).toString()}`);
-            log(`take3=${(await ch.take()).toString()}`);
+            log(`take2=${(yield ch.take()).toString()}`);
+            log(`take3=${(yield ch.take()).toString()}`);
           }
         ),
         [
@@ -70,8 +72,8 @@ describe('Given a CSP', () => {
           'p1=true',
           'take1=foo',
           'p2=Symbol(ENDED)',
-          'take2=Symbol(ENDED)',
           'p3=Symbol(ENDED)',
+          'take2=Symbol(ENDED)',
           'take3=Symbol(ENDED)',
           '<A',
           '<B'

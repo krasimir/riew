@@ -15,28 +15,17 @@ export default function chan(...args) {
   implementIterableProtocol(api);
 
   api.buff = buff;
-  api.state = () => state;
-  api.put = item => ({ ch: api, op: 'PUT', item });
-  api.putNow = item => {
-    if (state === CLOSED || state === ENDED) {
-      return state;
+  api.state = s => {
+    if (typeof s !== 'undefined') {
+      state = s;
+      if (state === ENDED) {
+        grid.remove(api);
+      }
     }
-    return buff.put(item);
+    return state;
   };
+  api.put = item => ({ ch: api, op: PUT, item });
   api.take = () => ({ ch: api, op: 'TAKE' });
-  api.takeNow = () => {
-    if (state === ENDED) return ENDED;
-    // When we close a channel we do check if the buffer is empty.
-    // If it is not then it is safe to take from it.
-    // If it is empty the state here will be ENDED, not CLOSED.
-    // So there is no way to reach this point with CLOSED state and an empty buffer.
-    let takeValue = buff.take();
-    if (state === CLOSED && buff.isEmpty()) {
-      state = ENDED;
-      grid.remove(api);
-    }
-    return takeValue;
-  };
   api.close = () => {
     state = buff.isEmpty() ? ENDED : CLOSED;
     buff.puts.forEach(put => put(state));

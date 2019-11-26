@@ -213,7 +213,7 @@ describe('Given the Riew library', () => {
   });
   describe('when we have a channel passed to two React component', () => {
     describe('and unmount then update the state', () => {
-      fit('should not produce an error', () => {
+      xit('should not produce an error', () => {
         return act(async () => {
           const s = state(true);
           const changeToFalse = () => s.put(false);
