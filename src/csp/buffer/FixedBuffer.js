@@ -5,7 +5,6 @@ export default function FixedBuffer(size = 0) {
 
   api.setValue = v => (api.value = v);
   api.put = (item, callback) => {
-    console.log('put', item, `takes=${api.takes.length}`, api.value);
     if (api.takes.length === 0) {
       if (api.value.length < size) {
         api.value.push(item);
@@ -23,7 +22,6 @@ export default function FixedBuffer(size = 0) {
     }
   };
   api.take = callback => {
-    console.log('take', `puts=${api.puts.length}`, api.value);
     if (api.value.length === 0) {
       if (api.puts.length === 0) {
         api.takes.push(callback);

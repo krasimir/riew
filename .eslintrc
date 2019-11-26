@@ -52,7 +52,7 @@
     "comma-style": [2, "last"],
     "complexity": 0,
     "computed-property-spacing": [2, "always"],
-    "consistent-return": 2,
+    "consistent-return": 0,
     "consistent-this": 0,
     "curly": [2, "multi-line"],
     "default-case": 0,

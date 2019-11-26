@@ -5,6 +5,7 @@ import { grid } from '../index';
 
 export const PUT = 'PUT';
 export const TAKE = 'TAKE';
+export const SLEEP = 'SLEEP';
 
 export default function chan(...args) {
   let state = OPEN;
@@ -25,7 +26,8 @@ export default function chan(...args) {
     return state;
   };
   api.put = item => ({ ch: api, op: PUT, item });
-  api.take = () => ({ ch: api, op: 'TAKE' });
+  api.take = () => ({ ch: api, op: TAKE });
+  api.sleep = (ms = 0) => ({ ch: api, op: SLEEP, ms });
   api.close = () => {
     state = buff.isEmpty() ? ENDED : CLOSED;
     buff.puts.forEach(put => put(state));
