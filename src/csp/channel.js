@@ -1,13 +1,8 @@
-import { OPEN, CLOSED, ENDED } from './buffer/states';
-import ops from './ops';
+import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
 import { normalizeChannelArguments } from './utils';
 import { grid } from '../index';
 
-export const PUT = 'PUT';
-export const TAKE = 'TAKE';
-export const SLEEP = 'SLEEP';
-
-export default function chan(...args) {
+export function chan(...args) {
   let state = OPEN;
   let [ id, buff ] = normalizeChannelArguments(args);
   let api = { id, '@channel': true };
@@ -25,9 +20,8 @@ export default function chan(...args) {
     }
     return state;
   };
-  api.put = item => ({ ch: api, op: PUT, item });
-  api.take = () => ({ ch: api, op: TAKE });
-  api.sleep = (ms = 0) => ({ ch: api, op: SLEEP, ms });
+  // api.put = item => {};
+  // api.take = () => {};
   api.close = () => {
     state = buff.isEmpty() ? ENDED : CLOSED;
     buff.puts.forEach(put => put(state));
@@ -55,7 +49,192 @@ chan.OPEN = OPEN;
 chan.CLOSED = CLOSED;
 chan.ENDED = ENDED;
 
-// ------------------------------------------------
+// **************************************************** go / generators
+
+export function go(genFunc, args, done) {
+  const gen = genFunc(...args);
+  (function next(value) {
+    const i = gen.next(value);
+    if (i.done === true) {
+      done();
+      return;
+    }
+    switch (i.value.op) {
+      case PUT:
+        i.value.ch.put(i.value.item, next);
+        break;
+      case TAKE:
+        i.value.ch.take(next);
+        break;
+      case SLEEP:
+        setTimeout(() => {
+          next();
+        }, i.value.ms);
+        break;
+      default:
+        throw new Error('Unrecognized operation for a routine.');
+    }
+  })();
+}
+export function put(ch, item) {
+  return { ch, op: PUT, item };
+}
+export function take(ch) {
+  return { ch, op: TAKE };
+}
+export function sleep(ms = 0) {
+  return { op: SLEEP, ms };
+}
+
+// **************************************************** ops
+
+export function ops(ch) {
+  let opsTaker = false;
+  let pipes = [];
+
+  function taker() {
+    if (!opsTaker) {
+      opsTaker = true;
+      (async function listen() {
+        while (true) {
+          let v = await ch.take();
+          if (v === CLOSED || v === ENDED) {
+            break;
+          }
+          pipes.forEach(p => {
+            switch (p.type) {
+              case 'pipe':
+                if (p.ch.state() === OPEN) {
+                  p.ch.put(v);
+                }
+                break;
+              case 'map':
+                if (p.ch.state() === OPEN) {
+                  p.ch.put(p.func(v));
+                }
+                break;
+              case 'filter':
+                if (p.ch.state() === OPEN && p.func(v)) {
+                  p.ch.put(v);
+                }
+                break;
+              case 'takeEvery':
+                p.func(v);
+                break;
+              case 'takeLatest':
+                if (ch.buff.puts.length === 0) {
+                  p.func(v);
+                }
+                break;
+            }
+          });
+        }
+      })();
+    }
+  }
+
+  ch.put = (item, next) => {
+    let result;
+    let callback = next;
+    if (typeof next === 'undefined') {
+      result = new Promise(resolve => (callback = resolve));
+    }
+
+    let state = ch.state();
+    if (state === chan.CLOSED || state === chan.ENDED) {
+      callback(state);
+    } else {
+      ch.buff.put(item, result => callback(result));
+    }
+
+    return result;
+  };
+
+  ch.take = next => {
+    let result;
+    let callback = next;
+    if (typeof next === 'undefined') {
+      result = new Promise(resolve => (callback = resolve));
+    }
+
+    let state = ch.state();
+    if (state === chan.ENDED) {
+      callback(chan.ENDED);
+    } else {
+      // When we close a channel we do check if the buffer is empty.
+      // If it is not then it is safe to take from it.
+      // If it is empty the state here will be ENDED, not CLOSED.
+      // So there is no way to reach this point with CLOSED state and an empty buffer.
+      if (state === chan.CLOSED && ch.buff.isEmpty()) {
+        ch.state(chan.ENDED);
+        callback(chan.ENDED);
+      } else {
+        ch.buff.take(result => callback(result));
+      }
+    }
+
+    return result;
+  };
+
+  ch.pipe = (...channels) => {
+    channels.forEach(channel => {
+      if (!pipes.find(({ ch }) => ch === channel)) {
+        pipes.push({ type: 'pipe', ch: channel });
+      }
+    });
+    taker();
+    return ch;
+  };
+
+  ch.map = func => {
+    const newCh = chan();
+    pipes.push({ ch: newCh, func, type: 'map' });
+    taker();
+    return newCh;
+  };
+
+  ch.filter = func => {
+    const newCh = chan();
+    pipes.push({ ch: newCh, func, type: 'filter' });
+    taker();
+    return newCh;
+  };
+
+  ch.from = value => {
+    if (isChannel(value)) {
+      value.pipe(ch);
+    } else if (typeof value !== 'undefined') {
+      ch.buff.setValue(value);
+    }
+    return ch;
+  };
+
+  ch.takeEvery = func => {
+    pipes.push({ func, type: 'takeEvery' });
+    taker();
+    return ch;
+  };
+
+  ch.takeLatest = func => {
+    pipes.push({ func, type: 'takeLatest' });
+    taker();
+    return ch;
+  };
+}
+
+// **************************************************** utils
+
+export function isChannel(ch) {
+  return ch && ch[ '@channel' ] === true;
+}
+
+export function isChannelPut(func) {
+  return func && func[ '@channel_put' ] === true;
+}
+
+export function isChannelTake(func) {
+  return func && func[ '@channel_take' ] === true;
+}
 
 function implementIterableProtocol(ch) {
   if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {

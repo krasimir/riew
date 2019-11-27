@@ -1,4 +1,4 @@
-import { chan, buffer, merge, timeout, state, go } from '../index';
+import { chan, buffer, merge, timeout, state, go, put, take, sleep } from '../index';
 import { delay } from '../../__helpers__';
 import { getFuncName } from '../../utils';
 
@@ -37,11 +37,11 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            yield ch.put('foo');
+            yield put(ch, 'foo');
             log('put successful');
           },
           function * B(log) {
-            log(`take=${yield ch.take()}`);
+            log(`take=${yield take(ch)}`);
           }
         ),
         [ '>A', '>B', 'put successful', '<A', 'take=foo', '<B' ]
@@ -59,15 +59,15 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            log(`p1=${(yield ch.put('foo')).toString()}`);
-            log(`p2=${(yield ch.put('bar')).toString()}`);
-            log(`p3=${(yield ch.put('zar')).toString()}`);
+            log(`p1=${(yield put(ch, 'foo')).toString()}`);
+            log(`p2=${(yield put(ch, 'bar')).toString()}`);
+            log(`p3=${(yield put(ch, 'zar')).toString()}`);
           },
           function * B(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
             ch.close();
-            log(`take2=${(yield ch.take()).toString()}`);
-            log(`take3=${(yield ch.take()).toString()}`);
+            log(`take2=${(yield take(ch)).toString()}`);
+            log(`take3=${(yield take(ch)).toString()}`);
           }
         ),
         [
@@ -90,7 +90,7 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
           },
           function * B() {
             ch.close();
@@ -112,18 +112,18 @@ describe('Given a CSP', () => {
       return exercise(
         Test(
           function * A(log) {
-            log(`p1=${(yield ch.put('foo')).toString()}`);
-            log(`p2=${(yield ch.put('bar')).toString()}`);
+            log(`p1=${(yield put(ch, 'foo')).toString()}`);
+            log(`p2=${(yield put(ch, 'bar')).toString()}`);
             ch.close();
-            log(`p3=${(yield ch.put('zar')).toString()}`);
-            yield ch.sleep(2);
-            log(`p4=${(yield ch.put('moo')).toString()}`);
+            log(`p3=${(yield put(ch, 'zar')).toString()}`);
+            yield sleep(2);
+            log(`p4=${(yield put(ch, 'moo')).toString()}`);
           },
           function * B(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
-            yield ch.sleep(4);
-            log(`take2=${(yield ch.take()).toString()}`);
-            log(`take3=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
+            yield sleep(4);
+            log(`take2=${(yield take(ch)).toString()}`);
+            log(`take3=${(yield take(ch)).toString()}`);
           }
         ),
         [
@@ -142,19 +142,19 @@ describe('Given a CSP', () => {
         10
       );
     });
-    xit('should resolve the pending takes with ENDED', async () => {
+    it('should resolve the pending takes with ENDED', async () => {
       const ch = chan();
 
       exercise(
         Test(
           function * A(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
           },
           function * B() {
             ch.close();
           }
         ),
-        [ '>A', '>B', 'take1=Symbol(ENDED)', '<B', '<A' ]
+        [ '>A', '>B', 'take1=Symbol(ENDED)', '<A', '<B' ]
       );
     });
   });
@@ -162,11 +162,11 @@ describe('Given a CSP', () => {
   // Types of buffers
 
   describe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
-    xit('allow writing and reading', async () => {
+    fit('allow writing and reading', async () => {
       const ch = chan();
 
       ch.put('foo');
-      expect(ch.take()).toEqual('foo');
+      expect(await ch.take()).toEqual('foo');
     });
     xit('should block the channel if there is no puts but we want to take', async () => {
       const ch = chan();

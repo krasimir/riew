@@ -1,6 +1,6 @@
 import b from './buffer';
-import { default as Channel } from './channel';
-import { default as Go } from './go';
+import { chan as Channel, go as Go } from './channel';
+export { isChannel, isChannelPut, isChannelTake, put, take, sleep } from './channel';
 
 export const buffer = b;
 export const chan = Channel;
@@ -33,16 +33,4 @@ export function merge(...channels) {
   });
 
   return newCh;
-}
-
-export function isChannel(ch) {
-  return ch && ch[ '@channel' ] === true;
-}
-
-export function isChannelPut(func) {
-  return func && func[ '@channel_put' ] === true;
-}
-
-export function isChannelTake(func) {
-  return func && func[ '@channel_take' ] === true;
 }

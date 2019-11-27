@@ -1,4 +1,4 @@
-import { PUT, TAKE, SLEEP } from './channel';
+import { PUT, TAKE, SLEEP } from './constants';
 import chan from './channel';
 
 export default function go(genFunc, args, done) {
@@ -9,7 +9,7 @@ export default function go(genFunc, args, done) {
       done();
     } else {
       const { ch, op } = iteration.value;
-      const state = ch.state();
+      const state = ch ? ch.state() : null;
 
       switch (op) {
         case PUT:
