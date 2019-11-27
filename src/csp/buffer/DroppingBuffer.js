@@ -4,7 +4,7 @@ export default function DroppingBuffer(size = 1, sliding = false) {
   const api = BufferInterface();
 
   api.setValue = v => (api.value = v);
-  api.put = item => {
+  api.put = (item, callback) => {
     let r = true;
     if (api.value.length < size) {
       api.value.push(item);
@@ -17,14 +17,14 @@ export default function DroppingBuffer(size = 1, sliding = false) {
     if (api.takes.length > 0) {
       api.takes.shift()(api.value.shift());
     }
-    return r;
+    callback(r);
   };
-  api.take = () => {
+  api.take = callback => {
     if (api.value.length === 0) {
-      return new Promise(resolve => api.takes.push(resolve));
+      api.takes.push(callback);
+    } else {
+      callback(api.value.shift());
     }
-    const v = api.value.shift();
-    return v;
   };
 
   return api;

@@ -12,12 +12,13 @@ function Test(...routines) {
   });
   return log;
 }
-function exercise(log, expectation, delay) {
+function exercise(log, expectation, delay, cleanup = () => {}) {
   if (delay) {
     return new Promise(resolve => {
       setTimeout(() => {
         expect(log).toStrictEqual(expectation);
         resolve();
+        cleanup();
       }, delay);
     });
   }
@@ -142,7 +143,7 @@ describe('Given a CSP', () => {
         10
       );
     });
-    it('should resolve the pending takes with ENDED', async () => {
+    it('should resolve the pending takes with ENDED', () => {
       const ch = chan();
 
       exercise(
@@ -162,206 +163,215 @@ describe('Given a CSP', () => {
   // Types of buffers
 
   describe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
-    fit('allow writing and reading', async () => {
+    it('allow writing and reading', async () => {
       const ch = chan();
 
       ch.put('foo');
       expect(await ch.take()).toEqual('foo');
     });
-    xit('should block the channel if there is no puts but we want to take', async () => {
+    it('should block the channel if there is no puts but we want to take', () => {
       const ch = chan();
 
       exercise(
         Test(
           function * A(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
-            log(`take2=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
+            log(`take2=${(yield take(ch)).toString()}`);
           },
           function * B(log) {
-            log(`put1=${(yield ch.put('foo')).toString()}`);
-            log(`put2=${(yield ch.put('bar')).toString()}`);
+            log(`put1=${(yield put(ch, 'foo')).toString()}`);
+            log(`put2=${(yield put(ch, 'bar')).toString()}`);
           }
         ),
-        [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', 'put2=true', '<A', '<B' ]
+        [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<A', 'put2=true', '<B' ]
       );
     });
-    xit('should block the channel if there is no takers but we want to put', async () => {
+    it('should block the channel if there is no takers but we want to put', () => {
       const ch = chan();
 
       exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield ch.put('foo')).toString()}`);
-            log(`put2=${(yield ch.put('bar')).toString()}`);
+            log(`put1=${(yield put(ch, 'foo')).toString()}`);
+            log(`put2=${(yield put(ch, 'bar')).toString()}`);
           },
           function * B(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
-            log(`take2=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
+            log(`take2=${(yield take(ch)).toString()}`);
           }
         ),
-        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', 'take2=bar', '<A', '<B' ]
+        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', '<A', 'take2=bar', '<B' ]
       );
     });
   });
   describe('when we create a channel with a fixed buffer with size > 0', () => {
-    xit('should allow as many puts as we have space', async () => {
+    it('should allow as many puts as we have space', async () => {
       const ch = chan(buffer.fixed(2));
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-      exercise(
+      return exercise(
         Test(
           function * A(log) {
             log(`value1=${ch.__value().toString()}`);
-            log(`put1=${(yield ch.put('foo')).toString()}`);
+            log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`value2=${ch.__value().toString()}`);
-            log(`put2=${(yield ch.put('bar')).toString()}`);
+            log(`put2=${(yield put(ch, 'bar')).toString()}`);
             log(`value3=${ch.__value().toString()}`);
-            log(`put3=${(yield ch.put('zar')).toString()}`);
+            log(`put3=${(yield put(ch, 'zar')).toString()}`);
             log(`value4=${ch.__value().toString()}`);
-            log(`put4=${(yield ch.put('mar')).toString()}`);
+            log(`put4=${(yield put(ch, 'mar')).toString()}`);
             log(`value5=${ch.__value().toString()}`);
           },
           function * B(log) {
-            yield delay(20);
+            yield sleep(5);
             log('end of waiting');
-            log(`take1=${(yield ch.take()).toString()}`);
-            log(`take2=${(yield ch.take()).toString()}`);
-            log(`take3=${(yield ch.take()).toString()}`);
-            log(`take4=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
+            log(`take2=${(yield take(ch)).toString()}`);
+            log(`take3=${(yield take(ch)).toString()}`);
+            log(`take4=${(yield take(ch)).toString()}`);
           }
         ),
         [
           '>A',
           'value1=',
-          '>B',
           'put1=true',
           'value2=foo',
           'put2=true',
           'value3=foo,bar',
+          '>B',
           'end of waiting',
           'put3=true',
           'value4=bar,zar',
           'take1=foo',
           'put4=true',
           'value5=zar,mar',
-          'take2=bar',
           '<A',
+          'take2=bar',
           'take3=zar',
           'take4=mar',
           '<B'
-        ]
+        ],
+        10,
+        () => {
+          spy.mockRestore();
+        }
       );
-      spy.mockRestore();
     });
   });
   describe('when we create a channel with a dropping buffer', () => {
     describe("and the buffer's size is 0", () => {
-      xit("shouldn't block the puts but only the takes", async () => {
+      it("shouldn't block the puts but only the takes", async () => {
         const ch = chan(buffer.dropping());
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        exercise(
+        return exercise(
           Test(
             function * A(log) {
               log(`value=${ch.__value().toString()}`);
-              log(`put1=${(yield ch.put('foo')).toString()}`);
+              log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              log(`put2=${(yield ch.put('bar')).toString()}`);
+              log(`put2=${(yield put(ch, 'bar')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              log(`put3=${(yield ch.put('zar')).toString()}`);
+              log(`put3=${(yield put(ch, 'zar')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              yield delay(10);
-              log(`put4=${(yield ch.put('final')).toString()}`);
+              yield sleep(10);
+              log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
             function * B(log) {
-              yield delay(5);
+              yield sleep(5);
               log('---');
-              log(`take1=${(yield ch.take()).toString()}`);
-              log(`take2=${(yield ch.take()).toString()}`);
+              log(`take1=${(yield take(ch)).toString()}`);
+              log(`take2=${(yield take(ch)).toString()}`);
             }
           ),
           [
             '>A',
             'value=',
-            '>B',
             'put1=true',
             'value=foo',
             'put2=false',
             'value=foo',
             'put3=false',
             'value=foo',
+            '>B',
             '---',
             'take1=foo',
             'take2=final',
+            '<B',
             'put4=true',
             'value=',
-            '<B',
             '<A'
-          ]
+          ],
+          15,
+          () => {
+            spy.mockRestore();
+          }
         );
-        spy.mockRestore();
       });
     });
     describe("and the buffer's size is > 0", () => {
-      xit("shouldn't block and it should buffer more values", async () => {
+      it("shouldn't block and it should buffer more values", async () => {
         const ch = chan(buffer.dropping(2));
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        exercise(
+        return exercise(
           Test(
             function * A(log) {
               log(`value=${ch.__value().toString()}`);
-              log(`put1=${(yield ch.put('foo')).toString()}`);
+              log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              log(`put2=${(yield ch.put('bar')).toString()}`);
+              log(`put2=${(yield put(ch, 'bar')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              log(`put3=${(yield ch.put('zar')).toString()}`);
+              log(`put3=${(yield put(ch, 'zar')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              yield delay(10);
-              log(`put4=${(yield ch.put('final')).toString()}`);
+              yield sleep(10);
+              log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
             function * B(log) {
-              yield delay(5);
+              yield sleep(5);
               log('---');
-              log(`take1=${(yield ch.take()).toString()}`);
-              log(`take2=${(yield ch.take()).toString()}`);
-              log(`take3=${(yield ch.take()).toString()}`);
+              log(`take1=${(yield take(ch)).toString()}`);
+              log(`take2=${(yield take(ch)).toString()}`);
+              log(`take3=${(yield take(ch)).toString()}`);
             }
           ),
           [
             '>A',
             'value=',
-            '>B',
             'put1=true',
             'value=foo',
             'put2=true',
             'value=foo,bar',
             'put3=false',
             'value=foo,bar',
+            '>B',
             '---',
             'take1=foo',
             'take2=bar',
             'take3=final',
+            '<B',
             'put4=true',
             'value=',
-            '<B',
             '<A'
-          ]
+          ],
+          15,
+          () => {
+            spy.mockRestore();
+          }
         );
-        spy.mockRestore();
       });
     });
-    describe('and we have a preset value', () => {
-      xit('should allow a non-blocking take', async () => {
+    describe('and we have a pre-set value', () => {
+      it('should allow a non-blocking take', () => {
         const ch = chan(buffer.dropping(2)).from([ 'a', 'b' ]);
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         exercise(
           Test(function * A(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
-            log(`take2=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
+            log(`take2=${(yield take(ch)).toString()}`);
           }),
           [ '>A', 'take1=a', 'take2=b', '<A' ]
         );
@@ -371,89 +381,92 @@ describe('Given a CSP', () => {
   });
   describe('when we create a channel with a sliding buffer', () => {
     describe("and the buffer's size is 0", () => {
-      xit("shouldn't block but keep the latest pushed value", async () => {
+      it("shouldn't block but keep the latest pushed value", async () => {
         const ch = chan(buffer.sliding());
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        exercise(
+        return exercise(
           Test(
             function * A(log) {
               log(`value=${ch.__value().toString()}`);
-              log(`put1=${(yield ch.put('foo')).toString()}`);
+              log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              log(`put2=${(yield ch.put('bar')).toString()}`);
+              log(`put2=${(yield put(ch, 'bar')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              log(`put3=${(yield ch.put('zar')).toString()}`);
+              log(`put3=${(yield put(ch, 'zar')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              yield delay(10);
-              log(`put4=${(yield ch.put('final')).toString()}`);
+              yield sleep(10);
+              log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
             function * B(log) {
-              yield delay(5);
+              yield sleep(5);
               log('---');
-              log(`take1=${(yield ch.take()).toString()}`);
-              log(`take2=${(yield ch.take()).toString()}`);
+              log(`take1=${(yield take(ch)).toString()}`);
+              log(`take2=${(yield take(ch)).toString()}`);
             }
           ),
           [
             '>A',
             'value=',
-            '>B',
             'put1=true',
             'value=foo',
             'put2=true',
             'value=bar',
             'put3=true',
             'value=zar',
+            '>B',
             '---',
             'take1=zar',
             'take2=final',
+            '<B',
             'put4=true',
             'value=',
-            '<B',
             '<A'
-          ]
+          ],
+          15,
+          () => {
+            spy.mockRestore();
+          }
         );
-        spy.mockRestore();
       });
     });
     describe("and the buffer's size is > 0", () => {
-      xit("shouldn't block but drop values from the other side", async () => {
+      it("shouldn't block but drop values from the other side", async () => {
         const ch = chan(buffer.sliding(2));
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        exercise(
+        return exercise(
           Test(
             function * A(log) {
               log(`value=${ch.__value().toString()}`);
-              log(`put1=${(yield ch.put('foo')).toString()}`);
+              log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              log(`put2=${(yield ch.put('bar')).toString()}`);
+              log(`put2=${(yield put(ch, 'bar')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              log(`put3=${(yield ch.put('zar')).toString()}`);
+              log(`put3=${(yield put(ch, 'zar')).toString()}`);
               log(`value=${ch.__value().toString()}`);
-              yield delay(10);
-              log(`put4=${(yield ch.put('final')).toString()}`);
+              yield sleep(10);
+              log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
             function * B(log) {
-              yield delay(5);
+              yield sleep(5);
               log('---');
-              log(`take1=${(yield ch.take()).toString()}`);
-              log(`take2=${(yield ch.take()).toString()}`);
+              log(`take1=${(yield take(ch)).toString()}`);
+              log(`take2=${(yield take(ch)).toString()}`);
             }
           ),
           [
             '>A',
             'value=',
-            '>B',
             'put1=true',
             'value=foo',
             'put2=true',
             'value=foo,bar',
             'put3=true',
             'value=bar,zar',
+            '>B',
             '---',
             'take1=bar',
             'take2=zar',
@@ -461,9 +474,12 @@ describe('Given a CSP', () => {
             'put4=true',
             'value=final',
             '<A'
-          ]
+          ],
+          15,
+          () => {
+            spy.mockRestore();
+          }
         );
-        spy.mockRestore();
       });
     });
   });

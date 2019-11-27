@@ -20,22 +20,6 @@ export function chan(...args) {
     }
     return state;
   };
-  // api.put = item => {};
-  // api.take = () => {};
-  api.close = () => {
-    state = buff.isEmpty() ? ENDED : CLOSED;
-    buff.puts.forEach(put => put(state));
-    // We have a pending take only if the buffer is empty.
-    // So, closed buffer with no value => ENDED
-    buff.takes.forEach(put => put(ENDED));
-    if (state === ENDED) {
-      grid.remove(api);
-    }
-  };
-  api.reset = () => {
-    state = OPEN;
-    buff.reset();
-  };
   api.setBuffer = b => (buff = api.buff = b);
   api.__value = () => {
     console.warn("Riew: you should not get the channel's value directly! This method is here purely for testing purposes.");
@@ -72,7 +56,7 @@ export function go(genFunc, args, done) {
         }, i.value.ms);
         break;
       default:
-        throw new Error('Unrecognized operation for a routine.');
+        throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
     }
   })();
 }
@@ -174,6 +158,23 @@ export function ops(ch) {
     }
 
     return result;
+  };
+
+  ch.close = () => {
+    const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
+    ch.state(newState);
+    ch.buff.puts.forEach(put => put(newState));
+    // We have a pending take only if the buffer is empty.
+    // So, closed buffer with no value => ENDED
+    ch.buff.takes.forEach(put => put(ENDED));
+    if (newState === ENDED) {
+      grid.remove(ch);
+    }
+  };
+
+  ch.reset = () => {
+    ch.state(OPEN);
+    ch.buff.reset();
   };
 
   ch.pipe = (...channels) => {
