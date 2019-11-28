@@ -45,7 +45,28 @@ describe('Given a CSP', () => {
             log(`take=${yield take(ch)}`);
           }
         ),
-        [ '>A', '>B', 'put successful', '<A', 'take=foo', '<B' ]
+        [ '>A', '>B', 'take=foo', '<B', 'put successful', '<A' ]
+      );
+    });
+  });
+  describe('and we put without waiting', () => {
+    it('should end the first routine and allow consuming from the channel in the second', () => {
+      const ch = chan();
+
+      exercise(
+        Test(
+          function * A(log) {
+            ch.put('foo');
+            ch.put('bar');
+            ch.put('zar');
+          },
+          function * B(log) {
+            log(`take1=${yield take(ch)}`);
+            log(`take2=${yield take(ch)}`);
+            log(`take3=${yield take(ch)}`);
+          }
+        ),
+        [ '>A', '<A', '>B', 'take1=foo', 'take2=bar', 'take3=zar', '<B' ]
       );
     });
   });
@@ -74,14 +95,14 @@ describe('Given a CSP', () => {
         [
           '>A',
           '>B',
-          'p1=true',
           'take1=foo',
-          'p2=Symbol(ENDED)',
-          'p3=Symbol(ENDED)',
-          '<A',
           'take2=Symbol(ENDED)',
           'take3=Symbol(ENDED)',
-          '<B'
+          '<B',
+          'p1=true',
+          'p2=Symbol(ENDED)',
+          'p3=Symbol(ENDED)',
+          '<A'
         ]
       );
     });
@@ -200,12 +221,12 @@ describe('Given a CSP', () => {
             log(`take2=${(yield take(ch)).toString()}`);
           }
         ),
-        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', '<A', 'take2=bar', '<B' ]
+        [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<B', 'put2=true', '<A' ]
       );
     });
   });
   describe('when we create a channel with a fixed buffer with size > 0', () => {
-    it('should allow as many puts as we have space', async () => {
+    it('should allow as many puts as we have space', () => {
       const ch = chan(buffer.fixed(2));
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -260,7 +281,7 @@ describe('Given a CSP', () => {
   });
   describe('when we create a channel with a dropping buffer', () => {
     describe("and the buffer's size is 0", () => {
-      it("shouldn't block the puts but only the takes", async () => {
+      it("shouldn't block the puts but only the takes", () => {
         const ch = chan(buffer.dropping());
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -311,7 +332,7 @@ describe('Given a CSP', () => {
       });
     });
     describe("and the buffer's size is > 0", () => {
-      it("shouldn't block and it should buffer more values", async () => {
+      it("shouldn't block and it should buffer more values", () => {
         const ch = chan(buffer.dropping(2));
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -381,7 +402,7 @@ describe('Given a CSP', () => {
   });
   describe('when we create a channel with a sliding buffer', () => {
     describe("and the buffer's size is 0", () => {
-      it("shouldn't block but keep the latest pushed value", async () => {
+      it("shouldn't block but keep the latest pushed value", () => {
         const ch = chan(buffer.sliding());
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -432,7 +453,7 @@ describe('Given a CSP', () => {
       });
     });
     describe("and the buffer's size is > 0", () => {
-      it("shouldn't block but drop values from the other side", async () => {
+      it("shouldn't block but drop values from the other side", () => {
         const ch = chan(buffer.sliding(2));
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -484,7 +505,7 @@ describe('Given a CSP', () => {
     });
   });
   describe('when we create a channel with a reducer buffer', () => {
-    xit('should behave like a fixed buffer with size 0 but should accumulate state value', async () => {
+    it('should behave like a fixed buffer with size 0 but should accumulate state value', () => {
       const reducerSpy = jest.fn();
       const ch = chan(
         buffer.reducer((current = 10, data) => {
@@ -493,27 +514,29 @@ describe('Given a CSP', () => {
         })
       );
 
-      exercise(
+      return exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield ch.put(20)).toString()}`);
-            log(`put2=${(yield ch.put(5)).toString()}`);
-            log(`put3=${(yield ch.put(3)).toString()}`);
+            log(`put1=${(yield put(ch, 20)).toString()}`);
+            log(`put2=${(yield put(ch, 5)).toString()}`);
+            log(`put3=${(yield put(ch, 3)).toString()}`);
           },
           function * B(log) {
-            yield delay(5);
-            log(`take1=${(yield ch.take()).toString()}`);
-            log(`take2=${(yield ch.take()).toString()}`);
-            log(`take3=${(yield ch.take()).toString()}`);
+            yield sleep(5);
+            log(`take1=${(yield take(ch)).toString()}`);
+            log(`take2=${(yield take(ch)).toString()}`);
+            log(`take3=${(yield take(ch)).toString()}`);
           }
         ),
-        [ '>A', '>B', 'put1=true', 'take1=30', 'put2=true', 'take2=35', 'put3=true', 'take3=38', '<A', '<B' ]
+        [ '>A', '>B', 'take1=30', 'put1=true', 'take2=35', 'put2=true', 'take3=38', '<B', 'put3=true', '<A' ],
+        10,
+        () => {
+          expect(reducerSpy).toBeCalledWithArgs([ 10 ], [ 30 ], [ 35 ]);
+        }
       );
-
-      expect(reducerSpy).toBeCalledWithArgs([ 10 ], [ 30 ], [ 35 ]);
     });
     describe('and we fire multiple puts one after each other', () => {
-      xit('should flatten them', async () => {
+      it('should flatten them', () => {
         const reducerSpy = jest.fn();
         const ch = chan(
           buffer.reducer((current = 0, data) => {
@@ -522,25 +545,29 @@ describe('Given a CSP', () => {
           })
         );
 
-        exercise(
+        return exercise(
           Test(
             function * A(log) {
               ch.put(10);
               ch.put(20);
               ch.put(30);
-              yield delay(7);
+              yield sleep(7);
               ch.put(40);
             },
             function * B(log) {
-              yield delay(5);
-              log(`take1=${(yield ch.take()).toString()}`);
-              log(`take2=${(yield ch.take()).toString()}`);
+              yield sleep(5);
+              log(`take1=${(yield take(ch)).toString()}`);
+              log(`take2=${(yield take(ch)).toString()}`);
+              log(`take2=${(yield take(ch)).toString()}`);
+              log(`take2=${(yield take(ch)).toString()}`);
             }
           ),
-          [ '>A', '>B', 'take1=60', 'take2=100', '<A', '<B' ]
+          [ '>A', '>B', 'take1=10', 'take2=30', 'take2=60', 'take2=100', '<B', '<A' ],
+          15,
+          () => {
+            expect(reducerSpy).toBeCalledWithArgs([ 0 ], [ 10 ], [ 30 ], [ 60 ]);
+          }
         );
-
-        expect(reducerSpy).toBeCalledWithArgs([ 0 ], [ 10 ], [ 30 ], [ 60 ]);
       });
     });
     describe('and we have an array of items as value', () => {

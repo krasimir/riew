@@ -1,39 +1,37 @@
 import BufferInterface from './Interface';
 
-export default function ReducerBuffer(reducer) {
-  const api = BufferInterface();
-  let v;
+const defaultReducer = (currentValue, newValue) => newValue;
 
-  api.setValue = newValue => {
-    api.value = [ newValue ];
-    v = newValue;
-  };
-  api.getValue = () => v;
-  api.put = item => {
+export default function ReducerBuffer(reducer = defaultReducer) {
+  const api = BufferInterface();
+  let reducerValue;
+
+  api.setValue = v => (api.value = v);
+  api.put = (item, callback) => {
     if (api.takes.length === 0) {
-      return new Promise(resolve => {
-        api.puts.push(() => {
-          api.value = [ (v = reducer(v, item)) ];
-          resolve(true);
-        });
+      api.puts.push(v => {
+        api.value.push((reducerValue = reducer(reducerValue, item)));
+        if (api.takes.length > 0) {
+          api.takes.shift()(api.value.shift());
+        }
+        callback(v || true);
       });
-    }
-    api.value.push((v = reducer(v, item)));
-    return new Promise(resolve => {
-      resolve(true);
+    } else {
+      api.value.push((reducerValue = reducer(reducerValue, item)));
       api.takes.shift()(api.value.shift());
-    });
-  };
-  api.take = () => {
-    if (api.value.length === 0) {
-      if (api.puts.length === 0) {
-        return new Promise(resolve => api.takes.push(resolve));
-      }
-      api.puts.forEach(p => p());
-      api.puts = [];
-      return api.take();
+      callback(true);
     }
-    return api.value.shift();
+  };
+  api.take = callback => {
+    if (api.value.length === 0) {
+      api.takes.push(callback);
+      if (api.puts.length > 0) {
+        api.puts.shift()();
+        api.take(callback);
+      }
+    } else {
+      callback(api.value.shift());
+    }
   };
 
   return api;

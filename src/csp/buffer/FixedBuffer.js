@@ -12,6 +12,9 @@ export default function FixedBuffer(size = 0) {
       } else {
         api.puts.push(v => {
           api.value.push(item);
+          if (api.takes.length > 0) {
+            api.takes.shift()(api.value.shift());
+          }
           callback(v || true);
         });
       }
@@ -23,9 +26,8 @@ export default function FixedBuffer(size = 0) {
   };
   api.take = callback => {
     if (api.value.length === 0) {
-      if (api.puts.length === 0) {
-        api.takes.push(callback);
-      } else {
+      api.takes.push(callback);
+      if (api.puts.length > 0) {
         api.puts.shift()();
         api.take(callback);
       }
