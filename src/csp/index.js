@@ -1,6 +1,6 @@
 import b from './buffer';
 import { chan as Channel, go as Go } from './channel';
-export { isChannel, isChannelPut, isChannelTake, put, take, sleep } from './channel';
+export { isChannel, isChannelPut, isChannelTake, put, take, sleep, takeLatest } from './channel';
 
 export const buffer = b;
 export const chan = Channel;

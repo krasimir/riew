@@ -571,7 +571,7 @@ describe('Given a CSP', () => {
       });
     });
     describe('and we have an array of items as value', () => {
-      xit('should properly reduce value', async () => {
+      it('should properly reduce value', () => {
         const reducerSpy = jest.fn();
         const ch = chan(
           buffer.reducer((current, data) => {
@@ -588,16 +588,16 @@ describe('Given a CSP', () => {
         exercise(
           Test(
             function * A(log) {
-              log(`take1=${(yield ch.take()).filter(({ selected }) => selected).map(({ id }) => id)}`);
-              log(`take2=${(yield ch.take()).filter(({ selected }) => selected).map(({ id }) => id)}`);
-              log(`take2=${(yield ch.take()).filter(({ selected }) => selected).map(({ id }) => id)}`);
+              log(`take1=${(yield take(ch)).filter(({ selected }) => selected).map(({ id }) => id)}`);
+              log(`take2=${(yield take(ch)).filter(({ selected }) => selected).map(({ id }) => id)}`);
+              log(`take3=${(yield take(ch)).filter(({ selected }) => selected).map(({ id }) => id)}`);
             },
             function * B(log) {
-              yield ch.put(10);
-              yield ch.put(20);
+              yield put(ch, 10);
+              yield put(ch, 20);
             }
           ),
-          [ '>A', '>B', 'take1=10,20', 'take2=10', 'take2=20', '<B', '<A' ]
+          [ '>A', 'take1=10,20', '>B', 'take2=10', 'take3=20', '<A', '<B' ]
         );
 
         expect(reducerSpy).toBeCalledWithArgs(
@@ -635,16 +635,15 @@ describe('Given a CSP', () => {
   // takeEvery
 
   describe('when using the `takeEvery` method', () => {
-    xit('should provide an API for streamed values', async () => {
+    it('should provide an API for streamed values', () => {
       const ch = chan('ch1');
 
       exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield ch.put('foo')).toString()}`);
-            log(`put2=${(yield ch.put('bar')).toString()}`);
-            log(`put3=${(yield ch.put('zar')).toString()}`);
-            ch.close();
+            log(`put1=${(yield put(ch, 'foo')).toString()}`);
+            log(`put2=${(yield put(ch, 'bar')).toString()}`);
+            log(`put3=${(yield put(ch, 'zar')).toString()}`);
           },
           function * B(log) {
             ch.takeEvery(value => {
@@ -652,33 +651,8 @@ describe('Given a CSP', () => {
             });
           }
         ),
-        [ '>A', '>B', 'put1=true', 'take=foo', '<B', 'put2=true', 'take=bar', 'put3=true', 'take=zar', '<A' ]
+        [ '>A', '>B', 'take=foo', 'put1=true', 'take=bar', 'put2=true', 'take=zar', 'put3=true', '<A', '<B' ]
       );
-    });
-  });
-
-  // takeLatest
-
-  describe('when using takeLatest method', () => {
-    xit('should fire the callback only if there are no more pending puts', async () => {
-      const reducerSpy = jest.fn();
-      const ch = chan(
-        buffer.reducer((current = '', data) => {
-          return current + data;
-        })
-      ).takeLatest(reducerSpy);
-      const data1 = chan()
-        .from([ 'foo' ])
-        .pipe(ch);
-      const data2 = chan()
-        .from([ 'bar' ])
-        .pipe(ch);
-
-      data1.put('A');
-      data2.put('B');
-      delay();
-
-      expect(reducerSpy).toBeCalledWithArgs([ 'foobarAB' ]);
     });
   });
 

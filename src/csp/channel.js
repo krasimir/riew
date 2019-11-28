@@ -79,41 +79,40 @@ export function ops(ch) {
   function taker() {
     if (!opsTaker) {
       opsTaker = true;
-      (async function listen() {
-        while (true) {
-          let v = await ch.take();
-          if (v === CLOSED || v === ENDED) {
-            break;
-          }
-          pipes.forEach(p => {
-            switch (p.type) {
-              case 'pipe':
-                if (p.ch.state() === OPEN) {
-                  p.ch.put(v);
-                }
-                break;
-              case 'map':
-                if (p.ch.state() === OPEN) {
-                  p.ch.put(p.func(v));
-                }
-                break;
-              case 'filter':
-                if (p.ch.state() === OPEN && p.func(v)) {
-                  p.ch.put(v);
-                }
-                break;
-              case 'takeEvery':
-                p.func(v);
-                break;
-              case 'takeLatest':
-                if (ch.buff.puts.length === 0) {
-                  p.func(v);
-                }
-                break;
-            }
-          });
+      const listen = v => {
+        if (v === CLOSED || v === ENDED) {
+          return;
         }
-      })();
+        pipes.forEach(p => {
+          switch (p.type) {
+            case 'pipe':
+              if (p.ch.state() === OPEN) {
+                p.ch.put(v);
+              }
+              break;
+            case 'map':
+              if (p.ch.state() === OPEN) {
+                p.ch.put(p.func(v));
+              }
+              break;
+            case 'filter':
+              if (p.ch.state() === OPEN && p.func(v)) {
+                p.ch.put(v);
+              }
+              break;
+            case 'takeEvery':
+              p.func(v);
+              break;
+            case 'takeLatest':
+              if (ch.buff.puts.length === 0) {
+                p.func(v);
+              }
+              break;
+          }
+        });
+        ch.take(listen);
+      };
+      ch.take(listen);
     }
   }
 
@@ -212,12 +211,6 @@ export function ops(ch) {
 
   ch.takeEvery = func => {
     pipes.push({ func, type: 'takeEvery' });
-    taker();
-    return ch;
-  };
-
-  ch.takeLatest = func => {
-    pipes.push({ func, type: 'takeLatest' });
     taker();
     return ch;
   };

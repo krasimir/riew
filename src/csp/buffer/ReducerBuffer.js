@@ -6,7 +6,10 @@ export default function ReducerBuffer(reducer = defaultReducer) {
   const api = BufferInterface();
   let reducerValue;
 
-  api.setValue = v => (api.value = v);
+  api.setValue = v => {
+    api.value = [ v ];
+    reducerValue = v;
+  };
   api.put = (item, callback) => {
     if (api.takes.length === 0) {
       api.puts.push(v => {
