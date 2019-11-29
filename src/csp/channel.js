@@ -2,6 +2,8 @@ import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
 import { normalizeChannelArguments } from './utils';
 import { grid } from '../index';
 
+// **************************************************** chan / channel
+
 export function chan(...args) {
   let state = OPEN;
   let [ id, buff ] = normalizeChannelArguments(args);
@@ -29,6 +31,9 @@ export function chan(...args) {
   grid.add(api);
   return api;
 }
+
+// **************************************************** constants
+
 chan.OPEN = OPEN;
 chan.CLOSED = CLOSED;
 chan.ENDED = ENDED;
@@ -37,9 +42,15 @@ chan.ENDED = ENDED;
 
 export function go(genFunc, args, done) {
   const gen = genFunc(...args);
+  let alreadyDone = false;
   (function next(value) {
     const i = gen.next(value);
+    if (alreadyDone) {
+      // There are cases where the channel is closed but then we have more iteration
+      return;
+    }
     if (i.done === true) {
+      alreadyDone = true;
       done();
       return;
     }
@@ -214,6 +225,37 @@ export function ops(ch) {
     taker();
     return ch;
   };
+}
+
+export function merge(...channels) {
+  const newCh = chan();
+
+  channels.map(ch => {
+    const listen = () => {
+      ch.take(v => {
+        if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
+          newCh.put(v);
+          listen();
+        }
+      });
+    };
+    listen();
+  });
+
+  return newCh;
+}
+
+export function state(value) {
+  if (typeof value !== 'undefined') {
+    return chan().from([ value ]);
+  }
+  return chan();
+}
+
+export function timeout(interval) {
+  const ch = chan();
+  setTimeout(() => ch.close(), interval);
+  return ch;
 }
 
 // **************************************************** utils

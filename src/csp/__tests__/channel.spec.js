@@ -659,40 +659,40 @@ describe('Given a CSP', () => {
   // merge
 
   describe('when we merge channels', () => {
-    xit('should merge two and more into a single channel', async () => {
-      const ch1 = chan('ch1');
-      const ch2 = chan('ch2');
-      const ch3 = chan('ch3');
+    it('should merge two and more into a single channel', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const ch3 = chan();
       const ch4 = merge(ch1, ch2, ch3);
 
       exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield ch1.put('foo')).toString()}`);
-            log(`put2=${(yield ch2.put('bar')).toString()}`);
-            log(`put3=${(yield ch3.put('zar')).toString()}`);
-            log(`put4=${(yield ch4.put('moo')).toString()}`);
+            log(`put1=${(yield put(ch1, 'foo')).toString()}`);
+            log(`put2=${(yield put(ch2, 'bar')).toString()}`);
+            log(`put3=${(yield put(ch3, 'zar')).toString()}`);
+            log(`put4=${(yield put(ch4, 'moo')).toString()}`);
           },
           function * B(log) {
-            log(`take1=${(yield ch4.take()).toString()}`);
-            log(`take2=${(yield ch4.take()).toString()}`);
-            log(`take3=${(yield ch4.take()).toString()}`);
-            log(`take4=${(yield ch4.take()).toString()}`);
+            log(`take1=${(yield take(ch4)).toString()}`);
+            log(`take2=${(yield take(ch4)).toString()}`);
+            log(`take3=${(yield take(ch4)).toString()}`);
+            log(`take4=${(yield take(ch4)).toString()}`);
           }
         ),
         [
           '>A',
-          '>B',
           'put1=true',
-          'take1=foo',
           'put2=true',
-          'take2=bar',
           'put3=true',
+          '>B',
+          'take1=foo',
+          'take2=bar',
           'take3=zar',
-          'put4=true',
           'take4=moo',
-          '<A',
-          '<B'
+          '<B',
+          'put4=true',
+          '<A'
         ]
       );
     });
@@ -701,7 +701,7 @@ describe('Given a CSP', () => {
   // pipe
 
   describe('when we pipe channels', () => {
-    xit('should distribute a single value to multiple channels', async () => {
+    it('should distribute a single value to multiple channels', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
@@ -712,10 +712,9 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            ch2.take().then(v => log(`take_ch2=${v}`));
-            ch3.take().then(v => log(`take_ch3=${v}`));
-            ch3.take().then(v => log(`take_ch3=${v}`));
-            yield delay(5);
+            ch2.take(v => log(`take_ch2=${v}`));
+            ch3.take(v => log(`take_ch3=${v}`));
+            ch3.take(v => log(`take_ch3=${v}`));
           },
           function * B() {
             ch1.put('foo');
@@ -723,10 +722,10 @@ describe('Given a CSP', () => {
             ch1.put('zar');
           }
         ),
-        [ '>A', '>B', '<B', 'take_ch3=foo', 'take_ch2=bar', 'take_ch3=zar', '<A' ]
+        [ '>A', '<A', '>B', 'take_ch3=foo', 'take_ch2=bar', 'take_ch3=zar', '<B' ]
       );
     });
-    xit('should support nested piping', async () => {
+    it('should support nested piping', () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
       const ch3 = chan('ch3');
@@ -741,23 +740,22 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            yield ch1.put('foo');
-            yield ch1.put('bar');
-            yield ch1.put('zar');
+            yield put(ch1, 'foo');
+            yield put(ch1, 'bar');
+            yield put(ch1, 'zar');
           },
           function * B(log) {
-            ch1.take().then(v => log(`take_ch1=${v}`));
-            ch2.take().then(v => log(`take_ch2=${v}`));
-            ch3.take().then(v => log(`take_ch3=${v}`));
-            ch4.take().then(v => log(`take_ch4=${v}`));
-            yield delay(10);
+            ch1.take(v => log(`take_ch1=${v}`));
+            ch2.take(v => log(`take_ch2=${v}`));
+            ch3.take(v => log(`take_ch3=${v}`));
+            ch4.take(v => log(`take_ch4=${v}`));
           }
         ),
-        [ '>A', '>B', 'take_ch3=foo', 'take_ch1=bar', 'take_ch4=foo', 'take_ch2=zar', '<A', '<B' ]
+        [ '>A', '<A', '>B', 'take_ch3=foo', 'take_ch3=bar', 'take_ch3=zar', 'take_ch4=foo', 'take_ch4=bar', 'take_ch4=zar', '<B' ]
       );
     });
     describe('and we pipe multiple times to the same channel', () => {
-      xit('should consider only the first pipe call', async () => {
+      it('should consider only the first pipe call', () => {
         const ch1 = chan('ch1');
         const ch2 = chan('ch2');
 
@@ -768,20 +766,19 @@ describe('Given a CSP', () => {
         exercise(
           Test(
             function * A(log) {
-              yield ch1.put('foo');
-              yield ch1.put('bar');
-              yield ch1.put('zar');
+              yield put(ch1, 'foo');
+              yield put(ch1, 'bar');
+              yield put(ch1, 'zar');
             },
             function * B(log) {
-              ch2.take().then(v => log(`take_ch1=${v}`));
-              ch2.take().then(v => log(`take_ch2=${v}`));
-              ch2.take().then(v => log(`take_ch3=${v}`));
-              ch2.take().then(v => log(`take_ch4=${v}`));
-              ch2.take().then(v => log(`take_ch4=${v}`));
-              yield delay(10);
+              ch2.take(v => log(`take_ch1=${v}`));
+              ch2.take(v => log(`take_ch2=${v}`));
+              ch2.take(v => log(`take_ch3=${v}`));
+              ch2.take(v => log(`take_ch4=${v}`));
+              ch2.take(v => log(`take_ch4=${v}`));
             }
           ),
-          [ '>A', '>B', 'take_ch1=foo', 'take_ch2=bar', 'take_ch3=zar', '<A', '<B' ]
+          [ '>A', '<A', '>B', 'take_ch1=foo', 'take_ch1=bar', 'take_ch1=zar', '<B' ]
         );
       });
     });
@@ -790,70 +787,74 @@ describe('Given a CSP', () => {
   // timeout
 
   describe('when we use the timeout method', () => {
-    xit('should create a channel that is self closing after X amount of time', async () => {
+    it('should create a channel that is self closing after X amount of time', () => {
       const ch = timeout(10);
 
-      exercise(
+      return exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield ch.put('foo')).toString()}`);
-            yield delay(20);
-            log(`put2=${(yield ch.put('bar')).toString()}`);
+            log(`put1=${(yield put(ch, 'foo')).toString()}`);
+            yield sleep(20);
+            log(`put2=${(yield put(ch, 'bar')).toString()}`);
           },
           function * B(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
-            yield delay(20);
-            log(`take2=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
+            yield sleep(20);
+            log(`take2=${(yield take(ch)).toString()}`);
           }
         ),
-        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=Symbol(ENDED)', 'take2=Symbol(ENDED)', '<A', '<B' ]
+        [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=Symbol(ENDED)', '<B', 'put2=Symbol(ENDED)', '<A' ],
+        30
       );
     });
   });
 
   // reset
 
-  describe('when we use the reset method', () => {
-    xit('should put the channel in its initial state', async () => {
+  describe('when we use the `reset` method', () => {
+    it('should put the channel in its initial state', () => {
       const ch = chan(buffer.sliding(2));
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-      exercise(
+      return exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield ch.put('foo')).toString()}`);
+            log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`value=${ch.__value().toString()}`);
-            log(`put2=${(yield ch.put('bar')).toString()}`);
+            log(`put2=${(yield put(ch, 'bar')).toString()}`);
             log(`value=${ch.__value().toString()}`);
-            log(`put3=${(yield ch.put('zar')).toString()}`);
+            log(`put3=${(yield put(ch, 'zar')).toString()}`);
             log(`value=${ch.__value().toString()}`);
-            yield delay(10);
-            log(`put4=${(yield ch.put('mar')).toString()}`);
+            yield sleep(10);
+            log(`put4=${(yield put(ch, 'mar')).toString()}`);
             log(`value=${ch.__value().toString()}`);
           },
           function * B(log) {
-            yield delay(5);
+            yield sleep(5);
             ch.reset();
             log('reset');
           }
         ),
         [
           '>A',
-          '>B',
           'put1=true',
           'value=foo',
           'put2=true',
           'value=foo,bar',
           'put3=true',
           'value=bar,zar',
+          '>B',
           'reset',
           '<B',
           'put4=true',
           'value=mar',
           '<A'
-        ]
+        ],
+        20,
+        () => {
+          spy.mockReset();
+        }
       );
-      spy.mockReset();
     });
   });
 
@@ -861,84 +862,88 @@ describe('Given a CSP', () => {
 
   describe('when we use the from method', () => {
     describe('and we pass an array of values', () => {
-      xit('should pre-set the value of the channel', async () => {
+      it('should pre-set the value of the channel', () => {
         const ch = chan(buffer.fixed(2)).from([ 'foo', 'bar' ]);
 
-        exercise(
+        return exercise(
           Test(
             function * A(log) {
-              log(`take1=${(yield ch.take()).toString()}`);
-              log(`take2=${(yield ch.take()).toString()}`);
-              log(`take3=${(yield ch.take()).toString()}`);
+              log(`take1=${(yield take(ch)).toString()}`);
+              log(`take2=${(yield take(ch)).toString()}`);
+              log(`take3=${(yield take(ch)).toString()}`);
             },
             function * B(log) {
-              yield delay(5);
+              yield sleep(5);
               log('B put');
-              log(`put=${(yield ch.put('zar')).toString()}`);
+              log(`put=${(yield put(ch, 'zar')).toString()}`);
             }
           ),
-          [ '>A', '>B', 'take1=foo', 'take2=bar', 'B put', 'take3=zar', 'put=true', '<A', '<B' ]
+          [ '>A', 'take1=foo', 'take2=bar', '>B', 'B put', 'take3=zar', '<A', 'put=true', '<B' ],
+          10
         );
       });
     });
     describe('and we pass another channel', () => {
-      xit('should auto pipe', async () => {
+      it('should auto pipe', () => {
         const ch1 = chan();
         const ch2 = chan().from(ch1);
 
-        exercise(
+        return exercise(
           Test(
             function * A(log) {
-              log(`take1=${(yield ch2.take()).toString()}`);
-              log(`take2=${(yield ch2.take()).toString()}`);
+              log(`take1=${(yield take(ch2)).toString()}`);
+              log(`take2=${(yield take(ch2)).toString()}`);
             },
             function * B(log) {
-              yield delay(5);
-              log(`put1=${(yield ch1.put('foo')).toString()}`);
-              log(`put2=${(yield ch1.put('bar')).toString()}`);
+              yield sleep(5);
+              log(`put1=${(yield put(ch1, 'foo')).toString()}`);
+              log(`put2=${(yield put(ch1, 'bar')).toString()}`);
             }
           ),
-          [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', 'take2=bar', '<B', '<A' ]
+          [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<A', 'put2=true', '<B' ],
+          10
         );
       });
     });
     describe('and we pass only a single value that is not array', () => {
       describe('and that value is undefined', () => {
-        xit('should do nothing', async () => {
+        it('should do nothing', () => {
           const ch = chan().from();
 
-          exercise(
+          return exercise(
             Test(
               function * A(log) {
-                log(`take1=${(yield ch.take()).toString()}`);
-                log(`take2=${(yield ch.take()).toString()}`);
+                log(`take1=${(yield take(ch)).toString()}`);
+                log(`take2=${(yield take(ch)).toString()}`);
               },
               function * B(log) {
-                yield delay(5);
-                log(`put1=${(yield ch.put('foo')).toString()}`);
-                log(`put2=${(yield ch.put('bar')).toString()}`);
+                yield sleep(5);
+                log(`put1=${(yield put(ch, 'foo')).toString()}`);
+                log(`put2=${(yield put(ch, 'bar')).toString()}`);
               }
             ),
-            [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', 'put2=true', '<A', '<B' ]
+            [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<A', 'put2=true', '<B' ],
+            10
           );
         });
       });
       describe('and that value is NOT undefined', () => {
-        xit('should pass it as array of one item to the buffer', async () => {
+        it('should pass it as array of one item to the buffer', () => {
           const ch = state('foo');
 
-          exercise(
+          return exercise(
             Test(
               function * A(log) {
-                log(`take1=${(yield ch.take()).toString()}`);
-                log(`take2=${(yield ch.take()).toString()}`);
+                log(`take1=${(yield take(ch)).toString()}`);
+                log(`take2=${(yield take(ch)).toString()}`);
               },
               function * B(log) {
-                yield delay(5);
-                log(`put2=${(yield ch.put('bar')).toString()}`);
+                yield sleep(5);
+                log(`put2=${(yield put(ch, 'bar')).toString()}`);
               }
             ),
-            [ '>A', '>B', 'take1=foo', 'take2=bar', 'put2=true', '<A', '<B' ]
+            [ '>A', 'take1=foo', '>B', 'take2=bar', '<A', 'put2=true', '<B' ],
+            10
           );
         });
       });
@@ -948,27 +953,26 @@ describe('Given a CSP', () => {
   // filter
 
   describe('when we use the filter method', () => {
-    xit('should return a new channel that only receives the filtered data', async () => {
+    it('should return a new channel that only receives the filtered data', () => {
       const ch1 = chan();
       const ch2 = ch1.filter(v => v > 10);
 
       exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield ch1.put(5)).toString()}`);
-            log(`put2=${(yield ch1.put(12)).toString()}`);
-            log(`put3=${(yield ch1.put(20)).toString()}`);
-            log(`put4=${(yield ch1.put(4)).toString()}`);
+            log(`put1=${(yield put(ch1, 5)).toString()}`);
+            log(`put2=${(yield put(ch1, 12)).toString()}`);
+            log(`put3=${(yield put(ch1, 20)).toString()}`);
+            log(`put4=${(yield put(ch1, 4)).toString()}`);
           },
           function * B(log) {
-            ch2.take().then(v => log(`take1=${v}`));
-            ch2.take().then(v => log(`take2=${v}`));
-            ch2.take().then(v => log(`take3=${v}`)); // not happening
-            ch2.take().then(v => log(`take4=${v}`)); // not happening
-            yield delay(5);
+            ch2.take(v => log(`take1=${v}`));
+            ch2.take(v => log(`take2=${v}`));
+            ch2.take(v => log(`take3=${v}`));
+            ch2.take(v => log(`take4=${v}`));
           }
         ),
-        [ '>A', '>B', 'put1=true', 'put2=true', 'take1=12', 'put3=true', 'take2=20', 'put4=true', '<A', '<B' ]
+        [ '>A', 'put1=true', 'put2=true', 'put3=true', 'put4=true', '<A', '>B', 'take1=12', 'take1=20', '<B' ]
       );
     });
   });
@@ -976,7 +980,7 @@ describe('Given a CSP', () => {
   // map
 
   describe('when we use the map method', () => {
-    xit('should return a new channel that receives the mapped data', async () => {
+    it('should return a new channel that receives the mapped data', () => {
       const ch1 = chan();
       const ch2 = ch1.map(v => v * 2);
       const ch3 = ch1.map(v => v * 3);
@@ -984,18 +988,17 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield ch1.put(5)).toString()}`);
-            log(`put2=${(yield ch1.put(12)).toString()}`);
+            log(`put1=${(yield put(ch1, 5)).toString()}`);
+            log(`put2=${(yield put(ch1, 12)).toString()}`);
           },
           function * B(log) {
-            ch2.take().then(v => log(`take2_1=${v}`));
-            ch2.take().then(v => log(`take2_2=${v}`));
-            ch3.take().then(v => log(`take3_1=${v}`));
-            ch3.take().then(v => log(`take3_2=${v}`));
-            yield delay(5);
+            ch2.take(v => log(`take2_1=${v}`));
+            ch2.take(v => log(`take2_2=${v}`));
+            ch3.take(v => log(`take3_1=${v}`));
+            ch3.take(v => log(`take3_2=${v}`));
           }
         ),
-        [ '>A', '>B', 'put1=true', 'take2_1=10', 'take3_1=15', 'put2=true', 'take2_2=24', 'take3_2=36', '<A', '<B' ]
+        [ '>A', 'put1=true', 'put2=true', '<A', '>B', 'take2_1=10', 'take2_1=24', 'take3_1=15', 'take3_1=36', '<B' ]
       );
     });
   });
@@ -1003,42 +1006,42 @@ describe('Given a CSP', () => {
   // iterable protocol
 
   describe('when we destruct a channel', () => {
-    xit('should gives us access to the take and put methods', async () => {
+    it('should gives us access to the take and put methods', async () => {
       const [ take, put ] = chan();
 
       exercise(
         Test(
           function * A(log) {
-            log(`put1=${(yield put('foo')).toString()}`);
-            log(`put2=${(yield put('bar')).toString()}`);
+            put('foo', () => log('put1'));
+            put('bar', () => log('put2'));
           },
           function * B(log) {
-            log(`take1=${(yield take()).toString()}`);
-            log(`take2=${(yield take()).toString()}`);
+            take(v => log('take1=' + v));
+            take(v => log('take2=' + v));
           }
         ),
-        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=true', 'take2=bar', '<A', '<B' ]
+        [ '>A', '<A', '>B', 'take1=foo', 'put1', 'take1=bar', 'put2', '<B' ]
       );
     });
   });
 
-  // iterable protocol
+  // state helper
 
   describe('when we use the state method', () => {
-    xit('should create a unbuffered channel with a value inside', async () => {
+    it('should create a unbuffered channel with a value inside', () => {
       const ch = state('foo');
 
       exercise(
         Test(
           function * A(log) {
-            log(`take1=${(yield ch.take()).toString()}`);
-            log(`take2=${(yield ch.take()).toString()}`);
+            log(`take1=${(yield take(ch)).toString()}`);
+            log(`take2=${(yield take(ch)).toString()}`);
           },
           function * B(log) {
-            log(`put1=${(yield ch.put('bar')).toString()}`);
+            log(`put1=${(yield put(ch, 'bar')).toString()}`);
           }
         ),
-        [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<B', '<A' ]
+        [ '>A', 'take1=foo', '>B', 'take2=bar', '<A', 'put1=true', '<B' ]
       );
     });
   });
