@@ -1,5 +1,4 @@
-import { chan, buffer, merge, timeout, state, go, put, take, sleep } from '../index';
-import { delay } from '../../__helpers__';
+import { chan, buffer, merge, timeout, from, go, put, take, sleep } from '../index';
 import { getFuncName } from '../../utils';
 
 function Test(...routines) {
@@ -929,7 +928,7 @@ describe('Given a CSP', () => {
       });
       describe('and that value is NOT undefined', () => {
         it('should pass it as array of one item to the buffer', () => {
-          const ch = state('foo');
+          const ch = from('foo');
 
           return exercise(
             Test(
@@ -1027,9 +1026,9 @@ describe('Given a CSP', () => {
 
   // state helper
 
-  describe('when we use the state method', () => {
+  describe('when we use the from method', () => {
     it('should create a unbuffered channel with a value inside', () => {
-      const ch = state('foo', 'bar');
+      const ch = from('foo', 'bar');
 
       exercise(
         Test(
