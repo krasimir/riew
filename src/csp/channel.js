@@ -245,9 +245,9 @@ export function merge(...channels) {
   return newCh;
 }
 
-export function state(value) {
+export function state(...value) {
   if (typeof value !== 'undefined') {
-    return chan().from([ value ]);
+    return chan().from([ ...value ]);
   }
   return chan();
 }

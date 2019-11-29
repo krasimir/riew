@@ -1029,19 +1029,20 @@ describe('Given a CSP', () => {
 
   describe('when we use the state method', () => {
     it('should create a unbuffered channel with a value inside', () => {
-      const ch = state('foo');
+      const ch = state('foo', 'bar');
 
       exercise(
         Test(
           function * A(log) {
             log(`take1=${(yield take(ch)).toString()}`);
             log(`take2=${(yield take(ch)).toString()}`);
+            log(`take3=${(yield take(ch)).toString()}`);
           },
           function * B(log) {
-            log(`put1=${(yield put(ch, 'bar')).toString()}`);
+            log(`put=${(yield put(ch, 'zar')).toString()}`);
           }
         ),
-        [ '>A', 'take1=foo', '>B', 'take2=bar', '<A', 'put1=true', '<B' ]
+        [ '>A', 'take1=foo', 'take2=bar', '>B', 'take3=zar', '<A', 'put=true', '<B' ]
       );
     });
   });
