@@ -25,6 +25,41 @@ function exercise(log, expectation, delay, cleanup = () => {}) {
 }
 
 describe('Given a CSP', () => {
+  // Routines
+  describe('and we run a routine', () => {
+    it('should put and take from channels', () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      go(function * () {
+        spy(yield take(ch));
+        yield put(ch, 'pong');
+      });
+      go(function * () {
+        yield put(ch, 'ping');
+        spy(yield take(ch));
+      });
+      expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
+    });
+    it('should work even if we use plain functions', () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      go(function () {
+        ch.take(v => {
+          spy(v);
+          ch.put('pong');
+        });
+      });
+      go(function () {
+        ch.put('ping', () => {
+          ch.take(spy);
+        });
+      });
+      expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
+    });
+  });
+
   // States
 
   describe('and we have an the channel OPEN', () => {
@@ -631,9 +666,9 @@ describe('Given a CSP', () => {
     });
   });
 
-  // takeEvery
+  // subscribe
 
-  describe('when using the `takeEvery` method', () => {
+  describe('when using the `subscribe` method', () => {
     it('should provide an API for streamed values', () => {
       const ch = chan('ch1');
 
@@ -645,7 +680,7 @@ describe('Given a CSP', () => {
             log(`put3=${(yield put(ch, 'zar')).toString()}`);
           },
           function * B(log) {
-            ch.takeEvery(value => {
+            ch.subscribe(value => {
               log(`take=${value.toString()}`);
             });
           }
@@ -1024,7 +1059,7 @@ describe('Given a CSP', () => {
     });
   });
 
-  // state helper
+  // from helper
 
   describe('when we use the from method', () => {
     it('should create a unbuffered channel with a value inside', () => {
@@ -1043,6 +1078,23 @@ describe('Given a CSP', () => {
         ),
         [ '>A', 'take1=foo', 'take2=bar', '>B', 'take3=zar', '<A', 'put=true', '<B' ]
       );
+    });
+  });
+
+  // more complex examples
+  describe('when we combine methods', () => {
+    it('should work', () => {
+      const spy1 = jest.fn();
+      const spy2 = jest.fn();
+      const message = from('Hello World');
+      const update = () => message.put('chao');
+
+      message.map(value => value.toUpperCase()).subscribe(spy1);
+      message.map(value => value.toLowerCase()).subscribe(spy2);
+      update();
+
+      expect(spy1).toBeCalledWithArgs([ 'HELLO WORLD' ], [ 'CHAO' ]);
+      expect(spy2).toBeCalledWithArgs([ 'chao' ]);
     });
   });
 });

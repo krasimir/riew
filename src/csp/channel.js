@@ -1,6 +1,7 @@
+import { getId, isPromise, isGenerator } from '../utils';
 import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
-import { normalizeChannelArguments } from './utils';
 import { grid } from '../index';
+import buffer from './buffer';
 
 // **************************************************** chan / channel
 
@@ -40,8 +41,18 @@ chan.ENDED = ENDED;
 
 // **************************************************** go / generators
 
-export function go(genFunc, args, done) {
+export function go(genFunc, args = [], done) {
   const gen = genFunc(...args);
+  if (!isGenerator(gen)) {
+    if (isPromise(gen)) {
+      gen.then(() => {
+        if (done) done();
+      });
+      return;
+    }
+    if (done) done();
+    return;
+  }
   let alreadyDone = false;
   (function next(value) {
     const i = gen.next(value);
@@ -51,7 +62,7 @@ export function go(genFunc, args, done) {
     }
     if (i.done === true) {
       alreadyDone = true;
-      done();
+      if (done) done();
       return;
     }
     switch (i.value.op) {
@@ -220,7 +231,7 @@ export function ops(ch) {
     return ch;
   };
 
-  ch.takeEvery = func => {
+  ch.subscribe = func => {
     pipes.push({ func, type: 'takeEvery' });
     taker();
     return ch;
@@ -292,4 +303,22 @@ function implementIterableProtocol(ch) {
       };
     };
   }
+}
+
+function normalizeChannelArguments(args) {
+  let id, buff;
+  if (args.length === 2) {
+    id = args[ 0 ];
+    buff = args[ 1 ];
+  } else if (args.length === 1 && typeof args[ 0 ] === 'string') {
+    id = args[ 0 ];
+    buff = buffer.fixed();
+  } else if (args.length === 1 && typeof args[ 0 ] === 'object') {
+    id = getId('ch');
+    buff = args[ 0 ];
+  } else {
+    id = getId('ch');
+    buff = buffer.fixed();
+  }
+  return [ id, buff ];
 }

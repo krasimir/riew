@@ -1,4 +1,5 @@
 export const isPromise = obj => obj && typeof obj[ 'then' ] === 'function';
+export const isGenerator = obj => obj && typeof obj[ 'next' ] === 'function';
 export const isObjectLiteral = obj => (obj ? obj.constructor === {}.constructor : false);
 export const getFuncName = func => {
   if (func.name) return func.name;

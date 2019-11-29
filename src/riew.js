@@ -15,7 +15,7 @@ function normalizeExternalsMap(arr) {
   }, {});
 }
 
-export default function createRiew(viewFunc, ...controllers) {
+export default function createRiew(viewFunc, ...routines) {
   const instance = {
     id: getId('r'),
     name: getFuncName(viewFunc)
@@ -75,7 +75,7 @@ export default function createRiew(viewFunc, ...controllers) {
   const viewCh = chan(accumulate());
   const propsCh = chan().pipe(viewCh);
 
-  viewCh.takeLatest(data => {
+  viewCh.takeEvery(data => {
     viewFunc(data);
   });
 
@@ -87,7 +87,7 @@ export default function createRiew(viewFunc, ...controllers) {
     normalizeDataMap(normalizedExternals, viewCh);
 
     let controllersResult = parallel(
-      ...controllers.map(c => () => {
+      ...routines.map(c => () => {
         const dataCh = chan().pipe(viewCh);
         return c({
           ...normalizedExternals,
@@ -128,7 +128,7 @@ export default function createRiew(viewFunc, ...controllers) {
     externals = { ...externals, ...normalizeExternalsMap(maps) };
   };
   instance.test = map => {
-    const newInstance = createRiew(viewFunc, ...controllers);
+    const newInstance = createRiew(viewFunc, ...routines);
 
     newInstance.__setExternals([ map ]);
     return newInstance;
