@@ -58,6 +58,23 @@ describe('Given a CSP', () => {
       });
       expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
     });
+    it('should work even if we use async function', () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      go(async function () {
+        ch.take(v => {
+          spy(v);
+          ch.put('pong');
+        });
+      });
+      go(async function () {
+        ch.put('ping', () => {
+          ch.take(spy);
+        });
+      });
+      expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
+    });
   });
 
   // States

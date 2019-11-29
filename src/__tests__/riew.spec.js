@@ -8,7 +8,7 @@ describe('Given the `riew` factory function', () => {
     reset();
   });
   describe('when we create and mount riew with a given view and list of controllers', () => {
-    it(`should
+    fit(`should
       * call the view with the initial props
       * call each of the controller
       * run the clean-up functions of each controller`, () => {
@@ -39,7 +39,7 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we have an async routine', () => {
-    it('should render the view without waiting the routine to finish', async () => {
+    xit('should render the view without waiting the routine to finish', async () => {
       const view = jest.fn();
       const routine = async function ({ data }) {
         await delay(3);
@@ -53,7 +53,7 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we create a state in the controller', () => {
-    it(`should close the channel of the state if the riew is unmounted
+    xit(`should close the channel of the state if the riew is unmounted
       and should remove the state from the grid`, async () => {
       let sp;
       const view = jest.fn();
@@ -88,7 +88,7 @@ describe('Given the `riew` factory function', () => {
         ]
       );
     });
-    it('should send the state value to the view', async () => {
+    xit('should send the state value to the view', async () => {
       const view = jest.fn();
       const se = function ({ state, data }) {
         data({ s: state('foo') });
@@ -99,7 +99,7 @@ describe('Given the `riew` factory function', () => {
       await delay();
       expect(view).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ]);
     });
-    it('should subscribe (only once) for the changes in the state and re-render the view', async () => {
+    xit('should subscribe (only once) for the changes in the state and re-render the view', async () => {
       const view = jest.fn();
       const se = async function ({ state, data }) {
         const [ s, setState ] = state('foo');
@@ -118,7 +118,7 @@ describe('Given the `riew` factory function', () => {
       expect(view).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
     describe('when we have multiple channels produced', () => {
-      fit('should still subscribe all of them', () => {
+      xit('should still subscribe all of them', () => {
         const view = jest.fn();
         const controller = function ({ state, data }) {
           const message = state('Hello World');

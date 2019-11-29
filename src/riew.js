@@ -2,6 +2,17 @@ import { use } from './index';
 import { isObjectEmpty, isPromise, parallel, getFuncName, getId } from './utils';
 import { chan as Channel, buffer, isChannel, isChannelTake } from './csp';
 
+export default function createRiew(viewFunc, ...routines) {
+  const riew = {
+    id: getId('r'),
+    name: getFuncName(viewFunc)
+  };
+
+  return riew;
+}
+
+/*
+
 const accumulate = () => buffer.reducer((current, newData) => ({ ...current, ...newData }));
 
 function normalizeExternalsMap(arr) {
@@ -136,3 +147,5 @@ export default function createRiew(viewFunc, ...routines) {
 
   return instance;
 }
+
+*/
