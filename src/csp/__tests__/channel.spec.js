@@ -1,5 +1,6 @@
-import { chan, buffer, merge, timeout, from, go, put, take, sleep } from '../index';
+import { chan, buffer, merge, timeout, from, go, put, take, takeLatest, sleep } from '../index';
 import { getFuncName } from '../../utils';
+import { delay } from '../../__helpers__';
 
 function Test(...routines) {
   const log = [];
@@ -556,14 +557,26 @@ describe('Given a CSP', () => {
     });
   });
   describe('when we create a channel with a reducer buffer', () => {
-    it('should behave like a fixed buffer with size 0 but should accumulate state value', () => {
+    const reducer = spy =>
+      buffer.reducer((current = 10, data) => {
+        let newValue;
+        if (data !== undefined) {
+          newValue = current + data;
+        } else {
+          newValue = current;
+        }
+        spy(data, newValue);
+        return newValue;
+      });
+
+    it(`should
+      * run the reducer once by default
+      * provide non-blocking puts
+      * provide blocking takes
+      * reduce the value
+    `, () => {
       const reducerSpy = jest.fn();
-      const ch = chan(
-        buffer.reducer((current = 10, data) => {
-          reducerSpy(current);
-          return current + data;
-        })
-      );
+      const ch = chan(reducer(reducerSpy));
 
       return exercise(
         Test(
@@ -575,26 +588,20 @@ describe('Given a CSP', () => {
           function * B(log) {
             yield sleep(5);
             log(`take1=${(yield take(ch)).toString()}`);
-            log(`take2=${(yield take(ch)).toString()}`);
-            log(`take3=${(yield take(ch)).toString()}`);
+            log(`take2=${(yield take(ch)).toString()}`); // <-- never happen
           }
         ),
-        [ '>A', '>B', 'take1=30', 'put1=true', 'take2=35', 'put2=true', 'take3=38', '<B', 'put3=true', '<A' ],
+        [ '>A', 'put1=true', 'put2=true', 'put3=true', '<A', '>B', 'take1=38' ],
         10,
         () => {
-          expect(reducerSpy).toBeCalledWithArgs([ 10 ], [ 30 ], [ 35 ]);
+          expect(reducerSpy).toBeCalledWithArgs([ undefined, 10 ], [ 20, 30 ], [ 5, 35 ], [ 3, 38 ]);
         }
       );
     });
     describe('and we fire multiple puts one after each other', () => {
-      it('should flatten them', () => {
+      it('should reduce the value because the puts are non-blocking', () => {
         const reducerSpy = jest.fn();
-        const ch = chan(
-          buffer.reducer((current = 0, data) => {
-            reducerSpy(current);
-            return current + data;
-          })
-        );
+        const ch = chan(reducer(reducerSpy));
 
         return exercise(
           Test(
@@ -602,21 +609,19 @@ describe('Given a CSP', () => {
               ch.put(10);
               ch.put(20);
               ch.put(30);
-              yield sleep(7);
+              yield sleep(5);
               ch.put(40);
             },
             function * B(log) {
-              yield sleep(5);
               log(`take1=${(yield take(ch)).toString()}`);
-              log(`take2=${(yield take(ch)).toString()}`);
-              log(`take2=${(yield take(ch)).toString()}`);
+              yield sleep(7);
               log(`take2=${(yield take(ch)).toString()}`);
             }
           ),
-          [ '>A', '>B', 'take1=10', 'take2=30', 'take2=60', 'take2=100', '<B', '<A' ],
+          [ '>A', '>B', 'take1=70', '<A', 'take2=110', '<B' ],
           15,
           () => {
-            expect(reducerSpy).toBeCalledWithArgs([ 0 ], [ 10 ], [ 30 ], [ 60 ]);
+            expect(reducerSpy).toBeCalledWithArgs([ undefined, 10 ], [ 10, 20 ], [ 20, 40 ], [ 30, 70 ], [ 40, 110 ]);
           }
         );
       });
@@ -625,7 +630,7 @@ describe('Given a CSP', () => {
       it('should properly reduce value', () => {
         const reducerSpy = jest.fn();
         const ch = chan(
-          buffer.reducer((current, data) => {
+          buffer.reducer((current = [], data) => {
             reducerSpy(current, data);
             return current.map(item => {
               return {
@@ -652,6 +657,7 @@ describe('Given a CSP', () => {
         );
 
         expect(reducerSpy).toBeCalledWithArgs(
+          [ [], undefined ],
           [
             [
               {
@@ -1051,6 +1057,46 @@ describe('Given a CSP', () => {
         ),
         [ '>A', 'put1=true', 'put2=true', '<A', '>B', 'take2_1=10', 'take2_1=24', 'take3_1=15', 'take3_1=36', '<B' ]
       );
+    });
+  });
+
+  // take latest
+
+  describe('when using the takeLatest method', () => {
+    it('it should get only one take for multiple puts (if the buffer strategy allows that)', () => {
+      const ch = chan(buffer.reducer((a = 0, b) => a + b));
+
+      return exercise(
+        Test(
+          function * A(log) {
+            log(`take=${(yield takeLatest(ch)).toString()}`);
+          },
+          function * B(log) {
+            log(`put1=${(yield put(ch, 2)).toString()}`);
+            log(`put2=${(yield put(ch, 4)).toString()}`);
+            log(`put3=${(yield put(ch, 6)).toString()}`);
+          }
+        ),
+        [ '>A', '>B', 'put1=true', 'put2=true', 'put3=true', '<B', 'take=12', '<A' ],
+        20
+      );
+    });
+    describe('when using `takeLatest` method of the channel itself', () => {
+      it('should constantly return values', async () => {
+        const ch = chan(buffer.reducer((a = 0, b) => a + b));
+        const spy = jest.fn();
+
+        ch.takeLatest(spy);
+        ch.put(10);
+        ch.put(2);
+        ch.put(6);
+
+        // take latest adds a micro task so we need another one to
+        // run the expectation
+        await delay();
+
+        expect(spy).toBeCalledWithArgs([ 18 ]);
+      });
     });
   });
 

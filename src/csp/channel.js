@@ -1,5 +1,5 @@
 import { getId, isPromise, isGenerator } from '../utils';
-import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
+import { PUT, TAKE, TAKE_LATEST, SLEEP, OPEN, CLOSED, ENDED } from './constants';
 import { grid } from '../index';
 import buffer from './buffer';
 
@@ -72,10 +72,11 @@ export function go(genFunc, args = [], done) {
       case TAKE:
         i.value.ch.take(next);
         break;
+      case TAKE_LATEST:
+        Promise.resolve().then(() => i.value.ch.take(next));
+        break;
       case SLEEP:
-        setTimeout(() => {
-          next();
-        }, i.value.ms);
+        setTimeout(next, i.value.ms);
         break;
       default:
         throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
@@ -87,6 +88,9 @@ export function put(ch, item) {
 }
 export function take(ch) {
   return { ch, op: TAKE };
+}
+export function takeLatest(ch) {
+  return { ch, op: TAKE_LATEST };
 }
 export function sleep(ms = 0) {
   return { op: SLEEP, ms };
@@ -124,11 +128,6 @@ export function ops(ch) {
               break;
             case 'takeEvery':
               p.func(v);
-              break;
-            case 'takeLatest':
-              if (ch.buff.puts.length === 0) {
-                p.func(v);
-              }
               break;
           }
         });
@@ -179,6 +178,11 @@ export function ops(ch) {
     }
 
     return result;
+  };
+
+  ch.takeLatest = func => {
+    Promise.resolve().then(() => ch.take(func));
+    return ch;
   };
 
   ch.close = () => {

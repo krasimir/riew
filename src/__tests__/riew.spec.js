@@ -7,8 +7,25 @@ describe('Given the `riew` factory function', () => {
   beforeEach(() => {
     reset();
   });
+  describe('when mounting', () => {
+    it(`should
+      - run the routines
+      - fire the viewFunc in a sync fashion`, () => {
+      const viewFunc = jest.fn();
+      const routine1 = function ({ put }) {
+        put({ r1: 'r1' });
+      };
+      const routine2 = function ({ put }) {
+        put({ r2: 'r2' });
+      };
+      const r = riew(viewFunc, routine1, routine2);
+
+      r.mount({ props: 'props' });
+      expect(viewFunc).toBeCalledWithArgs({ a: 'a', b: 'b' });
+    });
+  });
   describe('when we create and mount riew with a given view and list of controllers', () => {
-    fit(`should
+    xit(`should
       * call the view with the initial props
       * call each of the controller
       * run the clean-up functions of each controller`, () => {
