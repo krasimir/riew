@@ -1098,6 +1098,27 @@ describe('Given a CSP', () => {
         expect(spy).toBeCalledWithArgs([ 18 ]);
       });
     });
+
+    describe('when using `takeLatest` as something that returns a promise', () => {
+      it('should again register a micro task and return the value', () => {
+        const ch = chan(buffer.reducer((a = 0, b) => a + b));
+
+        return exercise(
+          Test(
+            async function A(log) {
+              log(`take=${(await ch.takeLatest()).toString()}`);
+            },
+            function * B(log) {
+              log(`put1=${(yield put(ch, 2)).toString()}`);
+              log(`put2=${(yield put(ch, 4)).toString()}`);
+              log(`put3=${(yield put(ch, 6)).toString()}`);
+            }
+          ),
+          [ '>A', '>B', 'put1=true', 'put2=true', 'put3=true', '<B', 'take=12', '<A' ],
+          10
+        );
+      });
+    });
   });
 
   // iterable protocol

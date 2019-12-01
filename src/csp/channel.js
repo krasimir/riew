@@ -181,8 +181,13 @@ export function ops(ch) {
   };
 
   ch.takeLatest = func => {
-    Promise.resolve().then(() => ch.take(func));
-    return ch;
+    let result = ch;
+    let next = func;
+    if (typeof func === 'undefined') {
+      result = new Promise(resolve => (next = resolve));
+    }
+    Promise.resolve().then(() => ch.take(next));
+    return result;
   };
 
   ch.close = () => {
