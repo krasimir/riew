@@ -240,7 +240,7 @@ export function ops(ch) {
     return ch;
   };
 
-  ch.subscribe = func => {
+  ch.takeEvery = func => {
     pipes.push({ func, type: 'takeEvery' });
     taker();
     return ch;

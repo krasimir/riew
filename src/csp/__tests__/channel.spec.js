@@ -689,9 +689,9 @@ describe('Given a CSP', () => {
     });
   });
 
-  // subscribe
+  // takeEvery
 
-  describe('when using the `subscribe` method', () => {
+  describe('when using the `takeEvery` method', () => {
     it('should provide an API for streamed values', () => {
       const ch = chan('ch1');
 
@@ -703,7 +703,7 @@ describe('Given a CSP', () => {
             log(`put3=${(yield put(ch, 'zar')).toString()}`);
           },
           function * B(log) {
-            ch.subscribe(value => {
+            ch.takeEvery(value => {
               log(`take=${value.toString()}`);
             });
           }
@@ -1098,7 +1098,6 @@ describe('Given a CSP', () => {
         expect(spy).toBeCalledWithArgs([ 18 ]);
       });
     });
-
     describe('when using `takeLatest` as something that returns a promise', () => {
       it('should again register a micro task and return the value', () => {
         const ch = chan(buffer.reducer((a = 0, b) => a + b));
@@ -1115,6 +1114,25 @@ describe('Given a CSP', () => {
             }
           ),
           [ '>A', '>B', 'put1=true', 'put2=true', 'put3=true', '<B', 'take=12', '<A' ],
+          10
+        );
+      });
+    });
+    describe('when using `takeLatest` with a fixed buffer', () => {
+      it('should work', () => {
+        const ch = chan();
+
+        return exercise(
+          Test(
+            function * A(log) {
+              log(`take=${(yield takeLatest(ch)).toString()}`);
+            },
+            function * B(log) {
+              log(`put1=${(yield put(ch, 2)).toString()}`);
+              log(`put2=${(yield put(ch, 4)).toString()}`);
+            }
+          ),
+          [ '>A', '>B', 'take=2', '<A', 'put1=true', 'put2=true', '<B' ],
           10
         );
       });
@@ -1173,8 +1191,8 @@ describe('Given a CSP', () => {
       const message = from('Hello World');
       const update = () => message.put('chao');
 
-      message.map(value => value.toUpperCase()).subscribe(spy1);
-      message.map(value => value.toLowerCase()).subscribe(spy2);
+      message.map(value => value.toUpperCase()).takeEvery(spy1);
+      message.map(value => value.toLowerCase()).takeEvery(spy2);
       update();
 
       expect(spy1).toBeCalledWithArgs([ 'HELLO WORLD' ], [ 'CHAO' ]);
