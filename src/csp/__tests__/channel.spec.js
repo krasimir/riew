@@ -31,50 +31,93 @@ describe('Given a CSP', () => {
     it('should put and take from channels', () => {
       const ch = chan();
       const spy = jest.fn();
+      const cleanup1 = jest.fn();
+      const cleanup2 = jest.fn();
 
-      go(function * () {
-        spy(yield take(ch));
-        yield put(ch, 'pong');
-      });
-      go(function * () {
-        yield put(ch, 'ping');
-        spy(yield take(ch));
-      });
+      go(
+        function * () {
+          spy(yield take(ch));
+          yield put(ch, 'pong');
+          return 'a';
+        },
+        [],
+        cleanup1
+      );
+      go(
+        function * () {
+          yield put(ch, 'ping');
+          spy(yield take(ch));
+          return 'b';
+        },
+        [],
+        cleanup2
+      );
       expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
+      expect(cleanup1).toBeCalledWithArgs([ 'a' ]);
+      expect(cleanup2).toBeCalledWithArgs([ 'b' ]);
     });
     it('should work even if we use plain functions', () => {
       const ch = chan();
       const spy = jest.fn();
+      const cleanup1 = jest.fn();
+      const cleanup2 = jest.fn();
 
-      go(function () {
-        ch.take(v => {
-          spy(v);
-          ch.put('pong');
-        });
-      });
-      go(function () {
-        ch.put('ping', () => {
-          ch.take(spy);
-        });
-      });
+      go(
+        function () {
+          ch.take(v => {
+            spy(v);
+            ch.put('pong');
+          });
+          return 'a';
+        },
+        [],
+        cleanup1
+      );
+      go(
+        function () {
+          ch.put('ping', () => {
+            ch.take(spy);
+          });
+          return 'b';
+        },
+        [],
+        cleanup2
+      );
       expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
+      expect(cleanup1).toBeCalledWithArgs([ 'a' ]);
+      expect(cleanup2).toBeCalledWithArgs([ 'b' ]);
     });
-    it('should work even if we use async function', () => {
+    it('should work even if we use async function', async () => {
       const ch = chan();
       const spy = jest.fn();
+      const cleanup1 = jest.fn();
+      const cleanup2 = jest.fn();
 
-      go(async function () {
-        ch.take(v => {
-          spy(v);
-          ch.put('pong');
-        });
-      });
-      go(async function () {
-        ch.put('ping', () => {
-          ch.take(spy);
-        });
-      });
+      go(
+        async function () {
+          ch.take(v => {
+            spy(v);
+            ch.put('pong');
+          });
+          return 'a';
+        },
+        [],
+        cleanup1
+      );
+      go(
+        async function () {
+          ch.put('ping', () => {
+            ch.take(spy);
+          });
+          return 'b';
+        },
+        [],
+        cleanup2
+      );
       expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
+      await delay();
+      expect(cleanup1).toBeCalledWithArgs([ 'a' ]);
+      expect(cleanup2).toBeCalledWithArgs([ 'b' ]);
     });
   });
 

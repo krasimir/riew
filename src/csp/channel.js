@@ -45,12 +45,12 @@ export function go(genFunc, args = [], done) {
   const gen = genFunc(...args);
   if (!isGenerator(gen)) {
     if (isPromise(gen)) {
-      gen.then(() => {
-        if (done) done();
+      gen.then(r => {
+        if (done) done(r);
       });
       return;
     }
-    if (done) done();
+    if (done) done(gen);
     return;
   }
   let alreadyDone = false;
@@ -62,7 +62,7 @@ export function go(genFunc, args = [], done) {
     }
     if (i.done === true) {
       alreadyDone = true;
-      if (done) done();
+      if (done) done(i.value);
       return;
     }
     switch (i.value.op) {
@@ -180,16 +180,6 @@ export function ops(ch) {
     return result;
   };
 
-  ch.takeLatest = func => {
-    let result = ch;
-    let next = func;
-    if (typeof func === 'undefined') {
-      result = new Promise(resolve => (next = resolve));
-    }
-    Promise.resolve().then(() => ch.take(next));
-    return result;
-  };
-
   ch.close = () => {
     const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
     ch.state(newState);
@@ -205,6 +195,22 @@ export function ops(ch) {
   ch.reset = () => {
     ch.state(OPEN);
     ch.buff.reset();
+  };
+
+  ch.subscribe = func => {
+    pipes.push({ func, type: 'takeEvery' });
+    taker();
+    return ch;
+  };
+
+  ch.takeLatest = func => {
+    let result = ch;
+    let next = func;
+    if (typeof func === 'undefined') {
+      result = new Promise(resolve => (next = resolve));
+    }
+    Promise.resolve().then(() => ch.take(next));
+    return result;
   };
 
   ch.pipe = (...channels) => {
@@ -237,12 +243,6 @@ export function ops(ch) {
     } else if (typeof value !== 'undefined') {
       ch.buff.setValue(value);
     }
-    return ch;
-  };
-
-  ch.takeEvery = func => {
-    pipes.push({ func, type: 'takeEvery' });
-    taker();
     return ch;
   };
 }

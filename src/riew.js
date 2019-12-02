@@ -10,6 +10,7 @@ export default function createRiew(viewFunc, ...routines) {
     name: getFuncName(viewFunc)
   };
   const channels = [];
+  let cleanup = [];
   const chan = function (...args) {
     const ch = Channel(...args);
     channels.push(ch);
@@ -23,17 +24,29 @@ export default function createRiew(viewFunc, ...routines) {
       propsCh.put(props);
     }
     routines.map(r => {
-      return go(r, [
-        {
-          put: (...args) => viewCh.put(...args)
+      return go(
+        r,
+        [
+          {
+            put: (...args) => viewCh.put(...args),
+            chan
+          }
+        ],
+        result => {
+          if (typeof result === 'function') {
+            cleanup.push(result);
+          }
         }
-      ]);
+      );
     });
   };
-  riew.unmount = function () {};
+  riew.unmount = function () {
+    cleanup.forEach(c => c());
+    cleanup = [];
+  };
 
   propsCh.pipe(viewCh);
-  viewCh.subscribe(viewFunc).put({});
+  viewCh.takeLatest(viewFunc);
 
   return riew;
 }
