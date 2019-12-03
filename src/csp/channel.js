@@ -107,7 +107,7 @@ export function ops(ch) {
       opsTaker = true;
       const listen = v => {
         if (v === CLOSED || v === ENDED) return;
-        pipes.forEach(p => p.func(v));
+        pipes.filter(p => p.latest === false).forEach(p => p.func(v));
         ch.take(listen);
       };
       ch.take(listen);
@@ -186,9 +186,11 @@ export function ops(ch) {
 
   ch.subscribe = (func, options = {}) => {
     let id = getId('sub');
-    let who = typeof options.who !== 'undefined' ? options.who : {};
+    let who = typeof options.who !== 'undefined' ? options.who : getId('who');
     let latest = typeof options.latest !== 'undefined' ? options.latest : false;
-    if (!pipes.find(p => p.who === who)) pipes.push({ id, func, who, latest });
+    if (!pipes.find(p => p.who === who)) {
+      pipes.push({ id, func, who, latest });
+    }
     taker();
     return () => {
       const index = pipes.findIndex(p => p.id === id);

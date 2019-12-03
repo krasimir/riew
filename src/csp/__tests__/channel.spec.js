@@ -783,7 +783,7 @@ describe('Given a CSP', () => {
 
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
     });
-    fit('should subscribe with a microtask', async () => {
+    it('should subscribe with a microtask', async () => {
       const ch = chan();
       const spy = jest.fn();
 
@@ -793,6 +793,12 @@ describe('Given a CSP', () => {
       ch.put('bar');
       ch.put('baz');
       ch.put('moo');
+
+      // because of the microtask
+      await delay();
+
+      ch.put('no');
+      ch.put('yes');
 
       // because of the microtask
       await delay();
