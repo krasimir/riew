@@ -732,10 +732,10 @@ describe('Given a CSP', () => {
     });
   });
 
-  // takeEvery
+  // subscribe
 
-  describe('when using the `takeEvery` method', () => {
-    it('should provide an API for streamed values', () => {
+  describe('when using the `subscribe` method', () => {
+    it('should provide an API for continues value receiving', () => {
       const ch = chan('ch1');
 
       exercise(
@@ -746,13 +746,58 @@ describe('Given a CSP', () => {
             log(`put3=${(yield put(ch, 'zar')).toString()}`);
           },
           function * B(log) {
-            ch.takeEvery(value => {
+            ch.subscribe(value => {
               log(`take=${value.toString()}`);
             });
           }
         ),
         [ '>A', '>B', 'take=foo', 'put1=true', 'take=bar', 'put2=true', 'take=zar', 'put3=true', '<A', '<B' ]
       );
+    });
+    it("shouldn't subscribe to the same observer twice", () => {
+      const ch = chan();
+      const spy1 = jest.fn();
+      const spy2 = jest.fn();
+
+      ch.subscribe(spy1);
+      ch.subscribe(spy1);
+      ch.subscribe(spy2, { who: 'foo' });
+      ch.subscribe(spy2, { who: 'foo' });
+      ch.subscribe(spy2, { who: 'foo' });
+
+      ch.put('Hey');
+
+      expect(spy1).toBeCalledWithArgs([ 'Hey' ], [ 'Hey' ]);
+      expect(spy2).toBeCalledWithArgs([ 'Hey' ]);
+    });
+    it('should provide an API for unsubscribing', () => {
+      const ch = chan();
+      const spy = jest.fn();
+      const unsub = ch.subscribe(spy);
+
+      ch.put('foo');
+      ch.put('bar');
+      unsub();
+      ch.put('baz');
+      ch.put('moo');
+
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+    });
+    fit('should subscribe with a microtask', async () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      ch.subscribe(spy, { latest: true });
+
+      ch.put('foo');
+      ch.put('bar');
+      ch.put('baz');
+      ch.put('moo');
+
+      // because of the microtask
+      await delay();
+
+      expect(spy).toBeCalledWithArgs([ 'moo' ]);
     });
   });
 
@@ -1125,7 +1170,7 @@ describe('Given a CSP', () => {
       );
     });
     describe('when using `takeLatest` method of the channel itself', () => {
-      it('should constantly return values', async () => {
+      it('should return a single value if we have multiple sync puts', async () => {
         const ch = chan(buffer.reducer((a = 0, b) => a + b));
         const spy = jest.fn();
 
@@ -1234,8 +1279,8 @@ describe('Given a CSP', () => {
       const message = from('Hello World');
       const update = () => message.put('chao');
 
-      message.map(value => value.toUpperCase()).takeEvery(spy1);
-      message.map(value => value.toLowerCase()).takeEvery(spy2);
+      message.map(value => value.toUpperCase()).subscribe(spy1);
+      message.map(value => value.toLowerCase()).subscribe(spy2);
       update();
 
       expect(spy1).toBeCalledWithArgs([ 'HELLO WORLD' ], [ 'CHAO' ]);

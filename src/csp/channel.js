@@ -106,31 +106,8 @@ export function ops(ch) {
     if (!opsTaker) {
       opsTaker = true;
       const listen = v => {
-        if (v === CLOSED || v === ENDED) {
-          return;
-        }
-        pipes.forEach(p => {
-          switch (p.type) {
-            case 'pipe':
-              if (p.ch.state() === OPEN) {
-                p.ch.put(v);
-              }
-              break;
-            case 'map':
-              if (p.ch.state() === OPEN) {
-                p.ch.put(p.func(v));
-              }
-              break;
-            case 'filter':
-              if (p.ch.state() === OPEN && p.func(v)) {
-                p.ch.put(v);
-              }
-              break;
-            case 'takeEvery':
-              p.func(v);
-              break;
-          }
-        });
+        if (v === CLOSED || v === ENDED) return;
+        pipes.forEach(p => p.func(v));
         ch.take(listen);
       };
       ch.take(listen);
@@ -180,6 +157,16 @@ export function ops(ch) {
     return result;
   };
 
+  ch.takeLatest = func => {
+    let result = ch;
+    let next = func;
+    if (typeof func === 'undefined') {
+      result = new Promise(resolve => (next = resolve));
+    }
+    Promise.resolve().then(() => ch.take(next));
+    return result;
+  };
+
   ch.close = () => {
     const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
     ch.state(newState);
@@ -197,42 +184,38 @@ export function ops(ch) {
     ch.buff.reset();
   };
 
-  ch.subscribe = func => {
-    pipes.push({ func, type: 'takeEvery' });
+  ch.subscribe = (func, options = {}) => {
+    let id = getId('sub');
+    let who = typeof options.who !== 'undefined' ? options.who : {};
+    let latest = typeof options.latest !== 'undefined' ? options.latest : false;
+    if (!pipes.find(p => p.who === who)) pipes.push({ id, func, who, latest });
     taker();
-    return ch;
-  };
-
-  ch.takeLatest = func => {
-    let result = ch;
-    let next = func;
-    if (typeof func === 'undefined') {
-      result = new Promise(resolve => (next = resolve));
-    }
-    Promise.resolve().then(() => ch.take(next));
-    return result;
+    return () => {
+      const index = pipes.findIndex(p => p.id === id);
+      if (index >= 0) {
+        pipes.splice(index, 1);
+      }
+    };
   };
 
   ch.pipe = (...channels) => {
-    channels.forEach(channel => {
-      if (!pipes.find(({ ch }) => ch === channel)) {
-        pipes.push({ type: 'pipe', ch: channel });
-      }
-    });
+    channels.forEach(c => ch.subscribe(value => c.put(value), { who: c }));
     taker();
     return ch;
   };
 
   ch.map = func => {
     const newCh = chan();
-    pipes.push({ ch: newCh, func, type: 'map' });
+    ch.subscribe(value => newCh.put(func(value)));
     taker();
     return newCh;
   };
 
   ch.filter = func => {
     const newCh = chan();
-    pipes.push({ ch: newCh, func, type: 'filter' });
+    ch.subscribe(value => {
+      if (func(value)) newCh.put(value);
+    });
     taker();
     return newCh;
   };
