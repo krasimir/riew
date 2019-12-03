@@ -761,9 +761,9 @@ describe('Given a CSP', () => {
 
       ch.subscribe(spy1);
       ch.subscribe(spy1);
-      ch.subscribe(spy2, { who: 'foo' });
-      ch.subscribe(spy2, { who: 'foo' });
-      ch.subscribe(spy2, { who: 'foo' });
+      ch.subscribe(spy2, 'foo');
+      ch.subscribe(spy2, 'foo');
+      ch.subscribe(spy2, 'foo');
 
       ch.put('Hey');
 
@@ -783,27 +783,27 @@ describe('Given a CSP', () => {
 
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
     });
-    it('should subscribe with a microtask', async () => {
-      const ch = chan();
-      const spy = jest.fn();
+    describe('and we pass a channel instead of a function', () => {
+      it('should pipe', () => {
+        const ch = chan();
+        const ch2 = chan();
+        const spy2 = jest.fn();
+        const ch3 = chan();
+        const spy3 = jest.fn();
 
-      ch.subscribe(spy, { latest: true });
+        ch.subscribe(ch2);
+        ch.subscribe(ch3);
+        ch.subscribe(ch3);
+        ch2.subscribe(spy2);
+        ch3.subscribe(spy3);
 
-      ch.put('foo');
-      ch.put('bar');
-      ch.put('baz');
-      ch.put('moo');
+        ch.put('foo');
+        ch.put('bar');
+        ch.put('zar');
 
-      // because of the microtask
-      await delay();
-
-      ch.put('no');
-      ch.put('yes');
-
-      // because of the microtask
-      await delay();
-
-      expect(spy).toBeCalledWithArgs([ 'moo' ]);
+        expect(spy2).toBeCalledWithArgs([ 'foo' ], [ 'bar' ], [ 'zar' ]);
+        expect(spy3).toBeCalledWithArgs([ 'foo' ], [ 'bar' ], [ 'zar' ]);
+      });
     });
   });
 
@@ -849,7 +849,7 @@ describe('Given a CSP', () => {
     });
   });
 
-  // pipe
+  // piping
 
   describe('when we pipe channels', () => {
     it('should distribute a single value to multiple channels', () => {
@@ -857,8 +857,8 @@ describe('Given a CSP', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      ch1.pipe(ch2);
-      ch2.pipe(ch3);
+      ch1.subscribe(ch2);
+      ch2.subscribe(ch3);
 
       exercise(
         Test(
@@ -882,11 +882,9 @@ describe('Given a CSP', () => {
       const ch3 = chan('ch3');
       const ch4 = chan('ch4');
 
-      ch1.pipe(
-        ch2,
-        ch3
-      );
-      ch2.pipe(ch4);
+      ch1.subscribe(ch2);
+      ch1.subscribe(ch3);
+      ch2.subscribe(ch4);
 
       exercise(
         Test(
@@ -910,9 +908,9 @@ describe('Given a CSP', () => {
         const ch1 = chan('ch1');
         const ch2 = chan('ch2');
 
-        ch1.pipe(ch2);
-        ch1.pipe(ch2);
-        ch1.pipe(ch2);
+        ch1.subscribe(ch2);
+        ch1.subscribe(ch2);
+        ch1.subscribe(ch2);
 
         exercise(
           Test(

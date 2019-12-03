@@ -100,14 +100,20 @@ export function sleep(ms = 0) {
 
 export function ops(ch) {
   let opsTaker = false;
-  let pipes = [];
+  let observers = [];
 
   function taker() {
     if (!opsTaker) {
       opsTaker = true;
       const listen = v => {
         if (v === CLOSED || v === ENDED) return;
-        pipes.filter(p => p.latest === false).forEach(p => p.func(v));
+        observers.forEach(p => {
+          if (isChannel(p.observer)) {
+            p.observer.put(v);
+          } else {
+            p.observer(v);
+          }
+        });
         ch.take(listen);
       };
       ch.take(listen);
@@ -184,26 +190,21 @@ export function ops(ch) {
     ch.buff.reset();
   };
 
-  ch.subscribe = (func, options = {}) => {
+  ch.subscribe = (observer, who = getId('who')) => {
     let id = getId('sub');
-    let who = typeof options.who !== 'undefined' ? options.who : getId('who');
-    let latest = typeof options.latest !== 'undefined' ? options.latest : false;
-    if (!pipes.find(p => p.who === who)) {
-      pipes.push({ id, func, who, latest });
+    if (isChannel(observer)) {
+      who = observer.id;
+    }
+    if (!observers.find(p => p.who === who)) {
+      observers.push({ id, observer, who });
     }
     taker();
     return () => {
-      const index = pipes.findIndex(p => p.id === id);
+      const index = observers.findIndex(p => p.id === id);
       if (index >= 0) {
-        pipes.splice(index, 1);
+        observers.splice(index, 1);
       }
     };
-  };
-
-  ch.pipe = (...channels) => {
-    channels.forEach(c => ch.subscribe(value => c.put(value), { who: c }));
-    taker();
-    return ch;
   };
 
   ch.map = func => {
@@ -224,7 +225,7 @@ export function ops(ch) {
 
   ch.from = value => {
     if (isChannel(value)) {
-      value.pipe(ch);
+      value.subscribe(ch);
     } else if (typeof value !== 'undefined') {
       ch.buff.setValue(value);
     }
