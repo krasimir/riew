@@ -42,24 +42,33 @@ chan.ENDED = ENDED;
 // **************************************************** go / generators
 
 export function go(genFunc, args = [], done) {
+  const RUNNING = 'RUNNING';
+  const STOPPED = 'STOPPED';
   const gen = genFunc(...args);
+  let state = RUNNING;
+  const api = {
+    stop() {
+      state = STOPPED;
+    }
+  };
+
   if (!isGenerator(gen)) {
     if (isPromise(gen)) {
       gen.then(r => {
-        if (done) done(r);
+        if (done && state === RUNNING) done(r);
       });
-      return;
+      return api;
     }
-    if (done) done(gen);
-    return;
+    if (done && state === RUNNING) done(gen);
+    return api;
   }
   let alreadyDone = false;
   (function next(value) {
-    const i = gen.next(value);
-    if (alreadyDone) {
+    if (alreadyDone || state === STOPPED) {
       // There are cases where the channel is closed but then we have more iteration
       return;
     }
+    const i = gen.next(value);
     if (i.done === true) {
       alreadyDone = true;
       if (done) done(i.value);
@@ -82,6 +91,8 @@ export function go(genFunc, args = [], done) {
         throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
     }
   })();
+
+  return api;
 }
 export function put(ch, item) {
   return { ch, op: PUT, item };
@@ -177,12 +188,8 @@ export function ops(ch) {
     const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
     ch.state(newState);
     ch.buff.puts.forEach(put => put(newState));
-    // We have a pending take only if the buffer is empty.
-    // So, closed buffer with no value => ENDED
-    ch.buff.takes.forEach(put => put(ENDED));
-    if (newState === ENDED) {
-      grid.remove(ch);
-    }
+    ch.buff.takes.forEach(take => take(newState));
+    grid.remove(ch);
   };
 
   ch.reset = () => {
@@ -231,6 +238,8 @@ export function ops(ch) {
     }
     return ch;
   };
+
+  ch.isActive = () => ch.state() === OPEN;
 }
 
 export function merge(...channels) {

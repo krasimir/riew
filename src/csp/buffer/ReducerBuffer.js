@@ -19,8 +19,8 @@ export default function ReducerBuffer(reducer = defaultReducer) {
   };
   api.take = callback => {
     if (api.value.length === 0) {
-      api.takes.push(() => {
-        callback(api.value.shift());
+      api.takes.push(v => {
+        callback(v || api.value.shift());
       });
     } else {
       callback(api.value.shift());

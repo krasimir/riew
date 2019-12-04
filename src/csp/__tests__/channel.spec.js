@@ -119,6 +119,18 @@ describe('Given a CSP', () => {
       expect(cleanup1).toBeCalledWithArgs([ 'a' ]);
       expect(cleanup2).toBeCalledWithArgs([ 'b' ]);
     });
+    it('should provide an API to stop the routine', async () => {
+      const spy = jest.fn();
+      const routine = go(function * A(log) {
+        yield sleep(4);
+        spy('foo');
+      });
+
+      await delay(2);
+      routine.stop();
+      await delay(4);
+      expect(spy).not.toBeCalled();
+    });
   });
 
   // States

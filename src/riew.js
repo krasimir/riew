@@ -1,6 +1,6 @@
 import { use } from './index';
 import { isObjectEmpty, isPromise, parallel, getFuncName, getId } from './utils';
-import { chan as Channel, buffer, isChannel, isChannelTake, go } from './csp';
+import { chan as Channel, buffer, isChannel, isChannelTake, go, from as From } from './csp';
 
 const accumulate = () => buffer.reducer((current, newData) => ({ ...current, ...newData }));
 
@@ -9,27 +9,42 @@ export default function createRiew(viewFunc, ...routines) {
     id: getId('r'),
     name: getFuncName(viewFunc)
   };
-  const channels = [];
+  let channels = [];
   let cleanup = [];
+  let runningRoutines = [];
   const chan = function (...args) {
     const ch = Channel(...args);
     channels.push(ch);
     return ch;
   };
+  const from = function (...args) {
+    const ch = From(...args);
+    channels.push(ch);
+    return ch;
+  };
   const viewCh = chan(`riew_${riew.name}_view`, accumulate());
   const propsCh = chan(`riew_${riew.name}_props`, accumulate());
+  const render = value => {
+    if (value !== Channel.CLOSED && value !== Channel.ENDED) {
+      viewFunc(value);
+    }
+    if (viewCh.isActive()) {
+      viewCh.takeLatest(render);
+    }
+  };
 
   riew.mount = function (props) {
     if (props) {
       propsCh.put(props);
     }
-    routines.map(r => {
-      return go(
+    runningRoutines = routines.map(r =>
+      go(
         r,
         [
           {
-            put: (...args) => viewCh.put(...args),
-            chan
+            render: (...args) => viewCh.put(...args),
+            chan,
+            state: from
           }
         ],
         result => {
@@ -37,16 +52,20 @@ export default function createRiew(viewFunc, ...routines) {
             cleanup.push(result);
           }
         }
-      );
-    });
+      )
+    );
   };
   riew.unmount = function () {
     cleanup.forEach(c => c());
     cleanup = [];
+    channels.forEach(c => c.close());
+    channels = [];
+    runningRoutines.forEach(r => r.stop());
+    runningRoutines = [];
   };
 
-  propsCh.pipe(viewCh);
-  viewCh.takeLatest(viewFunc);
+  propsCh.subscribe(viewCh);
+  viewCh.takeLatest(render);
 
   return riew;
 }
