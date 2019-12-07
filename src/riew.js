@@ -42,8 +42,8 @@ export default function createRiew(viewFunc, ...routines) {
     channels.push(ch);
     return ch;
   };
-  const viewCh = chan(`riew_${riew.name}_view`, bufferStrategy());
-  const propsCh = chan(`riew_${riew.name}_props`, bufferStrategy());
+  const viewCh = chan(`riew_${riew.name}_view`);
+  const propsCh = chan(`riew_${riew.name}_props`);
   const render = value => {
     if (value !== Channel.CLOSED && value !== Channel.ENDED) {
       renderer.push(value);

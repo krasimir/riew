@@ -120,7 +120,6 @@ describe('Given the `riew` factory function', () => {
       expect(grid.getNodeById(sp.id)).toBeDefined();
       r.unmount();
       expect(grid.getNodeById(sp.id)).not.toBeDefined();
-      expect(view).toBeCalledWithArgs([ {} ]);
     });
     it('should send the state value to the view', async () => {
       const view = jest.fn();
