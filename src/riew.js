@@ -22,6 +22,12 @@ const Renderer = function (viewFunc) {
   };
 };
 
+function requireObject(obj) {
+  if (typeof obj === 'undefined' || obj === null || (typeof obj !== 'undefined' && typeof obj !== 'object')) {
+    throw new Error(`A key-value object expected. Instead "${obj}" passed.`);
+  }
+}
+
 export default function createRiew(viewFunc, ...routines) {
   const riew = {
     id: getId('r'),
@@ -31,6 +37,7 @@ export default function createRiew(viewFunc, ...routines) {
   let channels = [];
   let cleanup = [];
   let runningRoutines = [];
+  let externals = {};
   const chan = function (...args) {
     const ch = Channel(...args);
     channels.push(ch);
@@ -49,29 +56,55 @@ export default function createRiew(viewFunc, ...routines) {
     }
   };
   const normalizeRenderData = value =>
-    Object.keys(value).reduce((viewObj, key) => {
+    Object.keys(value).reduce((obj, key) => {
       if (isChannel(value[ key ])) {
         let ch = value[ key ];
         ch.subscribe(v => viewCh.put({ [ key ]: v }), ch.id);
       } else if (isChannelTake(value[ key ])) {
         let ch = value[ key ].ch;
-        ch.subscribe(v => viewCh.put({ [ key ]: v }), ch.id);
+        ch.subscribe(v => viewCh.put({ [ key ]: v }), ch.id + riew.id);
       } else {
-        viewObj[ key ] = value[ key ];
+        obj[ key ] = value[ key ];
       }
-      return viewObj;
+      return obj;
     }, {});
+  const processExternals = () => {
+    const exs = Object.keys(externals).reduce((obj, key) => {
+      let o;
+      if (key.charAt(0) === '@') {
+        key = key.substr(1, key.length);
+        o = use(key);
+      } else {
+        o = externals[ key ];
+      }
+      obj[ key ] = o;
+      return obj;
+    }, {});
+    const viewData = normalizeRenderData(exs);
+
+    if (!isObjectEmpty(viewData)) {
+      viewCh.put(viewData);
+    }
+    return exs;
+  };
 
   riew.mount = function (props = {}) {
+    requireObject(props);
+    propsCh.subscribe(viewCh);
+    let normalizedExternals = processExternals();
     runningRoutines = routines.map(r =>
       go(
         r,
         [
           {
-            render: value => viewCh.put(normalizeRenderData(value)),
+            render: value => {
+              requireObject(value);
+              viewCh.put(normalizeRenderData(value));
+            },
             chan,
             state: from,
-            props: propsCh
+            props: propsCh,
+            ...normalizedExternals
           }
         ],
         result => {
@@ -81,7 +114,6 @@ export default function createRiew(viewFunc, ...routines) {
         }
       )
     );
-    propsCh.subscribe(viewCh);
     viewCh.subscribe(render);
     propsCh.put(props);
   };
@@ -94,7 +126,29 @@ export default function createRiew(viewFunc, ...routines) {
     runningRoutines = [];
   };
   riew.update = function (props = {}) {
+    requireObject(props);
     propsCh.put(props);
+  };
+  riew.with = (...maps) => {
+    riew.__setExternals(maps);
+    return riew;
+  };
+  riew.__setExternals = maps => {
+    maps = maps.reduce((map, item) => {
+      if (typeof item === 'string') {
+        map = { ...map, [ '@' + item ]: true };
+      } else {
+        map = { ...map, ...item };
+      }
+      return map;
+    }, {});
+    externals = { ...externals, ...maps };
+  };
+  riew.test = map => {
+    const newInstance = createRiew(viewFunc, ...routines);
+
+    newInstance.__setExternals([ map ]);
+    return newInstance;
   };
 
   return riew;
