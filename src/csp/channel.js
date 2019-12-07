@@ -1,5 +1,5 @@
 import { getId, isPromise, isGenerator } from '../utils';
-import { PUT, TAKE, TAKE_LATEST, SLEEP, OPEN, CLOSED, ENDED } from './constants';
+import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
 import { grid } from '../index';
 import buffer from './buffer';
 
@@ -81,9 +81,6 @@ export function go(genFunc, args = [], done) {
       case TAKE:
         i.value.ch.take(next);
         break;
-      case TAKE_LATEST:
-        Promise.resolve().then(() => i.value.ch.take(next));
-        break;
       case SLEEP:
         setTimeout(next, i.value.ms);
         break;
@@ -99,9 +96,6 @@ export function put(ch, item) {
 }
 export function take(ch) {
   return { ch, op: TAKE };
-}
-export function takeLatest(ch) {
-  return { ch, op: TAKE_LATEST };
 }
 export function sleep(ms = 0) {
   return { op: SLEEP, ms };
@@ -171,16 +165,6 @@ export function ops(ch) {
       }
     }
 
-    return result;
-  };
-
-  ch.takeLatest = func => {
-    let result = ch;
-    let next = func;
-    if (typeof func === 'undefined') {
-      result = new Promise(resolve => (next = resolve));
-    }
-    Promise.resolve().then(() => ch.take(next));
     return result;
   };
 

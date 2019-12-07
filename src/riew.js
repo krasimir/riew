@@ -2,13 +2,33 @@ import { use } from './index';
 import { isObjectEmpty, isPromise, parallel, getFuncName, getId } from './utils';
 import { chan as Channel, buffer, isChannel, isChannelTake, go, from as From } from './csp';
 
-const accumulate = () => buffer.reducer((current, newData) => ({ ...current, ...newData }));
+const accumulate = (current, newData) => ({ ...current, ...newData });
+const bufferStrategy = () => buffer.reducer(accumulate);
+
+const Renderer = function (viewFunc) {
+  let data = {};
+  let inProgress = false;
+
+  return {
+    push(newData) {
+      data = accumulate(data, newData);
+      if (!inProgress) {
+        inProgress = true;
+        Promise.resolve().then(() => {
+          viewFunc(data);
+          inProgress = false;
+        });
+      }
+    }
+  };
+};
 
 export default function createRiew(viewFunc, ...routines) {
   const riew = {
     id: getId('r'),
     name: getFuncName(viewFunc)
   };
+  const renderer = Renderer(viewFunc);
   let channels = [];
   let cleanup = [];
   let runningRoutines = [];
@@ -22,14 +42,11 @@ export default function createRiew(viewFunc, ...routines) {
     channels.push(ch);
     return ch;
   };
-  const viewCh = chan(`riew_${riew.name}_view`, accumulate());
-  const propsCh = chan(`riew_${riew.name}_props`, accumulate());
+  const viewCh = chan(`riew_${riew.name}_view`, bufferStrategy());
+  const propsCh = chan(`riew_${riew.name}_props`, bufferStrategy());
   const render = value => {
     if (value !== Channel.CLOSED && value !== Channel.ENDED) {
-      viewFunc(value);
-    }
-    if (viewCh.isActive()) {
-      viewCh.takeLatest(render);
+      renderer.push(value);
     }
   };
   const normalizeRenderData = value =>
@@ -75,7 +92,7 @@ export default function createRiew(viewFunc, ...routines) {
   };
 
   propsCh.subscribe(viewCh);
-  viewCh.takeLatest(render);
+  viewCh.subscribe(render);
 
   return riew;
 }
