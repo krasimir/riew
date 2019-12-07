@@ -1,4 +1,4 @@
-import { chan, buffer, merge, timeout, from, go, put, take, takeLatest, sleep } from '../index';
+import { chan, buffer, merge, timeout, go, put, take, sleep } from '../index';
 import { getFuncName } from '../../utils';
 import { delay } from '../../__helpers__';
 
@@ -493,7 +493,9 @@ describe('Given a CSP', () => {
     });
     describe('and we have a pre-set value', () => {
       it('should allow a non-blocking take', () => {
-        const ch = chan(buffer.dropping(2)).from('a', 'b');
+        const ch = chan(buffer.dropping(2));
+        ch.put('a');
+        ch.put('b');
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         exercise(
@@ -887,98 +889,6 @@ describe('Given a CSP', () => {
     });
   });
 
-  // from
-
-  describe('when we use the from method', () => {
-    describe('and we pass an array of values', () => {
-      it('should pre-set the value of the channel', () => {
-        const ch = chan(buffer.fixed(2)).from('foo', 'bar');
-
-        return exercise(
-          Test(
-            function * A(log) {
-              log(`take1=${(yield take(ch)).toString()}`);
-              log(`take2=${(yield take(ch)).toString()}`);
-              log(`take3=${(yield take(ch)).toString()}`);
-            },
-            function * B(log) {
-              yield sleep(5);
-              log('B put');
-              log(`put=${(yield put(ch, 'zar')).toString()}`);
-            }
-          ),
-          [ '>A', 'take1=foo', 'take2=bar', '>B', 'B put', 'take3=zar', '<A', 'put=true', '<B' ],
-          10
-        );
-      });
-    });
-    describe('and we pass another channel', () => {
-      it('should auto pipe', () => {
-        const ch1 = chan();
-        const ch2 = chan().from(ch1);
-
-        return exercise(
-          Test(
-            function * A(log) {
-              log(`take1=${(yield take(ch2)).toString()}`);
-              log(`take2=${(yield take(ch2)).toString()}`);
-            },
-            function * B(log) {
-              yield sleep(5);
-              log(`put1=${(yield put(ch1, 'foo')).toString()}`);
-              log(`put2=${(yield put(ch1, 'bar')).toString()}`);
-            }
-          ),
-          [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<A', 'put2=true', '<B' ],
-          10
-        );
-      });
-    });
-    describe('and we pass only a single value that is not array', () => {
-      describe('and that value is undefined', () => {
-        it('should do nothing', () => {
-          const ch = chan().from();
-
-          return exercise(
-            Test(
-              function * A(log) {
-                log(`take1=${(yield take(ch)).toString()}`);
-                log(`take2=${(yield take(ch)).toString()}`);
-              },
-              function * B(log) {
-                yield sleep(5);
-                log(`put1=${(yield put(ch, 'foo')).toString()}`);
-                log(`put2=${(yield put(ch, 'bar')).toString()}`);
-              }
-            ),
-            [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<A', 'put2=true', '<B' ],
-            10
-          );
-        });
-      });
-      describe('and that value is NOT undefined', () => {
-        it('should pass it as array of one item to the buffer', () => {
-          const ch = from('foo');
-
-          return exercise(
-            Test(
-              function * A(log) {
-                log(`take1=${(yield take(ch)).toString()}`);
-                log(`take2=${(yield take(ch)).toString()}`);
-              },
-              function * B(log) {
-                yield sleep(5);
-                log(`put2=${(yield put(ch, 'bar')).toString()}`);
-              }
-            ),
-            [ '>A', 'take1=foo', '>B', 'take2=bar', '<A', 'put2=true', '<B' ],
-            10
-          );
-        });
-      });
-    });
-  });
-
   // filter
 
   describe('when we use the filter method', () => {
@@ -1032,35 +942,14 @@ describe('Given a CSP', () => {
     });
   });
 
-  // from helper
-
-  describe('when we use the from method', () => {
-    it('should create a unbuffered channel with a value inside', () => {
-      const ch = from('foo', 'bar');
-
-      exercise(
-        Test(
-          function * A(log) {
-            log(`take1=${(yield take(ch)).toString()}`);
-            log(`take2=${(yield take(ch)).toString()}`);
-            log(`take3=${(yield take(ch)).toString()}`);
-          },
-          function * B(log) {
-            log(`put=${(yield put(ch, 'zar')).toString()}`);
-          }
-        ),
-        [ '>A', 'take1=foo', 'take2=bar', '>B', 'take3=zar', '<A', 'put=true', '<B' ]
-      );
-    });
-  });
-
   // more complex examples
 
   describe('when we combine methods', () => {
     it('should work', () => {
       const spy1 = jest.fn();
       const spy2 = jest.fn();
-      const message = chan().from('fOO');
+      const message = chan();
+      message.put('fOO');
       const update = v => message.put(v);
 
       message.map(value => value.toUpperCase()).subscribe(spy1);

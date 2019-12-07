@@ -211,15 +211,6 @@ export function ops(ch) {
     return newCh;
   };
 
-  ch.from = (...value) => {
-    if (isChannel(value[ 0 ])) {
-      value.forEach(c => c.subscribe(ch));
-    } else if (typeof value !== 'undefined') {
-      ch.buff.setValue(value);
-    }
-    return ch;
-  };
-
   ch.isActive = () => ch.state() === OPEN;
 }
 
@@ -239,13 +230,6 @@ export function merge(...channels) {
   });
 
   return newCh;
-}
-
-export function from(...value) {
-  if (typeof value !== 'undefined') {
-    return chan().from(...value);
-  }
-  return chan();
 }
 
 export function timeout(interval) {

@@ -1,6 +1,6 @@
 import { use } from './index';
 import { isObjectEmpty, getFuncName, getId, requireObject, accumulate } from './utils';
-import { chan as Channel, isChannel, go, from as From } from './csp';
+import { chan as Channel, isChannel, go } from './csp';
 
 const Renderer = function (viewFunc) {
   let data = {};
@@ -49,26 +49,11 @@ export default function createRiew(viewFunc, ...routines) {
       }
       return obj;
     }, {});
-  const normalizeExternals = () =>
-    Object.keys(externals).reduce((obj, key) => {
-      let o;
-      if (key.charAt(0) === '@') {
-        key = key.substr(1, key.length);
-        o = use(key);
-      } else {
-        o = externals[ key ];
-      }
-      obj[ key ] = o;
-      return obj;
-    }, {});
 
   riew.mount = function (props = {}) {
-    let normalizedExternals = normalizeExternals();
     requireObject(props);
-    if (!isObjectEmpty(normalizedExternals)) {
-      viewCh.put(normalizeRenderData(normalizedExternals));
-    }
     propsCh.subscribe(viewCh);
+    viewCh.subscribe(render);
     runningRoutines = routines.map(r =>
       go(
         r,
@@ -79,13 +64,8 @@ export default function createRiew(viewFunc, ...routines) {
               viewCh.put(normalizeRenderData(value));
             },
             chan,
-            from: (...args) => {
-              const ch = From(...args);
-              channels.push(ch);
-              return ch;
-            },
             props: propsCh,
-            ...normalizedExternals
+            ...externals
           }
         ],
         result => {
@@ -95,7 +75,9 @@ export default function createRiew(viewFunc, ...routines) {
         }
       )
     );
-    viewCh.subscribe(render);
+    if (!isObjectEmpty(externals)) {
+      viewCh.put(normalizeRenderData(externals));
+    }
     propsCh.put(props);
   };
 
@@ -121,7 +103,7 @@ export default function createRiew(viewFunc, ...routines) {
   riew.__setExternals = maps => {
     maps = maps.reduce((map, item) => {
       if (typeof item === 'string') {
-        map = { ...map, [ '@' + item ]: true };
+        map = { ...map, [ item ]: use(item) };
       } else {
         map = { ...map, ...item };
       }
