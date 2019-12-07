@@ -53,6 +53,9 @@ export default function createRiew(viewFunc, ...routines) {
       if (isChannel(value[ key ])) {
         let ch = value[ key ];
         ch.subscribe(v => viewCh.put({ [ key ]: v }), ch.id);
+      } else if (isChannelTake(value[ key ])) {
+        let ch = value[ key ].ch;
+        ch.subscribe(v => viewCh.put({ [ key ]: v }), ch.id);
       } else {
         viewObj[ key ] = value[ key ];
       }
@@ -60,7 +63,6 @@ export default function createRiew(viewFunc, ...routines) {
     }, {});
 
   riew.mount = function (props = {}) {
-    propsCh.put(props);
     runningRoutines = routines.map(r =>
       go(
         r,
@@ -68,7 +70,8 @@ export default function createRiew(viewFunc, ...routines) {
           {
             render: value => viewCh.put(normalizeRenderData(value)),
             chan,
-            state: from
+            state: from,
+            props: propsCh
           }
         ],
         result => {
@@ -78,6 +81,9 @@ export default function createRiew(viewFunc, ...routines) {
         }
       )
     );
+    propsCh.subscribe(viewCh);
+    viewCh.subscribe(render);
+    propsCh.put(props);
   };
   riew.unmount = function () {
     cleanup.forEach(c => c());
@@ -87,9 +93,9 @@ export default function createRiew(viewFunc, ...routines) {
     runningRoutines.forEach(r => r.stop());
     runningRoutines = [];
   };
-
-  propsCh.subscribe(viewCh);
-  viewCh.subscribe(render);
+  riew.update = function (props = {}) {
+    propsCh.put(props);
+  };
 
   return riew;
 }

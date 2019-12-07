@@ -181,43 +181,39 @@ describe('Given the `riew` factory function', () => {
         );
       });
     });
-    fit('should unsubscribe the channels if we unmount', async () => {
+    it('should unsubscribe the channels and not render if we unmount', async () => {
       const view = jest.fn();
       const routine = async function ({ state, render }) {
         const message = state('Hello World');
-        const up = message.map(value => value.toUpperCase());
-        const lower = message.map(value => value.toLowerCase());
-        const update = () => message.put('Chao');
-        const update2 = () => message.put('Foo');
+        const update = () => message.put('foo');
 
-        render({ up, lower });
+        render({ message });
         await delay(3);
         update();
-        update2();
       };
       const r = riew(view, routine);
 
       r.mount();
       await delay();
       r.unmount();
-      await delay(10);
-      expect(view).toBeCalledWithArgs([ {} ], [ { up: 'HELLO WORLD', lower: 'hello world' } ]);
+      await delay(5);
+      expect(view).toBeCalledWithArgs([ { message: 'Hello World' } ]);
     });
   });
   describe('when we send an external channel to the view and the view is unmounted', () => {
-    xit(`should
+    it(`should
       * initially subscribe and then unsubscribe
       * keep the external subscriptions`, async () => {
       const spy = jest.fn();
-      const ch = chan().from([ 'foo' ]);
+      const ch = chan().from('foo');
       const [ s, setState ] = ch;
       const view = jest.fn();
-      const routine = function ({ data }) {
-        data({ s });
+      const routine = function ({ render }) {
+        render({ s });
       };
       const r = riew(view, routine);
 
-      ch.takeEvery(spy);
+      ch.subscribe(spy);
 
       r.mount();
       setState('baz');
@@ -231,20 +227,20 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we send a channel to the view', () => {
-    xit(`should
+    it(`should
       * pass the values from the channel to the view
       * subscribe to the channel's values`, async () => {
-      const view = jest.fn().mockImplementation(async ({ s, change }) => {
+      const view = jest.fn().mockImplementation(async ({ change }) => {
         setTimeout(() => change(), 10);
       });
-      const routine = function ({ data, state }) {
+      const routine = function ({ render, state }) {
         const s = state('foo');
         const up = s.map(value => value.toUpperCase());
         const change = () => s.put('bar');
 
-        data({ s: up, change });
-        data({ s: up, change });
-        data({ s: up, change });
+        render({ s: up, change });
+        render({ s: up, change });
+        render({ s: up, change });
       };
       const r = riew(view, routine);
 
@@ -254,18 +250,18 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we send a putter or a taker to the view', () => {
-    xit(`should
+    it(`should
       * run the taker and pass the value + also subscribe to channel values
       * pass down the putter`, async () => {
       const view = jest.fn().mockImplementation(async ({ s, change }) => {
         setTimeout(() => change('bar'), 10);
       });
-      const routine = function ({ data, state }) {
+      const routine = function ({ render, state }) {
         const [ getter, setter ] = state('foo');
 
-        data({ s: getter, change: setter });
-        data({ s: getter, change: setter });
-        data({ s: getter, change: setter });
+        render({ s: getter, change: setter });
+        render({ s: getter, change: setter });
+        render({ s: getter, change: setter });
       };
       const r = riew(view, routine);
 
@@ -275,21 +271,23 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we update the riew', () => {
-    xit('should render the view with accumulated props', async () => {
+    it('should render the view with accumulated props', async () => {
       const view = jest.fn();
       const r = riew(view);
 
       r.mount({ foo: 'bar' });
+      await delay();
       r.update({ baz: 'moo' });
+      await delay();
       r.update({ x: 'y' });
       await delay();
 
       expect(view).toBeCalledWithArgs([ { foo: 'bar' } ], [ { foo: 'bar', baz: 'moo' } ], [ { foo: 'bar', baz: 'moo', x: 'y' } ]);
     });
-    xit('should deliver the riew input to the routine', async () => {
+    it('should deliver the riew input to the routine', async () => {
       const spy = jest.fn();
       const routine = function ({ props }) {
-        props.takeEvery(spy);
+        props.subscribe(spy);
       };
       const r = riew(() => {}, routine);
 
@@ -299,10 +297,10 @@ describe('Given the `riew` factory function', () => {
       expect(spy).toBeCalledWithArgs([ { foo: 'bar' } ], [ { baz: 'moo' } ]);
     });
     describe('and we update the data as a result of props change', () => {
-      xit('should NOT end up in a maximum call stack exceeded', async () => {
+      fit('should NOT end up in a maximum call stack exceeded', async () => {
         const spy = jest.fn();
-        const routine = function ({ props, data }) {
-          props.map(({ n }) => n + 5).takeEvery(n => data({ n }));
+        const routine = function ({ props, render }) {
+          props.map(({ n }) => n + 5).subscribe(n => render({ n }));
         };
         const r = riew(spy, routine);
 
