@@ -1,39 +1,32 @@
 import { use } from './index';
-import { isObjectEmpty, getFuncName, getId } from './utils';
+import { isObjectEmpty, getFuncName, getId, requireObject, accumulate } from './utils';
 import { chan as Channel, isChannel, go, from as From } from './csp';
-
-const accumulate = (current, newData) => ({ ...current, ...newData });
 
 const Renderer = function (viewFunc) {
   let data = {};
   let inProgress = false;
 
-  return {
-    push(newData) {
-      data = accumulate(data, newData);
-      if (!inProgress) {
-        inProgress = true;
-        Promise.resolve().then(() => {
-          viewFunc(data);
-          inProgress = false;
-        });
-      }
+  return newData => {
+    if (newData === Channel.CLOSED || newData === Channel.ENDED) {
+      return;
+    }
+    data = accumulate(data, newData);
+    if (!inProgress) {
+      inProgress = true;
+      Promise.resolve().then(() => {
+        viewFunc(data);
+        inProgress = false;
+      });
     }
   };
 };
-
-function requireObject(obj) {
-  if (typeof obj === 'undefined' || obj === null || (typeof obj !== 'undefined' && typeof obj !== 'object')) {
-    throw new Error(`A key-value object expected. Instead "${obj}" passed.`);
-  }
-}
 
 export default function createRiew(viewFunc, ...routines) {
   const riew = {
     id: getId('r'),
     name: getFuncName(viewFunc)
   };
-  const renderer = Renderer(viewFunc);
+  const render = Renderer(viewFunc);
   let channels = [];
   let cleanups = [];
   let runningRoutines = [];
@@ -43,18 +36,9 @@ export default function createRiew(viewFunc, ...routines) {
     channels.push(ch);
     return ch;
   };
-  const from = function (...args) {
-    const ch = From(...args);
-    channels.push(ch);
-    return ch;
-  };
-  const viewCh = chan(`riew_${riew.name}_view`);
-  const propsCh = chan(`riew_${riew.name}_props`);
-  const render = value => {
-    if (value !== Channel.CLOSED && value !== Channel.ENDED) {
-      renderer.push(value);
-    }
-  };
+  const viewCh = chan(`${riew.name}_view`);
+  const propsCh = chan(`${riew.name}_props`);
+
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
       if (isChannel(value[ key ])) {
@@ -65,8 +49,8 @@ export default function createRiew(viewFunc, ...routines) {
       }
       return obj;
     }, {});
-  const processExternals = () => {
-    const exs = Object.keys(externals).reduce((obj, key) => {
+  const normalizeExternals = () =>
+    Object.keys(externals).reduce((obj, key) => {
       let o;
       if (key.charAt(0) === '@') {
         key = key.substr(1, key.length);
@@ -77,18 +61,14 @@ export default function createRiew(viewFunc, ...routines) {
       obj[ key ] = o;
       return obj;
     }, {});
-    const viewData = normalizeRenderData(exs);
-
-    if (!isObjectEmpty(viewData)) {
-      viewCh.put(viewData);
-    }
-    return exs;
-  };
 
   riew.mount = function (props = {}) {
+    let normalizedExternals = normalizeExternals();
     requireObject(props);
+    if (!isObjectEmpty(normalizedExternals)) {
+      viewCh.put(normalizeRenderData(normalizedExternals));
+    }
     propsCh.subscribe(viewCh);
-    let normalizedExternals = processExternals();
     runningRoutines = routines.map(r =>
       go(
         r,
@@ -99,7 +79,11 @@ export default function createRiew(viewFunc, ...routines) {
               viewCh.put(normalizeRenderData(value));
             },
             chan,
-            from,
+            from: (...args) => {
+              const ch = From(...args);
+              channels.push(ch);
+              return ch;
+            },
             props: propsCh,
             ...normalizedExternals
           }
@@ -114,6 +98,7 @@ export default function createRiew(viewFunc, ...routines) {
     viewCh.subscribe(render);
     propsCh.put(props);
   };
+
   riew.unmount = function () {
     cleanups.forEach(c => c());
     cleanups = [];
@@ -122,14 +107,17 @@ export default function createRiew(viewFunc, ...routines) {
     runningRoutines.forEach(r => r.stop());
     runningRoutines = [];
   };
+
   riew.update = function (props = {}) {
     requireObject(props);
     propsCh.put(props);
   };
+
   riew.with = (...maps) => {
     riew.__setExternals(maps);
     return riew;
   };
+
   riew.__setExternals = maps => {
     maps = maps.reduce((map, item) => {
       if (typeof item === 'string') {
@@ -141,6 +129,7 @@ export default function createRiew(viewFunc, ...routines) {
     }, {});
     externals = { ...externals, ...maps };
   };
+
   riew.test = map => {
     const newInstance = createRiew(viewFunc, ...routines);
 

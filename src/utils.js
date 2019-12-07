@@ -108,3 +108,13 @@ export function isObjectEmpty(obj) {
   }
   return true;
 }
+
+export function requireObject(obj) {
+  if (typeof obj === 'undefined' || obj === null || (typeof obj !== 'undefined' && typeof obj !== 'object')) {
+    throw new Error(`A key-value object expected. Instead "${obj}" passed.`);
+  }
+}
+
+export function accumulate(current, newData) {
+  return { ...current, ...newData };
+}
