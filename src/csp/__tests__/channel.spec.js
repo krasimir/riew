@@ -1032,28 +1032,6 @@ describe('Given a CSP', () => {
     });
   });
 
-  // iterable protocol
-
-  describe('when we destruct a channel', () => {
-    it('should gives us access to the take and put methods', async () => {
-      const [ take, put ] = chan();
-
-      exercise(
-        Test(
-          function * A(log) {
-            put('foo', () => log('put1'));
-            put('bar', () => log('put2'));
-          },
-          function * B(log) {
-            take(v => log('take1=' + v));
-            take(v => log('take2=' + v));
-          }
-        ),
-        [ '>A', '<A', '>B', 'take1=foo', 'put1', 'take1=bar', 'put2', '<B' ]
-      );
-    });
-  });
-
   // from helper
 
   describe('when we use the from method', () => {

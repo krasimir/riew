@@ -11,7 +11,6 @@ export function chan(...args) {
   let api = { id, '@channel': true };
 
   ops(api);
-  implementIterableProtocol(api);
 
   api.buff = buff;
   api.state = s => {
@@ -259,36 +258,6 @@ export function timeout(interval) {
 
 export function isChannel(ch) {
   return ch && ch[ '@channel' ] === true;
-}
-
-export function isChannelPut(func) {
-  return func && func[ '@channel_put' ] === true;
-}
-
-export function isChannelTake(func) {
-  return func && func[ '@channel_take' ] === true;
-}
-
-function implementIterableProtocol(ch) {
-  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
-    ch[ Symbol.iterator ] = function () {
-      const take = (...args) => ch.take(...args);
-      const put = (...args) => ch.put(...args);
-      const values = [ take, put ];
-      let i = 0;
-
-      take[ '@channel_take' ] = true;
-      put[ '@channel_put' ] = true;
-      take.ch = put.ch = ch;
-
-      return {
-        next: () => ({
-          value: values[ i++ ],
-          done: i > values.length
-        })
-      };
-    };
-  }
 }
 
 function normalizeChannelArguments(args) {
