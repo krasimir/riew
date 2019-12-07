@@ -32,6 +32,16 @@ export default function createRiew(viewFunc, ...routines) {
       viewCh.takeLatest(render);
     }
   };
+  const normalizeRenderData = value =>
+    Object.keys(value).reduce((viewObj, key) => {
+      if (isChannel(value[ key ])) {
+        let ch = value[ key ];
+        ch.subscribe(v => viewCh.put({ [ key ]: v }), ch.id);
+      } else {
+        viewObj[ key ] = value[ key ];
+      }
+      return viewObj;
+    }, {});
 
   riew.mount = function (props) {
     if (props) {
@@ -42,7 +52,7 @@ export default function createRiew(viewFunc, ...routines) {
         r,
         [
           {
-            render: (...args) => viewCh.put(...args),
+            render: value => viewCh.put(normalizeRenderData(value)),
             chan,
             state: from
           }

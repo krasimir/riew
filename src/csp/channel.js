@@ -130,6 +130,14 @@ export function ops(ch) {
       ch.take(listen);
     }
   }
+  function removeObserver(id) {
+    return () => {
+      const index = observers.findIndex(p => p.id === id);
+      if (index >= 0) {
+        observers.splice(index, 1);
+      }
+    };
+  }
 
   ch.put = (item, next) => {
     let result;
@@ -197,42 +205,55 @@ export function ops(ch) {
     ch.buff.reset();
   };
 
-  ch.subscribe = (observer, who = getId('who')) => {
-    let id = getId('sub');
-    if (isChannel(observer)) {
-      who = observer.id;
+  ch.subscribe = o => {
+    if (!Array.isArray(o)) {
+      o = [ o ];
     }
-    if (!observers.find(p => p.who === who)) {
-      observers.push({ id, observer, who });
-    }
-    taker();
-    return () => {
-      const index = observers.findIndex(p => p.id === id);
-      if (index >= 0) {
-        observers.splice(index, 1);
+    const cleanups = o.map(observer => {
+      let id = getId('sub');
+      let who = observer.id || getId('who');
+      if (!observers.find(p => p.who === who)) {
+        observers.push({ id, observer, who });
       }
-    };
-  };
-
-  ch.map = func => {
-    const newCh = chan();
-    ch.subscribe(value => newCh.put(func(value)));
-    taker();
-    return newCh;
-  };
-
-  ch.filter = func => {
-    const newCh = chan();
-    ch.subscribe(value => {
-      if (func(value)) newCh.put(value);
+      return removeObserver(id);
     });
+
     taker();
-    return newCh;
+    if (cleanups.length === 1) return cleanups[ 0 ];
+    return cleanups;
   };
 
-  ch.from = value => {
-    if (isChannel(value)) {
-      value.subscribe(ch);
+  ch.map = (...funcs) => {
+    const observers = [];
+    const newChannels = funcs.map(f => {
+      const newCh = chan();
+      observers.push(value => newCh.put(f(value)));
+      return newCh;
+    });
+
+    ch.subscribe(observers);
+    if (newChannels.length === 1) return newChannels[ 0 ];
+    return newChannels;
+  };
+
+  ch.filter = (...funcs) => {
+    const observers = [];
+    const newChannels = funcs.map(f => {
+      const newCh = chan();
+      observers.push(value => {
+        if (f(value)) newCh.put(value);
+      });
+      return newCh;
+    });
+
+    ch.subscribe(observers);
+    if (newChannels.length === 1) return newChannels[ 0 ];
+    return newChannels;
+  };
+
+  ch.from = (...value) => {
+    if (isChannel(value[ 0 ])) {
+      value.forEach(c => c.subscribe(ch));
     } else if (typeof value !== 'undefined') {
       ch.buff.setValue(value);
     }
@@ -262,7 +283,7 @@ export function merge(...channels) {
 
 export function from(...value) {
   if (typeof value !== 'undefined') {
-    return chan().from([ ...value ]);
+    return chan().from(...value);
   }
   return chan();
 }

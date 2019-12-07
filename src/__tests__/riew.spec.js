@@ -122,53 +122,59 @@ describe('Given the `riew` factory function', () => {
       expect(grid.getNodeById(sp.id)).not.toBeDefined();
       expect(view).toBeCalledWithArgs([ {} ]);
     });
-    xit('should send the state value to the view', async () => {
+    it('should send the state value to the view', async () => {
       const view = jest.fn();
-      const se = function ({ state, data }) {
-        data({ s: state('foo') });
+      const routine = async function ({ state, render }) {
+        const ch = state('foo');
+        render({ s: ch });
+        await delay(2);
+        ch.put('bar');
       };
-      const r = riew(view, se);
+      const r = riew(view, routine);
 
       r.mount();
-      await delay();
-      expect(view).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ]);
+      await delay(4);
+      expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
-    xit('should subscribe (only once) for the changes in the state and re-render the view', async () => {
+    it('should subscribe (only once) for the changes in the state and re-render the view', async () => {
       const view = jest.fn();
-      const se = async function ({ state, data }) {
-        const [ s, setState ] = state('foo');
+      const se = async function ({ state, render }) {
+        const s = state('foo');
 
-        data({ s });
-        data({ s });
-        data({ s });
-        data({ s });
+        render({ s });
+        render({ s });
+        render({ s });
+        render({ s });
         await delay(4);
-        setState('bar');
+        s.put('bar');
       };
       const r = riew(view, se);
 
       r.mount();
       await delay(10);
-      expect(view).toBeCalledWithArgs([ {} ], [ { s: 'foo' } ], [ { s: 'bar' } ]);
+      expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
     describe('when we have multiple channels produced', () => {
-      xit('should still subscribe all of them', () => {
+      fit('should still subscribe all of them', async () => {
         const view = jest.fn();
-        const routine = function ({ state, data }) {
-          const message = state('Hello World');
+        const routine = async function ({ chan, render }) {
+          const message = chan();
           const up = message.map(value => value.toUpperCase());
           const lower = message.map(value => value.toLowerCase());
-          const update = () => message.put('chao');
+          const update = v => message.put(v);
 
-          data({ up, lower });
-          update();
-          data({ a: 10 });
+          render({ up, lower });
+          update('Hello World');
+          await delay(2);
+          update('cHao');
+          await delay(2);
+          render({ a: 10 });
         };
         const r = riew(view, routine);
 
         r.mount();
+        await delay(10);
         expect(view).toBeCalledWithArgs(
-          [ {} ],
           [ { up: 'HELLO WORLD', lower: 'hello world' } ],
           [ { up: 'CHAO', lower: 'chao' } ],
           [ { up: 'CHAO', lower: 'chao', a: 10 } ]
