@@ -1,7 +1,7 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
 import { register, riew, reset, grid } from '../index';
-import { chan, state, sleep, put, take } from '../csp';
+import { chan, state, sleep } from '../csp';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {
@@ -120,6 +120,7 @@ describe('Given the `riew` factory function', () => {
       expect(grid.getNodeById(sp.id)).toBeDefined();
       r.unmount();
       expect(grid.getNodeById(sp.id)).not.toBeDefined();
+      expect(view).toBeCalledWithArgs([ {} ]);
     });
     it('should send the state value to the view', async () => {
       const view = jest.fn();
@@ -180,16 +181,16 @@ describe('Given the `riew` factory function', () => {
         );
       });
     });
-    xit('should unsubscribe the channels if we unmount', async () => {
+    fit('should unsubscribe the channels if we unmount', async () => {
       const view = jest.fn();
-      const routine = async function ({ state, data }) {
+      const routine = async function ({ state, render }) {
         const message = state('Hello World');
         const up = message.map(value => value.toUpperCase());
         const lower = message.map(value => value.toLowerCase());
         const update = () => message.put('Chao');
         const update2 = () => message.put('Foo');
 
-        data({ up, lower });
+        render({ up, lower });
         await delay(3);
         update();
         update2();

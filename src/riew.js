@@ -1,9 +1,8 @@
 import { use } from './index';
 import { isObjectEmpty, isPromise, parallel, getFuncName, getId } from './utils';
-import { chan as Channel, buffer, isChannel, isChannelTake, go, from as From } from './csp';
+import { chan as Channel, isChannel, isChannelTake, go, from as From } from './csp';
 
 const accumulate = (current, newData) => ({ ...current, ...newData });
-const bufferStrategy = () => buffer.reducer(accumulate);
 
 const Renderer = function (viewFunc) {
   let data = {};
@@ -60,10 +59,8 @@ export default function createRiew(viewFunc, ...routines) {
       return viewObj;
     }, {});
 
-  riew.mount = function (props) {
-    if (props) {
-      propsCh.put(props);
-    }
+  riew.mount = function (props = {}) {
+    propsCh.put(props);
     runningRoutines = routines.map(r =>
       go(
         r,
