@@ -158,7 +158,7 @@ describe('Given the `riew` factory function', () => {
       fit('should still subscribe all of them', async () => {
         const view = jest.fn();
         const routine = async function ({ chan, render }) {
-          const message = chan();
+          const message = chan().from('fOo');
           const up = message.map(value => value.toUpperCase());
           const lower = message.map(value => value.toLowerCase());
           const update = v => message.put(v);

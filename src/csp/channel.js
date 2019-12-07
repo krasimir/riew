@@ -130,14 +130,6 @@ export function ops(ch) {
       ch.take(listen);
     }
   }
-  function removeObserver(id) {
-    return () => {
-      const index = observers.findIndex(p => p.id === id);
-      if (index >= 0) {
-        observers.splice(index, 1);
-      }
-    };
-  }
 
   ch.put = (item, next) => {
     let result;
@@ -205,50 +197,35 @@ export function ops(ch) {
     ch.buff.reset();
   };
 
-  ch.subscribe = o => {
-    if (!Array.isArray(o)) {
-      o = [ o ];
+  ch.subscribe = (observer, who = getId('who')) => {
+    let id = getId('sub');
+    if (isChannel(observer)) {
+      who = observer.id;
     }
-    const cleanups = o.map(observer => {
-      let id = getId('sub');
-      let who = observer.id || getId('who');
-      if (!observers.find(p => p.who === who)) {
-        observers.push({ id, observer, who });
-      }
-      return removeObserver(id);
-    });
-
+    if (!observers.find(p => p.who === who)) {
+      observers.push({ id, observer, who });
+    }
     taker();
-    if (cleanups.length === 1) return cleanups[ 0 ];
-    return cleanups;
+    return () => {
+      const index = observers.findIndex(p => p.id === id);
+      if (index >= 0) {
+        observers.splice(index, 1);
+      }
+    };
   };
 
-  ch.map = (...funcs) => {
-    const observers = [];
-    const newChannels = funcs.map(f => {
-      const newCh = chan();
-      observers.push(value => newCh.put(f(value)));
-      return newCh;
-    });
-
-    ch.subscribe(observers);
-    if (newChannels.length === 1) return newChannels[ 0 ];
-    return newChannels;
+  ch.map = func => {
+    const newCh = chan();
+    ch.subscribe(value => newCh.put(func(value)));
+    return newCh;
   };
 
-  ch.filter = (...funcs) => {
-    const observers = [];
-    const newChannels = funcs.map(f => {
-      const newCh = chan();
-      observers.push(value => {
-        if (f(value)) newCh.put(value);
-      });
-      return newCh;
+  ch.filter = func => {
+    const newCh = chan();
+    ch.subscribe(value => {
+      if (func(value)) newCh.put(value);
     });
-
-    ch.subscribe(observers);
-    if (newChannels.length === 1) return newChannels[ 0 ];
-    return newChannels;
+    return newCh;
   };
 
   ch.from = (...value) => {

@@ -770,13 +770,12 @@ describe('Given a CSP', () => {
       const ch = chan();
       const spy1 = jest.fn();
       const spy2 = jest.fn();
-      spy2.id = 'foo';
 
       ch.subscribe(spy1);
       ch.subscribe(spy1);
-      ch.subscribe(spy2);
-      ch.subscribe(spy2);
-      ch.subscribe(spy2);
+      ch.subscribe(spy2, 'foo');
+      ch.subscribe(spy2, 'foo');
+      ch.subscribe(spy2, 'foo');
 
       ch.put('Hey');
 
@@ -1137,21 +1136,6 @@ describe('Given a CSP', () => {
         [ '>A', 'put1=true', 'put2=true', 'put3=true', 'put4=true', '<A', '>B', 'take1=12', 'take1=20', '<B' ]
       );
     });
-    it("should allow batch filters so we don't lose values", () => {
-      const spy1 = jest.fn();
-      const spy2 = jest.fn();
-      const message = chan().from(20);
-      const update = v => message.put(v);
-
-      const [ ch1, ch2 ] = message.filter(value => value > 10, value => value > 13);
-      ch1.subscribe(spy1);
-      ch2.subscribe(spy2);
-      update(12);
-      update(5);
-
-      expect(spy1).toBeCalledWithArgs([ 20 ], [ 12 ]);
-      expect(spy2).toBeCalledWithArgs([ 20 ]);
-    });
   });
 
   // map
@@ -1177,21 +1161,6 @@ describe('Given a CSP', () => {
         ),
         [ '>A', 'put1=true', 'put2=true', '<A', '>B', 'take2_1=10', 'take2_1=24', 'take3_1=15', 'take3_1=36', '<B' ]
       );
-    });
-    it("should allow batch mappers so we don't lose values", () => {
-      const spy1 = jest.fn();
-      const spy2 = jest.fn();
-      const message = chan().from('fOO');
-      const update = v => message.put(v);
-
-      const [ ch1, ch2 ] = message.map(value => value.toUpperCase(), value => value.toLowerCase());
-      ch1.subscribe(spy1);
-      ch2.subscribe(spy2);
-      update('Hello World');
-      update('chAO');
-
-      expect(spy1).toBeCalledWithArgs([ 'FOO' ], [ 'HELLO WORLD' ], [ 'CHAO' ]);
-      expect(spy2).toBeCalledWithArgs([ 'foo' ], [ 'hello world' ], [ 'chao' ]);
     });
   });
 
