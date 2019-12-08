@@ -1,4 +1,4 @@
-import { chan, buffer, merge, timeout, go, put, take, sleep } from '../index';
+import { chan, buffer, merge, timeout, go, put, take, sleep, state } from '../index';
 import { getFuncName } from '../../utils';
 import { delay } from '../../__helpers__';
 
@@ -614,7 +614,7 @@ describe('Given a CSP', () => {
     });
   });
 
-  describe('when we create a channel with a reducer buffer', () => {
+  xdescribe('when we create a channel with a reducer buffer', () => {
     const reducer = spy =>
       buffer.reducer((current = 10, data) => {
         let newValue;
@@ -1077,6 +1077,14 @@ describe('Given a CSP', () => {
         ),
         [ '>A', 'put1=true', 'put2=true', '<A', '>B', 'take2_1=10', 'take2_1=24', 'take3_1=15', 'take3_1=36', '<B' ]
       );
+    });
+  });
+
+  // state
+
+  describe('when we want to have a state management', () => {
+    fit('should allow us to define a state', () => {
+      const s = state();
     });
   });
 
