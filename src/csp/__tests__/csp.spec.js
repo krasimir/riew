@@ -133,7 +133,7 @@ describe('Given a CSP', () => {
     });
   });
 
-  // States
+  // CSP States
 
   describe('and we have an the channel OPEN', () => {
     it(`should
@@ -614,144 +614,6 @@ describe('Given a CSP', () => {
     });
   });
 
-  xdescribe('when we create a channel with a reducer buffer', () => {
-    const reducer = spy =>
-      buffer.reducer((current = 10, data) => {
-        let newValue;
-        if (data !== undefined) {
-          newValue = current + data;
-        } else {
-          newValue = current;
-        }
-        spy(data, newValue);
-        return newValue;
-      });
-
-    it(`should
-      * run the reducer once by default
-      * provide non-blocking puts
-      * provide blocking takes
-      * reduce the value
-    `, () => {
-      const reducerSpy = jest.fn();
-      const ch = chan(reducer(reducerSpy));
-
-      return exercise(
-        Test(
-          function * A(log) {
-            log(`put1=${(yield put(ch, 20)).toString()}`);
-            log(`put2=${(yield put(ch, 5)).toString()}`);
-            log(`put3=${(yield put(ch, 3)).toString()}`);
-          },
-          function * B(log) {
-            yield sleep(5);
-            log(`take1=${(yield take(ch)).toString()}`);
-            log(`take2=${(yield take(ch)).toString()}`); // <-- never happen
-          }
-        ),
-        [ '>A', 'put1=true', 'put2=true', 'put3=true', '<A', '>B', 'take1=38' ],
-        10,
-        () => {
-          expect(reducerSpy).toBeCalledWithArgs([ undefined, 10 ], [ 20, 30 ], [ 5, 35 ], [ 3, 38 ]);
-        }
-      );
-    });
-    describe('and we fire multiple puts one after each other', () => {
-      it('should reduce the value because the puts are non-blocking', () => {
-        const reducerSpy = jest.fn();
-        const ch = chan(reducer(reducerSpy));
-
-        return exercise(
-          Test(
-            function * A(log) {
-              ch.put(10);
-              ch.put(20);
-              ch.put(30);
-              yield sleep(5);
-              ch.put(40);
-            },
-            function * B(log) {
-              log(`take1=${(yield take(ch)).toString()}`);
-              yield sleep(7);
-              log(`take2=${(yield take(ch)).toString()}`);
-            }
-          ),
-          [ '>A', '>B', 'take1=70', '<A', 'take2=110', '<B' ],
-          15,
-          () => {
-            expect(reducerSpy).toBeCalledWithArgs([ undefined, 10 ], [ 10, 20 ], [ 20, 40 ], [ 30, 70 ], [ 40, 110 ]);
-          }
-        );
-      });
-    });
-    describe('and we have an array of items as value', () => {
-      it('should properly reduce value', () => {
-        const reducerSpy = jest.fn();
-        const ch = chan(
-          buffer.reducer((current = [], data) => {
-            if (typeof data === 'number') {
-              reducerSpy(current, data);
-              return current.map(item => {
-                return {
-                  ...item,
-                  selected: data === item.id
-                };
-              });
-            }
-            return [ ...current, data ];
-          })
-        );
-
-        ch.put({ id: 10, selected: true });
-        ch.put({ id: 20, selected: true });
-
-        exercise(
-          Test(
-            function * A(log) {
-              log(`take1=${(yield take(ch)).filter(({ selected }) => selected).map(({ id }) => id)}`);
-              log(`take2=${(yield take(ch)).filter(({ selected }) => selected).map(({ id }) => id)}`);
-              log(`take3=${(yield take(ch)).filter(({ selected }) => selected).map(({ id }) => id)}`);
-            },
-            function * B(log) {
-              yield put(ch, 10);
-              yield put(ch, 20);
-            }
-          ),
-          [ '>A', 'take1=10,20', '>B', 'take2=10', 'take3=20', '<A', '<B' ]
-        );
-
-        expect(reducerSpy).toBeCalledWithArgs(
-          [
-            [
-              {
-                id: 10,
-                selected: true
-              },
-              {
-                id: 20,
-                selected: true
-              }
-            ],
-            10
-          ],
-          [
-            [
-              {
-                id: 10,
-                selected: true
-              },
-              {
-                id: 20,
-                selected: false
-              }
-            ],
-            20
-          ]
-        );
-      });
-    });
-  });
-
   // subscribe
 
   describe('when using the `subscribe` method', () => {
@@ -1083,8 +945,61 @@ describe('Given a CSP', () => {
   // state
 
   describe('when we want to have a state management', () => {
-    fit('should allow us to define a state', () => {
+    it(`should
+      * allow us to keep a state
+      * allow us to read and write`, () => {
+      const spy = jest.fn();
+      const s = state(10);
+      const increment = s.set((current, incrementWith) => {
+        return current + (incrementWith || 1);
+      });
+      const read = s.map(value => `value: ${value}`);
+      const moreThen = s.filter(value => value > 14);
+
+      read.take(spy);
+      read.subscribe(spy);
+      moreThen.subscribe(spy);
+
+      expect(s.getState()).toBe(10);
+
+      increment.put();
+      increment.put(4);
+      increment.put();
+
+      expect(s.getState()).toBe(16);
+      expect(spy).toBeCalledWithArgs([ 'value: 10' ], [ 'value: 11' ], [ 'value: 15' ], [ 15 ], [ 'value: 16' ], [ 16 ]);
+    });
+    it('should NOT do the initial put if there is no initial state', () => {
       const s = state();
+      const read = s.map();
+      const update = s.set();
+      const spy = jest.fn();
+
+      read.subscribe(spy);
+      update.put(42);
+
+      expect(spy).toBeCalledWithArgs([ 42 ]);
+    });
+    it('should allow us to use async setter', async () => {
+      const s = state();
+      const read = s.map();
+      const update = s.set(async (_, newValue) => {
+        await delay(5);
+        return newValue + 100;
+      });
+
+      return exercise(
+        Test(
+          function * A(log) {
+            log(`take=${yield take(read)}`);
+          },
+          function * B() {
+            yield put(update, 42);
+          }
+        ),
+        [ '>A', '>B', '<B', 'take=142', '<A' ],
+        10
+      );
     });
   });
 
