@@ -4,159 +4,173 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var STATE_VALUE_CHANGE = exports.STATE_VALUE_CHANGE = 'STATE_VALUE_CHANGE';
-var CANCEL_EFFECT = exports.CANCEL_EFFECT = 'CANCEL_EFFECT';
+exports.default = DroppingBuffer;
 
-},{}],2:[function(require,module,exports){
+var _Interface = require('./Interface');
+
+var _Interface2 = _interopRequireDefault(_Interface);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function DroppingBuffer() {
+  var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+  var sliding = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+  var api = (0, _Interface2.default)();
+
+  api.setValue = function (v) {
+    return api.value = v;
+  };
+  api.put = function (item, callback) {
+    var r = true;
+    if (api.value.length < size) {
+      api.value.push(item);
+    } else if (sliding) {
+      api.value.shift();
+      api.value.push(item);
+    } else {
+      r = false;
+    }
+    if (api.takes.length > 0) {
+      api.takes.shift()(api.value.shift());
+    }
+    callback(r);
+  };
+  api.take = function (callback) {
+    if (api.value.length === 0) {
+      api.takes.push(callback);
+    } else {
+      callback(api.value.shift());
+    }
+  };
+
+  return api;
+}
+
+},{"./Interface":3}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = FixedBuffer;
+
+var _Interface = require('./Interface');
+
+var _Interface2 = _interopRequireDefault(_Interface);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function FixedBuffer() {
+  var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+
+  var api = (0, _Interface2.default)();
+
+  api.setValue = function (v) {
+    return api.value = v;
+  };
+  api.put = function (item, callback) {
+    if (api.takes.length === 0) {
+      if (api.value.length < size) {
+        api.value.push(item);
+        callback(true);
+      } else {
+        api.puts.push(function (v) {
+          api.value.push(item);
+          if (api.takes.length > 0) {
+            api.takes.shift()(api.value.shift());
+          }
+          callback(v || true);
+        });
+      }
+    } else {
+      api.value.push(item);
+      api.takes.shift()(api.value.shift());
+      callback(true);
+    }
+  };
+  api.take = function (callback) {
+    if (api.value.length === 0) {
+      api.takes.push(callback);
+      if (api.puts.length > 0) {
+        api.puts.shift()();
+        api.take(callback);
+      }
+    } else {
+      var v = api.value.shift();
+      if (api.value.length < size && api.puts.length > 0) {
+        api.puts.shift()();
+      }
+      callback(v);
+    }
+  };
+
+  return api;
+}
+
+},{"./Interface":3}],3:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = BufferInterface;
+function BufferInterface() {
+  return {
+    value: [],
+    puts: [],
+    takes: [],
+    isEmpty: function isEmpty() {
+      return this.value.length === 0;
+    },
+    reset: function reset() {
+      this.value = [];
+      this.puts = [];
+      this.takes = [];
+    },
+    setValue: function setValue(v) {
+      this.value = v;
+    },
+    getValue: function getValue() {
+      return this.value;
+    }
+  };
+}
+
+},{}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _utils = require('./utils');
+var _FixedBuffer = require('./FixedBuffer');
 
-function Subscription(name, callback, guard) {
-  return {
-    name: name || (0, _utils.getId)('sub'),
-    callback: callback,
-    guard: guard
-  };
+var _FixedBuffer2 = _interopRequireDefault(_FixedBuffer);
+
+var _DroppingBuffer = require('./DroppingBuffer');
+
+var _DroppingBuffer2 = _interopRequireDefault(_DroppingBuffer);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function Grid() {
-  var gridAPI = {};
-  var nodes = [];
-  var s11s = {};
-
-  function getSubscriptionName(target, source) {
-    return (target ? target.id : (0, _utils.getId)('target')) + '_' + (source ? source.id : (0, _utils.getId)('source'));
+var buffer = {
+  fixed: _FixedBuffer2.default,
+  dropping: _DroppingBuffer2.default,
+  sliding: function sliding(size) {
+    return (0, _DroppingBuffer2.default)(size, true);
   }
-  function getSourceSubscriptions(source, type) {
-    if (!source) {
-      return Object.keys(s11s).reduce(function (ss, sourceId) {
-        ss = ss.concat(s11s[sourceId][type] || []);
-        return ss;
-      }, []);
-    }
-    if (!s11s[source.id]) s11s[source.id] = {};
-    if (!s11s[source.id][type]) s11s[source.id][type] = [];
-    return s11s[source.id][type];
-  }
+};
 
-  gridAPI.add = function (product) {
-    if (!product || !product.id) {
-      throw new Error('Each node in the grid must be an object with "id" field. Instead "' + product + '" given.');
-    }
-    nodes.push(product);
-  };;
-  gridAPI.remove = function (product) {
-    var idx = nodes.findIndex(function (_ref) {
-      var id = _ref.id;
-      return id === product.id;
-    });
+exports.default = buffer;
 
-    if (idx >= 0) {
-      // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach
-      nodes.splice(idx, 1);
-    }
-  };;
-  gridAPI.reset = function () {
-    nodes = [];
-    s11s = {};
-  };
-  gridAPI.nodes = function () {
-    return nodes;
-  };
-  gridAPI.getNodeById = function (nodeId) {
-    return nodes.find(function (_ref2) {
-      var id = _ref2.id;
-      return id === nodeId;
-    });
-  };
-  gridAPI.subscribe = function (target) {
-    var api = {};
-    var source = void 0;
-
-    api.to = function (x) {
-      return source = x, api;
-    };
-    api.when = function (type, callback, guard) {
-      var subscriptionSource = source ? source : { id: (0, _utils.getId)('sub_actor') };
-      var ss = getSourceSubscriptions(subscriptionSource, type);
-      var subscriptionName = getSubscriptionName(target, subscriptionSource);
-      var subscription = ss.find(function (s) {
-        return s.name === subscriptionName;
-      });
-
-      if (!subscription) {
-        ss.push(subscription = Subscription(subscriptionName, callback, guard));
-      }
-      return api;
-    };
-
-    return api;
-  };
-  gridAPI.emit = function (type) {
-    var api = {};
-    var source = void 0;
-
-    api.from = function (x) {
-      return source = x, api;
-    };
-    api.with = function () {
-      for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-        args[_key] = arguments[_key];
-      }
-
-      var arr = getSourceSubscriptions(source, type);
-
-      arr.forEach(function (s) {
-        if (!s.guard || s.guard()) {
-          s.callback.apply(s, args);
-        }
-      });
-    };
-
-    return api;
-  };
-  gridAPI.unsubscribe = function (target) {
-    return {
-      from: function from(source) {
-        var subscriptionName = getSubscriptionName(target, source);
-
-        if (s11s[source.id]) {
-          Object.keys(s11s[source.id]).forEach(function (type) {
-            if (target) {
-              var idx = s11s[source.id][type].findIndex(function (_ref3) {
-                var name = _ref3.name;
-                return name === subscriptionName;
-              });
-
-              if (idx >= 0) {
-                // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach
-                s11s[source.id][type].splice(idx, 1);
-              }
-            } else {
-              s11s[source.id][type] = [];
-            }
-          });
-        }
-      }
-    };
-  };
-  gridAPI.off = function (source) {
-    s11s[source.id] = {};
-  };
-
-  return gridAPI;
-}
-
-var grid = Grid();
-
-exports.default = grid;
-
-},{"./utils":15}],3:[function(require,module,exports){
+},{"./DroppingBuffer":1,"./FixedBuffer":2}],5:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -197,7 +211,552 @@ var _slicedToArray = function () {
   };
 }();
 
+exports.chan = chan;
+exports.go = go;
+exports.put = put;
+exports.take = take;
+exports.sleep = sleep;
+exports.ops = ops;
+exports.merge = merge;
+exports.timeout = timeout;
+exports.isChannel = isChannel;
+
+var _utils = require('../utils');
+
+var _constants = require('./constants');
+
+var _index = require('../index');
+
+var _buffer = require('./buffer');
+
+var _buffer2 = _interopRequireDefault(_buffer);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+// **************************************************** chan / channel
+
+function chan() {
+  var state = _constants.OPEN;
+
+  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+    args[_key] = arguments[_key];
+  }
+
+  var _normalizeChannelArgu = normalizeChannelArguments(args),
+      _normalizeChannelArgu2 = _slicedToArray(_normalizeChannelArgu, 2),
+      id = _normalizeChannelArgu2[0],
+      buff = _normalizeChannelArgu2[1];
+
+  var api = { id: id, '@channel': true };
+
+  ops(api);
+
+  api.buff = buff;
+  api.state = function (s) {
+    if (typeof s !== 'undefined') {
+      state = s;
+      if (state === _constants.ENDED) {
+        _index.grid.remove(api);
+      }
+    }
+    return state;
+  };
+  api.__value = function () {
+    console.warn("Riew: you should not get the channel's value directly! This method is here purely for testing purposes.");
+    return buff.getValue();
+  };
+
+  _index.grid.add(api);
+  return api;
+}
+
+// **************************************************** constants
+
+chan.OPEN = _constants.OPEN;
+chan.CLOSED = _constants.CLOSED;
+chan.ENDED = _constants.ENDED;
+
+// **************************************************** go / generators
+
+function go(genFunc) {
+  var args = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+  var done = arguments[2];
+
+  var RUNNING = 'RUNNING';
+  var STOPPED = 'STOPPED';
+  var gen = genFunc.apply(undefined, _toConsumableArray(args));
+  var state = RUNNING;
+  var api = {
+    stop: function stop() {
+      state = STOPPED;
+    }
+  };
+
+  if (!(0, _utils.isGenerator)(gen)) {
+    if ((0, _utils.isPromise)(gen)) {
+      gen.then(function (r) {
+        if (done && state === RUNNING) done(r);
+      });
+      return api;
+    }
+    if (done && state === RUNNING) done(gen);
+    return api;
+  }
+  var alreadyDone = false;
+  (function next(value) {
+    if (alreadyDone || state === STOPPED) {
+      // There are cases where the channel is closed but then we have more iteration
+      return;
+    }
+    var i = gen.next(value);
+    if (i.done === true) {
+      alreadyDone = true;
+      if (done) done(i.value);
+      return;
+    }
+    switch (i.value.op) {
+      case _constants.PUT:
+        i.value.ch.put(i.value.item, next);
+        break;
+      case _constants.TAKE:
+        i.value.ch.take(next);
+        break;
+      case _constants.SLEEP:
+        setTimeout(next, i.value.ms);
+        break;
+      default:
+        throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
+    }
+  })();
+
+  return api;
+}
+function put(ch, item) {
+  return { ch: ch, op: _constants.PUT, item: item };
+}
+function take(ch) {
+  return { ch: ch, op: _constants.TAKE };
+}
+function sleep() {
+  var ms = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+
+  return { op: _constants.SLEEP, ms: ms };
+}
+
+// **************************************************** ops
+
+function ops(ch) {
+  var opsTaker = false;
+  var observers = [];
+
+  function taker() {
+    if (!opsTaker) {
+      opsTaker = true;
+      var listen = function listen(v) {
+        if (v === _constants.CLOSED || v === _constants.ENDED) return;
+        observers.forEach(function (p) {
+          if (isChannel(p.observer)) {
+            p.observer.put(v);
+          } else {
+            p.observer(v);
+          }
+        });
+        ch.take(listen);
+      };
+      ch.take(listen);
+    }
+  }
+
+  ch.put = function (item, next) {
+    var result = void 0;
+    var callback = next;
+    if (typeof next === 'undefined') {
+      result = new Promise(function (resolve) {
+        return callback = resolve;
+      });
+    }
+
+    var state = ch.state();
+    if (state === chan.CLOSED || state === chan.ENDED) {
+      callback(state);
+    } else {
+      ch.buff.put(item, function (result) {
+        return callback(result);
+      });
+    }
+
+    return result;
+  };
+
+  ch.take = function (next) {
+    var result = void 0;
+    var callback = next;
+    if (typeof next === 'undefined') {
+      result = new Promise(function (resolve) {
+        return callback = resolve;
+      });
+    }
+
+    var state = ch.state();
+    if (state === chan.ENDED) {
+      callback(chan.ENDED);
+    } else {
+      // When we close a channel we do check if the buffer is empty.
+      // If it is not then it is safe to take from it.
+      // If it is empty the state here will be ENDED, not CLOSED.
+      // So there is no way to reach this point with CLOSED state and an empty buffer.
+      if (state === chan.CLOSED && ch.buff.isEmpty()) {
+        ch.state(chan.ENDED);
+        callback(chan.ENDED);
+      } else {
+        ch.buff.take(function (result) {
+          return callback(result);
+        });
+      }
+    }
+
+    return result;
+  };
+
+  ch.close = function () {
+    var newState = ch.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
+    ch.state(newState);
+    ch.buff.puts.forEach(function (put) {
+      return put(newState);
+    });
+    ch.buff.takes.forEach(function (take) {
+      return take(newState);
+    });
+    _index.grid.remove(ch);
+  };
+
+  ch.reset = function () {
+    ch.state(_constants.OPEN);
+    ch.buff.reset();
+  };
+
+  ch.subscribe = function (observer) {
+    var who = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : (0, _utils.getId)('who');
+
+    var id = (0, _utils.getId)('sub');
+    if (isChannel(observer)) {
+      who = observer.id;
+    }
+    if (!observers.find(function (p) {
+      return p.who === who;
+    })) {
+      observers.push({ id: id, observer: observer, who: who });
+    }
+    taker();
+    return function () {
+      var index = observers.findIndex(function (p) {
+        return p.id === id;
+      });
+      if (index >= 0) {
+        observers.splice(index, 1);
+      }
+    };
+  };
+
+  ch.map = function (func) {
+    var newCh = chan();
+    ch.subscribe(function (value) {
+      return newCh.put(func(value));
+    });
+    return newCh;
+  };
+
+  ch.filter = function (func) {
+    var newCh = chan();
+    ch.subscribe(function (value) {
+      if (func(value)) newCh.put(value);
+    });
+    return newCh;
+  };
+
+  ch.isActive = function () {
+    return ch.state() === _constants.OPEN;
+  };
+}
+
+function merge() {
+  var newCh = chan();
+
+  for (var _len2 = arguments.length, channels = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    channels[_key2] = arguments[_key2];
+  }
+
+  channels.map(function (ch) {
+    var listen = function listen() {
+      ch.take(function (v) {
+        if (v !== _constants.CLOSED && v !== _constants.ENDED && newCh.state() === _constants.OPEN) {
+          newCh.put(v);
+          listen();
+        }
+      });
+    };
+    listen();
+  });
+
+  return newCh;
+}
+
+function timeout(interval) {
+  var ch = chan();
+  setTimeout(function () {
+    return ch.close();
+  }, interval);
+  return ch;
+}
+
+// **************************************************** utils
+
+function isChannel(ch) {
+  return ch && ch['@channel'] === true;
+}
+
+function normalizeChannelArguments(args) {
+  var id = void 0,
+      buff = void 0;
+  if (args.length === 2) {
+    id = args[0];
+    buff = args[1];
+  } else if (args.length === 1 && typeof args[0] === 'string') {
+    id = args[0];
+    buff = _buffer2.default.fixed();
+  } else if (args.length === 1 && _typeof(args[0]) === 'object') {
+    id = (0, _utils.getId)('ch');
+    buff = args[0];
+  } else {
+    id = (0, _utils.getId)('ch');
+    buff = _buffer2.default.fixed();
+  }
+  return [id, buff];
+}
+
+},{"../index":11,"../utils":14,"./buffer":4,"./constants":6}],6:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var OPEN = exports.OPEN = Symbol('OPEN');
+var CLOSED = exports.CLOSED = Symbol('CLOSED');
+var ENDED = exports.ENDED = Symbol('ENDED');
+var PUT = exports.PUT = 'PUT';
+var TAKE = exports.TAKE = 'TAKE';
+var SLEEP = exports.SLEEP = 'SLEEP';
+
+},{}],7:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _buffer = require('./buffer');
+
+Object.defineProperty(exports, 'buffer', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_buffer).default;
+  }
+});
+
+var _channel = require('./channel');
+
+Object.keys(_channel).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _channel[key];
+    }
+  });
+});
+
 var _state = require('./state');
+
+Object.keys(_state).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _state[key];
+    }
+  });
+});
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+},{"./buffer":4,"./channel":5,"./state":8}],8:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.state = state;
+exports.isState = isState;
+
+var _channel = require('./channel');
+
+var _utils = require('../utils');
+
+function state() {
+  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+    args[_key] = arguments[_key];
+  }
+
+  var value = args[0];
+  var onChange = [];
+  var channels = [];
+  var createChannel = function createChannel() {
+    var ch = (0, _channel.chan)();
+    channels.push(ch);
+    return ch;
+  };
+  var api = {
+    '@state': true,
+    getState: function getState() {
+      return value;
+    },
+    set: function set() {
+      var reducer = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function (c, v) {
+        return v;
+      };
+
+      var ch = createChannel();
+
+      ch.subscribe(function (newValue) {
+        var result = reducer(value, newValue);
+
+        if ((0, _utils.isPromise)(result)) {
+          result.then(function (v) {
+            value = v;
+            onChange.forEach(function (c) {
+              return c(value);
+            });
+          });
+        } else {
+          value = result;
+          onChange.forEach(function (c) {
+            return c(value);
+          });
+        }
+      });
+      return ch;
+    },
+    map: function map() {
+      var mapper = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function (v) {
+        return v;
+      };
+
+      var ch = createChannel();
+
+      onChange.push(function (value) {
+        ch.put(mapper(value));
+      });
+      if (args.length > 0) {
+        ch.put(mapper(value));
+      }
+      return ch;
+    },
+    filter: function filter(_filter) {
+      var ch = createChannel();
+
+      onChange.push(function (value) {
+        if (_filter(value)) {
+          ch.put(value);
+        }
+      });
+      if (_filter(value) && args.length > 0) {
+        ch.put(value);
+      }
+      return ch;
+    },
+    destroy: function destroy() {
+      onChange = [];
+      channels.forEach(function (ch) {
+        return ch.close();
+      });
+      channels = [];
+    }
+  };
+
+  return api;
+}
+
+function isState(s) {
+  return s && s['@state'] === true;
+}
+
+},{"../utils":14,"./channel":5}],9:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+function Grid() {
+  var gridAPI = {};
+  var nodes = [];
+
+  gridAPI.add = function (product) {
+    if (!product || !product.id) {
+      throw new Error("Each node in the grid must be an object with \"id\" field. Instead \"" + product + "\" given.");
+    }
+    nodes.push(product);
+  };
+  gridAPI.remove = function (product) {
+    var idx = nodes.findIndex(function (_ref) {
+      var id = _ref.id;
+      return id === product.id;
+    });
+
+    if (idx >= 0) {
+      // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach
+      nodes.splice(idx, 1);
+    }
+  };
+  gridAPI.reset = function () {
+    nodes = [];
+  };
+  gridAPI.nodes = function () {
+    return nodes;
+  };
+  gridAPI.getNodeById = function (nodeId) {
+    return nodes.find(function (_ref2) {
+      var id = _ref2.id;
+      return id === nodeId;
+    });
+  };
+
+  return gridAPI;
+}
+
+var grid = Grid();
+
+exports.default = grid;
+
+},{}],10:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 
 var _riew = require('./riew');
 
@@ -210,10 +769,6 @@ var _react2 = _interopRequireDefault(_react);
 var _grid = require('./grid');
 
 var _grid2 = _interopRequireDefault(_grid);
-
-var _constants = require('./constants');
-
-var _index = require('./index');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -258,69 +813,9 @@ function Harvester() {
   };
 
   return api;
-};
+}
 
 var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabilities(h) {
-
-  // ------------------------------------------------------------------ state
-  h.defineProduct('state', function (initialValue) {
-    var state = (0, _state.State)(initialValue);
-
-    _grid2.default.add(state);
-    return h.produce('effect', state);
-  });
-
-  // ------------------------------------------------------------------ effect
-  h.defineProduct('effect', function (state) {
-    var items = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-
-    var effect = state.createEffect(items);
-
-    _grid2.default.add(effect);
-    return effect;
-  });
-
-  // ------------------------------------------------------------------ mergeStates
-  h.defineProduct('mergeStates', function (statesMap) {
-    var fetchSourceValues = function fetchSourceValues() {
-      return Object.keys(statesMap).reduce(function (result, key) {
-        var _statesMap$key = _slicedToArray(statesMap[key], 1),
-            s = _statesMap$key[0];
-
-        result[key] = s();
-        return result;
-      }, {});
-    };
-    var effect = h.produce('state');
-    var sInstance = _grid2.default.getNodeById(effect.stateId);
-
-    sInstance.get = fetchSourceValues;
-    sInstance.set = function (newValue) {
-      if ((typeof newValue === 'undefined' ? 'undefined' : _typeof(newValue)) !== 'object') {
-        throw new Error('Wrong merged state value. Must be key-value pairs.');
-      }
-      Object.keys(newValue).forEach(function (key) {
-        if (!statesMap[key]) {
-          throw new Error('There is no state with key "' + key + '".');
-        }
-
-        var _statesMap$key2 = _slicedToArray(statesMap[key], 2),
-            setChildState = _statesMap$key2[1];
-
-        setChildState(newValue[key]);
-      }, {});
-    };
-
-    Object.keys(statesMap).forEach(function (key) {
-      (0, _index.subscribe)(statesMap[key].pipe(function () {
-        _grid2.default.emit(_constants.STATE_VALUE_CHANGE).from(sInstance).with(fetchSourceValues());
-      }));
-    });
-
-    return effect;
-  });
-
-  // ------------------------------------------------------------------ riew
   h.defineProduct('riew', function (viewFunc) {
     for (var _len2 = arguments.length, controllers = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
       controllers[_key2 - 1] = arguments[_key2];
@@ -331,8 +826,6 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
     _grid2.default.add(riew);
     return riew;
   });
-
-  // ------------------------------------------------------------------ reactRiew
   h.defineProduct('reactRiew', function (viewFunc) {
     for (var _len3 = arguments.length, controllers = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
       controllers[_key3 - 1] = arguments[_key3];
@@ -348,7 +841,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./constants":1,"./grid":2,"./index":4,"./react":12,"./riew":13,"./state":14}],4:[function(require,module,exports){
+},{"./grid":9,"./react":12,"./riew":13}],11:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -356,7 +849,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.grid = exports.harvester = exports.parallel = exports.serial = exports.compose = exports._fork = exports.test = exports.destroy = exports.unsubscribe = exports.subscribe = exports.cancel = exports.reset = exports.register = exports.use = exports.react = exports.riew = exports.merge = exports.state = undefined;
+exports.grid = exports.harvester = exports.reset = exports.register = exports.use = exports.react = exports.riew = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -364,25 +857,16 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 };
 
-var _utils = require('./utils');
+var _csp = require('./csp');
 
-Object.defineProperty(exports, 'compose', {
-  enumerable: true,
-  get: function get() {
-    return _utils.compose;
-  }
-});
-Object.defineProperty(exports, 'serial', {
-  enumerable: true,
-  get: function get() {
-    return _utils.serial;
-  }
-});
-Object.defineProperty(exports, 'parallel', {
-  enumerable: true,
-  get: function get() {
-    return _utils.parallel;
-  }
+Object.keys(_csp).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _csp[key];
+    }
+  });
 });
 
 var _harvester = require('./harvester');
@@ -393,30 +877,10 @@ var _grid = require('./grid');
 
 var _grid2 = _interopRequireDefault(_grid);
 
-var _constants = require('./constants');
-
-var _state = require('./state');
-
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-var state = exports.state = function state(initialValue) {
-  return _harvester2.default.produce('state', initialValue);
-};
-var merge = exports.merge = function merge(statesMap) {
-  return _harvester2.default.produce('mergeStates', statesMap);
-};
 var riew = exports.riew = function riew() {
   for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
     args[_key] = arguments[_key];
@@ -452,409 +916,10 @@ var register = exports.register = function register(name, whatever) {
 var reset = exports.reset = function reset() {
   return _grid2.default.reset(), _harvester2.default.reset();
 };
-var cancel = exports.cancel = function cancel(effect) {
-  return grid.emit(_constants.CANCEL_EFFECT).from(effect).with();
-};
-var subscribe = exports.subscribe = function subscribe(effect, initialCall) {
-  if (!(0, _state.isEffect)(effect)) {
-    throw new Error('You must pass an `effect` to the subscribe function.');
-  }
-
-  var state = grid.getNodeById(effect.stateId);
-  var res = grid.subscribe(effect).to(state).when(_constants.STATE_VALUE_CHANGE, function () {
-    return effect();
-  }, function () {
-    return !effect.isRunning();
-  });
-
-  if (initialCall) effect();
-  return res;
-};
-var unsubscribe = exports.unsubscribe = function unsubscribe(effect) {
-  var state = grid.getNodeById(effect.stateId);
-
-  grid.unsubscribe(effect).from(state);
-};
-var destroy = exports.destroy = function destroy(effect) {
-  grid.nodes().filter(function (node) {
-    return node.id === effect.stateId || node.stateId === effect.stateId;
-  }).forEach(function (node) {
-    node.destroy();
-    grid.remove(node);
-    if ('__registered' in node) {
-      // in case of exported effect
-      _harvester2.default.undefineProduct(node.__registered);
-    }
-  });
-};
-var test = exports.test = function test(effect, callback) {
-  var state = grid.getNodeById(effect.stateId);
-  var test = _fork(state, effect);
-  var tools = {
-    setValue: function setValue(newValue) {
-      test.items = [{ type: 'map', func: [function () {
-          return newValue;
-        }] }].concat(_toConsumableArray(test.items));
-    },
-    swap: function swap(index, funcs, type) {
-      if (!Array.isArray(funcs)) funcs = [funcs];
-      test.items[index].func = funcs;
-      if (type) {
-        test.items[index].type = type;
-      }
-    },
-    swapFirst: function swapFirst(funcs, type) {
-      tools.swap(0, funcs, type);
-    },
-    swapLast: function swapLast(funcs, type) {
-      tools.swap(test.items.length - 1, funcs, type);
-    }
-  };
-
-  callback(tools);
-  return test;
-};
-var _fork = exports._fork = function _fork(state, effect, newItem) {
-  var newItems = [].concat(_toConsumableArray(effect.items));
-
-  if (newItem) {
-    newItems.push(newItem);
-  }
-  return _harvester2.default.produce('effect', state, newItems);
-};
-
 var harvester = exports.harvester = _harvester2.default;
 var grid = exports.grid = _grid2.default;
 
-},{"./constants":1,"./grid":2,"./harvester":3,"./state":14,"./utils":15}],5:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.implementLoggableInterface = implementLoggableInterface;
-exports.implementIterableProtocol = implementIterableProtocol;
-function implementLoggableInterface(obj) {
-  var initialValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-
-  obj.loggable = initialValue;
-  obj.loggability = function (value) {
-    obj.loggable = value;
-    return obj;
-  };
-}
-
-function implementIterableProtocol(event) {
-  if (typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined') {
-    event[Symbol.iterator] = function () {
-      var values = [event.map(), event.mutate()];
-      var i = 0;
-
-      return {
-        next: function next() {
-          return {
-            value: values[i++],
-            done: i > values.length
-          };
-        }
-      };
-    };
-  }
-};
-
-},{}],6:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.QueueAPI = undefined;
-exports.createQueue = createQueue;
-
-var _utils = require('./utils');
-
-var _pipe = require('./queueMethods/pipe');
-
-var _pipe2 = _interopRequireDefault(_pipe);
-
-var _map = require('./queueMethods/map');
-
-var _map2 = _interopRequireDefault(_map);
-
-var _mapToKey = require('./queueMethods/mapToKey');
-
-var _mapToKey2 = _interopRequireDefault(_mapToKey);
-
-var _mutate = require('./queueMethods/mutate');
-
-var _mutate2 = _interopRequireDefault(_mutate);
-
-var _filter = require('./queueMethods/filter');
-
-var _filter2 = _interopRequireDefault(_filter);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-var QueueAPI = exports.QueueAPI = {
-  define: function define(methodName, func) {
-    this[methodName] = function (q, args, payload, next) {
-      var result = func.apply(undefined, _toConsumableArray(args))(q.result, payload, q);
-
-      if ((0, _utils.isPromise)(result)) {
-        return result.then(next);
-      }
-      return next(result);
-    };
-  }
-};
-
-QueueAPI.define('pipe', _pipe2.default);
-QueueAPI.define('map', _map2.default);
-QueueAPI.define('mapToKey', _mapToKey2.default);
-QueueAPI.define('mutate', _mutate2.default);
-QueueAPI.define('filter', _filter2.default);
-
-function createQueue(initialStateValue, setStateValue, onDone) {
-  var q = {
-    id: (0, _utils.getId)('q'),
-    index: null,
-    setStateValue: setStateValue,
-    result: initialStateValue,
-    items: [],
-    add: function add(type, func) {
-      this.items.push({ type: type, func: func });
-    },
-    process: function process() {
-      for (var _len = arguments.length, payload = Array(_len), _key = 0; _key < _len; _key++) {
-        payload[_key] = arguments[_key];
-      }
-
-      q.index = 0;
-
-      function next() {
-        if (q.index < q.items.length) {
-          return loop();
-        }
-        q.index = null;
-        onDone();
-        return q.result;
-      };
-      function loop() {
-        var _q$items$q$index = q.items[q.index],
-            type = _q$items$q$index.type,
-            func = _q$items$q$index.func;
-
-        var logic = QueueAPI[type];
-
-        if (logic) {
-          var r = logic(q, func, payload, function (lastResult) {
-            q.result = lastResult;
-            q.index++;
-            return next();
-          });
-
-          return r;
-        }
-        throw new Error('Unsupported method "' + type + '".');
-      };
-
-      if (q.items.length > 0) {
-        return loop();
-      }
-      return q.result;
-    },
-    cancel: function cancel() {
-      q.items = [];
-    }
-  };
-
-  return q;
-}
-
-},{"./queueMethods/filter":7,"./queueMethods/map":8,"./queueMethods/mapToKey":9,"./queueMethods/mutate":10,"./queueMethods/pipe":11,"./utils":15}],7:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = filter;
-
-var _utils = require('../utils');
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-function filter(func) {
-  return function (intermediateValue, payload, q) {
-    var filterResult = func.apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
-
-    if ((0, _utils.isPromise)(filterResult)) {
-      return filterResult.then(function (asyncResult) {
-        if (!asyncResult) {
-          q.index = q.items.length;
-        }
-        return intermediateValue;
-      });
-    }
-    if (!filterResult) {
-      q.index = q.items.length;
-    }
-    return intermediateValue;
-  };
-}
-
-},{"../utils":15}],8:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = map;
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-function map(func) {
-  return function (intermediateValue, payload) {
-    return (func || function (value) {
-      return value;
-    }).apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
-  };
-};
-
-},{}],9:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = mapToKey;
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
-}
-
-function mapToKey(key) {
-  return function (intermediateValue, payload) {
-    var mappingFunc = function mappingFunc(value) {
-      return _defineProperty({}, key, value);
-    };
-
-    return mappingFunc.apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
-  };
-};
-
-},{}],10:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = mutate;
-
-var _utils = require('../utils');
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-function mutate(func) {
-  return function (intermediateValue, payload, q) {
-    var result = (func || function (current, payload) {
-      return payload;
-    }).apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
-
-    if ((0, _utils.isPromise)(result)) {
-      return result.then(function (asyncResult) {
-        q.setStateValue(asyncResult);
-        return asyncResult;
-      });
-    }
-    q.setStateValue(result);
-    return result;
-  };
-};
-
-},{"../utils":15}],11:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = pipe;
-
-var _utils = require('../utils');
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-function pipe(func) {
-  return function (intermediateValue, payload) {
-    var result = (func || function () {}).apply(undefined, [intermediateValue].concat(_toConsumableArray(payload)));
-
-    if ((0, _utils.isPromise)(result)) {
-      return result.then(function () {
-        return intermediateValue;
-      });
-    }
-    return intermediateValue;
-  };
-};
-
-},{"../utils":15}],12:[function(require,module,exports){
+},{"./csp":7,"./grid":9,"./harvester":10}],12:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -967,7 +1032,7 @@ function riew(View) {
         };
       }, []);
 
-      return content === null ? null : _react2.default.createElement(View, Object.assign({}, outerProps, content));
+      return content === null ? null : _react2.default.createElement(View, content);
     };
 
     comp.displayName = 'Riew_' + (0, _utils.getFuncName)(View);
@@ -986,20 +1051,12 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":4,"../utils":15}],13:[function(require,module,exports){
+},{"../index":11,"../utils":14}],13:[function(require,module,exports){
 'use strict';
-
-var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
 
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
@@ -1015,11 +1072,9 @@ exports.default = createRiew;
 
 var _index = require('./index');
 
-var _state3 = require('./state');
-
 var _utils = require('./utils');
 
-var _constants = require('./constants');
+var _csp = require('./csp');
 
 function _defineProperty(obj, key, value) {
   if (key in obj) {
@@ -1029,273 +1084,199 @@ function _defineProperty(obj, key, value) {
   }return obj;
 }
 
-function normalizeExternalsMap(arr) {
-  return arr.reduce(function (map, item) {
-    if (typeof item === 'string') {
-      map = _extends({}, map, _defineProperty({}, '@' + item, true));
-    } else {
-      map = _extends({}, map, item);
+var Renderer = function Renderer(viewFunc) {
+  var data = {};
+  var inProgress = false;
+  var active = true;
+
+  return {
+    push: function push(newData) {
+      if (newData === _csp.chan.CLOSED || newData === _csp.chan.ENDED) {
+        return;
+      }
+      data = (0, _utils.accumulate)(data, newData);
+      if (!inProgress) {
+        inProgress = true;
+        Promise.resolve().then(function () {
+          if (active) {
+            viewFunc(data);
+          }
+          inProgress = false;
+        });
+      }
+    },
+    destroy: function destroy() {
+      active = false;
     }
-    return map;
-  }, {});
-}
+  };
+};
 
 function createRiew(viewFunc) {
-  for (var _len = arguments.length, controllers = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    controllers[_key - 1] = arguments[_key];
+  for (var _len = arguments.length, routines = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    routines[_key - 1] = arguments[_key];
   }
 
-  var instance = {
+  var riew = {
     id: (0, _utils.getId)('r'),
     name: (0, _utils.getFuncName)(viewFunc)
   };
-  var active = false;
-  var internalStates = [];
-  var onUnmountCallbacks = [];
-  var subscriptions = {};
+  var renderer = Renderer(viewFunc);
+  var channels = [];
+  var states = [];
+  var cleanups = [];
+  var runningRoutines = [];
   var externals = {};
-  var data = (0, _index.state)({});
+  var chan = function chan() {
+    var ch = _csp.chan.apply(undefined, arguments);
+    channels.push(ch);
+    return ch;
+  };
+  var state = function state() {
+    var s = _csp.state.apply(undefined, arguments);
+    states.push(s);
+    return s;
+  };
+  var viewCh = chan(riew.name + '_view');
+  var propsCh = chan(riew.name + '_props');
 
-  var updateData = data.mutate(function (current, newStuff) {
-    if (newStuff === null || typeof newStuff !== 'undefined' && (typeof newStuff === 'undefined' ? 'undefined' : _typeof(newStuff)) !== 'object') {
-      throw new Error('A key-value object expected. Instead "' + newStuff + '" passed.');
-    }
-    // console.log('updateData', newStuff);
-    return _extends({}, current, newStuff);
-  });
-  var render = data.map(function (newStuff) {
-    var result = {};
-
-    Object.keys(newStuff).forEach(function (key) {
-      if ((0, _state3.isEffect)(newStuff[key]) && !newStuff[key].isMutating()) {
-        var effect = newStuff[key];
-        var _state = _index.grid.getNodeById(effect.stateId);
-
-        result[key] = effect();
-        if (!subscriptions[effect.stateId]) subscriptions[effect.stateId] = {};
-        subscriptions[effect.stateId][key] = effect;
-        _index.grid.subscribe(instance).to(_state).when(_constants.STATE_VALUE_CHANGE, function () {
-          updateData(Object.keys(subscriptions[effect.stateId]).reduce(function (effectsResult, key) {
-            effectsResult[key] = subscriptions[effect.stateId][key]();
-            return effectsResult;
-          }, {}));
-        });
+  var normalizeRenderData = function normalizeRenderData(value) {
+    return Object.keys(value).reduce(function (obj, key) {
+      if ((0, _csp.isChannel)(value[key])) {
+        var ch = value[key];
+        ch.subscribe(function (v) {
+          viewCh.put(_defineProperty({}, key, v));
+        }, ch.id + riew.id);
+      } else if ((0, _csp.isState)(value[key])) {
+        var _state = value[key];
+        var _ch = _state.map();
+        _ch.subscribe(function (v) {
+          viewCh.put(_defineProperty({}, key, v));
+        }, _ch.id + riew.id);
       } else {
-        result[key] = newStuff[key];
+        obj[key] = value[key];
       }
+      return obj;
+    }, {});
+  };
+
+  riew.mount = function () {
+    var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+    (0, _utils.requireObject)(props);
+    propsCh.subscribe(viewCh);
+    viewCh.subscribe(renderer.push);
+    runningRoutines = routines.map(function (r) {
+      return (0, _csp.go)(r, [_extends({
+        render: function render(value) {
+          (0, _utils.requireObject)(value);
+          viewCh.put(normalizeRenderData(value));
+        },
+        chan: chan,
+        state: state,
+        props: propsCh
+      }, externals)], function (result) {
+        if (typeof result === 'function') {
+          cleanups.push(result);
+        }
+      });
     });
-    return result;
-  }).filter(function () {
-    return active;
-  }).pipe(viewFunc);
-
-  function processExternals() {
-    Object.keys(externals).forEach(function (key) {
-      var external = void 0;
-
-      if (key.charAt(0) === '@') {
-        key = key.substr(1, key.length);
-        external = (0, _index.use)(key);
-      } else {
-        external = externals[key];
-      }
-
-      updateData(_defineProperty({}, key, external));
-    });
-  }
-
-  instance.mount = function () {
-    var initialData = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-    if (active) {
-      updateData(initialData);
-      return instance;
+    if (!(0, _utils.isObjectEmpty)(externals)) {
+      viewCh.put(normalizeRenderData(externals));
     }
-    updateData(initialData);
-    processExternals();
-
-    var controllersResult = _utils.parallel.apply(undefined, controllers)(_extends({}, data(), {
-      data: updateData,
-      props: data,
-      state: function state() {
-        var s = _index.state.apply(undefined, arguments);
-
-        internalStates.push(s);
-        return s;
-      }
-    }));
-    var done = function done(result) {
-      return onUnmountCallbacks = result || [];
-    };
-
-    if ((0, _utils.isPromise)(controllersResult)) {
-      controllersResult.then(done);
-    } else {
-      done(controllersResult);
-    }
-
-    active = true;
-    (0, _index.subscribe)(render, true);
-    return instance;
+    propsCh.put(props);
   };
-  instance.update = function (newData) {
-    updateData(newData);
-  };
-  instance.unmount = function () {
-    active = false;
-    (0, _index.unsubscribe)(render);
-    onUnmountCallbacks.filter(function (f) {
-      return typeof f === 'function';
-    }).forEach(function (f) {
-      return f();
+
+  riew.unmount = function () {
+    cleanups.forEach(function (c) {
+      return c();
     });
-    onUnmountCallbacks = [];
-    Object.keys(subscriptions).forEach(function (stateId) {
-      return _index.grid.unsubscribe(instance).from(_index.grid.getNodeById(stateId));
+    cleanups = [];
+    channels.forEach(function (c) {
+      return c.close();
     });
-    subscriptions = {};
-    data.destroy();
-    internalStates.forEach(_index.destroy);
-    internalStates = [];
-    return instance;
+    channels = [];
+    states.forEach(function (s) {
+      return s.destroy();
+    });
+    states = [];
+    runningRoutines.forEach(function (r) {
+      return r.stop();
+    });
+    runningRoutines = [];
+    renderer.destroy();
   };
-  instance.with = function () {
+
+  riew.update = function () {
+    var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+    (0, _utils.requireObject)(props);
+    propsCh.put(props);
+  };
+
+  riew.with = function () {
     for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
       maps[_key2] = arguments[_key2];
     }
 
-    instance.__setExternals(maps);
-    return instance;
+    riew.__setExternals(maps);
+    return riew;
   };
-  instance.test = function (map) {
-    var newInstance = createRiew.apply(undefined, [viewFunc].concat(controllers));
+
+  riew.test = function (map) {
+    var newInstance = createRiew.apply(undefined, [viewFunc].concat(routines));
 
     newInstance.__setExternals([map]);
     return newInstance;
   };
-  instance.__setExternals = function (maps) {
-    externals = _extends({}, externals, normalizeExternalsMap(maps));
+
+  riew.__setExternals = function (maps) {
+    maps = maps.reduce(function (map, item) {
+      if (typeof item === 'string') {
+        map = _extends({}, map, _defineProperty({}, item, (0, _index.use)(item)));
+      } else {
+        map = _extends({}, map, item);
+      }
+      return map;
+    }, {});
+    externals = _extends({}, externals, maps);
   };
-  instance.__data = data;
 
-  return instance;
-};
+  return riew;
+}
 
-},{"./constants":1,"./index":4,"./state":14,"./utils":15}],14:[function(require,module,exports){
+},{"./csp":7,"./index":11,"./utils":14}],14:[function(require,module,exports){
 'use strict';
+
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.isEffect = isEffect;
-exports.State = State;
 
-var _fastDeepEqual = require('fast-deep-equal');
-
-var _fastDeepEqual2 = _interopRequireDefault(_fastDeepEqual);
-
-var _utils = require('./utils');
-
-var _queue = require('./queue');
-
-var _constants = require('./constants');
-
-var _interfaces = require('./interfaces');
-
-var _index = require('./index');
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function isEffect(effect) {
-  return effect && effect.__riewEffect === true;
-}
-
-function State(initialValue) {
-  var state = {};
-  var value = initialValue;
-  var active = true;
-
-  state.id = (0, _utils.getId)('s');
-  state.get = function () {
-    return value;
-  };
-  state.set = function (newValue) {
-    if ((0, _fastDeepEqual2.default)(value, newValue) || active === false) return;
-    value = newValue;
-    _index.grid.emit(_constants.STATE_VALUE_CHANGE).from(state).with(value);
-  };
-  state.destroy = function () {
-    active = false;
-    _index.grid.unsubscribe().from(state);
-  };
-  state.createEffect = function () {
-    var items = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-
-    var queuesRunning = 0;
-    var effect = function effect() {
-      if (active === false) return value;
-      var q = (0, _queue.createQueue)(state.get(), state.set, function () {
-        queuesRunning -= 1;
-        _index.grid.unsubscribe(q).from(effect);
-      });
-
-      _index.grid.subscribe(q).to(effect).when(_constants.CANCEL_EFFECT, q.cancel);
-      effect.items.forEach(function (_ref) {
-        var type = _ref.type,
-            func = _ref.func;
-        return q.add(type, func);
-      });
-      queuesRunning += 1;
-      return q.process.apply(q, arguments);
-    };
-
-    effect.__riewEffect = true;
-    effect.id = (0, _utils.getId)('e');
-    effect.stateId = state.id;
-    effect.items = items;
-
-    (0, _interfaces.implementIterableProtocol)(effect);
-
-    effect.isMutating = function () {
-      return !!effect.items.find(function (_ref2) {
-        var type = _ref2.type;
-        return type === 'mutate';
-      });
-    };
-    effect.destroy = function () {
-      (0, _index.cancel)(effect);
-      _index.grid.unsubscribe().from(effect);
-    };
-    effect.isRunning = function () {
-      return queuesRunning > 0;
-    };
-
-    Object.keys(_queue.QueueAPI).forEach(function (m) {
-      effect[m] = function () {
-        for (var _len = arguments.length, methodArgs = Array(_len), _key = 0; _key < _len; _key++) {
-          methodArgs[_key] = arguments[_key];
-        }
-
-        return (0, _index._fork)(state, effect, { type: m, func: methodArgs });
-      };
-    });
-
-    return effect;
-  };
-
-  return state;
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
 };
 
-},{"./constants":1,"./index":4,"./interfaces":5,"./queue":6,"./utils":15,"fast-deep-equal":16}],15:[function(require,module,exports){
-'use strict';
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
+exports.isObjectEmpty = isObjectEmpty;
+exports.requireObject = requireObject;
+exports.accumulate = accumulate;
 var isPromise = exports.isPromise = function isPromise(obj) {
   return obj && typeof obj['then'] === 'function';
+};
+var isGenerator = exports.isGenerator = function isGenerator(obj) {
+  return obj && typeof obj['next'] === 'function';
 };
 var isObjectLiteral = exports.isObjectLiteral = function isObjectLiteral(obj) {
   return obj ? obj.constructor === {}.constructor : false;
@@ -1306,112 +1287,6 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
 
   return result ? result[1] : 'unknown';
 };
-var compose = exports.compose = function compose() {
-  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-    args[_key] = arguments[_key];
-  }
-
-  return function (lastResult) {
-    var isAsync = false;
-    var done = function done() {};
-    var funcs = [].concat(args);
-
-    (function loop() {
-      if (funcs.length === 0) {
-        done(lastResult);return;
-      }
-      var f = funcs.shift();
-      var result = f(lastResult);
-
-      if (isPromise(result)) {
-        isAsync = true;
-        result.then(function (r) {
-          lastResult = r;
-          loop();
-        });
-      } else {
-        lastResult = result;
-        loop();
-      }
-    })();
-
-    if (isAsync) {
-      return new Promise(function (d) {
-        return done = d;
-      });
-    }
-    return lastResult;
-  };
-};
-var serial = exports.serial = function serial() {
-  for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-    args[_key2] = arguments[_key2];
-  }
-
-  return function (arg) {
-    var isAsync = false;
-    var done = function done() {};
-    var results = [];
-    var funcs = [].concat(args);
-
-    (function loop() {
-      if (funcs.length === 0) {
-        done(results);return;
-      }
-      var f = funcs.shift();
-      var result = f(arg);
-
-      if (isPromise(result)) {
-        isAsync = true;
-        result.then(function (r) {
-          results.push(r);
-          loop();
-        });
-      } else {
-        results.push(result);
-        loop();
-      }
-    })();
-
-    if (isAsync) {
-      return new Promise(function (d) {
-        return done = d;
-      });
-    }
-    return results;
-  };
-};
-var parallel = exports.parallel = function parallel() {
-  for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-    args[_key3] = arguments[_key3];
-  }
-
-  return function (arg) {
-    var isAsync = false;
-    var results = [];
-    var funcs = [].concat(args);
-
-    (function loop() {
-      if (funcs.length === 0) {
-        return;
-      }
-      var f = funcs.shift();
-      var result = f(arg);
-
-      if (isPromise(result)) isAsync = true;
-      results.push(result);
-      loop();
-    })();
-
-    if (isAsync) {
-      return Promise.all(results.map(function (r) {
-        if (isPromise(r)) return r;
-        return Promise.resolve(r);
-      }));
-    }
-    return results;
-  };
-};
 
 var ids = 0;
 
@@ -1419,62 +1294,24 @@ var getId = exports.getId = function getId(prefix) {
   return prefix + '_' + ++ids;
 };
 
-},{}],16:[function(require,module,exports){
-'use strict';
-
-var isArray = Array.isArray;
-var keyList = Object.keys;
-var hasProp = Object.prototype.hasOwnProperty;
-
-module.exports = function equal(a, b) {
-  if (a === b) return true;
-
-  if (a && b && typeof a == 'object' && typeof b == 'object') {
-    var arrA = isArray(a)
-      , arrB = isArray(b)
-      , i
-      , length
-      , key;
-
-    if (arrA && arrB) {
-      length = a.length;
-      if (length != b.length) return false;
-      for (i = length; i-- !== 0;)
-        if (!equal(a[i], b[i])) return false;
-      return true;
-    }
-
-    if (arrA != arrB) return false;
-
-    var dateA = a instanceof Date
-      , dateB = b instanceof Date;
-    if (dateA != dateB) return false;
-    if (dateA && dateB) return a.getTime() == b.getTime();
-
-    var regexpA = a instanceof RegExp
-      , regexpB = b instanceof RegExp;
-    if (regexpA != regexpB) return false;
-    if (regexpA && regexpB) return a.toString() == b.toString();
-
-    var keys = keyList(a);
-    length = keys.length;
-
-    if (length !== keyList(b).length)
+function isObjectEmpty(obj) {
+  for (var prop in obj) {
+    if (obj.hasOwnProperty(prop)) {
       return false;
-
-    for (i = length; i-- !== 0;)
-      if (!hasProp.call(b, keys[i])) return false;
-
-    for (i = length; i-- !== 0;) {
-      key = keys[i];
-      if (!equal(a[key], b[key])) return false;
     }
-
-    return true;
   }
+  return true;
+}
 
-  return a!==a && b!==b;
-};
+function requireObject(obj) {
+  if (typeof obj === 'undefined' || obj === null || typeof obj !== 'undefined' && (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) !== 'object') {
+    throw new Error('A key-value object expected. Instead "' + obj + '" passed.');
+  }
+}
 
-},{}]},{},[4])(4)
+function accumulate(current, newData) {
+  return _extends({}, current, newData);
+}
+
+},{}]},{},[11])(11)
 });
