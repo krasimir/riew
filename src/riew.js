@@ -1,22 +1,30 @@
 import { use } from './index';
 import { isObjectEmpty, getFuncName, getId, requireObject, accumulate } from './utils';
-import { chan as Channel, isChannel, go } from './csp';
+import { chan as Channel, state as State, isChannel, isState, go } from './csp';
 
 const Renderer = function (viewFunc) {
   let data = {};
   let inProgress = false;
+  let active = true;
 
-  return newData => {
-    if (newData === Channel.CLOSED || newData === Channel.ENDED) {
-      return;
-    }
-    data = accumulate(data, newData);
-    if (!inProgress) {
-      inProgress = true;
-      Promise.resolve().then(() => {
-        viewFunc(data);
-        inProgress = false;
-      });
+  return {
+    push(newData) {
+      if (newData === Channel.CLOSED || newData === Channel.ENDED) {
+        return;
+      }
+      data = accumulate(data, newData);
+      if (!inProgress) {
+        inProgress = true;
+        Promise.resolve().then(() => {
+          if (active) {
+            viewFunc(data);
+          }
+          inProgress = false;
+        });
+      }
+    },
+    destroy() {
+      active = false;
     }
   };
 };
@@ -26,8 +34,9 @@ export default function createRiew(viewFunc, ...routines) {
     id: getId('r'),
     name: getFuncName(viewFunc)
   };
-  const render = Renderer(viewFunc);
+  let renderer = Renderer(viewFunc);
   let channels = [];
+  let states = [];
   let cleanups = [];
   let runningRoutines = [];
   let externals = {};
@@ -36,6 +45,11 @@ export default function createRiew(viewFunc, ...routines) {
     channels.push(ch);
     return ch;
   };
+  const state = function (...args) {
+    const s = State(...args);
+    states.push(s);
+    return s;
+  };
   const viewCh = chan(`${riew.name}_view`);
   const propsCh = chan(`${riew.name}_props`);
 
@@ -43,6 +57,12 @@ export default function createRiew(viewFunc, ...routines) {
     Object.keys(value).reduce((obj, key) => {
       if (isChannel(value[ key ])) {
         let ch = value[ key ];
+        ch.subscribe(v => {
+          viewCh.put({ [ key ]: v });
+        }, ch.id + riew.id);
+      } else if (isState(value[ key ])) {
+        let state = value[ key ];
+        let ch = state.map();
         ch.subscribe(v => {
           viewCh.put({ [ key ]: v });
         }, ch.id + riew.id);
@@ -55,7 +75,7 @@ export default function createRiew(viewFunc, ...routines) {
   riew.mount = function (props = {}) {
     requireObject(props);
     propsCh.subscribe(viewCh);
-    viewCh.subscribe(render);
+    viewCh.subscribe(renderer.push);
     runningRoutines = routines.map(r =>
       go(
         r,
@@ -66,6 +86,7 @@ export default function createRiew(viewFunc, ...routines) {
               viewCh.put(normalizeRenderData(value));
             },
             chan,
+            state,
             props: propsCh,
             ...externals
           }
@@ -88,8 +109,11 @@ export default function createRiew(viewFunc, ...routines) {
     cleanups = [];
     channels.forEach(c => c.close());
     channels = [];
+    states.forEach(s => s.destroy());
+    states = [];
     runningRoutines.forEach(r => r.stop());
     runningRoutines = [];
+    renderer.destroy();
   };
 
   riew.update = function (props = {}) {

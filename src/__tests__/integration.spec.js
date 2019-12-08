@@ -138,27 +138,24 @@ describe('Given the Riew library', () => {
   describe('when we mutate the state and have a selector subscribed to it', () => {
     it('should re-render the view with the new data', () => {
       return act(async () => {
-        const repos = chan(
-          buffer.reducer((list = [], id) => {
-            if (typeof id === 'string') {
-              return list.map(repo => {
-                if (repo.id === id) {
-                  return {
-                    ...repo,
-                    prs: [ 'foo', 'bar' ]
-                  };
-                }
-                return repo;
-              });
-            }
-            return [ ...list, id ];
-          })
-        );
-        repos.put({ id: 'a', selected: false });
-        repos.put({ id: 'b', selected: true });
+        const repos = state([ { id: 'a', selected: false }, { id: 'b', selected: true } ]);
+        const update = repos.set((list = [], id) => {
+          if (typeof id === 'string') {
+            return list.map(repo => {
+              if (repo.id === id) {
+                return {
+                  ...repo,
+                  prs: [ 'foo', 'bar' ]
+                };
+              }
+              return repo;
+            });
+          }
+          return [ ...list, id ];
+        });
 
         const selector = repos.map(list => list.filter(({ selected }) => selected));
-        const change = id => repos.put(id);
+        const change = id => update.put(id);
         const View = ({ selector }) => {
           return (
             <div>
@@ -219,38 +216,38 @@ describe('Given the Riew library', () => {
   });
   describe('when we have a channel passed to two React component', () => {
     describe('and unmount then update the state', () => {
-      xit('should not produce an error', () => {
+      it('should not produce an error', () => {
         return act(async () => {
-          const s = chan();
-          const changeToFalse = () => s.put(false);
+          const s = state(true);
+          const update = s.set();
+          const changeToFalse = () => update.put(false);
 
           register('whee', s);
 
           const ParentParentParent = riew(function ParentParentParent({ whee }) {
-            console.log('whee:' + whee);
             return whee ? <ParentParent /> : 'boo';
           }).with('whee');
+
           const ParentParent = riew(function ParentParent({ whee }) {
-            console.log('whee2:' + whee);
             return whee ? <Parent /> : 'boo';
           }).with('whee');
+
           const Parent = riew(function Parent() {
             return <Component />;
           });
+
           const Component = riew(function Component({ whee }) {
             return `Whee is ${whee}`;
           }).with('whee');
 
           const { container } = render(<ParentParentParent />);
 
-          await delay(3);
-          console.log('-------- setting to true');
-          s.put(true);
-
-          await delay(3);
+          await delay(30);
           exerciseHTML(container, 'Whee is true');
-          changeToFalse();
-          await delay(3);
+          act(() => {
+            changeToFalse();
+          });
+          await delay(30);
           exerciseHTML(container, 'boo');
         });
       });

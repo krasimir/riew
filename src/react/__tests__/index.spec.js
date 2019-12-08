@@ -136,22 +136,20 @@ describe('Given the React riew function', () => {
     it('when firing the mutation func should re-render with a new value', () => {
       return act(async () => {
         const routine = ({ render }) => {
-          const value = chan(
-            buffer.reducer((current = [], payload) => {
-              if (typeof payload === 'number') {
-                return current.map(item => {
-                  return {
-                    ...item,
-                    selected: item.value === payload ? false : item.selected
-                  };
-                });
-              }
-              return [ ...current, payload ];
-            })
-          );
-          value.put({ value: 2, selected: true });
-          value.put({ value: 67, selected: true });
-          const change = payload => value.put(payload);
+          const s = state([ { value: 2, selected: true }, { value: 67, selected: true } ]);
+          const value = s.map();
+          const select = s.set((current = [], payload) => {
+            if (typeof payload === 'number') {
+              return current.map(item => {
+                return {
+                  ...item,
+                  selected: item.value === payload ? false : item.selected
+                };
+              });
+            }
+            return [ ...current, payload ];
+          });
+          const change = payload => select.put(payload);
 
           render({ value, change });
         };

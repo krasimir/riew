@@ -3,13 +3,20 @@ import { isPromise } from '../utils';
 
 export function state(...args) {
   let value = args[ 0 ];
-  const onChange = [];
+  let onChange = [];
+  let channels = [];
+  const createChannel = () => {
+    const ch = chan();
+    channels.push(ch);
+    return ch;
+  };
   const api = {
+    '@state': true,
     getState() {
       return value;
     },
     set(reducer = (c, v) => v) {
-      const ch = chan();
+      const ch = createChannel();
 
       ch.subscribe(newValue => {
         let result = reducer(value, newValue);
@@ -27,7 +34,7 @@ export function state(...args) {
       return ch;
     },
     map(mapper = v => v) {
-      const ch = chan();
+      const ch = createChannel();
 
       onChange.push(value => {
         ch.put(mapper(value));
@@ -38,7 +45,7 @@ export function state(...args) {
       return ch;
     },
     filter(filter) {
-      const ch = chan();
+      const ch = createChannel();
 
       onChange.push(value => {
         if (filter(value)) {
@@ -49,8 +56,17 @@ export function state(...args) {
         ch.put(value);
       }
       return ch;
+    },
+    destroy() {
+      onChange = [];
+      channels.forEach(ch => ch.close());
+      channels = [];
     }
   };
 
   return api;
+}
+
+export function isState(s) {
+  return s && s[ '@state' ] === true;
 }

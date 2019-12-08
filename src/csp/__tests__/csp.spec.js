@@ -1001,6 +1001,21 @@ describe('Given a CSP', () => {
         10
       );
     });
+    it('should allow us destroy the state and its channels', () => {
+      const s = state(20);
+      const read = s.map();
+      const update = s.set();
+      const spy = jest.fn();
+
+      read.subscribe(spy);
+      update.put(30);
+      s.destroy();
+      update.put(40);
+
+      expect(spy).toBeCalledWithArgs([ 20 ], [ 30 ]);
+      expect(read.state()).toBe(chan.ENDED);
+      expect(update.state()).toBe(chan.ENDED);
+    });
   });
 
   // more complex examples

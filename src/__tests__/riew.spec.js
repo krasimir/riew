@@ -1,7 +1,6 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { register, riew, reset, grid } from '../index';
-import { chan, sleep } from '../csp';
+import { register, riew, reset, grid, chan, sleep, state } from '../index';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {
@@ -497,6 +496,64 @@ describe('Given the `riew` factory function', () => {
 
       expect(view1).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
       expect(view2).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
+    });
+  });
+  describe('when we work with state', () => {
+    describe('when we create state from within a routine', () => {
+      it(`should
+        * still subscribe as usual for the newly created channels
+        * destroy the state and its channels if the riew is unmounted`, async () => {
+        const stateChannels = [];
+        const refChannel = ch => {
+          stateChannels.push(ch);
+          return ch;
+        };
+        const routine = async function ({ render, state }) {
+          const s = state('foo');
+          render({ s: refChannel(s.map()) });
+          await delay(2);
+          refChannel(s.set()).put('baz');
+        };
+        const view = jest.fn();
+        const r = riew(view, routine);
+
+        r.mount();
+        await delay(4);
+        r.unmount();
+        expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'baz' } ]);
+        stateChannels.forEach(ch => expect(ch.state()).toBe(chan.ENDED));
+      });
+      it('should accept a state via the `render` method', async () => {
+        const routine = async function ({ state, render }) {
+          const counter = state(1);
+          const increment = counter.set(current => current + 1);
+
+          render({ counter });
+          await delay(2);
+          increment.put();
+        };
+        const view = jest.fn();
+        const r = riew(view, routine);
+
+        r.mount();
+        await delay(4);
+        expect(view).toBeCalledWithArgs([ { counter: 1 } ], [ { counter: 2 } ]);
+      });
+      it('should accept a state via the `with` method', async () => {
+        const counter = state(12);
+        register('counter', counter);
+        const routine = async function ({ counter }) {
+          const increment = counter.set(current => current + 1);
+          await delay(2);
+          increment.put();
+        };
+        const view = jest.fn();
+        const r = riew(view, routine).with('counter');
+
+        r.mount();
+        await delay(4);
+        expect(view).toBeCalledWithArgs([ { counter: 12 } ], [ { counter: 13 } ]);
+      });
     });
   });
 });
