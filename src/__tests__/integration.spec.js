@@ -16,10 +16,10 @@ describe('Given the Riew library', () => {
   describe('when we use an async effect', () => {
     it('should allow us to render multiple times', () => {
       return act(async () => {
-        const A = riew(DummyComponent, async ({ data }) => {
-          data({ text: 'Hello' });
+        const A = riew(DummyComponent, async ({ render }) => {
+          render({ text: 'Hello' });
           await delay(20);
-          data({ text: 'world' });
+          render({ text: 'world' });
         });
 
         const { queryByText, getByText } = render(<A />);
@@ -34,9 +34,9 @@ describe('Given the Riew library', () => {
     it('should not try to re-render if the bridge is unmounted', () => {
       return act(async () => {
         const spy = jest.spyOn(console, 'error');
-        const A = riew(DummyComponent, async ({ data }) => {
+        const A = riew(DummyComponent, async ({ render }) => {
           await delay(10);
-          data({ text: 'world' });
+          render({ text: 'world' });
         });
 
         const { unmount } = render(<A />);
@@ -99,8 +99,8 @@ describe('Given the Riew library', () => {
       return act(async () => {
         const FetchTime = riew(
           ({ location }) => (location ? <p>{ location }</p> : null),
-          async ({ data, props }) => {
-            props.takeEvery(({ city }) => data({ location: city }));
+          async ({ render, props }) => {
+            props.subscribe(({ city }) => render({ location: city }));
           }
         );
         const App = function () {
@@ -139,18 +139,24 @@ describe('Given the Riew library', () => {
     it('should re-render the view with the new data', () => {
       return act(async () => {
         const repos = chan(
-          buffer.reducer((list, id) => {
-            return list.map(repo => {
-              if (repo.id === id) {
-                return {
-                  ...repo,
-                  prs: [ 'foo', 'bar' ]
-                };
-              }
-              return repo;
-            });
+          buffer.reducer((list = [], id) => {
+            if (typeof id === 'string') {
+              return list.map(repo => {
+                if (repo.id === id) {
+                  return {
+                    ...repo,
+                    prs: [ 'foo', 'bar' ]
+                  };
+                }
+                return repo;
+              });
+            }
+            return [ ...list, id ];
           })
-        ).from([ { id: 'a', selected: false }, { id: 'b', selected: true } ]);
+        );
+        repos.put({ id: 'a', selected: false });
+        repos.put({ id: 'b', selected: true });
+
         const selector = repos.map(list => list.filter(({ selected }) => selected));
         const change = id => repos.put(id);
         const View = ({ selector }) => {
@@ -164,11 +170,11 @@ describe('Given the Riew library', () => {
             </div>
           );
         };
-        const controller = async ({ change }) => {
+        const routine = async ({ change }) => {
           await delay(2);
           change('b');
         };
-        const R = riew(View, controller).with({ selector, change });
+        const R = riew(View, routine).with({ selector, change });
         const { container } = render(<R />);
 
         await delay(3);
@@ -194,38 +200,38 @@ describe('Given the Riew library', () => {
   });
   describe('when we have a forked effect passed to a React component', () => {
     describe('and we update the main effect', () => {
-      it('should re-render the react component with the forked effect data', () => {
+      it('should re-render the react component with the forked data', () => {
         return act(async () => {
-          const ch = state([ 15, 4, 12 ]);
-          const [ , setRepos ] = ch;
+          const ch = chan();
+          ch.put([ 15, 4, 12 ]);
           const moreThen10 = ch.map(nums => nums.filter(n => n > 10));
           const Component = jest.fn().mockImplementation(() => null);
           const R = riew(Component).with({ moreThen10 });
 
           render(<R />);
           await delay(3);
-          setRepos([ 5, 6, 7, 120 ]);
+          ch.put([ 5, 6, 7, 120 ]);
           await delay(3);
-          expect(Component).toBeCalledWithArgs([ {}, {} ], [ { moreThen10: [ 15, 12 ] }, {} ], [ { moreThen10: [ 120 ] }, {} ]);
+          expect(Component).toBeCalledWithArgs([ { moreThen10: [ 15, 12 ] }, {} ], [ { moreThen10: [ 120 ] }, {} ]);
         });
       });
     });
   });
   describe('when we have a channel passed to two React component', () => {
     describe('and unmount then update the state', () => {
-      xit('should not produce an error', () => {
+      it('should not produce an error', () => {
         return act(async () => {
-          const s = state(true);
+          const s = chan();
           const changeToFalse = () => s.put(false);
 
           register('whee', s);
 
           const ParentParentParent = riew(function ParentParentParent({ whee }) {
-            console.log('1', whee);
+            console.log('whee:' + whee);
             return whee ? <ParentParent /> : 'boo';
           }).with('whee');
           const ParentParent = riew(function ParentParent({ whee }) {
-            console.log('2', whee);
+            console.log('whee2:' + whee);
             return whee ? <Parent /> : 'boo';
           }).with('whee');
           const Parent = riew(function Parent() {
@@ -237,9 +243,12 @@ describe('Given the Riew library', () => {
 
           const { container } = render(<ParentParentParent />);
 
-          await delay(10);
+          await delay(3);
+          console.log('-------- setting to true');
+          s.put(true);
+
+          await delay(3);
           exerciseHTML(container, 'Whee is true');
-          changeToFalse();
           changeToFalse();
           await delay(3);
           exerciseHTML(container, 'boo');

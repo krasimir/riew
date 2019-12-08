@@ -1,7 +1,7 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
 import { register, riew, reset, grid } from '../index';
-import { chan, sleep, from } from '../csp';
+import { chan, sleep } from '../csp';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {

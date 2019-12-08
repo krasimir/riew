@@ -20,16 +20,16 @@ describe('Given the React riew function', () => {
       });
     });
     it(`should
-      * run the controller function
+      * run the routine function
       * render once by default
       * render every time when we call the "data" method`, () => {
       return act(async () => {
-        const controller = jest.fn().mockImplementation(async ({ data }) => {
+        const routine = jest.fn().mockImplementation(async ({ render }) => {
           await delay(5);
-          data({ foo: 'bar' });
+          render({ foo: 'bar' });
         });
         const view = jest.fn().mockImplementation(() => null);
-        const R = riew(view, controller);
+        const R = riew(view, routine);
 
         render(<R />);
         await delay(10);
@@ -43,10 +43,11 @@ describe('Given the React riew function', () => {
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, () => {
         return act(async () => {
-          const [ s, setState ] = state('foo');
-          const R = riew(({ state }) => <p>{ state }</p>, async function ({ state }) {
+          const s = chan();
+          s.put('foo');
+          const R = riew(({ state }) => <p>{ state }</p>, async function () {
             await delay(5);
-            setState('bar');
+            s.put('bar');
           }).with({ state: s });
           const { container, unmount } = render(<R />);
 
@@ -60,19 +61,22 @@ describe('Given the React riew function', () => {
       describe('and we use a state that is exported into the grid', () => {
         it('should receive the state value and subscribe for changes', () => {
           return act(async () => {
-            const [ s, setState ] = state(42);
+            const s = chan();
+            s.put(42);
+            const s2 = chan();
+            s2.put('foo');
 
             register('hello', s);
 
             const View = ({ state, hello }) => {
               return <p>{ (state + hello).toString() }</p>;
             };
-            const R = riew(View).with({ state: state('foo') }, 'hello');
+            const R = riew(View).with({ state: s2 }, 'hello');
             const { container } = render(<R />);
 
             await delay(3);
             exerciseHTML(container, '<p>foo42</p>');
-            setState('200');
+            s.put('200');
             await delay(3);
             exerciseHTML(container, '<p>foo200</p>');
           });
@@ -102,7 +106,7 @@ describe('Given the React riew function', () => {
           const propsSpy = jest.fn();
           const view = jest.fn().mockImplementation(() => null);
           const I = riew(view, function ({ props }) {
-            props.takeEvery(propsSpy);
+            props.subscribe(propsSpy);
           });
 
           const { rerender } = render(<I foo='bar' />);
@@ -131,20 +135,25 @@ describe('Given the React riew function', () => {
   describe('when we render a channel and pass a function to update the value of the channel', () => {
     it('when firing the mutation func should re-render with a new value', () => {
       return act(async () => {
-        const effect = ({ state, data }) => {
+        const routine = ({ render }) => {
           const value = chan(
             buffer.reducer((current = [], payload) => {
-              return current.map(item => {
-                return {
-                  ...item,
-                  selected: item.value === payload ? false : item.selected
-                };
-              });
+              if (typeof payload === 'number') {
+                return current.map(item => {
+                  return {
+                    ...item,
+                    selected: item.value === payload ? false : item.selected
+                  };
+                });
+              }
+              return [ ...current, payload ];
             })
-          ).from([ { value: 2, selected: true }, { value: 67, selected: true } ]);
+          );
+          value.put({ value: 2, selected: true });
+          value.put({ value: 67, selected: true });
           const change = payload => value.put(payload);
 
-          data({ value, change });
+          render({ value, change });
         };
         const View = ({ value, change }) => {
           return (
@@ -160,7 +169,7 @@ describe('Given the React riew function', () => {
             </div>
           );
         };
-        const R = riew(View, effect);
+        const R = riew(View, routine);
         const { container, getByText } = render(<R />);
 
         await delay(5);
@@ -176,7 +185,8 @@ describe('Given the React riew function', () => {
   describe('when we register a channel', () => {
     it('should provide the value to the react component', async () => {
       return act(async () => {
-        const s = state(true);
+        const s = chan();
+        s.put(true);
         const changeToFalse = () => s.put(false);
         const spy = jest.fn();
 
@@ -189,13 +199,12 @@ describe('Given the React riew function', () => {
 
         const { container } = render(<Component />);
 
-        await delay(3);
+        await delay();
         exerciseHTML(container, 'foo');
-        expect(spy.mock.calls[ 0 ]).toBe(true);
-        // changeToFalse();
-        // changeToFalse();
-        // await delay(3);
-        // exerciseHTML(container, 'boo');
+        changeToFalse();
+        await delay();
+        exerciseHTML(container, 'bar');
+        expect(spy).toBeCalledWithArgs([ true ], [ false ]);
       });
     });
   });

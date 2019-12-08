@@ -43,7 +43,9 @@ export default function createRiew(viewFunc, ...routines) {
     Object.keys(value).reduce((obj, key) => {
       if (isChannel(value[ key ])) {
         let ch = value[ key ];
-        ch.subscribe(v => viewCh.put({ [ key ]: v }), ch.id + riew.id);
+        ch.subscribe(v => {
+          viewCh.put({ [ key ]: v });
+        }, ch.id + riew.id);
       } else {
         obj[ key ] = value[ key ];
       }
@@ -100,6 +102,13 @@ export default function createRiew(viewFunc, ...routines) {
     return riew;
   };
 
+  riew.test = map => {
+    const newInstance = createRiew(viewFunc, ...routines);
+
+    newInstance.__setExternals([ map ]);
+    return newInstance;
+  };
+
   riew.__setExternals = maps => {
     maps = maps.reduce((map, item) => {
       if (typeof item === 'string') {
@@ -110,13 +119,6 @@ export default function createRiew(viewFunc, ...routines) {
       return map;
     }, {});
     externals = { ...externals, ...maps };
-  };
-
-  riew.test = map => {
-    const newInstance = createRiew(viewFunc, ...routines);
-
-    newInstance.__setExternals([ map ]);
-    return newInstance;
   };
 
   return riew;
