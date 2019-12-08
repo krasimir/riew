@@ -1,18 +1,18 @@
 const webpack = require('webpack');
 
 module.exports = {
-  entry: ['regenerator-runtime/runtime', './src/index.js'],
+  entry: [ 'regenerator-runtime/runtime', './src/index.js' ],
   module: {
     rules: [
       {
         test: /\.(js)$/,
         exclude: /node_modules/,
-        use: ['babel-loader']
+        use: [ 'babel-loader' ]
       }
     ]
   },
   resolve: {
-    extensions: ['*', '.js']
+    extensions: [ '*', '.js' ]
   },
   output: {
     path: __dirname + '/js',

@@ -61,6 +61,17 @@ export function state(...args) {
       onChange = [];
       channels.forEach(ch => ch.close());
       channels = [];
+    },
+    [ Symbol.iterator ]() {
+      const out = [ api.map(), api.set() ];
+      let i = 0;
+
+      return {
+        next: () => ({
+          value: out[ i++ ],
+          done: i > api.length
+        })
+      };
     }
   };
 

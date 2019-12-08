@@ -8,12 +8,13 @@ import Footer from './Footer';
 import { ToDo } from './Data';
 import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
 
-const controller = function ({ data, state, todos }) {
-  let filter = state(ALL);
+const routine = function ({ render, state, todos }) {
+  let filterState = state(ALL);
+  let filter = filterState.set();
 
-  data({
+  render({
     filter,
-    viewAll: filter.mutate(() => ALL),
+    viewAll: () => filter.put(ALL),
     viewActive: filter.mutate(() => ACTIVE),
     viewCompleted: filter.mutate(() => COMPLETED),
     toggle: todos.mutate((todos, payload) => {
@@ -52,7 +53,7 @@ const controller = function ({ data, state, todos }) {
         return todo;
       });
     }),
-    clearCompleted: todos.mutate((todos) => {
+    clearCompleted: todos.mutate(todos => {
       return todos.filter(todo => {
         return !todo.completed;
       });
@@ -86,7 +87,8 @@ const View = ({
               newTodo(e.target.value);
               e.target.value = '';
             }
-          }}/>
+          } }
+        />
       </header>
       <section className='main'>
         <input id='toggle-all' className='toggle-all' type='checkbox' />
@@ -96,21 +98,23 @@ const View = ({
           filter={ filter }
           onToggle={ toggle }
           onDelete={ deleteTodo }
-          onEdit={ (index) => editingTodo({ index, value: true }) }
+          onEdit={ index => editingTodo({ index, value: true }) }
           onUpdate={ (index, label) => updateTodo({ index, label }) }
-          onUpdateCancel={ index => editingTodo({ index, value: false }) } />
+          onUpdateCancel={ index => editingTodo({ index, value: false }) }
+        />
       </section>
-        <Footer
-          todos={ todos }
-          filter={ filter }
-          all={ viewAll }
-          active={ viewActive }
-          completed={ viewCompleted }
-          clearCompleted={ clearCompleted } />
+      <Footer
+        todos={ todos }
+        filter={ filter }
+        all={ viewAll }
+        active={ viewActive }
+        completed={ viewCompleted }
+        clearCompleted={ clearCompleted }
+      />
     </section>
   </React.Fragment>
 );
 
-const App = riew(View, controller).with('todos');
+const App = riew(View, routine).with('todos');
 
 ReactDOM.render(<App />, document.querySelector('#container'));

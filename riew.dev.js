@@ -616,6 +616,14 @@ var _channel = require('./channel');
 
 var _utils = require('../utils');
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
+
 function state() {
   for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
     args[_key] = arguments[_key];
@@ -629,7 +637,7 @@ function state() {
     channels.push(ch);
     return ch;
   };
-  var api = {
+  var api = _defineProperty({
     '@state': true,
     getState: function getState() {
       return value;
@@ -695,7 +703,19 @@ function state() {
       });
       channels = [];
     }
-  };
+  }, Symbol.iterator, function () {
+    var out = [api.map(), api.set()];
+    var i = 0;
+
+    return {
+      next: function next() {
+        return {
+          value: out[i++],
+          done: i > api.length
+        };
+      }
+    };
+  });
 
   return api;
 }
