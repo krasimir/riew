@@ -1,7 +1,6 @@
 import h from './harvester';
 import g from './grid';
 export * from './csp';
-export { compose, serial, parallel } from './utils';
 
 export const riew = (...args) => {
   return h.produce('riew', ...args);
