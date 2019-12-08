@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset, register, chan, buffer } from '../index';
+import { reset, register, chan } from '../index';
 
 import { react, state } from '../index';
 
