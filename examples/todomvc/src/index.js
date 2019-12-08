@@ -9,15 +9,14 @@ import { ToDo } from './Data';
 import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
 
 const routine = function ({ render, state, todos }) {
-  let filterState = state(ALL);
-  let filter = filterState.set();
+  let [ filter, changeFilter ] = state(ALL);
 
   render({
     filter,
-    viewAll: () => filter.put(ALL),
-    viewActive: filter.mutate(() => ACTIVE),
-    viewCompleted: filter.mutate(() => COMPLETED),
-    toggle: todos.mutate((todos, payload) => {
+    viewAll: () => changeFilter.put(ALL),
+    viewActive: () => changeFilter.put(ACTIVE),
+    viewCompleted: () => changeFilter.put(COMPLETED),
+    toggle: todos.set((todos, payload) => {
       return todos.map((todo, i) => {
         if (i === payload) {
           return {
@@ -27,10 +26,10 @@ const routine = function ({ render, state, todos }) {
         }
         return todo;
       });
-    }),
-    newTodo: todos.mutate((todos, payload) => [ ...todos, ToDo(payload) ]),
-    deleteTodo: todos.mutate((todos, payload) => todos.filter((todo, i) => i !== payload)),
-    editingTodo: todos.mutate((todos, payload) => {
+    }).put,
+    newTodo: todos.set((todos, payload) => [ ...todos, ToDo(payload) ]).put,
+    deleteTodo: todos.set((todos, payload) => todos.filter((todo, i) => i !== payload)).put,
+    editingTodo: todos.set((todos, payload) => {
       return todos.map((todo, i) => {
         if (i === payload.index) {
           return {
@@ -40,8 +39,8 @@ const routine = function ({ render, state, todos }) {
         }
         return todo;
       });
-    }),
-    updateTodo: todos.mutate((todos, payload) => {
+    }).put,
+    updateTodo: todos.set((todos, payload) => {
       return todos.map((todo, i) => {
         if (i === payload.index) {
           return {
@@ -52,12 +51,12 @@ const routine = function ({ render, state, todos }) {
         }
         return todo;
       });
-    }),
-    clearCompleted: todos.mutate(todos => {
+    }).put,
+    clearCompleted: todos.set(todos => {
       return todos.filter(todo => {
         return !todo.completed;
       });
-    })
+    }).put
   });
 };
 
