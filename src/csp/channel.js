@@ -102,26 +102,7 @@ export function sleep(ms = 0) {
 // **************************************************** ops
 
 export function ops(ch) {
-  let opsTaker = false;
   let observers = [];
-
-  function taker() {
-    if (!opsTaker) {
-      opsTaker = true;
-      const listen = v => {
-        if (v === CLOSED || v === ENDED) return;
-        observers.forEach(p => {
-          if (isChannel(p.observer)) {
-            p.observer.put(v);
-          } else {
-            p.observer(v);
-          }
-        });
-        ch.take(listen);
-      };
-      ch.take(listen);
-    }
-  }
 
   ch.put = (item, next) => {
     let result;
@@ -149,7 +130,7 @@ export function ops(ch) {
 
     let state = ch.state();
     if (state === chan.ENDED) {
-      callback(chan.ENDED);
+      callback((result = chan.ENDED));
     } else {
       // When we close a channel we do check if the buffer is empty.
       // If it is not then it is safe to take from it.
@@ -157,9 +138,9 @@ export function ops(ch) {
       // So there is no way to reach this point with CLOSED state and an empty buffer.
       if (state === chan.CLOSED && ch.buff.isEmpty()) {
         ch.state(chan.ENDED);
-        callback(chan.ENDED);
+        callback((result = chan.ENDED));
       } else {
-        ch.buff.take(result => callback(result));
+        ch.buff.take(r => callback((result = r)));
       }
     }
 
@@ -177,23 +158,6 @@ export function ops(ch) {
   ch.reset = () => {
     ch.state(OPEN);
     ch.buff.reset();
-  };
-
-  ch.subscribe = (observer, who = getId('who')) => {
-    let id = getId('sub');
-    if (isChannel(observer)) {
-      who = observer.id;
-    }
-    if (!observers.find(p => p.who === who)) {
-      observers.push({ id, observer, who });
-    }
-    taker();
-    return () => {
-      const index = observers.findIndex(p => p.id === id);
-      if (index >= 0) {
-        observers.splice(index, 1);
-      }
-    };
   };
 
   ch.map = func => {

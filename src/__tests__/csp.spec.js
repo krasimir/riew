@@ -1,6 +1,6 @@
 import { chan, buffer, merge, timeout, go, put, take, sleep, state } from '../index';
-import { getFuncName } from '../../utils';
-import { delay } from '../../__helpers__';
+import { getFuncName } from '../utils';
+import { delay } from '../__helpers__';
 
 function Test(...routines) {
   const log = [];
