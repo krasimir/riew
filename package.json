@@ -1,7 +1,7 @@
 {
   "name": "riew",
   "version": "1.0.0",
-  "description": "Reactive view-controller architecture",
+  "description": "Reactive View Architecture",
   "main": "./lib/index.js",
   "scripts": {
     "clean": "rm -rf ./lib/* && rm -f ./riew.dev.js && rm -f ./riew.production.js",
