@@ -26,10 +26,11 @@ export default function FixedBuffer(size = 0) {
   };
   api.take = callback => {
     if (api.value.length === 0) {
-      api.takes.push(callback);
       if (api.puts.length > 0) {
         api.puts.shift()();
         api.take(callback);
+      } else {
+        api.takes.push(callback);
       }
     } else {
       const v = api.value.shift();

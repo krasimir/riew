@@ -10,7 +10,124 @@ export function chan(...args) {
   let [ id, buff ] = normalizeChannelArguments(args);
   let api = { id, '@channel': true };
 
-  ops(api);
+  api.put = (item, next) => {
+    let result;
+    let callback = next;
+    if (typeof next === 'undefined') {
+      result = new Promise(resolve => (callback = resolve));
+    }
+
+    let state = api.state();
+    if (state === chan.CLOSED || state === chan.ENDED) {
+      callback(state);
+    } else {
+      api.buff.put(item, result => callback(result));
+    }
+
+    return result;
+  };
+
+  api.take = next => {
+    let result;
+    let callback = next;
+    if (typeof next === 'undefined') {
+      result = new Promise(resolve => (callback = resolve));
+    }
+
+    let state = api.state();
+    if (state === chan.ENDED) {
+      callback((result = chan.ENDED));
+    } else {
+      // When we close a channel we do check if the buffer is empty.
+      // If it is not then it is safe to take from it.
+      // If it is empty the state here will be ENDED, not CLOSED.
+      // So there is no way to reach this point with CLOSED state and an empty buffer.
+      if (state === chan.CLOSED && api.buff.isEmpty()) {
+        api.state(chan.ENDED);
+        callback((result = chan.ENDED));
+      } else {
+        api.buff.take(r => callback((result = r)));
+      }
+    }
+
+    return result;
+  };
+
+  api.close = () => {
+    const newState = api.buff.isEmpty() ? ENDED : CLOSED;
+    api.state(newState);
+    api.buff.puts.forEach(put => put(newState));
+    api.buff.takes.forEach(take => take(newState));
+    grid.remove(api);
+  };
+
+  api.reset = () => {
+    api.state(OPEN);
+    api.buff.reset();
+  };
+
+  api.merge = (...channels) => {
+    const newCh = chan();
+
+    [ api, ...channels ].forEach(ch => {
+      (function taker() {
+        ch.take(v => {
+          if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
+            newCh.put(v, taker);
+          }
+        });
+      })();
+    });
+
+    return newCh;
+  };
+
+  let isMultTakerFired = false;
+  let taps = [];
+  api.mult = (...channels) => {
+    if (!isMultTakerFired) {
+      isMultTakerFired = true;
+      taps = taps.concat(channels);
+      (function taker() {
+        api.take(v => {
+          if (v !== CLOSED && v !== ENDED) {
+            let numOfSuccessfulPuts = 0;
+            let putFinished = chWithSuccessfulPut => {
+              numOfSuccessfulPuts += 1;
+              if (numOfSuccessfulPuts >= taps.length) {
+                taker();
+              }
+            };
+            taps.forEach((ch, idx) => {
+              if (ch.state() === OPEN) {
+                ch.put(v, () => putFinished(ch));
+              } else {
+                numOfSuccessfulPuts += 1;
+                taps.splice(idx, 1);
+                putFinished();
+              }
+            });
+          }
+        });
+      })();
+    } else {
+      channels.forEach(ch => {
+        if (!taps.find(c => ch.id === c.id)) {
+          taps.push(ch);
+        }
+      });
+    }
+  };
+
+  api.unmult = ch => {
+    taps = taps.filter(c => c.id !== ch.id);
+  };
+
+  api.unmultAll = ch => {
+    taps = [];
+  };
+
+  api.isActive = () => api.state() === OPEN;
 
   api.buff = buff;
   api.state = s => {
@@ -100,100 +217,6 @@ export function sleep(ms = 0) {
 }
 
 // **************************************************** ops
-
-export function ops(ch) {
-  let observers = [];
-
-  ch.put = (item, next) => {
-    let result;
-    let callback = next;
-    if (typeof next === 'undefined') {
-      result = new Promise(resolve => (callback = resolve));
-    }
-
-    let state = ch.state();
-    if (state === chan.CLOSED || state === chan.ENDED) {
-      callback(state);
-    } else {
-      ch.buff.put(item, result => callback(result));
-    }
-
-    return result;
-  };
-
-  ch.take = next => {
-    let result;
-    let callback = next;
-    if (typeof next === 'undefined') {
-      result = new Promise(resolve => (callback = resolve));
-    }
-
-    let state = ch.state();
-    if (state === chan.ENDED) {
-      callback((result = chan.ENDED));
-    } else {
-      // When we close a channel we do check if the buffer is empty.
-      // If it is not then it is safe to take from it.
-      // If it is empty the state here will be ENDED, not CLOSED.
-      // So there is no way to reach this point with CLOSED state and an empty buffer.
-      if (state === chan.CLOSED && ch.buff.isEmpty()) {
-        ch.state(chan.ENDED);
-        callback((result = chan.ENDED));
-      } else {
-        ch.buff.take(r => callback((result = r)));
-      }
-    }
-
-    return result;
-  };
-
-  ch.close = () => {
-    const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
-    ch.state(newState);
-    ch.buff.puts.forEach(put => put(newState));
-    ch.buff.takes.forEach(take => take(newState));
-    grid.remove(ch);
-  };
-
-  ch.reset = () => {
-    ch.state(OPEN);
-    ch.buff.reset();
-  };
-
-  ch.map = func => {
-    const newCh = chan();
-    ch.subscribe(value => newCh.put(func(value)));
-    return newCh;
-  };
-
-  ch.filter = func => {
-    const newCh = chan();
-    ch.subscribe(value => {
-      if (func(value)) newCh.put(value);
-    });
-    return newCh;
-  };
-
-  ch.isActive = () => ch.state() === OPEN;
-}
-
-export function merge(...channels) {
-  const newCh = chan();
-
-  channels.map(ch => {
-    const listen = () => {
-      ch.take(v => {
-        if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
-          newCh.put(v);
-          listen();
-        }
-      });
-    };
-    listen();
-  });
-
-  return newCh;
-}
 
 export function timeout(interval) {
   const ch = chan();
