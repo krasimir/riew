@@ -1,29 +1,5 @@
 import { chan, buffer, timeout, go, put, take, sleep, state } from '../index';
-import { getFuncName } from '../utils';
-import { delay } from '../__helpers__';
-
-function Test(...routines) {
-  const log = [];
-  routines.map(routine => {
-    const rName = getFuncName(routine);
-    const logSomething = str => log.push(str);
-    log.push(`>${rName}`);
-    go(routine, [ logSomething ], () => log.push(`<${rName}`));
-  });
-  return log;
-}
-function exercise(log, expectation, delay, cleanup = () => {}) {
-  if (delay) {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        expect(log).toStrictEqual(expectation);
-        resolve();
-        cleanup();
-      }, delay);
-    });
-  }
-  expect(log).toStrictEqual(expectation);
-}
+import { delay, Test, exercise } from '../__helpers__';
 
 describe('Given a CSP', () => {
   // Routines
@@ -857,7 +833,7 @@ describe('Given a CSP', () => {
   // timeout
 
   describe('when we use the timeout method', () => {
-    xit('should create a channel that is self closing after X amount of time', () => {
+    it('should create a channel that is self closing after X amount of time', () => {
       const ch = timeout(10);
 
       return exercise(
@@ -873,7 +849,7 @@ describe('Given a CSP', () => {
             log(`take2=${(yield take(ch)).toString()}`);
           }
         ),
-        [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=Symbol(ENDED)', '<B', 'put2=Symbol(ENDED)', '<A' ],
+        [ '>A', '>B', 'put1=true', 'take1=foo', 'put2=Symbol(ENDED)', '<A', 'take2=Symbol(ENDED)', '<B' ],
         30
       );
     });
@@ -882,7 +858,7 @@ describe('Given a CSP', () => {
   // reset
 
   describe('when we use the `reset` method', () => {
-    xit('should put the channel in its initial state', () => {
+    it('should put the channel in its initial state', () => {
       const ch = chan(buffer.sliding(2));
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -925,164 +901,6 @@ describe('Given a CSP', () => {
           spy.mockReset();
         }
       );
-    });
-  });
-
-  // filter
-
-  describe('when we use the filter method', () => {
-    xit('should return a new channel that only receives the filtered data', () => {
-      const ch1 = chan();
-      const ch2 = ch1.filter(v => v > 10);
-
-      exercise(
-        Test(
-          function * A(log) {
-            log(`put1=${(yield put(ch1, 5)).toString()}`);
-            log(`put2=${(yield put(ch1, 12)).toString()}`);
-            log(`put3=${(yield put(ch1, 20)).toString()}`);
-            log(`put4=${(yield put(ch1, 4)).toString()}`);
-          },
-          function * B(log) {
-            ch2.take(v => log(`take1=${v}`));
-            ch2.take(v => log(`take2=${v}`));
-            ch2.take(v => log(`take3=${v}`));
-            ch2.take(v => log(`take4=${v}`));
-          }
-        ),
-        [ '>A', 'put1=true', 'put2=true', 'put3=true', 'put4=true', '<A', '>B', 'take1=12', 'take1=20', '<B' ]
-      );
-    });
-  });
-
-  // map
-
-  describe('when we use the map method', () => {
-    xit('should return a new channel that receives the mapped data', () => {
-      const ch1 = chan();
-      const ch2 = ch1.map(v => v * 2);
-      const ch3 = ch1.map(v => v * 3);
-
-      exercise(
-        Test(
-          function * A(log) {
-            log(`put1=${(yield put(ch1, 5)).toString()}`);
-            log(`put2=${(yield put(ch1, 12)).toString()}`);
-          },
-          function * B(log) {
-            ch2.take(v => log(`take2_1=${v}`));
-            ch2.take(v => log(`take2_2=${v}`));
-            ch3.take(v => log(`take3_1=${v}`));
-            ch3.take(v => log(`take3_2=${v}`));
-          }
-        ),
-        [ '>A', 'put1=true', 'put2=true', '<A', '>B', 'take2_1=10', 'take2_1=24', 'take3_1=15', 'take3_1=36', '<B' ]
-      );
-    });
-  });
-
-  // state
-
-  describe('when we want to have a state management', () => {
-    xit(`should
-      * allow us to keep a state
-      * allow us to read and write`, () => {
-      const spy = jest.fn();
-      const s = state(10);
-      const increment = s.set((current, incrementWith) => {
-        return current + (incrementWith || 1);
-      });
-      const read = s.map(value => `value: ${value}`);
-      const moreThen = s.filter(value => value > 14);
-
-      read.take(spy);
-      read.subscribe(spy);
-      moreThen.subscribe(spy);
-
-      expect(s.getState()).toBe(10);
-
-      increment.put();
-      increment.put(4);
-      increment.put();
-
-      expect(s.getState()).toBe(16);
-      expect(spy).toBeCalledWithArgs([ 'value: 10' ], [ 'value: 11' ], [ 'value: 15' ], [ 15 ], [ 'value: 16' ], [ 16 ]);
-    });
-    xit('should NOT do the initial put if there is no initial state', () => {
-      const s = state();
-      const read = s.map();
-      const update = s.set();
-      const spy = jest.fn();
-
-      read.subscribe(spy);
-      update.put(42);
-
-      expect(spy).toBeCalledWithArgs([ 42 ]);
-    });
-    xit('should allow us to use async setter', async () => {
-      const s = state();
-      const read = s.map();
-      const update = s.set(async (_, newValue) => {
-        await delay(5);
-        return newValue + 100;
-      });
-
-      return exercise(
-        Test(
-          function * A(log) {
-            log(`take=${yield take(read)}`);
-          },
-          function * B() {
-            yield put(update, 42);
-          }
-        ),
-        [ '>A', '>B', '<B', 'take=142', '<A' ],
-        10
-      );
-    });
-    xit('should allow us destroy the state and its channels', () => {
-      const s = state(20);
-      const read = s.map();
-      const update = s.set();
-      const spy = jest.fn();
-
-      read.subscribe(spy);
-      update.put(30);
-      s.destroy();
-      update.put(40);
-
-      expect(spy).toBeCalledWithArgs([ 20 ], [ 30 ]);
-      expect(read.state()).toBe(chan.ENDED);
-      expect(update.state()).toBe(chan.ENDED);
-    });
-    xit('should allow us destruct the state and receive map and set channels', () => {
-      const [ read, write ] = state(20);
-      const spy = jest.fn();
-
-      read.subscribe(spy);
-      write.put(30);
-
-      expect(spy).toBeCalledWithArgs([ 20 ], [ 30 ]);
-    });
-  });
-
-  // more complex examples
-
-  describe('when we combine methods', () => {
-    xit('should work', () => {
-      const spy1 = jest.fn();
-      const spy2 = jest.fn();
-      const message = chan();
-      message.put('fOO');
-      const update = v => message.put(v);
-
-      message.map(value => value.toUpperCase()).subscribe(spy1);
-      message.map(value => value.toLowerCase()).subscribe(spy2);
-      update('Hello World');
-      update('cHao');
-
-      expect(spy1).toBeCalledWithArgs([ 'FOO' ], [ 'HELLO WORLD' ], [ 'CHAO' ]);
-      expect(spy2).toBeCalledWithArgs([ 'hello world' ], [ 'chao' ]);
     });
   });
 });

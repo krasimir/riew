@@ -1,9 +1,9 @@
 /* eslint-disable react/prop-types, react/jsx-key */
 import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
-import { delay, exerciseHTML } from '../../__helpers__';
-import riew from '../index';
-import { state, reset, register, chan, buffer } from '../../index';
+import { delay, exerciseHTML } from '../__helpers__';
+import riew from '../react/index';
+import { state, reset, register, chan } from '../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {

@@ -1,5 +1,5 @@
-import { chan } from './channel';
-import { isPromise } from '../utils';
+import { chan } from '../channel';
+import { isPromise } from '../../utils';
 
 export function state(...args) {
   let value = args[ 0 ];
