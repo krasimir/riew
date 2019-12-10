@@ -1,6 +1,6 @@
-import { getId, isPromise, isGenerator } from '../utils';
+import { getId, isPromise, isGenerator, getFuncName } from '../utils';
 import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
-import { grid, topicChannels, topic } from '../index';
+import { grid, pub, sub, topic } from '../index';
 import buffer from './buffer';
 
 // **************************************************** chan / channel
@@ -177,34 +177,44 @@ export function go(genFunc, args = [], done) {
     if (done && state === RUNNING) done(gen);
     return api;
   }
-  let alreadyDone = false;
   (function next(value) {
-    if (alreadyDone || state === STOPPED) {
-      // There are cases where the channel is closed but then we have more iteration
+    if (state === STOPPED) {
       return;
     }
     const i = gen.next(value);
     if (i.done === true) {
-      alreadyDone = true;
       if (done) done(i.value);
       return;
     }
     // pubsub topic
     if (typeof i.value.ch === 'string') {
-      i.value.ch = topic(i.value.ch);
-    }
-    switch (i.value.op) {
-      case PUT:
-        i.value.ch.put(i.value.item, next);
-        break;
-      case TAKE:
-        i.value.ch.take(next);
-        break;
-      case SLEEP:
-        setTimeout(next, i.value.ms);
-        break;
-      default:
-        throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
+      switch (i.value.op) {
+        case PUT:
+          pub(i.value.ch, i.value.item, next);
+          break;
+        case TAKE:
+          sub(i.value.ch, next, true);
+          break;
+        default:
+          throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
+      }
+      if (i.value.op === PUT) {
+        i.value.ch = topic(i.value.ch);
+      }
+    } else {
+      switch (i.value.op) {
+        case PUT:
+          i.value.ch.put(i.value.item, next);
+          break;
+        case TAKE:
+          i.value.ch.take(next);
+          break;
+        case SLEEP:
+          setTimeout(next, i.value.ms);
+          break;
+        default:
+          throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
+      }
     }
   })();
 

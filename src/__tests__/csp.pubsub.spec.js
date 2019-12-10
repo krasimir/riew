@@ -118,18 +118,35 @@ describe('Given a CSP pubsub extension', () => {
       * take from the topic's channel`, () => {
       expect(Object.keys(topicChannels())).toHaveLength(0);
 
-      const spy = jest.fn();
+      const spyTake1 = jest.fn();
+      const spyTake2 = jest.fn();
+      const spyPut = jest.fn();
+      const log = jest.fn();
 
-      go(function * () {
-        spy(`value is ${yield take('yyy')}`);
-      });
-      go(function * () {
-        spy(`(1) ${yield put('yyy', 42)}`);
-        spy(`(2) ${yield put('yyy', 100)}`);
-        spy(`(3) ${yield put('yyy', 200)}`);
-      });
+      sub('yyy', spyTake2);
 
-      expect(spy).toBeCalledWithArgs([ 'value is 42' ], [ '(1) true' ]);
+      go(
+        function * A() {
+          log('>A');
+          spyTake1(`value is ${yield take('yyy')}`);
+        },
+        [],
+        () => log('<A')
+      );
+      go(
+        function * B() {
+          log('>B');
+          spyPut(`(1) ${yield put('yyy', 42)}`);
+          spyPut(`(2) ${yield put('yyy', 100)}`);
+          spyPut(`(3) ${yield put('yyy', 200)}`);
+        },
+        [],
+        () => log('<B')
+      );
+
+      expect(spyTake1).toBeCalledWithArgs([ 'value is 42' ]);
+      expect(spyTake2).toBeCalledWithArgs([ 42 ], [ 100 ], [ 200 ]);
+      expect(log).toBeCalledWithArgs([ '>A' ], [ '>B' ], [ '<A' ], [ '<B' ]);
     });
   });
 });
