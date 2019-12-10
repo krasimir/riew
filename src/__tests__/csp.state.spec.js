@@ -1,87 +1,57 @@
-import { chan, put, take, state } from '../index';
-import { delay, Test, exercise } from '../__helpers__';
+import { state } from '../index';
 
 describe('Given a CSP state extension', () => {
-  describe('when we want to have a state management', () => {
-    fit(`should
-      * allow us to keep a state
-      * allow us to read and write`, () => {
-      const spy = jest.fn();
+  describe('when we use the built-in get and set', () => {
+    it('should retrieve and change the state value', () => {
       const s = state(10);
-      const increment = s.set((current, incrementWith) => {
-        return current + (incrementWith || 1);
-      });
-      const read = s.map(value => `value: ${value}`);
-      const moreThen = s.filter(value => value > 14);
 
-      read.take(spy);
-      read.subscribe(spy);
-      moreThen.subscribe(spy);
-
-      expect(s.getState()).toBe(10);
-
-      increment.put();
-      increment.put(4);
-      increment.put();
-
-      expect(s.getState()).toBe(16);
-      expect(spy).toBeCalledWithArgs([ 'value: 10' ], [ 'value: 11' ], [ 'value: 15' ], [ 15 ], [ 'value: 16' ], [ 16 ]);
+      expect(s.get(10));
+      s.set(20);
+      expect(s.get(20));
     });
-    xit('should NOT do the initial put if there is no initial state', () => {
-      const s = state();
-      const read = s.map();
-      const update = s.set();
+  });
+  describe('when we subscribe for state value changes', () => {
+    it('should notify us for state value changes', () => {
+      const s = state('foo');
+      const spy1 = jest.fn();
+      const spy2 = jest.fn();
+
+      s.sub(spy1, true);
+      s.sub(spy2);
+
+      s.set('bar');
+      s.set('baz');
+
+      expect(spy1).toBeCalledWithArgs([ 'foo' ], [ 'bar' ], [ 'baz' ]);
+      expect(spy2).toBeCalledWithArgs([ 'bar' ], [ 'baz' ]);
+    });
+  });
+  describe('when we unsubscribe', () => {
+    it('should not call our function anymore', () => {
+      const s = state('foo');
       const spy = jest.fn();
 
-      read.subscribe(spy);
-      update.put(42);
+      s.sub(spy);
+      s.set('bar');
+      s.unsub(spy);
+      s.set('baz');
+      s.set('moo');
 
-      expect(spy).toBeCalledWithArgs([ 42 ]);
+      expect(spy).toBeCalledWithArgs([ 'bar' ]);
     });
-    xit('should allow us to use async setter', async () => {
-      const s = state();
-      const read = s.map();
-      const update = s.set(async (_, newValue) => {
-        await delay(5);
-        return newValue + 100;
-      });
-
-      return exercise(
-        Test(
-          function * A(log) {
-            log(`take=${yield take(read)}`);
-          },
-          function * B() {
-            yield put(update, 42);
-          }
-        ),
-        [ '>A', '>B', '<B', 'take=142', '<A' ],
-        10
-      );
-    });
-    xit('should allow us destroy the state and its channels', () => {
-      const s = state(20);
-      const read = s.map();
-      const update = s.set();
+  });
+  describe('when we destroy the state', () => {
+    it('should delete pubsub', () => {
+      const s = state('foo');
       const spy = jest.fn();
 
-      read.subscribe(spy);
-      update.put(30);
+      s.sub(spy);
+      s.set('bar');
       s.destroy();
-      update.put(40);
+      s.set('baz');
+      s.set('moo');
 
-      expect(spy).toBeCalledWithArgs([ 20 ], [ 30 ]);
-      expect(read.state()).toBe(chan.ENDED);
-      expect(update.state()).toBe(chan.ENDED);
-    });
-    xit('should allow us destruct the state and receive map and set channels', () => {
-      const [ read, write ] = state(20);
-      const spy = jest.fn();
-
-      read.subscribe(spy);
-      write.put(30);
-
-      expect(spy).toBeCalledWithArgs([ 20 ], [ 30 ]);
+      expect(spy).toBeCalledWithArgs([ 'bar' ]);
     });
   });
 });

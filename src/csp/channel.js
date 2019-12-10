@@ -1,6 +1,6 @@
 import { getId, isPromise, isGenerator } from '../utils';
 import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
-import { grid } from '../index';
+import { grid, topicChannels, topic } from '../index';
 import buffer from './buffer';
 
 // **************************************************** chan / channel
@@ -188,6 +188,13 @@ export function go(genFunc, args = [], done) {
       alreadyDone = true;
       if (done) done(i.value);
       return;
+    }
+    if (typeof i.value.ch === 'string') {
+      let channels = topicChannels();
+      if (!channels[ i.value.ch ]) {
+        topic(i.value.ch);
+      }
+      i.value.ch = channels[ i.value.ch ].ch;
     }
     switch (i.value.op) {
       case PUT:

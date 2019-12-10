@@ -1,18 +1,32 @@
-import { chan } from '../channel';
+import { chan, buffer } from '../index';
+import { getId } from '../../utils';
 
 const PubSub = function () {
   let channels = {};
-  const createChannel = topic => {
+  const createChannel = (topic, b) => {
     if (!channels[ topic ]) {
-      const ch = chan();
-      const bus = (channels[ topic ] = {
-        ch,
-        subscribers: []
-      });
+      channels[ topic ] = {
+        ch: chan(getId('pubsub_' + topic), b || buffer.fixed()),
+        subscribers: [],
+        listen: false
+      };
+    } else {
+      // topic already created
+      // console.warn(`"${topic}" already created.`);
+    }
+  };
+  const listen = topic => {
+    if (channels[ topic ] && channels[ topic ].listen === false) {
+      const bus = channels[ topic ];
+      const ch = bus.ch;
+      bus.listen = true;
       (function taker() {
         ch.take(value => {
           if (value !== chan.CLOSED && value !== chan.ENDED) {
-            bus.subscribers.forEach(s => s(value));
+            bus.subscribers = bus.subscribers.filter(({ callback, once }) => {
+              callback(value);
+              return !once;
+            });
             taker();
           }
         });
@@ -21,9 +35,10 @@ const PubSub = function () {
   };
 
   const api = {
-    subscribe(topic, callback) {
+    subscribe(topic, callback, once = false) {
       createChannel(topic);
-      channels[ topic ].subscribers.push(callback);
+      channels[ topic ].subscribers.push({ callback, once });
+      listen(topic);
     },
     publish(topic, payload, callback) {
       createChannel(topic);
@@ -31,23 +46,23 @@ const PubSub = function () {
     },
     unsubscribe(topic, callback) {
       if (channels[ topic ]) {
-        channels[ topic ].subscribers = channels[ topic ].subscribers.filter(c => c !== callback);
+        channels[ topic ].subscribers = channels[ topic ].subscribers.filter(({ callback: c }) => c !== callback);
       }
     },
-    unsubscribeAll(topic) {
-      if (channels[ topic ]) {
-        channels[ topic ].subscribers = [];
-      }
-    },
-    reset() {
+    haltAll() {
+      Object.keys(channels).forEach(topic => channels[ topic ].ch.close());
       channels = {};
     },
-    deleteTopic(topic) {
+    halt(topic) {
       if (channels[ topic ]) {
         channels[ topic ].ch.close();
         delete channels[ topic ];
       }
-    }
+    },
+    getChannels() {
+      return channels;
+    },
+    topic: createChannel
   };
 
   return api;
@@ -58,5 +73,7 @@ export const sub = ps.subscribe;
 export const pub = ps.publish;
 export const unsub = ps.unsubscribe;
 export const unsubAll = ps.unsubscribeAll;
-export const pubsubReset = ps.reset;
-export const deleteTopic = ps.deleteTopic;
+export const haltAll = ps.haltAll;
+export const halt = ps.halt;
+export const topicChannels = ps.getChannels;
+export const topic = ps.topic;

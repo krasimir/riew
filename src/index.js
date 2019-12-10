@@ -1,5 +1,6 @@
 import h from './harvester';
 import g from './grid';
+import { haltAll } from './csp';
 export * from './csp';
 
 export const riew = (...args) => {
@@ -20,6 +21,6 @@ export const register = (name, whatever) => {
   h.defineProduct(name, () => whatever);
   return whatever;
 };
-export const reset = () => (g.reset(), h.reset());
+export const reset = () => (g.reset(), h.reset(), haltAll());
 export const harvester = h;
 export const grid = g;
