@@ -189,12 +189,9 @@ export function go(genFunc, args = [], done) {
       if (done) done(i.value);
       return;
     }
+    // pubsub topic
     if (typeof i.value.ch === 'string') {
-      let channels = topicChannels();
-      if (!channels[ i.value.ch ]) {
-        topic(i.value.ch);
-      }
-      i.value.ch = channels[ i.value.ch ].ch;
+      i.value.ch = topic(i.value.ch);
     }
     switch (i.value.op) {
       case PUT:

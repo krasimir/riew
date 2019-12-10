@@ -14,6 +14,7 @@ const PubSub = function () {
       // topic already created
       // console.warn(`"${topic}" already created.`);
     }
+    return channels[ topic ].ch;
   };
   const listen = topic => {
     if (channels[ topic ] && channels[ topic ].listen === false) {
