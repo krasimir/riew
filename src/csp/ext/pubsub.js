@@ -3,16 +3,14 @@ import { getId } from '../../utils';
 
 const PubSub = function () {
   let channels = {};
-  const createChannel = (topic, b) => {
+  const createTopic = (topic, b, initialValue) => {
     if (!channels[ topic ]) {
       channels[ topic ] = {
         ch: chan(getId('pubsub_' + topic), b || buffer.fixed()),
         subscribers: [],
-        listen: false
+        listen: false,
+        initialValue
       };
-    } else {
-      // topic already created
-      // console.warn(`"${topic}" already created.`);
     }
     return channels[ topic ].ch;
   };
@@ -37,12 +35,17 @@ const PubSub = function () {
 
   const api = {
     subscribe(topic, callback, once = false) {
-      createChannel(topic);
-      channels[ topic ].subscribers.push({ callback, once });
+      createTopic(topic);
+      if (!channels[ topic ].subscribers.find(({ callback: c }) => c === callback)) {
+        channels[ topic ].subscribers.push({ callback, once });
+        if (typeof channels[ topic ].initialValue !== 'undefined') {
+          callback(channels[ topic ].initialValue);
+        }
+      }
       listen(topic);
     },
     publish(topic, payload, callback) {
-      createChannel(topic);
+      createTopic(topic);
       channels[ topic ].ch.put(payload, callback);
     },
     unsubscribe(topic, callback) {
@@ -63,7 +66,10 @@ const PubSub = function () {
     getChannels() {
       return channels;
     },
-    topic: createChannel
+    topic: createTopic,
+    topicExists(topic) {
+      return !!channels[ topic ];
+    }
   };
 
   return api;
@@ -76,5 +82,6 @@ export const unsub = ps.unsubscribe;
 export const unsubAll = ps.unsubscribeAll;
 export const haltAll = ps.haltAll;
 export const halt = ps.halt;
-export const topicChannels = ps.getChannels;
+export const topics = ps.getChannels;
 export const topic = ps.topic;
+export const topicExists = ps.topicExists;

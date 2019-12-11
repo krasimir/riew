@@ -198,9 +198,6 @@ export function go(genFunc, args = [], done) {
         default:
           throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
       }
-      if (i.value.op === PUT) {
-        i.value.ch = topic(i.value.ch);
-      }
     } else {
       switch (i.value.op) {
         case PUT:

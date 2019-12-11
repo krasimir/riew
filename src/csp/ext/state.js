@@ -1,36 +1,43 @@
-import { halt, pub, sub, unsub } from '../index';
+import { halt, pub, sub, topic, topicExists } from '../index';
 import { getId } from '../../utils';
 
 export function state(...args) {
   let value = args[ 0 ];
-  const api = { '@state': true, 'id': getId('state') };
-  const LISTENERS = api.id + '_LISTENERS';
-  const WRITERS = api.id + '_WRITERS';
-
-  sub(WRITERS, newValue => {
-    value = newValue;
-    pub(LISTENERS, newValue);
-  });
-
-  api.select = func => () => func(value);
-  api.mutation = func => payload => pub(WRITERS, func(value, payload));
-  api.sub = (func, immediate = false) => {
-    sub(LISTENERS, func);
-    if (immediate) {
-      func(value);
+  const id = getId('state');
+  const readTopics = [];
+  const writeTopics = [];
+  const api = {
+    id,
+    '@state': true,
+    read(topicName, func = v => v) {
+      if (topicExists(topicName)) {
+        console.warn(`Topic with name ${topicName} already exists.`);
+        return false;
+      }
+      readTopics.push({ topicName, func });
+      topic(topicName, null, func(value));
+      return true;
+    },
+    write(topicName, reducer = (_, v) => v) {
+      if (topicExists(topicName)) {
+        console.warn(`Topic with name ${topicName} already exists.`);
+        return false;
+      }
+      writeTopics.push({ topicName });
+      sub(topicName, payload => {
+        value = reducer(value, payload);
+        readTopics.forEach(r => {
+          pub(r.topicName, r.func(value));
+        });
+      });
+      return true;
+    },
+    destroy() {
+      readTopics.forEach(({ topicName }) => halt(topicName));
+      writeTopics.forEach(({ topicName }) => halt(topicName));
+      value = undefined;
     }
   };
-  api.unsub = func => unsub(LISTENERS, func);
-  api.destroy = () => {
-    halt(LISTENERS);
-    halt(WRITERS);
-    api.select = api.mutation = () => () => {};
-    api.sub = api.unsub = api.get = api.set = () => {};
-    value = null;
-  };
-
-  api.get = api.select(v => v);
-  api.set = api.mutation((_, newValue) => newValue);
 
   return api;
 }

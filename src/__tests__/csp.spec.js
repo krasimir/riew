@@ -1,4 +1,4 @@
-import { chan, buffer, timeout, go, put, take, sleep, state } from '../index';
+import { chan, buffer, timeout, go, put, take, sleep } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
 describe('Given a CSP', () => {

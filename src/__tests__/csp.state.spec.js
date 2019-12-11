@@ -1,57 +1,54 @@
-import { state } from '../index';
+import { state, pub, sub, reset, topics } from '../index';
 
 describe('Given a CSP state extension', () => {
+  beforeEach(() => {
+    reset();
+  });
   describe('when we use the built-in get and set', () => {
     it('should retrieve and change the state value', () => {
       const s = state(10);
-
-      expect(s.get(10));
-      s.set(20);
-      expect(s.get(20));
-    });
-  });
-  describe('when we subscribe for state value changes', () => {
-    it('should notify us for state value changes', () => {
-      const s = state('foo');
       const spy1 = jest.fn();
       const spy2 = jest.fn();
 
-      s.sub(spy1, true);
-      s.sub(spy2);
+      s.read('R', value => `value is ${value}`);
+      s.write('W1', (current, newValue) => current + newValue);
+      s.write('W2', (current, newValue) => current * newValue);
 
-      s.set('bar');
-      s.set('baz');
+      sub('R', spy1);
+      sub('R', spy2);
+      pub('W1', 4);
+      pub('W1', 12);
+      pub('W2', 3);
 
-      expect(spy1).toBeCalledWithArgs([ 'foo' ], [ 'bar' ], [ 'baz' ]);
-      expect(spy2).toBeCalledWithArgs([ 'bar' ], [ 'baz' ]);
+      expect(spy1).toBeCalledWithArgs([ 'value is 10' ], [ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
+      expect(spy2).toBeCalledWithArgs([ 'value is 10' ], [ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
     });
   });
-  describe('when we unsubscribe', () => {
-    it('should not call our function anymore', () => {
-      const s = state('foo');
-      const spy = jest.fn();
+  describe('when we try creating a topic with the same name', () => {
+    it('should warn us', () => {
+      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const s = state(10);
 
-      s.sub(spy);
-      s.set('bar');
-      s.unsub(spy);
-      s.set('baz');
-      s.set('moo');
+      s.read('R');
+      s.read('R');
+      s.write('W');
+      s.write('W');
 
-      expect(spy).toBeCalledWithArgs([ 'bar' ]);
+      expect(spy).toBeCalledWithArgs([ 'Topic with name R already exists.' ], [ 'Topic with name W already exists.' ]);
+
+      spy.mockRestore();
     });
   });
   describe('when we destroy the state', () => {
-    it('should delete pubsub', () => {
+    it('should halt the created topics', () => {
       const s = state('foo');
-      const spy = jest.fn();
 
-      s.sub(spy);
-      s.set('bar');
+      s.read('R');
+      s.read('W');
+
+      expect(Object.keys(topics())).toHaveLength(2);
       s.destroy();
-      s.set('baz');
-      s.set('moo');
-
-      expect(spy).toBeCalledWithArgs([ 'bar' ]);
+      expect(Object.keys(topics())).toHaveLength(0);
     });
   });
 });

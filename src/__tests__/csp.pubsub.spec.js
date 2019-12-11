@@ -1,12 +1,12 @@
-import { sub, pub, unsub, haltAll, halt, topic, topicChannels, buffer, go, take, put } from '../index';
+import { sub, pub, unsub, halt, topic, topics, buffer, go, take, put, topicExists, reset } from '../index';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
-    haltAll();
+    reset();
   });
   describe('when we publish', () => {
     it('should provide an API for subscribing', () => {
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
@@ -21,7 +21,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
     });
     it('should create a dedicated channel for each topic', () => {
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
@@ -37,7 +37,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyB).toBeCalledWithArgs([ 'baz' ]);
     });
     it('should provide an API for unsubscribing', () => {
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
@@ -53,7 +53,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
     });
     it('should provide an API for deleting a topic', () => {
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
@@ -61,17 +61,17 @@ describe('Given a CSP pubsub extension', () => {
       sub('a', spyA);
       sub('a', spyB);
 
-      expect(Object.keys(topicChannels())).toHaveLength(1);
+      expect(Object.keys(topics())).toHaveLength(1);
 
       pub('a', 'foo');
       halt('a');
 
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
       expect(spyA).toBeCalledWithArgs([ 'foo' ]);
       expect(spyB).toBeCalledWithArgs([ 'foo' ]);
     });
     it('should provide an API for subscribing once', () => {
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
 
       const spy = jest.fn();
 
@@ -84,7 +84,7 @@ describe('Given a CSP pubsub extension', () => {
   });
   describe('when we set a custom buffer strategy', () => {
     it('should respect it', () => {
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
 
       const spy = jest.fn();
 
@@ -99,7 +99,7 @@ describe('Given a CSP pubsub extension', () => {
   });
   describe('when we create a topic and publish to it but there is no subscribers', () => {
     it('should flush all the pending puts into the subscriber callback', () => {
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
 
       const spy = jest.fn();
 
@@ -116,7 +116,7 @@ describe('Given a CSP pubsub extension', () => {
     it(`should be possible to
       * put to the topic's channel
       * take from the topic's channel`, () => {
-      expect(Object.keys(topicChannels())).toHaveLength(0);
+      expect(Object.keys(topics())).toHaveLength(0);
 
       const spyTake1 = jest.fn();
       const spyTake2 = jest.fn();
@@ -147,6 +147,32 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyTake1).toBeCalledWithArgs([ 'value is 42' ]);
       expect(spyTake2).toBeCalledWithArgs([ 42 ], [ 100 ], [ 200 ]);
       expect(log).toBeCalledWithArgs([ '>A' ], [ '>B' ], [ '<A' ], [ '<B' ]);
+    });
+  });
+  describe("when we set the topic's initial value", () => {
+    it('should resolve the subscriptions with that value at least once', () => {
+      expect(Object.keys(topics())).toHaveLength(0);
+
+      const spy1 = jest.fn();
+      const spy2 = jest.fn();
+
+      topic('XXX', null, 'foo');
+      sub('XXX', spy1);
+      sub('XXX', spy1);
+      sub('XXX', spy2);
+      pub('XXX', 'bar');
+
+      expect(spy1).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+      expect(spy2).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+    });
+  });
+  describe('when we check if a topic exists', () => {
+    it('should return true or false', () => {
+      expect(Object.keys(topics())).toHaveLength(0);
+
+      topic('AAA');
+      expect(topicExists('AAA')).toBe(true);
+      expect(topicExists('BBB')).toBe(false);
     });
   });
 });
