@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset, register, chan } from '../index';
+import { reset, register, sub, pub } from '../index';
 
 import { react, state } from '../index';
 
@@ -100,7 +100,7 @@ describe('Given the Riew library', () => {
         const FetchTime = riew(
           ({ location }) => (location ? <p>{ location }</p> : null),
           async ({ render, props }) => {
-            props.subscribe(({ city }) => render({ location: city }));
+            sub(props, ({ city }) => render({ location: city }));
           }
         );
         const App = function () {
@@ -139,23 +139,20 @@ describe('Given the Riew library', () => {
     it('should re-render the view with the new data', () => {
       return act(async () => {
         const repos = state([ { id: 'a', selected: false }, { id: 'b', selected: true } ]);
-        const update = repos.set((list = [], id) => {
-          if (typeof id === 'string') {
-            return list.map(repo => {
-              if (repo.id === id) {
-                return {
-                  ...repo,
-                  prs: [ 'foo', 'bar' ]
-                };
-              }
-              return repo;
-            });
-          }
-          return [ ...list, id ];
+        repos.write('update', (list = [], id) => {
+          return list.map(repo => {
+            if (repo.id === id) {
+              return {
+                ...repo,
+                prs: [ 'foo', 'bar' ]
+              };
+            }
+            return repo;
+          });
         });
+        repos.read('selector', list => list.filter(({ selected }) => selected));
 
-        const selector = repos.map(list => list.filter(({ selected }) => selected));
-        const change = id => update.put(id);
+        const change = id => pub('update', id);
         const View = ({ selector }) => {
           return (
             <div>
@@ -171,7 +168,7 @@ describe('Given the Riew library', () => {
           await delay(2);
           change('b');
         };
-        const R = riew(View, routine).with({ selector, change });
+        const R = riew(View, routine).with({ $selector: 'selector', change });
         const { container } = render(<R />);
 
         await delay(3);
@@ -195,32 +192,30 @@ describe('Given the Riew library', () => {
       });
     });
   });
-  describe('when we have a forked effect passed to a React component', () => {
-    describe('and we update the main effect', () => {
-      it('should re-render the react component with the forked data', () => {
+  describe('when we have a topic passed to a React component', () => {
+    describe('and we update the state', () => {
+      it('should re-render the react component with the correct data', () => {
         return act(async () => {
-          const ch = chan();
-          ch.put([ 15, 4, 12 ]);
-          const moreThen10 = ch.map(nums => nums.filter(n => n > 10));
+          const s = state([ 15, 4, 12 ]);
+          s.read('moreThen10', nums => nums.filter(n => n > 10));
           const Component = jest.fn().mockImplementation(() => null);
-          const R = riew(Component).with({ moreThen10 });
+          const R = riew(Component).with({ $data: 'moreThen10' });
 
           render(<R />);
           await delay(3);
-          ch.put([ 5, 6, 7, 120 ]);
+          pub(s.WRITE, [ 5, 6, 7, 120 ]);
           await delay(3);
-          expect(Component).toBeCalledWithArgs([ { moreThen10: [ 15, 12 ] }, {} ], [ { moreThen10: [ 120 ] }, {} ]);
+          expect(Component).toBeCalledWithArgs([ { data: [ 15, 12 ] }, {} ], [ { data: [ 120 ] }, {} ]);
         });
       });
     });
   });
-  describe('when we have a channel passed to two React component', () => {
+  describe('when we have a state passed to two React component', () => {
     describe('and unmount then update the state', () => {
       it('should not produce an error', () => {
         return act(async () => {
           const s = state(true);
-          const update = s.set();
-          const changeToFalse = () => update.put(false);
+          const changeToFalse = () => pub(s.WRITE, false);
 
           register('whee', s);
 
