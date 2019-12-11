@@ -1,86 +1,62 @@
-import { chan, buffer } from '../index';
+import { chan } from '../index';
 
-const PubSub = function () {
-  let channels = {};
-  const createTopic = (topic, b, initialValue) => {
-    if (!channels[ topic ]) {
-      channels[ topic ] = {
-        ch: chan(topic, b || buffer.fixed()),
-        subscribers: [],
-        listen: false,
-        initialValue
-      };
-    }
-    return channels[ topic ].ch;
-  };
-  const listen = topic => {
-    if (channels[ topic ] && channels[ topic ].listen === false) {
-      const bus = channels[ topic ];
-      const ch = bus.ch;
-      bus.listen = true;
-      (function taker() {
-        ch.take(value => {
-          if (value !== chan.CLOSED && value !== chan.ENDED) {
-            bus.subscribers = bus.subscribers.filter(({ callback, once }) => {
-              callback(value);
-              return !once;
-            });
-            taker();
-          }
-        });
-      })();
-    }
-  };
+let topics = {};
 
-  const api = {
-    subscribe(topic, callback, once = false) {
-      createTopic(topic);
-      if (!channels[ topic ].subscribers.find(({ callback: c }) => c === callback)) {
-        channels[ topic ].subscribers.push({ callback, once });
-        if (typeof channels[ topic ].initialValue !== 'undefined') {
-          callback(channels[ topic ].initialValue);
-        }
-      }
-      listen(topic);
-    },
-    publish(topic, payload, callback) {
-      createTopic(topic);
-      channels[ topic ].ch.put(payload, callback);
-    },
-    unsubscribe(topic, callback) {
-      if (channels[ topic ]) {
-        channels[ topic ].subscribers = channels[ topic ].subscribers.filter(({ callback: c }) => c !== callback);
-      }
-    },
-    haltAll() {
-      Object.keys(channels).forEach(topic => channels[ topic ].ch.close());
-      channels = {};
-    },
-    halt(topic) {
-      if (channels[ topic ]) {
-        channels[ topic ].ch.close();
-        delete channels[ topic ];
-      }
-    },
-    getChannels() {
-      return channels;
-    },
-    topic: createTopic,
-    topicExists(topic) {
-      return !!channels[ topic ];
-    }
-  };
-
-  return api;
+export const topic = key => {
+  if (!topics[ key ]) {
+    topics[ key ] = {
+      ch: chan(key),
+      subscribers: [],
+      listen: false
+    };
+  }
+  return topics[ key ].ch;
 };
-const ps = PubSub();
+export const sub = (key, callback) => {
+  topic(key);
+  if (!topics[ key ].subscribers.find(c => c === callback)) {
+    topics[ key ].subscribers.push(callback);
+  }
+  listen(key);
+};
+export const pub = (key, payload, callback) => {
+  topic(key);
+  topics[ key ].ch.put(payload, callback);
+  listen(key);
+};
 
-export const sub = ps.subscribe;
-export const pub = ps.publish;
-export const unsub = ps.unsubscribe;
-export const unsubAll = ps.unsubscribeAll;
-export const haltAll = ps.haltAll;
-export const halt = ps.halt;
-export const topics = ps.getChannels;
-export const topic = ps.topic;
-export const topicExists = ps.topicExists;
+export const unsub = (topic, callback) => {
+  if (topics[ topic ]) {
+    topics[ topic ].subscribers = topics[ topic ].subscribers.filter(c => c !== callback);
+  }
+};
+export const haltAll = () => {
+  Object.keys(topics).forEach(topic => topics[ topic ].ch.close());
+  topics = {};
+};
+export const halt = topic => {
+  if (topics[ topic ]) {
+    topics[ topic ].ch.close();
+    delete topics[ topic ];
+  }
+};
+export const getTopics = () => {
+  return topics;
+};
+export const topicExists = topic => {
+  return !!topics[ topic ];
+};
+
+const listen = key => {
+  if (topics[ key ] && topics[ key ].listen === false) {
+    topics[ key ].listen = true;
+    (function taker() {
+      topics[ key ].ch.take(value => {
+        if (value !== chan.CLOSED && value !== chan.ENDED) {
+          topics[ key ].subscribers.forEach(callback => callback(value));
+          taker();
+        }
+      });
+    })();
+  }
+};

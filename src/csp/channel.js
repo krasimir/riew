@@ -1,6 +1,6 @@
-import { getId, isPromise, isGenerator, getFuncName } from '../utils';
+import { getId, isPromise, isGenerator } from '../utils';
 import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
-import { grid, pub, sub, topic } from '../index';
+import { grid, pub, sub, unsub } from '../index';
 import buffer from './buffer';
 
 // **************************************************** chan / channel
@@ -21,9 +21,8 @@ export function chan(...args) {
     if (state === chan.CLOSED || state === chan.ENDED) {
       callback(state);
     } else {
-      api.buff.put(item, result => callback(result));
+      api.buff.put(item, callback);
     }
-
     return result;
   };
 
@@ -38,10 +37,6 @@ export function chan(...args) {
     if (state === chan.ENDED) {
       callback((result = chan.ENDED));
     } else {
-      // When we close a channel we do check if the buffer is empty.
-      // If it is not then it is safe to take from it.
-      // If it is empty the state here will be ENDED, not CLOSED.
-      // So there is no way to reach this point with CLOSED state and an empty buffer.
       if (state === chan.CLOSED && api.buff.isEmpty()) {
         api.state(chan.ENDED);
         callback((result = chan.ENDED));
@@ -49,7 +44,6 @@ export function chan(...args) {
         api.buff.take(r => callback((result = r)));
       }
     }
-
     return result;
   };
 
@@ -78,7 +72,6 @@ export function chan(...args) {
         });
       })();
     });
-
     return newCh;
   };
 
@@ -118,17 +111,14 @@ export function chan(...args) {
       });
     }
   };
-
   api.unmult = ch => {
     taps = taps.filter(c => c.id !== ch.id);
   };
-
   api.unmultAll = ch => {
     taps = [];
   };
 
   api.isActive = () => api.state() === OPEN;
-
   api.buff = buff;
   api.state = s => {
     if (typeof s !== 'undefined') {
@@ -186,35 +176,32 @@ export function go(genFunc, args = [], done) {
       if (done) done(i.value);
       return;
     }
-    // pubsub topic
-    if (typeof i.value.ch === 'string') {
-      switch (i.value.op) {
-        case PUT:
+    switch (i.value.op) {
+      case PUT:
+        if (typeof i.value.ch === 'string') {
           pub(i.value.ch, i.value.item, next);
-          break;
-        case TAKE:
-          sub(i.value.ch, next, true);
-          break;
-        default:
-          throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
-      }
-    } else {
-      switch (i.value.op) {
-        case PUT:
+        } else {
           i.value.ch.put(i.value.item, next);
-          break;
-        case TAKE:
+        }
+        break;
+      case TAKE:
+        if (typeof i.value.ch === 'string') {
+          const callback = (...args) => {
+            unsub(i.value.ch, callback);
+            next(...args);
+          };
+          sub(i.value.ch, callback);
+        } else {
           i.value.ch.take(next);
-          break;
-        case SLEEP:
-          setTimeout(next, i.value.ms);
-          break;
-        default:
-          throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
-      }
+        }
+        break;
+      case SLEEP:
+        setTimeout(next, i.value.ms);
+        break;
+      default:
+        throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
     }
   })();
-
   return api;
 }
 export function put(ch, item) {

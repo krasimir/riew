@@ -1,4 +1,5 @@
-import { state, pub, sub, reset, topics } from '../index';
+import { state, pub, sub, reset, topics, go, take, put, sleep } from '../index';
+import { delay } from '../__helpers__';
 
 describe('Given a CSP state extension', () => {
   beforeEach(() => {
@@ -75,6 +76,48 @@ describe('Given a CSP state extension', () => {
       expect(s.getValue()).toBe('foo');
       pub(s.WRITE, 'bar');
       expect(s.getValue()).toBe('bar');
+    });
+  });
+  describe('when we use state into a generator routine', () => {
+    fit('should still work', async () => {
+      const s = state('foo');
+      const log = jest.fn();
+
+      s.write('xxx', (current, newV) => current + newV);
+
+      go(
+        function * A() {
+          log('>A');
+          log('take1=' + (yield take(s.READ)));
+          log('take2=' + (yield take(s.READ)));
+          log('take3=' + (yield take(s.READ)));
+        },
+        [],
+        () => log('<A')
+      );
+      go(
+        function * B() {
+          log('>B');
+          log('put1=' + (yield put(s.WRITE, 'bar')));
+          yield sleep(2);
+          log('put2=' + (yield put('xxx', 'moo')));
+        },
+        [],
+        () => log('<B')
+      );
+
+      await delay(10);
+      expect(log).toBeCalledWithArgs(
+        [ '>A' ],
+        [ 'take1=foo' ],
+        [ '>B' ],
+        [ 'take2=bar' ],
+        [ 'put1=true' ],
+        [ 'take3=barmoo' ],
+        [ '<A' ],
+        [ 'put2=true' ],
+        [ '<B' ]
+      );
     });
   });
 });

@@ -95,10 +95,11 @@ function FixedBuffer() {
   };
   api.take = function (callback) {
     if (api.value.length === 0) {
-      api.takes.push(callback);
       if (api.puts.length > 0) {
         api.puts.shift()();
         api.take(callback);
+      } else {
+        api.takes.push(callback);
       }
     } else {
       var v = api.value.shift();
@@ -216,8 +217,6 @@ exports.go = go;
 exports.put = put;
 exports.take = take;
 exports.sleep = sleep;
-exports.ops = ops;
-exports.merge = merge;
 exports.timeout = timeout;
 exports.isChannel = isChannel;
 
@@ -261,7 +260,152 @@ function chan() {
 
   var api = { id: id, '@channel': true };
 
-  ops(api);
+  api.put = function (item, next) {
+    var result = void 0;
+    var callback = next;
+    if (typeof next === 'undefined') {
+      result = new Promise(function (resolve) {
+        return callback = resolve;
+      });
+    }
+
+    var state = api.state();
+    if (state === chan.CLOSED || state === chan.ENDED) {
+      callback(state);
+    } else {
+      api.buff.put(item, function (result) {
+        return callback(result);
+      });
+    }
+
+    return result;
+  };
+
+  api.take = function (next) {
+    var result = void 0;
+    var callback = next;
+    if (typeof next === 'undefined') {
+      result = new Promise(function (resolve) {
+        return callback = resolve;
+      });
+    }
+
+    var state = api.state();
+    if (state === chan.ENDED) {
+      callback(result = chan.ENDED);
+    } else {
+      // When we close a channel we do check if the buffer is empty.
+      // If it is not then it is safe to take from it.
+      // If it is empty the state here will be ENDED, not CLOSED.
+      // So there is no way to reach this point with CLOSED state and an empty buffer.
+      if (state === chan.CLOSED && api.buff.isEmpty()) {
+        api.state(chan.ENDED);
+        callback(result = chan.ENDED);
+      } else {
+        api.buff.take(function (r) {
+          return callback(result = r);
+        });
+      }
+    }
+
+    return result;
+  };
+
+  api.close = function () {
+    var newState = api.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
+    api.state(newState);
+    api.buff.puts.forEach(function (put) {
+      return put(newState);
+    });
+    api.buff.takes.forEach(function (take) {
+      return take(newState);
+    });
+    _index.grid.remove(api);
+  };
+
+  api.reset = function () {
+    api.state(_constants.OPEN);
+    api.buff.reset();
+  };
+
+  api.merge = function () {
+    for (var _len2 = arguments.length, channels = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      channels[_key2] = arguments[_key2];
+    }
+
+    var newCh = chan();
+
+    [api].concat(channels).forEach(function (ch) {
+      (function taker() {
+        ch.take(function (v) {
+          if (v !== _constants.CLOSED && v !== _constants.ENDED && newCh.state() === _constants.OPEN) {
+            newCh.put(v, taker);
+          }
+        });
+      })();
+    });
+
+    return newCh;
+  };
+
+  var isMultTakerFired = false;
+  var taps = [];
+  api.mult = function () {
+    for (var _len3 = arguments.length, channels = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+      channels[_key3] = arguments[_key3];
+    }
+
+    if (!isMultTakerFired) {
+      isMultTakerFired = true;
+      taps = taps.concat(channels);
+      (function taker() {
+        api.take(function (v) {
+          if (v !== _constants.CLOSED && v !== _constants.ENDED) {
+            var numOfSuccessfulPuts = 0;
+            var putFinished = function putFinished(chWithSuccessfulPut) {
+              numOfSuccessfulPuts += 1;
+              if (numOfSuccessfulPuts >= taps.length) {
+                taker();
+              }
+            };
+            taps.forEach(function (ch, idx) {
+              if (ch.state() === _constants.OPEN) {
+                ch.put(v, function () {
+                  return putFinished(ch);
+                });
+              } else {
+                numOfSuccessfulPuts += 1;
+                taps.splice(idx, 1);
+                putFinished();
+              }
+            });
+          }
+        });
+      })();
+    } else {
+      channels.forEach(function (ch) {
+        if (!taps.find(function (c) {
+          return ch.id === c.id;
+        })) {
+          taps.push(ch);
+        }
+      });
+    }
+  };
+
+  api.unmult = function (ch) {
+    taps = taps.filter(function (c) {
+      return c.id !== ch.id;
+    });
+  };
+
+  api.unmultAll = function (ch) {
+    taps = [];
+  };
+
+  api.isActive = function () {
+    return api.state() === _constants.OPEN;
+  };
 
   api.buff = buff;
   api.state = function (s) {
@@ -314,30 +458,41 @@ function go(genFunc) {
     if (done && state === RUNNING) done(gen);
     return api;
   }
-  var alreadyDone = false;
   (function next(value) {
-    if (alreadyDone || state === STOPPED) {
-      // There are cases where the channel is closed but then we have more iteration
+    if (state === STOPPED) {
       return;
     }
     var i = gen.next(value);
     if (i.done === true) {
-      alreadyDone = true;
       if (done) done(i.value);
       return;
     }
-    switch (i.value.op) {
-      case _constants.PUT:
-        i.value.ch.put(i.value.item, next);
-        break;
-      case _constants.TAKE:
-        i.value.ch.take(next);
-        break;
-      case _constants.SLEEP:
-        setTimeout(next, i.value.ms);
-        break;
-      default:
-        throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
+    // pubsub topic
+    if (typeof i.value.ch === 'string') {
+      switch (i.value.op) {
+        case _constants.PUT:
+          (0, _index.pub)(i.value.ch, i.value.item, next);
+          break;
+        case _constants.TAKE:
+          (0, _index.sub)(i.value.ch, next, true);
+          break;
+        default:
+          throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
+      }
+    } else {
+      switch (i.value.op) {
+        case _constants.PUT:
+          i.value.ch.put(i.value.item, next);
+          break;
+        case _constants.TAKE:
+          i.value.ch.take(next);
+          break;
+        case _constants.SLEEP:
+          setTimeout(next, i.value.ms);
+          break;
+        default:
+          throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
+      }
     }
   })();
 
@@ -356,162 +511,6 @@ function sleep() {
 }
 
 // **************************************************** ops
-
-function ops(ch) {
-  var opsTaker = false;
-  var observers = [];
-
-  function taker() {
-    if (!opsTaker) {
-      opsTaker = true;
-      var listen = function listen(v) {
-        if (v === _constants.CLOSED || v === _constants.ENDED) return;
-        observers.forEach(function (p) {
-          if (isChannel(p.observer)) {
-            p.observer.put(v);
-          } else {
-            p.observer(v);
-          }
-        });
-        ch.take(listen);
-      };
-      ch.take(listen);
-    }
-  }
-
-  ch.put = function (item, next) {
-    var result = void 0;
-    var callback = next;
-    if (typeof next === 'undefined') {
-      result = new Promise(function (resolve) {
-        return callback = resolve;
-      });
-    }
-
-    var state = ch.state();
-    if (state === chan.CLOSED || state === chan.ENDED) {
-      callback(state);
-    } else {
-      ch.buff.put(item, function (result) {
-        return callback(result);
-      });
-    }
-
-    return result;
-  };
-
-  ch.take = function (next) {
-    var result = void 0;
-    var callback = next;
-    if (typeof next === 'undefined') {
-      result = new Promise(function (resolve) {
-        return callback = resolve;
-      });
-    }
-
-    var state = ch.state();
-    if (state === chan.ENDED) {
-      callback(chan.ENDED);
-    } else {
-      // When we close a channel we do check if the buffer is empty.
-      // If it is not then it is safe to take from it.
-      // If it is empty the state here will be ENDED, not CLOSED.
-      // So there is no way to reach this point with CLOSED state and an empty buffer.
-      if (state === chan.CLOSED && ch.buff.isEmpty()) {
-        ch.state(chan.ENDED);
-        callback(chan.ENDED);
-      } else {
-        ch.buff.take(function (result) {
-          return callback(result);
-        });
-      }
-    }
-
-    return result;
-  };
-
-  ch.close = function () {
-    var newState = ch.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
-    ch.state(newState);
-    ch.buff.puts.forEach(function (put) {
-      return put(newState);
-    });
-    ch.buff.takes.forEach(function (take) {
-      return take(newState);
-    });
-    _index.grid.remove(ch);
-  };
-
-  ch.reset = function () {
-    ch.state(_constants.OPEN);
-    ch.buff.reset();
-  };
-
-  ch.subscribe = function (observer) {
-    var who = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : (0, _utils.getId)('who');
-
-    var id = (0, _utils.getId)('sub');
-    if (isChannel(observer)) {
-      who = observer.id;
-    }
-    if (!observers.find(function (p) {
-      return p.who === who;
-    })) {
-      observers.push({ id: id, observer: observer, who: who });
-    }
-    taker();
-    return function () {
-      var index = observers.findIndex(function (p) {
-        return p.id === id;
-      });
-      if (index >= 0) {
-        observers.splice(index, 1);
-      }
-    };
-  };
-
-  ch.map = function (func) {
-    var newCh = chan();
-    ch.subscribe(function (value) {
-      return newCh.put(func(value));
-    });
-    return newCh;
-  };
-
-  ch.filter = function (func) {
-    var newCh = chan();
-    ch.subscribe(function (value) {
-      if (func(value)) newCh.put(value);
-    });
-    return newCh;
-  };
-
-  ch.isActive = function () {
-    return ch.state() === _constants.OPEN;
-  };
-}
-
-function merge() {
-  var newCh = chan();
-
-  for (var _len2 = arguments.length, channels = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-    channels[_key2] = arguments[_key2];
-  }
-
-  channels.map(function (ch) {
-    var listen = function listen() {
-      ch.take(function (v) {
-        if (v !== _constants.CLOSED && v !== _constants.ENDED && newCh.state() === _constants.OPEN) {
-          newCh.put(v);
-          listen();
-        }
-      });
-    };
-    listen();
-  });
-
-  return newCh;
-}
 
 function timeout(interval) {
   var ch = chan();
@@ -546,7 +545,7 @@ function normalizeChannelArguments(args) {
   return [id, buff];
 }
 
-},{"../index":11,"../utils":14,"./buffer":4,"./constants":6}],6:[function(require,module,exports){
+},{"../index":12,"../utils":15,"./buffer":4,"./constants":6}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -560,6 +559,196 @@ var TAKE = exports.TAKE = 'TAKE';
 var SLEEP = exports.SLEEP = 'SLEEP';
 
 },{}],7:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.topicExists = exports.topic = exports.topics = exports.halt = exports.haltAll = exports.unsubAll = exports.unsub = exports.pub = exports.sub = undefined;
+
+var _index = require('../index');
+
+var PubSub = function PubSub() {
+  var channels = {};
+  var createTopic = function createTopic(topic, b, initialValue) {
+    if (!channels[topic]) {
+      channels[topic] = {
+        ch: (0, _index.chan)(topic, b || _index.buffer.fixed()),
+        subscribers: [],
+        listen: false,
+        initialValue: initialValue
+      };
+    }
+    return channels[topic].ch;
+  };
+  var listen = function listen(topic) {
+    if (channels[topic] && channels[topic].listen === false) {
+      var bus = channels[topic];
+      var ch = bus.ch;
+      bus.listen = true;
+      (function taker() {
+        ch.take(function (value) {
+          if (value !== _index.chan.CLOSED && value !== _index.chan.ENDED) {
+            bus.subscribers = bus.subscribers.filter(function (_ref) {
+              var callback = _ref.callback,
+                  once = _ref.once;
+
+              callback(value);
+              return !once;
+            });
+            taker();
+          }
+        });
+      })();
+    }
+  };
+
+  var api = {
+    subscribe: function subscribe(topic, callback) {
+      var once = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+      createTopic(topic);
+      if (!channels[topic].subscribers.find(function (_ref2) {
+        var c = _ref2.callback;
+        return c === callback;
+      })) {
+        channels[topic].subscribers.push({ callback: callback, once: once });
+        if (typeof channels[topic].initialValue !== 'undefined') {
+          callback(channels[topic].initialValue);
+        }
+      }
+      listen(topic);
+    },
+    publish: function publish(topic, payload, callback) {
+      createTopic(topic);
+      channels[topic].ch.put(payload, callback);
+    },
+    unsubscribe: function unsubscribe(topic, callback) {
+      if (channels[topic]) {
+        channels[topic].subscribers = channels[topic].subscribers.filter(function (_ref3) {
+          var c = _ref3.callback;
+          return c !== callback;
+        });
+      }
+    },
+    haltAll: function haltAll() {
+      Object.keys(channels).forEach(function (topic) {
+        return channels[topic].ch.close();
+      });
+      channels = {};
+    },
+    halt: function halt(topic) {
+      if (channels[topic]) {
+        channels[topic].ch.close();
+        delete channels[topic];
+      }
+    },
+    getChannels: function getChannels() {
+      return channels;
+    },
+
+    topic: createTopic,
+    topicExists: function topicExists(topic) {
+      return !!channels[topic];
+    }
+  };
+
+  return api;
+};
+var ps = PubSub();
+
+var sub = exports.sub = ps.subscribe;
+var pub = exports.pub = ps.publish;
+var unsub = exports.unsub = ps.unsubscribe;
+var unsubAll = exports.unsubAll = ps.unsubscribeAll;
+var haltAll = exports.haltAll = ps.haltAll;
+var halt = exports.halt = ps.halt;
+var topics = exports.topics = ps.getChannels;
+var topic = exports.topic = ps.topic;
+var topicExists = exports.topicExists = ps.topicExists;
+
+},{"../index":9}],8:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.state = state;
+exports.isState = isState;
+
+var _index = require('../index');
+
+var _utils = require('../../utils');
+
+function state() {
+  var value = arguments.length <= 0 ? undefined : arguments[0];
+  var id = (0, _utils.getId)('state');
+  var readTopics = [];
+  var writeTopics = [];
+  var isThereInitialValue = arguments.length > 0;
+  var api = {
+    id: id,
+    '@state': true,
+    'READ': id + '_READ',
+    'WRITE': id + '_WRITE',
+    read: function read(topicName) {
+      var func = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (v) {
+        return v;
+      };
+
+      if ((0, _index.topicExists)(topicName)) {
+        console.warn('Topic with name ' + topicName + ' already exists.');
+        return false;
+      }
+      readTopics.push({ topicName: topicName, func: func });
+      (0, _index.topic)(topicName, null, isThereInitialValue ? func(value) : undefined);
+      return true;
+    },
+    write: function write(topicName) {
+      var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (_, v) {
+        return v;
+      };
+
+      if ((0, _index.topicExists)(topicName)) {
+        console.warn('Topic with name ' + topicName + ' already exists.');
+        return false;
+      }
+      writeTopics.push({ topicName: topicName });
+      (0, _index.sub)(topicName, function (payload) {
+        value = reducer(value, payload);
+        readTopics.forEach(function (r) {
+          (0, _index.pub)(r.topicName, r.func(value));
+        });
+      });
+      return true;
+    },
+    destroy: function destroy() {
+      readTopics.forEach(function (_ref) {
+        var topicName = _ref.topicName;
+        return (0, _index.halt)(topicName);
+      });
+      writeTopics.forEach(function (_ref2) {
+        var topicName = _ref2.topicName;
+        return (0, _index.halt)(topicName);
+      });
+      value = undefined;
+    },
+    getValue: function getValue() {
+      return value;
+    }
+  };
+
+  api.read(api.READ);
+  api.write(api.WRITE);
+
+  return api;
+}
+
+function isState(s) {
+  return s && s['@state'] === true;
+}
+
+},{"../../utils":15,"../index":9}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -587,7 +776,7 @@ Object.keys(_channel).forEach(function (key) {
   });
 });
 
-var _state = require('./state');
+var _state = require('./ext/state');
 
 Object.keys(_state).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -599,132 +788,23 @@ Object.keys(_state).forEach(function (key) {
   });
 });
 
+var _pubsub = require('./ext/pubsub');
+
+Object.keys(_pubsub).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _pubsub[key];
+    }
+  });
+});
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-},{"./buffer":4,"./channel":5,"./state":8}],8:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.state = state;
-exports.isState = isState;
-
-var _channel = require('./channel');
-
-var _utils = require('../utils');
-
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
-}
-
-function state() {
-  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-    args[_key] = arguments[_key];
-  }
-
-  var value = args[0];
-  var onChange = [];
-  var channels = [];
-  var createChannel = function createChannel() {
-    var ch = (0, _channel.chan)();
-    channels.push(ch);
-    return ch;
-  };
-  var api = _defineProperty({
-    '@state': true,
-    getState: function getState() {
-      return value;
-    },
-    set: function set() {
-      var reducer = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function (c, v) {
-        return v;
-      };
-
-      var ch = createChannel();
-
-      ch.subscribe(function (newValue) {
-        var result = reducer(value, newValue);
-
-        if ((0, _utils.isPromise)(result)) {
-          result.then(function (v) {
-            value = v;
-            onChange.forEach(function (c) {
-              return c(value);
-            });
-          });
-        } else {
-          value = result;
-          onChange.forEach(function (c) {
-            return c(value);
-          });
-        }
-      });
-      return ch;
-    },
-    map: function map() {
-      var mapper = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function (v) {
-        return v;
-      };
-
-      var ch = createChannel();
-
-      onChange.push(function (value) {
-        ch.put(mapper(value));
-      });
-      if (args.length > 0) {
-        ch.put(mapper(value));
-      }
-      return ch;
-    },
-    filter: function filter(_filter) {
-      var ch = createChannel();
-
-      onChange.push(function (value) {
-        if (_filter(value)) {
-          ch.put(value);
-        }
-      });
-      if (_filter(value) && args.length > 0) {
-        ch.put(value);
-      }
-      return ch;
-    },
-    destroy: function destroy() {
-      onChange = [];
-      channels.forEach(function (ch) {
-        return ch.close();
-      });
-      channels = [];
-    }
-  }, Symbol.iterator, function () {
-    var out = [api.map(), api.set()];
-    var i = 0;
-
-    return {
-      next: function next() {
-        return {
-          value: out[i++],
-          done: i > api.length
-        };
-      }
-    };
-  });
-
-  return api;
-}
-
-function isState(s) {
-  return s && s['@state'] === true;
-}
-
-},{"../utils":14,"./channel":5}],9:[function(require,module,exports){
+},{"./buffer":4,"./channel":5,"./ext/pubsub":7,"./ext/state":8}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -771,7 +851,7 @@ var grid = Grid();
 
 exports.default = grid;
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -861,7 +941,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./grid":9,"./react":12,"./riew":13}],11:[function(require,module,exports){
+},{"./grid":10,"./react":13,"./riew":14}],12:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -934,12 +1014,12 @@ var register = exports.register = function register(name, whatever) {
   return whatever;
 };
 var reset = exports.reset = function reset() {
-  return _grid2.default.reset(), _harvester2.default.reset();
+  return _grid2.default.reset(), _harvester2.default.reset(), (0, _csp.haltAll)();
 };
 var harvester = exports.harvester = _harvester2.default;
 var grid = exports.grid = _grid2.default;
 
-},{"./csp":7,"./grid":9,"./harvester":10}],12:[function(require,module,exports){
+},{"./csp":9,"./grid":10,"./harvester":11}],13:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1071,7 +1151,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":11,"../utils":14}],13:[function(require,module,exports){
+},{"../index":12,"../utils":15}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1094,8 +1174,6 @@ var _index = require('./index');
 
 var _utils = require('./utils');
 
-var _csp = require('./csp');
-
 function _defineProperty(obj, key, value) {
   if (key in obj) {
     Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
@@ -1111,7 +1189,7 @@ var Renderer = function Renderer(viewFunc) {
 
   return {
     push: function push(newData) {
-      if (newData === _csp.chan.CLOSED || newData === _csp.chan.ENDED) {
+      if (newData === _index.chan.CLOSED || newData === _index.chan.ENDED) {
         return;
       }
       data = (0, _utils.accumulate)(data, newData);
@@ -1136,42 +1214,35 @@ function createRiew(viewFunc) {
     routines[_key - 1] = arguments[_key];
   }
 
+  var name = (0, _utils.getFuncName)(viewFunc);
   var riew = {
-    id: (0, _utils.getId)('r'),
-    name: (0, _utils.getFuncName)(viewFunc)
+    id: (0, _utils.getId)(name),
+    name: name
   };
   var renderer = Renderer(viewFunc);
-  var channels = [];
   var states = [];
   var cleanups = [];
   var runningRoutines = [];
   var externals = {};
-  var chan = function chan() {
-    var ch = _csp.chan.apply(undefined, arguments);
-    channels.push(ch);
-    return ch;
-  };
   var state = function state() {
-    var s = _csp.state.apply(undefined, arguments);
+    var s = _index.state.apply(undefined, arguments);
     states.push(s);
     return s;
   };
-  var viewCh = chan(riew.name + '_view');
-  var propsCh = chan(riew.name + '_props');
+  var VIEW_TOPIC = riew.id + '_view';
+  var PROPS_TOPIC = riew.id + '_props';
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
-      if ((0, _csp.isChannel)(value[key])) {
-        var ch = value[key];
-        ch.subscribe(function (v) {
-          viewCh.put(_defineProperty({}, key, v));
-        }, ch.id + riew.id);
-      } else if ((0, _csp.isState)(value[key])) {
-        var _state = value[key];
-        var _ch = _state.map();
-        _ch.subscribe(function (v) {
-          viewCh.put(_defineProperty({}, key, v));
-        }, _ch.id + riew.id);
+      if ((0, _index.isState)(value[key])) {
+        (0, _index.sub)(value[key].READ, function (v) {
+          (0, _index.pub)(VIEW_TOPIC, _defineProperty({}, key, v));
+        });
+      } else if (key.charAt(0) === '$') {
+        var viewKey = key.substr(1, key.length);
+        (0, _index.sub)(value[key], function (v) {
+          (0, _index.pub)(VIEW_TOPIC, _defineProperty({}, viewKey, v));
+        });
       } else {
         obj[key] = value[key];
       }
@@ -1183,17 +1254,18 @@ function createRiew(viewFunc) {
     var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     (0, _utils.requireObject)(props);
-    propsCh.subscribe(viewCh);
-    viewCh.subscribe(renderer.push);
+    (0, _index.sub)(PROPS_TOPIC, function (newProps) {
+      return (0, _index.pub)(VIEW_TOPIC, newProps);
+    });
+    (0, _index.sub)(VIEW_TOPIC, renderer.push);
     runningRoutines = routines.map(function (r) {
-      return (0, _csp.go)(r, [_extends({
+      return (0, _index.go)(r, [_extends({
         render: function render(value) {
           (0, _utils.requireObject)(value);
-          viewCh.put(normalizeRenderData(value));
+          (0, _index.pub)(VIEW_TOPIC, normalizeRenderData(value));
         },
-        chan: chan,
         state: state,
-        props: propsCh
+        props: PROPS_TOPIC
       }, externals)], function (result) {
         if (typeof result === 'function') {
           cleanups.push(result);
@@ -1201,9 +1273,9 @@ function createRiew(viewFunc) {
       });
     });
     if (!(0, _utils.isObjectEmpty)(externals)) {
-      viewCh.put(normalizeRenderData(externals));
+      (0, _index.pub)(VIEW_TOPIC, normalizeRenderData(externals));
     }
-    propsCh.put(props);
+    (0, _index.pub)(PROPS_TOPIC, props);
   };
 
   riew.unmount = function () {
@@ -1211,10 +1283,6 @@ function createRiew(viewFunc) {
       return c();
     });
     cleanups = [];
-    channels.forEach(function (c) {
-      return c.close();
-    });
-    channels = [];
     states.forEach(function (s) {
       return s.destroy();
     });
@@ -1224,13 +1292,15 @@ function createRiew(viewFunc) {
     });
     runningRoutines = [];
     renderer.destroy();
+    (0, _index.halt)(PROPS_TOPIC);
+    (0, _index.halt)(VIEW_TOPIC);
   };
 
   riew.update = function () {
     var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     (0, _utils.requireObject)(props);
-    propsCh.put(props);
+    (0, _index.pub)(PROPS_TOPIC, props);
   };
 
   riew.with = function () {
@@ -1264,7 +1334,7 @@ function createRiew(viewFunc) {
   return riew;
 }
 
-},{"./csp":7,"./index":11,"./utils":14}],14:[function(require,module,exports){
+},{"./index":12,"./utils":15}],15:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1333,5 +1403,5 @@ function accumulate(current, newData) {
   return _extends({}, current, newData);
 }
 
-},{}]},{},[11])(11)
+},{}]},{},[12])(12)
 });
