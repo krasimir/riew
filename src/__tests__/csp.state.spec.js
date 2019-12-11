@@ -6,7 +6,7 @@ describe('Given a CSP state extension', () => {
     reset();
   });
   describe('when we use the built-in get and set', () => {
-    it('should retrieve and change the state value', () => {
+    fit('should retrieve and change the state value', () => {
       const s = state(10);
       const spy1 = jest.fn();
       const spy2 = jest.fn();
@@ -79,7 +79,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we use state into a generator routine', () => {
-    fit('should still work', async () => {
+    it('should still work', async () => {
       const s = state('foo');
       const log = jest.fn();
 
