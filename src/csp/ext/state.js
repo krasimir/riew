@@ -39,6 +39,9 @@ export function state(...args) {
       readTopics.forEach(({ topicName }) => halt(topicName));
       writeTopics.forEach(({ topicName }) => halt(topicName));
       value = undefined;
+    },
+    getValue() {
+      return value;
     }
   };
 

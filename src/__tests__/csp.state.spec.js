@@ -68,4 +68,13 @@ describe('Given a CSP state extension', () => {
       expect(spy2).toBeCalledWithArgs([ 'a' ], [ 'b' ]);
     });
   });
+  describe('when we want to get the value by using the `getValue` method', () => {
+    it('should return the current state value', () => {
+      const s = state('foo');
+
+      expect(s.getValue()).toBe('foo');
+      pub(s.WRITE, 'bar');
+      expect(s.getValue()).toBe('bar');
+    });
+  });
 });

@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 import riew from '../react/index';
-import { state, reset, register, chan } from '../index';
+import { state, reset, register, pub, sub } from '../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
@@ -43,11 +43,10 @@ describe('Given the React riew function', () => {
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, () => {
         return act(async () => {
-          const s = chan();
-          s.put('foo');
+          const s = state('foo');
           const R = riew(({ state }) => <p>{ state }</p>, async function () {
             await delay(5);
-            s.put('bar');
+            pub(s.WRITE, 'bar');
           }).with({ state: s });
           const { container, unmount } = render(<R />);
 
@@ -61,10 +60,8 @@ describe('Given the React riew function', () => {
       describe('and we use a state that is exported into the grid', () => {
         it('should receive the state value and subscribe for changes', () => {
           return act(async () => {
-            const s = chan();
-            s.put(42);
-            const s2 = chan();
-            s2.put('foo');
+            const s = state(42);
+            const s2 = state('foo');
 
             register('hello', s);
 
@@ -76,7 +73,7 @@ describe('Given the React riew function', () => {
 
             await delay(3);
             exerciseHTML(container, '<p>foo42</p>');
-            s.put('200');
+            pub(s.WRITE, '200');
             await delay(3);
             exerciseHTML(container, '<p>foo200</p>');
           });
@@ -106,7 +103,7 @@ describe('Given the React riew function', () => {
           const propsSpy = jest.fn();
           const view = jest.fn().mockImplementation(() => null);
           const I = riew(view, function ({ props }) {
-            props.subscribe(propsSpy);
+            sub(props, propsSpy);
           });
 
           const { rerender } = render(<I foo='bar' />);
@@ -137,21 +134,19 @@ describe('Given the React riew function', () => {
       return act(async () => {
         const routine = ({ render }) => {
           const s = state([ { value: 2, selected: true }, { value: 67, selected: true } ]);
-          const value = s.map();
-          const select = s.set((current = [], payload) => {
-            if (typeof payload === 'number') {
-              return current.map(item => {
-                return {
-                  ...item,
-                  selected: item.value === payload ? false : item.selected
-                };
-              });
-            }
-            return [ ...current, payload ];
+          s.write('select', (current = [], payload) => {
+            return current.map(item => {
+              return {
+                ...item,
+                selected: item.value === payload ? false : item.selected
+              };
+            });
           });
-          const change = payload => select.put(payload);
+          const change = payload => {
+            pub('select', payload);
+          };
 
-          render({ value, change });
+          render({ value: s, change });
         };
         const View = ({ value, change }) => {
           return (
@@ -180,12 +175,11 @@ describe('Given the React riew function', () => {
       });
     });
   });
-  describe('when we register a channel', () => {
+  describe('when we register a state', () => {
     it('should provide the value to the react component', async () => {
       return act(async () => {
-        const s = chan();
-        s.put(true);
-        const changeToFalse = () => s.put(false);
+        const s = state(true);
+        const changeToFalse = () => pub(s.WRITE, false);
         const spy = jest.fn();
 
         register('whee', s);
