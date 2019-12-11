@@ -6,16 +6,19 @@ export function state(...args) {
   const id = getId('state');
   const readTopics = [];
   const writeTopics = [];
+  const isThereInitialValue = args.length > 0;
   const api = {
     id,
     '@state': true,
+    'READ': id + '_READ',
+    'WRITE': id + '_WRITE',
     read(topicName, func = v => v) {
       if (topicExists(topicName)) {
         console.warn(`Topic with name ${topicName} already exists.`);
         return false;
       }
       readTopics.push({ topicName, func });
-      topic(topicName, null, func(value));
+      topic(topicName, null, isThereInitialValue ? func(value) : undefined);
       return true;
     },
     write(topicName, reducer = (_, v) => v) {
@@ -38,6 +41,9 @@ export function state(...args) {
       value = undefined;
     }
   };
+
+  api.read(api.READ);
+  api.write(api.WRITE);
 
   return api;
 }

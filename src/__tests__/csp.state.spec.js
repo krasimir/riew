@@ -46,9 +46,26 @@ describe('Given a CSP state extension', () => {
       s.read('R');
       s.read('W');
 
-      expect(Object.keys(topics())).toHaveLength(2);
+      expect(Object.keys(topics())).toHaveLength(4);
       s.destroy();
       expect(Object.keys(topics())).toHaveLength(0);
+    });
+  });
+  describe('when we use the built-in read and write channels', () => {
+    it('should get and set the state value', () => {
+      const s = state('foo');
+      const s2 = state('a');
+      const spy = jest.fn();
+      const spy2 = jest.fn();
+
+      sub(s.READ, spy);
+      sub(s2.READ, spy2);
+
+      pub(s.WRITE, 'bar');
+      pub(s2.WRITE, 'b');
+
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+      expect(spy2).toBeCalledWithArgs([ 'a' ], [ 'b' ]);
     });
   });
 });

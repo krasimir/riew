@@ -1,12 +1,11 @@
 import { chan, buffer } from '../index';
-import { getId } from '../../utils';
 
 const PubSub = function () {
   let channels = {};
   const createTopic = (topic, b, initialValue) => {
     if (!channels[ topic ]) {
       channels[ topic ] = {
-        ch: chan(getId('pubsub_' + topic), b || buffer.fixed()),
+        ch: chan(topic, b || buffer.fixed()),
         subscribers: [],
         listen: false,
         initialValue

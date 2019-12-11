@@ -30,9 +30,10 @@ const Renderer = function (viewFunc) {
 };
 
 export default function createRiew(viewFunc, ...routines) {
+  const name = getFuncName(viewFunc);
   const riew = {
-    id: getId('r'),
-    name: getFuncName(viewFunc)
+    id: getId(name),
+    name
   };
   let renderer = Renderer(viewFunc);
   let states = [];
@@ -44,15 +45,19 @@ export default function createRiew(viewFunc, ...routines) {
     states.push(s);
     return s;
   };
-  const VIEW_TOPIC = getId(`${riew.name}_view`);
-  const PROPS_TOPIC = getId(`${riew.name}_props`);
+  const VIEW_TOPIC = `${riew.id}_view`;
+  const PROPS_TOPIC = `${riew.id}_props`;
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
       if (isState(value[ key ])) {
-        let state = value[ key ];
-        state.sub(v => {
+        sub(value[ key ].READ, v => {
           pub(VIEW_TOPIC, { [ key ]: v });
+        });
+      } else if (key.charAt(0) === '$') {
+        const viewKey = key.substr(1, key.length);
+        sub(value[ key ], v => {
+          pub(VIEW_TOPIC, { [ viewKey ]: v });
         });
       } else {
         obj[ key ] = value[ key ];

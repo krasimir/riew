@@ -5,7 +5,7 @@ import SerializeError from './SerializeError';
 
 const { SimpleConsole } = require('./Console');
 
-// global.console = new SimpleConsole(process.stdout, process.stderr);
+global.console = new SimpleConsole(process.stdout, process.stderr);
 
 function sanitize(something, showErrorInConsole = false) {
   var result;

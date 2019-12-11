@@ -1,6 +1,6 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { register, riew, reset, grid, chan, sleep, state } from '../index';
+import { register, riew, reset, grid, chan, sleep, state, pub, sub, topicExists } from '../index';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {
@@ -102,14 +102,13 @@ describe('Given the `riew` factory function', () => {
       expect(spy).not.toBeCalled();
     });
   });
-  describe('when we create a channel in the routine', () => {
-    fit(`should close the channel if the riew is unmounted
+  describe('when we create a state in the routine', () => {
+    it(`should destroy the state if the riew is unmounted
       and should remove the channel from the grid`, async () => {
-      let sp;
+      let s;
       const view = jest.fn();
-      const routine = function ({ chan }) {
-        sp = chan();
-        sp.put('foo');
+      const routine = function ({ state }) {
+        s = state('XXX');
       };
       const r = riew(view, routine);
 
@@ -117,19 +116,20 @@ describe('Given the `riew` factory function', () => {
 
       await delay(4);
 
-      expect(grid.getNodeById(sp.id)).toBeDefined();
+      expect(grid.getNodeById(s.WRITE)).toBeDefined();
+      expect(grid.getNodeById(s.READ)).toBeDefined();
       r.unmount();
-      expect(grid.getNodeById(sp.id)).not.toBeDefined();
+      expect(grid.getNodeById(s.WRITE)).not.toBeDefined();
+      expect(grid.getNodeById(s.READ)).not.toBeDefined();
       expect(view).toBeCalledWithArgs([ {} ]);
     });
-    xit('should send the state value to the view', async () => {
+    it('should send the state value to the view', async () => {
       const view = jest.fn();
-      const routine = async function ({ chan, render }) {
-        const ch = chan();
-        ch.put('foo');
-        render({ s: ch });
+      const routine = async function ({ state, render }) {
+        const s = state('foo');
+        render({ s });
         await delay(2);
-        ch.put('bar');
+        pub(s.WRITE, 'bar');
       };
       const r = riew(view, routine);
 
@@ -137,18 +137,18 @@ describe('Given the `riew` factory function', () => {
       await delay(4);
       expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
-    xit('should subscribe (only once) for the changes in the state and re-render the view', async () => {
+    it('should subscribe (only once) for the changes in the state and re-render the view', async () => {
       const view = jest.fn();
-      const se = async function ({ chan, render }) {
-        const s = chan();
-        s.put('foo');
+      const se = async function ({ state, render }) {
+        const s = state();
+        pub(s.WRITE, 'foo');
 
         render({ s });
         render({ s });
         render({ s });
         render({ s });
         await delay(4);
-        s.put('bar');
+        pub(s.WRITE, 'bar');
       };
       const r = riew(view, se);
 
@@ -156,19 +156,19 @@ describe('Given the `riew` factory function', () => {
       await delay(10);
       expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
-    describe('when we have multiple channels produced', () => {
-      xit('should still subscribe all of them', async () => {
+    describe('when we have multiple states produced', () => {
+      it('should still subscribe to all of them', async () => {
         const view = jest.fn();
-        const routine = async function ({ chan, render }) {
-          const message = chan();
-          const up = message.map(value => value.toUpperCase());
-          const lower = message.map(value => value.toLowerCase());
-          const update = v => message.put(v);
+        const routine = async function ({ state, render }) {
+          const message = state('foo');
+          message.read('up', v => v.toUpperCase());
+          message.read('lower', v => v.toLowerCase());
 
-          render({ up, lower });
-          update('Hello World');
+          render({ $up: 'up', $lower: 'lower' });
           await delay(2);
-          update('cHao');
+          pub(message.WRITE, 'Hello World');
+          await delay(2);
+          pub(message.WRITE, 'cHao');
           await delay(2);
           render({ a: 10 });
         };
@@ -177,22 +177,21 @@ describe('Given the `riew` factory function', () => {
         r.mount();
         await delay(10);
         expect(view).toBeCalledWithArgs(
+          [ { up: 'FOO', lower: 'foo' } ],
           [ { up: 'HELLO WORLD', lower: 'hello world' } ],
           [ { up: 'CHAO', lower: 'chao' } ],
           [ { up: 'CHAO', lower: 'chao', a: 10 } ]
         );
       });
     });
-    xit('should unsubscribe the channels and not render if we unmount', async () => {
+    it('should unsubscribe the channels and not render if we unmount', async () => {
       const view = jest.fn();
-      const routine = async function ({ chan, render }) {
-        const message = chan();
-        const update = () => message.put('foo');
-        message.put('Hello World');
+      const routine = async function ({ state, render }) {
+        const message = state('Hello World');
 
         render({ message });
         await delay(3);
-        update();
+        pub(message.WRITE, 'foo');
       };
       const r = riew(view, routine);
 
@@ -203,48 +202,47 @@ describe('Given the `riew` factory function', () => {
       expect(view).toBeCalledWithArgs([ { message: 'Hello World' } ]);
     });
   });
-  describe('when we send an external channel to the view and the view is unmounted', () => {
-    xit(`should
+  describe('when we send an external state to the view and the view is unmounted', () => {
+    it(`should
       * initially subscribe and then unsubscribe
       * keep the external subscriptions`, async () => {
       const spy = jest.fn();
-      const ch = chan();
+      const s = state('foo');
       const view = jest.fn();
       const routine = function ({ render }) {
-        render({ s: ch });
+        render({ s });
       };
       const r = riew(view, routine);
 
-      ch.put('foo');
-      ch.subscribe(spy);
+      sub(s.READ, spy);
 
       r.mount();
-      ch.put('baz');
+      pub(s.WRITE, 'baz');
       await delay();
       r.unmount();
-      ch.put('zoo');
+      pub(s.WRITE, 'zoo');
       await delay();
-      expect(ch.state()).toBe(chan.OPEN);
+      expect(topicExists(s.WRITE)).toBeDefined();
       expect(view).toBeCalledWithArgs([ { s: 'baz' } ]);
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'baz' ], [ 'zoo' ]);
     });
   });
-  describe('when we send a channel to the view', () => {
-    xit(`should
-      * pass the values from the channel to the view
-      * subscribe to the channel's values`, async () => {
+  describe('when we send a state to the view', () => {
+    it(`should
+      * pass the values from the state to the view
+      * subscribe to the state's updates`, async () => {
       const view = jest.fn().mockImplementation(async ({ change }) => {
         setTimeout(() => change(), 10);
       });
-      const routine = function ({ render, chan }) {
-        const s = chan();
-        const up = s.map(value => value.toUpperCase());
-        const change = () => s.put('bar');
+      const routine = function ({ render, state }) {
+        const s = state();
+        s.read('up', v => v.toUpperCase());
+        const change = () => pub(s.WRITE, 'bar');
 
-        s.put('foo');
-        render({ s: up, change });
-        render({ s: up, change });
-        render({ s: up, change });
+        pub(s.WRITE, 'foo');
+        render({ $s: 'up', change });
+        render({ $s: 'up', change });
+        render({ $s: 'up', change });
       };
       const r = riew(view, routine);
 
