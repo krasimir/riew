@@ -1,19 +1,18 @@
-import { state, pub, sub, reset, topics, go, take, put, sleep } from '../index';
-import { delay } from '../__helpers__';
+import { state, pub, sub, reset, getTopics, go, take, put } from '../index';
 
 describe('Given a CSP state extension', () => {
   beforeEach(() => {
     reset();
   });
   describe('when we use the built-in get and set', () => {
-    fit('should retrieve and change the state value', () => {
+    it('should retrieve and change the state value', () => {
       const s = state(10);
       const spy1 = jest.fn();
       const spy2 = jest.fn();
 
-      s.read('R', value => `value is ${value}`);
-      s.write('W1', (current, newValue) => current + newValue);
-      s.write('W2', (current, newValue) => current * newValue);
+      s.select('R', value => `value is ${value}`);
+      s.mutate('W1', (current, newValue) => current + newValue);
+      s.mutate('W2', (current, newValue) => current * newValue);
 
       sub('R', spy1);
       sub('R', spy2);
@@ -26,30 +25,23 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we try creating a topic with the same name', () => {
-    it('should warn us', () => {
-      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    it('should throw an error', () => {
       const s = state(10);
 
-      s.read('R');
-      s.read('R');
-      s.write('W');
-      s.write('W');
-
-      expect(spy).toBeCalledWithArgs([ 'Topic with name R already exists.' ], [ 'Topic with name W already exists.' ]);
-
-      spy.mockRestore();
+      s.select('R');
+      expect(() => s.select('R')).toThrowError('Topic with name R already exists.');
     });
   });
   describe('when we destroy the state', () => {
     it('should halt the created topics', () => {
       const s = state('foo');
 
-      s.read('R');
-      s.read('W');
+      s.select('R');
+      s.select('W');
 
-      expect(Object.keys(topics())).toHaveLength(4);
+      expect(Object.keys(getTopics())).toHaveLength(4);
       s.destroy();
-      expect(Object.keys(topics())).toHaveLength(0);
+      expect(Object.keys(getTopics())).toHaveLength(0);
     });
   });
   describe('when we use the built-in read and write channels', () => {
@@ -59,11 +51,11 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
       const spy2 = jest.fn();
 
-      sub(s.READ, spy);
-      sub(s2.READ, spy2);
+      sub(s.GET, spy);
+      sub(s2.GET, spy2);
 
-      pub(s.WRITE, 'bar');
-      pub(s2.WRITE, 'b');
+      pub(s.SET, 'bar');
+      pub(s2.SET, 'b');
 
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
       expect(spy2).toBeCalledWithArgs([ 'a' ], [ 'b' ]);
@@ -74,23 +66,26 @@ describe('Given a CSP state extension', () => {
       const s = state('foo');
 
       expect(s.getValue()).toBe('foo');
-      pub(s.WRITE, 'bar');
+      pub(s.SET, 'bar');
       expect(s.getValue()).toBe('bar');
     });
   });
   describe('when we use state into a generator routine', () => {
-    it('should still work', async () => {
+    it(`should
+      * have a non-blocking takes`, async () => {
       const s = state('foo');
       const log = jest.fn();
 
-      s.write('xxx', (current, newV) => current + newV);
+      s.mutate('xxx', (current, newV) => current + newV);
+      s.select('up', current => current.toUpperCase());
+      sub('up', value => log('sub=' + value));
 
       go(
         function * A() {
           log('>A');
-          log('take1=' + (yield take(s.READ)));
-          log('take2=' + (yield take(s.READ)));
-          log('take3=' + (yield take(s.READ)));
+          log('take1=' + (yield take(s.GET)));
+          log('take2=' + (yield take(s.GET)));
+          log('take3=' + (yield take('up')));
         },
         [],
         () => log('<A')
@@ -98,23 +93,24 @@ describe('Given a CSP state extension', () => {
       go(
         function * B() {
           log('>B');
-          log('put1=' + (yield put(s.WRITE, 'bar')));
-          yield sleep(2);
+          log('put1=' + (yield put(s.SET, 'bar')));
           log('put2=' + (yield put('xxx', 'moo')));
         },
         [],
         () => log('<B')
       );
 
-      await delay(10);
       expect(log).toBeCalledWithArgs(
+        [ 'sub=FOO' ],
         [ '>A' ],
         [ 'take1=foo' ],
-        [ '>B' ],
-        [ 'take2=bar' ],
-        [ 'put1=true' ],
-        [ 'take3=barmoo' ],
+        [ 'take2=foo' ],
+        [ 'take3=FOO' ],
         [ '<A' ],
+        [ '>B' ],
+        [ 'sub=BAR' ],
+        [ 'put1=true' ],
+        [ 'sub=BARMOO' ],
         [ 'put2=true' ],
         [ '<B' ]
       );

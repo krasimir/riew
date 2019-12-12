@@ -7,25 +7,31 @@ export function state(...args) {
   const readTopics = [];
   const writeTopics = [];
   const isThereInitialValue = args.length > 0;
+
+  function verifyTopic(topicName) {
+    if (topicExists(topicName)) {
+      throw new Error(`Topic with name ${topicName} already exists.`);
+    }
+  }
+
   const api = {
     id,
     '@state': true,
-    'READ': id + '_READ',
-    'WRITE': id + '_WRITE',
-    read(topicName, func = v => v) {
-      if (topicExists(topicName)) {
-        console.warn(`Topic with name ${topicName} already exists.`);
-        return false;
-      }
+    'GET': id + '_READ',
+    'SET': id + '_WRITE',
+    select(topicName, func = v => v) {
+      verifyTopic(topicName);
       readTopics.push({ topicName, func });
-      topic(topicName, null, isThereInitialValue ? func(value) : undefined);
-      return true;
+      topic(topicName)
+        .onSubscriberAdded(callback => {
+          if (isThereInitialValue) {
+            callback(func(value));
+          }
+        })
+        .onSubscriberRemoved(callback => {});
     },
-    write(topicName, reducer = (_, v) => v) {
-      if (topicExists(topicName)) {
-        console.warn(`Topic with name ${topicName} already exists.`);
-        return false;
-      }
+    mutate(topicName, reducer = (_, v) => v) {
+      verifyTopic(topicName);
       writeTopics.push({ topicName });
       sub(topicName, payload => {
         value = reducer(value, payload);
@@ -33,7 +39,6 @@ export function state(...args) {
           pub(r.topicName, r.func(value));
         });
       });
-      return true;
     },
     destroy() {
       readTopics.forEach(({ topicName }) => halt(topicName));
@@ -45,8 +50,8 @@ export function state(...args) {
     }
   };
 
-  api.read(api.READ);
-  api.write(api.WRITE);
+  api.select(api.GET);
+  api.mutate(api.SET);
 
   return api;
 }

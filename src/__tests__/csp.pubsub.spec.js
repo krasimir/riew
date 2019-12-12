@@ -1,4 +1,4 @@
-import { sub, pub, unsub, halt, topic, getTopics, buffer, go, take, put, topicExists, reset, grid } from '../index';
+import { sub, pub, unsub, halt, topic, getTopics, go, take, put, topicExists, reset, grid } from '../index';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -134,6 +134,22 @@ describe('Given a CSP pubsub extension', () => {
       topic('AAA');
       expect(topicExists('AAA')).toBe(true);
       expect(topicExists('BBB')).toBe(false);
+    });
+  });
+  describe('when we want to know if a new subscriber is added or removed', () => {
+    it('should return true or false', () => {
+      const added = jest.fn();
+      const removed = jest.fn();
+      const callback = () => {};
+
+      topic('foo')
+        .onSubscriberAdded(added)
+        .onSubscriberRemoved(removed);
+      sub('foo', callback);
+      unsub('foo', callback);
+
+      expect(added).toBeCalledWithArgs([ callback ]);
+      expect(removed).toBeCalledWithArgs([ callback ]);
     });
   });
 });
