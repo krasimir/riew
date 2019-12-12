@@ -1,4 +1,4 @@
-import { getId, isPromise, isGenerator } from '../utils';
+import { getId, isGeneratorFunction, isPromise } from '../utils';
 import { PUT, TAKE, SLEEP, OPEN, CLOSED, ENDED } from './constants';
 import { grid, pub, sub, unsub } from '../index';
 import buffer from './buffer';
@@ -144,74 +144,102 @@ chan.OPEN = OPEN;
 chan.CLOSED = CLOSED;
 chan.ENDED = ENDED;
 
-// **************************************************** go / generators
+// **************************************************** go
 
-export function go(genFunc, args = [], done) {
+export function go(func, done = () => {}, props = {}) {
   const RUNNING = 'RUNNING';
   const STOPPED = 'STOPPED';
-  const gen = genFunc(...args);
   let state = RUNNING;
-  const api = {
+
+  const noop = () => {};
+  const routineApi = {
     stop() {
       state = STOPPED;
     }
   };
+  const generatorFuncApi = {
+    put: (ch, item) => ({ ch, op: PUT, item }),
+    take: ch => ({ ch, op: TAKE }),
+    sleep: (ms = 0) => ({ op: SLEEP, ms })
+  };
+  const regularOrAsyncFuncApi = {
+    put: (ch, item, callback) => {
+      if (typeof callback === 'function') {
+        return ch.put(item, callback);
+      }
+      return new Promise(resolve => ch.put(item, resolve));
+    },
+    take: (ch, callback) => {
+      if (typeof callback === 'function') {
+        return ch.take(callback);
+      }
+      return new Promise(resolve => ch.take(resolve));
+    },
+    sleep: (ch, ms = 0, callback = noop) => {
+      if (typeof callback === 'function') {
+        return setTimeout(() => {
+          ch.close();
+          callback();
+        }, ms);
+      }
+      return new Promise(resolve =>
+        setTimeout(() => {
+          ch.close();
+          resolve();
+        }, ms)
+      );
+    }
+  };
 
-  if (!isGenerator(gen)) {
-    if (isPromise(gen)) {
-      gen.then(r => {
+  if (isGeneratorFunction(func)) {
+    const gen = func({ ...props, ...generatorFuncApi });
+    (function next(value) {
+      if (state === STOPPED) {
+        return;
+      }
+      const i = gen.next(value);
+      if (i.done === true) {
+        if (done) done(i.value);
+        return;
+      }
+      switch (i.value.op) {
+        case PUT:
+          if (typeof i.value.ch === 'string') {
+            pub(i.value.ch, i.value.item, next);
+          } else {
+            i.value.ch.put(i.value.item, next);
+          }
+          break;
+        case TAKE:
+          if (typeof i.value.ch === 'string') {
+            const callback = (...args) => {
+              unsub(i.value.ch, callback);
+              next(...args);
+            };
+            sub(i.value.ch, callback);
+          } else {
+            i.value.ch.take(next);
+          }
+          break;
+        case SLEEP:
+          setTimeout(next, i.value.ms);
+          break;
+        default:
+          throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
+      }
+    })();
+  } else {
+    const result = func({ ...props, ...regularOrAsyncFuncApi });
+    if (isPromise(result)) {
+      result.then(r => {
         if (done && state === RUNNING) done(r);
       });
-      return api;
+    } else {
+      if (done && state === RUNNING) done(result);
     }
-    if (done && state === RUNNING) done(gen);
-    return api;
   }
-  (function next(value) {
-    if (state === STOPPED) {
-      return;
-    }
-    const i = gen.next(value);
-    if (i.done === true) {
-      if (done) done(i.value);
-      return;
-    }
-    switch (i.value.op) {
-      case PUT:
-        if (typeof i.value.ch === 'string') {
-          pub(i.value.ch, i.value.item, next);
-        } else {
-          i.value.ch.put(i.value.item, next);
-        }
-        break;
-      case TAKE:
-        if (typeof i.value.ch === 'string') {
-          const callback = (...args) => {
-            unsub(i.value.ch, callback);
-            next(...args);
-          };
-          sub(i.value.ch, callback);
-        } else {
-          i.value.ch.take(next);
-        }
-        break;
-      case SLEEP:
-        setTimeout(next, i.value.ms);
-        break;
-      default:
-        throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
-    }
-  })();
-  return api;
-}
-export function put(ch, item) {
-  return { ch, op: PUT, item };
-}
-export function take(ch) {
-  return { ch, op: TAKE };
-}
-export function sleep(ms = 0) {
-  return { op: SLEEP, ms };
+
+  return routineApi;
 }
 
 // **************************************************** ops

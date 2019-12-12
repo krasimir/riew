@@ -31,10 +31,7 @@ const Renderer = function (viewFunc) {
 
 export default function createRiew(viewFunc, ...routines) {
   const name = getFuncName(viewFunc);
-  const riew = {
-    id: getId(name),
-    name
-  };
+  const riew = { id: getId(name), name };
   let renderer = Renderer(viewFunc);
   let states = [];
   let cleanups = [];
