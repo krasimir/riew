@@ -1,6 +1,6 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { register, riew, reset, grid, sleep, state, pub, sub, topicExists } from '../index';
+import { register, riew, reset, grid, state, sub, topic, topicExists } from '../index';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {
@@ -89,7 +89,7 @@ describe('Given the `riew` factory function', () => {
     it('should not continue the routine', async () => {
       const view = jest.fn();
       const spy = jest.fn();
-      const routine = function * () {
+      const routine = function * ({ sleep }) {
         yield sleep(4);
         spy('ops');
       };
@@ -103,7 +103,7 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we create a state in the routine', () => {
-    xit(`should destroy the state if the riew is unmounted
+    it(`should destroy the state if the riew is unmounted
       and should remove the channel from the grid`, async () => {
       let s;
       const view = jest.fn();
@@ -116,20 +116,20 @@ describe('Given the `riew` factory function', () => {
 
       await delay(4);
 
-      expect(grid.getNodeById(s.WRITE)).toBeDefined();
-      expect(grid.getNodeById(s.READ)).toBeDefined();
+      expect(grid.getNodeById(s.SET)).toBeDefined();
+      expect(grid.getNodeById(s.GET)).toBeDefined();
       r.unmount();
-      expect(grid.getNodeById(s.WRITE)).not.toBeDefined();
-      expect(grid.getNodeById(s.READ)).not.toBeDefined();
+      expect(grid.getNodeById(s.SET)).not.toBeDefined();
+      expect(grid.getNodeById(s.GET)).not.toBeDefined();
       expect(view).toBeCalledWithArgs([ {} ]);
     });
-    xit('should send the state value to the view', async () => {
+    it('should send the state value to the view', async () => {
       const view = jest.fn();
-      const routine = async function ({ state, render }) {
+      const routine = async function ({ state, render, put }) {
         const s = state('foo');
         render({ s });
         await delay(2);
-        pub(s.WRITE, 'bar');
+        put(s.SET, 'bar');
       };
       const r = riew(view, routine);
 
@@ -137,18 +137,17 @@ describe('Given the `riew` factory function', () => {
       await delay(4);
       expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
-    xit('should subscribe (only once) for the changes in the state and re-render the view', async () => {
+    it('should subscribe (only once) for the changes in the state and re-render the view', async () => {
       const view = jest.fn();
-      const se = async function ({ state, render }) {
-        const s = state();
-        pub(s.WRITE, 'foo');
+      const se = async function ({ state, render, put }) {
+        const s = state('foo');
 
         render({ s });
         render({ s });
         render({ s });
         render({ s });
         await delay(4);
-        pub(s.WRITE, 'bar');
+        put(s.SET, 'bar');
       };
       const r = riew(view, se);
 
@@ -157,18 +156,18 @@ describe('Given the `riew` factory function', () => {
       expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'bar' } ]);
     });
     describe('when we have multiple states produced', () => {
-      xit('should still subscribe to all of them', async () => {
+      it('should still subscribe to all of them', async () => {
         const view = jest.fn();
-        const routine = async function ({ state, render }) {
+        const routine = async function ({ state, render, put }) {
           const message = state('foo');
-          message.read('up', v => v.toUpperCase());
-          message.read('lower', v => v.toLowerCase());
+          message.select('up', v => v.toUpperCase());
+          message.select('lower', v => v.toLowerCase());
 
           render({ $up: 'up', $lower: 'lower' });
           await delay(2);
-          pub(message.WRITE, 'Hello World');
+          put(message.SET, 'Hello World');
           await delay(2);
-          pub(message.WRITE, 'cHao');
+          put(message.SET, 'cHao');
           await delay(2);
           render({ a: 10 });
         };
@@ -184,14 +183,14 @@ describe('Given the `riew` factory function', () => {
         );
       });
     });
-    xit('should unsubscribe the channels and not render if we unmount', async () => {
+    it('should unsubscribe the channels and not render if we unmount', async () => {
       const view = jest.fn();
-      const routine = async function ({ state, render }) {
+      const routine = async function ({ state, render, put }) {
         const message = state('Hello World');
 
         render({ message });
         await delay(3);
-        pub(message.WRITE, 'foo');
+        put(message.SET, 'foo');
       };
       const r = riew(view, routine);
 
@@ -203,7 +202,7 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we send an external state to the view and the view is unmounted', () => {
-    xit(`should
+    it(`should
       * initially subscribe and then unsubscribe
       * keep the external subscriptions`, async () => {
       const spy = jest.fn();
@@ -214,32 +213,31 @@ describe('Given the `riew` factory function', () => {
       };
       const r = riew(view, routine);
 
-      sub(s.READ, spy);
+      sub(s.GET, spy);
 
       r.mount();
-      pub(s.WRITE, 'baz');
+      topic(s.SET).put('baz');
       await delay();
       r.unmount();
-      pub(s.WRITE, 'zoo');
+      topic(s.SET).put('zoo');
       await delay();
-      expect(topicExists(s.WRITE)).toBeDefined();
+      expect(topicExists(s.SET)).toBeDefined();
       expect(view).toBeCalledWithArgs([ { s: 'baz' } ]);
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'baz' ], [ 'zoo' ]);
     });
   });
   describe('when we send a state to the view', () => {
-    xit(`should
+    it(`should
       * pass the values from the state to the view
       * subscribe to the state's updates`, async () => {
       const view = jest.fn().mockImplementation(async ({ change }) => {
         setTimeout(() => change(), 10);
       });
-      const routine = function ({ render, state }) {
-        const s = state();
-        s.read('up', v => v.toUpperCase());
-        const change = () => pub(s.WRITE, 'bar');
+      const routine = function ({ render, state, put }) {
+        const s = state('foo');
+        s.select('up', v => v.toUpperCase());
+        const change = () => put(s.SET, 'bar');
 
-        pub(s.WRITE, 'foo');
         render({ $s: 'up', change });
         render({ $s: 'up', change });
         render({ $s: 'up', change });
@@ -252,7 +250,7 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we update the riew', () => {
-    xit('should render the view with accumulated props', async () => {
+    it('should render the view with accumulated props', async () => {
       const view = jest.fn();
       const r = riew(view);
 
@@ -265,7 +263,7 @@ describe('Given the `riew` factory function', () => {
 
       expect(view).toBeCalledWithArgs([ { foo: 'bar' } ], [ { foo: 'bar', baz: 'moo' } ], [ { foo: 'bar', baz: 'moo', x: 'y' } ]);
     });
-    xit('should deliver the riew input to the routine', async () => {
+    it('should deliver the riew input to the routine', async () => {
       const spy = jest.fn();
       const routine = function ({ props }) {
         sub(props, spy);
@@ -279,7 +277,7 @@ describe('Given the `riew` factory function', () => {
       expect(spy).toBeCalledWithArgs([ { foo: 'bar' } ], [ { baz: 'moo' } ]);
     });
     describe('and we update the data as a result of props change', () => {
-      xit('should NOT end up in a maximum call stack exceeded', async () => {
+      it('should NOT end up in a maximum call stack exceeded', async () => {
         const spy = jest.fn();
         const routine = function ({ props, render }) {
           sub(props, ({ n }) => {
@@ -297,7 +295,7 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('and when we use non object as initial props or for data method', () => {
-    xit('should throw an error', () => {
+    it('should throw an error', () => {
       expect(() => riew(() => {}).mount('foo')).toThrowError('A key-value object expected. Instead "foo" passed');
       expect(() =>
         riew(
@@ -312,7 +310,7 @@ describe('Given the `riew` factory function', () => {
   });
   describe('when we use `with` method', () => {
     describe('and we pass a channel', () => {
-      xit(`should send the state to the routine`, async () => {
+      it(`should send the state to the routine`, async () => {
         const view = jest.fn();
         const s1 = state('a');
         const s2 = state('b');
@@ -321,8 +319,8 @@ describe('Given the `riew` factory function', () => {
 
         r.mount();
         await delay(5);
-        pub(s1.WRITE, 'foo');
-        pub(s2.WRITE, 'bar');
+        topic(s1.SET).put('foo');
+        topic(s2.SET).put('bar');
         await delay();
 
         expect(view).toBeCalledWithArgs([ { s1: 'a', s2: 'b' } ], [ { s1: 'foo', s2: 'bar' } ]);
@@ -334,9 +332,9 @@ describe('Given the `riew` factory function', () => {
       });
     });
     describe('and when we pass something else', () => {
-      xit(`should pass the thing to the routine and view`, async () => {
+      it(`should pass the thing to the routine and view`, async () => {
         const s = state();
-        s.read('firstName', ({ firstName }) => firstName);
+        s.select('firstName', ({ firstName }) => firstName);
         const view = jest.fn();
         const spy = jest.fn();
         const r = riew(view, () => {
@@ -344,9 +342,9 @@ describe('Given the `riew` factory function', () => {
         }).with({ $firstName: 'firstName' });
 
         r.mount();
-        pub(s.WRITE, { firstName: 'John', lastName: 'Doe' });
+        topic(s.SET).put({ firstName: 'John', lastName: 'Doe' });
         await delay(5);
-        pub(s.WRITE, { firstName: 'Jon', lastName: 'Snow' });
+        topic(s.SET).put({ firstName: 'Jon', lastName: 'Snow' });
         await delay(5);
 
         expect(view).toBeCalledWithArgs([ { firstName: 'John' } ], [ { firstName: 'Jon' } ]);
@@ -354,7 +352,7 @@ describe('Given the `riew` factory function', () => {
       });
     });
     describe('when we want to use an exported state', () => {
-      xit('should recognize it and pass it down to the routine', async () => {
+      it('should recognize it and pass it down to the routine', async () => {
         const s = state('foo');
 
         register('xxx', s);
@@ -365,7 +363,7 @@ describe('Given the `riew` factory function', () => {
 
         r.mount();
         await delay();
-        pub(s.WRITE, 'bar');
+        topic(s.SET).put('bar');
         await delay();
 
         expect(view).toBeCalledWithArgs([ { xxx: 'foo' } ], [ { xxx: 'bar' } ]);
@@ -376,7 +374,7 @@ describe('Given the `riew` factory function', () => {
         ]);
       });
       describe('and when we have something else exported into the grid', () => {
-        xit('should pass it down as it is to the view and to the routine', async () => {
+        it('should pass it down as it is to the view and to the routine', async () => {
           const something = { id: 'fff', a: 'b' };
 
           register('something', something);
@@ -398,7 +396,7 @@ describe('Given the `riew` factory function', () => {
       });
     });
     describe('and when we pass primitive values', () => {
-      xit('should just proxy them to the routine and view', async () => {
+      it('should just proxy them to the routine and view', async () => {
         const spy = jest.fn();
         const r = riew(({ foo, bar }) => foo(bar + 10), ({ foo, bar }) => foo(bar)).with({
           foo: spy,
@@ -412,7 +410,7 @@ describe('Given the `riew` factory function', () => {
       });
     });
     describe('and when we use same instance with different externals', () => {
-      xit('should add externals on top of the existing ones', async () => {
+      it('should add externals on top of the existing ones', async () => {
         const spy = jest.fn();
         const r = riew(spy);
 
@@ -427,12 +425,12 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we want to test the riew', () => {
-    xit('should allow us to pass custom one-shot externals and keep the old riew working', async () => {
+    it('should allow us to pass custom one-shot externals and keep the old riew working', async () => {
       const s = state('foo');
       const s2 = state('bar');
-      const routine = jest.fn().mockImplementation(async ({ s }) => {
+      const routine = jest.fn().mockImplementation(async ({ s, put }) => {
         await delay();
-        pub(s.WRITE, 'baz');
+        put(s.SET, 'baz');
       });
       const view = jest.fn();
       const r = riew(view, routine).with({ s });
@@ -450,7 +448,7 @@ describe('Given the `riew` factory function', () => {
     });
   });
   describe('when we send the same routine to different views', () => {
-    xit('should re-render them if the state changes', async () => {
+    it('should re-render them if the state changes', async () => {
       const s = state('xxx');
       const routine = function ({ render }) {
         render({ s });
@@ -464,9 +462,9 @@ describe('Given the `riew` factory function', () => {
       r2.mount();
 
       await delay();
-      pub(s.WRITE, 'foo');
+      topic(s.SET).put('foo');
       await delay();
-      pub(s.WRITE, 'bar');
+      topic(s.SET).put('bar');
       await delay(5);
 
       expect(view1).toBeCalledWithArgs([ { s: 'xxx' } ], [ { s: 'foo' } ], [ { s: 'bar' } ]);
@@ -475,7 +473,7 @@ describe('Given the `riew` factory function', () => {
   });
   describe('when we work with state', () => {
     describe('when we create state from within a routine', () => {
-      xit(`should
+      it(`should
         * still subscribe as usual for the newly created channels
         * destroy the state and its channels if the riew is unmounted`, async () => {
         const states = [];
@@ -495,16 +493,16 @@ describe('Given the `riew` factory function', () => {
         await delay(4);
         r.unmount();
         expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'baz' } ]);
-        states.forEach(s => expect(topicExists(s.WRITE)).toBe(false));
+        states.forEach(s => expect(topicExists(s.SET)).toBe(false));
       });
-      xit('should accept a state via the `render` method', async () => {
-        const routine = async function ({ state, render }) {
+      it('should accept a state via the `render` method', async () => {
+        const routine = async function ({ state, render, put }) {
           const counter = state(1);
-          counter.write('increment', current => current + 1);
+          counter.mutate('increment', current => current + 1);
 
           render({ counter });
           await delay(2);
-          pub('increment');
+          put('increment');
         };
         const view = jest.fn();
         const r = riew(view, routine);
@@ -513,13 +511,13 @@ describe('Given the `riew` factory function', () => {
         await delay(4);
         expect(view).toBeCalledWithArgs([ { counter: 1 } ], [ { counter: 2 } ]);
       });
-      xit('should accept a state via the `with` method', async () => {
+      it('should accept a state via the `with` method', async () => {
         const counter = state(12);
         register('counter', counter);
-        const routine = async function ({ counter }) {
-          counter.write('increment', current => current + 1);
+        const routine = async function ({ counter, put }) {
+          counter.mutate('increment', current => current + 1);
           await delay(2);
-          pub('increment');
+          put('increment');
         };
         const view = jest.fn();
         const r = riew(view, routine).with('counter');

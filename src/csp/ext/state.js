@@ -17,8 +17,8 @@ export function state(...args) {
   const api = {
     id,
     '@state': true,
-    'GET': id + '_READ',
-    'SET': id + '_WRITE',
+    'GET': id + '_GET',
+    'SET': id + '_SET',
     select(topicName, func = v => v) {
       verifyTopic(topicName);
       readTopics.push({ topicName, func });
