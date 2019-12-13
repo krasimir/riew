@@ -1,4 +1,4 @@
-import { halt, sub, topic, topicExists } from '../index';
+import { halt, sub, topic, channelExists } from '../index';
 import { getId } from '../../utils';
 
 export function state(...args) {
@@ -9,7 +9,7 @@ export function state(...args) {
   const isThereInitialValue = args.length > 0;
 
   function verifyTopic(topicName) {
-    if (topicExists(topicName)) {
+    if (channelExists(topicName)) {
       throw new Error(`Topic with name ${topicName} already exists.`);
     }
   }

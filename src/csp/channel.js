@@ -1,5 +1,5 @@
 import { getId } from '../utils';
-import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP } from './constants';
+import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, CLOSE } from './constants';
 import { grid } from '../index';
 import buffer from './buffer';
 
@@ -67,11 +67,11 @@ export function chan(...args) {
   };
 
   api.sub = callback => {
+    listen();
     if (!subscribers.find(c => c === callback)) {
       subscribers.push(callback);
       onSubscriberAddedCallback(callback);
     }
-    listen();
   };
 
   api.unsub = callback => {
@@ -135,6 +135,22 @@ export function take(id, callback) {
   }
 }
 
+export function close(id) {
+  if (isChannel(id)) id = id.id;
+  chan(id).close();
+  return { op: CLOSE };
+}
+
+export function sub(id, callback) {
+  if (isChannel(id)) id = id.id;
+  chan(id).sub(callback);
+}
+
+export function unsub(id, callback) {
+  if (isChannel(id)) id = id.id;
+  chan(id).unsub(callback);
+}
+
 export function sleep(ms, callback) {
   if (typeof callback === 'function') {
     setTimeout(callback, ms);
@@ -143,12 +159,10 @@ export function sleep(ms, callback) {
   }
 }
 
-export const sub = (id, callback) => chan(id).sub(callback);
-export const unsub = (id, callback) => chan(id).unsub(callback);
-
-export function isChannel(ch) {
-  return ch && ch[ '@channel' ] === true;
-}
+export const isChannel = ch => ch && ch[ '@channel' ] === true;
+export const cspReset = () => (channels = {});
+export const getChannels = () => channels;
+export const channelExists = id => !!channels[ id ];
 
 // **************************************************** utils
 
@@ -169,7 +183,3 @@ function normalizeChannelArguments(args) {
   }
   return [ id, buff ];
 }
-
-export const cspReset = () => {
-  channels = {};
-};

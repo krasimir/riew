@@ -1,4 +1,4 @@
-import { state, topic, sub, reset, getTopics, go } from '../index';
+import { state, topic, sub, reset, getChannels, go } from '../index';
 
 describe('Given a CSP state extension', () => {
   beforeEach(() => {
@@ -39,9 +39,9 @@ describe('Given a CSP state extension', () => {
       s.select('R');
       s.select('W');
 
-      expect(Object.keys(getTopics())).toHaveLength(4);
+      expect(Object.keys(getChannels())).toHaveLength(4);
       s.destroy();
-      expect(Object.keys(getTopics())).toHaveLength(0);
+      expect(Object.keys(getChannels())).toHaveLength(0);
     });
   });
   describe('when we use the built-in read and write channels', () => {

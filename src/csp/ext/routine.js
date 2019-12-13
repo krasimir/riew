@@ -1,4 +1,4 @@
-import { PUT, TAKE, SLEEP } from '../constants';
+import { PUT, TAKE, CLOSE, SLEEP } from '../constants';
 
 export function go(func, done = () => {}, ...args) {
   const RUNNING = 'RUNNING';
@@ -27,6 +27,9 @@ export function go(func, done = () => {}, ...args) {
         break;
       case TAKE:
         i.value.ch.take(next);
+        break;
+      case CLOSE:
+        next();
         break;
       case SLEEP:
         setTimeout(next, i.value.ms);

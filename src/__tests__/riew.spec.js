@@ -1,6 +1,6 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { register, riew, reset, grid, state, sub, topic, topicExists } from '../index';
+import { register, riew, reset, grid, state, sub, topic, channelExists } from '../index';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {
@@ -221,7 +221,7 @@ describe('Given the `riew` factory function', () => {
       r.unmount();
       topic(s.SET).put('zoo');
       await delay();
-      expect(topicExists(s.SET)).toBeDefined();
+      expect(channelExists(s.SET)).toBeDefined();
       expect(view).toBeCalledWithArgs([ { s: 'baz' } ]);
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'baz' ], [ 'zoo' ]);
     });
@@ -493,7 +493,7 @@ describe('Given the `riew` factory function', () => {
         await delay(4);
         r.unmount();
         expect(view).toBeCalledWithArgs([ { s: 'foo' } ], [ { s: 'baz' } ]);
-        states.forEach(s => expect(topicExists(s.SET)).toBe(false));
+        states.forEach(s => expect(channelExists(s.SET)).toBe(false));
       });
       it('should accept a state via the `render` method', async () => {
         const routine = async function ({ state, render, put }) {

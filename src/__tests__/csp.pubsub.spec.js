@@ -1,4 +1,4 @@
-import { chan, sub, unsub, halt, topic, getTopics, go, topicExists, reset, grid } from '../index';
+import { chan, sub, unsub, getChannels, go, channelExists, reset, grid, take, put, close } from '../index';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -7,7 +7,7 @@ describe('Given a CSP pubsub extension', () => {
   describe('when we subscribe to a topic', () => {
     describe('and we publish to the same topic', () => {
       it('should call our callbacks', () => {
-        expect(Object.keys(getTopics())).toHaveLength(0);
+        expect(Object.keys(getChannels())).toHaveLength(0);
 
         const spyA = jest.fn();
         const spyB = jest.fn();
@@ -15,79 +15,67 @@ describe('Given a CSP pubsub extension', () => {
         sub('xxx', spyA);
         sub('xxx', spyB);
 
-        topic('xxx').put('foo');
-        topic('xxx').put('bar');
+        go(function * () {
+          yield put('xxx', 'foo');
+          yield put('xxx', 'bar');
+        });
 
         expect(spyA).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
         expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
       });
     });
     it('should provide an API for unsubscribing', () => {
-      expect(Object.keys(getTopics())).toHaveLength(0);
+      expect(Object.keys(getChannels())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
-      const t = topic('a');
 
       sub('a', spyA);
       sub('a', spyB);
 
-      t.put('foo');
-      unsub('a', spyA);
-      t.put('bar');
+      go(function * () {
+        yield put('a', 'foo');
+        unsub('a', spyA);
+        yield put('a', 'bar');
+      });
 
       expect(spyA).toBeCalledWithArgs([ 'foo' ]);
       expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
     });
     it('should create a dedicated channel for each topic', () => {
-      expect(Object.keys(getTopics())).toHaveLength(0);
+      expect(Object.keys(getChannels())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
-      const t1 = topic('topicA');
-      const t2 = topic('topicB');
 
       sub('topicA', spyA);
       sub('topicB', spyB);
 
-      t1.put('foo');
-      t1.put('bar');
-      t2.put('baz');
+      go(function * () {
+        yield put('topicA', 'foo');
+        yield put('topicA', 'bar');
+        yield put('topicB', 'baz');
+      });
 
       const gridNodes = grid.nodes().map(({ id }) => id);
 
       expect(gridNodes.includes('topicA')).toBe(true);
       expect(gridNodes.includes('topicB')).toBe(true);
-    });
-    it('should provide an API for deleting a topic', () => {
-      expect(Object.keys(getTopics())).toHaveLength(0);
-
-      const spyA = jest.fn();
-      const spyB = jest.fn();
-      const t = topic('a');
-
-      sub('a', spyA);
-      sub('a', spyB);
-
-      expect(Object.keys(getTopics())).toHaveLength(1);
-
-      t.put('foo');
-      halt('a');
-
-      expect(Object.keys(getTopics())).toHaveLength(0);
-      expect(spyA).toBeCalledWithArgs([ 'foo' ]);
-      expect(spyB).toBeCalledWithArgs([ 'foo' ]);
+      expect(spyA).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+      expect(spyB).toBeCalledWithArgs([ 'baz' ]);
     });
   });
   describe('when we subscribe to a topic after someone publish on it', () => {
     it('should NOT fire the callbacks', () => {
-      expect(Object.keys(getTopics())).toHaveLength(0);
+      expect(Object.keys(getChannels())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
-      const t = topic('topic');
 
-      t.put('foo');
+      go(function * () {
+        yield put('topic', 'foo');
+      });
+
       sub('topic', spyA);
       sub('topic', spyB);
 
@@ -95,11 +83,11 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyB).not.toBeCalled();
     });
   });
-  describe('when we want to use pubsub topics as part of routines', () => {
-    it(`should be possible to
+  describe('when we want to use pubsub as part of routines', () => {
+    fit(`should be possible to
       * put to the topic's channel
       * take from the topic's channel`, () => {
-      expect(Object.keys(getTopics())).toHaveLength(0);
+      expect(Object.keys(getChannels())).toHaveLength(0);
 
       const spyTake1 = jest.fn();
       const spyTake2 = jest.fn();
@@ -107,16 +95,19 @@ describe('Given a CSP pubsub extension', () => {
       const log = jest.fn();
 
       sub('yyy', spyTake2);
+      // ^
+      // we have overtaking of takes. The sub registers a listener taker
+      // and later we use a single take
 
       go(
-        function * A({ take }) {
+        function * A() {
           log('>A');
           spyTake1(`value is ${yield take('yyy')}`);
         },
         () => log('<A')
       );
       go(
-        function * B({ put }) {
+        function * B() {
           log('>B');
           spyPut(`(1) ${yield put('yyy', 42)}`);
           spyPut(`(2) ${yield put('yyy', 100)}`);
@@ -132,11 +123,11 @@ describe('Given a CSP pubsub extension', () => {
   });
   describe('when we check if a topic exists', () => {
     it('should return true or false', () => {
-      expect(Object.keys(getTopics())).toHaveLength(0);
+      expect(Object.keys(getChannels())).toHaveLength(0);
 
       topic('AAA');
-      expect(topicExists('AAA')).toBe(true);
-      expect(topicExists('BBB')).toBe(false);
+      expect(channelExists('AAA')).toBe(true);
+      expect(channelExists('BBB')).toBe(false);
     });
   });
   describe('when we want to know if a new subscriber is added or removed', () => {

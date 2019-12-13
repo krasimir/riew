@@ -1,5 +1,5 @@
-import { chan, buffer, timeout, go, merge, mult, unmult, unmultAll, reset, put, take, sleep } from '../index';
-import { delay, Test, exercise } from '../__helpers__';
+import { chan, buffer, timeout, go, merge, mult, unmult, unmultAll, reset, put, take, sleep, close } from '../index';
+import { delay, Test, exercise, ENDED } from '../__helpers__';
 
 describe('Given a CSP', () => {
   beforeEach(() => {
@@ -143,7 +143,7 @@ describe('Given a CSP', () => {
           },
           function * B(log) {
             log(`take1=${(yield take(ch)).toString()}`);
-            ch.close();
+            close(ch);
             log(`take2=${(yield take(ch)).toString()}`);
             log(`take3=${(yield take(ch)).toString()}`);
           }
