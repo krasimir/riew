@@ -33,6 +33,7 @@ describe('Given a CSP', () => {
   });
 
   // Routines basics
+
   describe('and we run a routine', () => {
     describe('which is a generator', () => {
       it('should put and take from channels', () => {
@@ -139,6 +140,22 @@ describe('Given a CSP', () => {
       routine.stop();
       await delay(4);
       expect(spy).not.toBeCalled();
+    });
+    describe('and we use topics to control flow', () => {
+      it('should work', async () => {
+        const spy = jest.fn();
+        go(async function ({ take }) {
+          const value = await take('xxx');
+          spy('foo' + value);
+        });
+        go(async function ({ sleep, put }) {
+          await sleep(10);
+          await put('xxx', 10);
+          spy('done');
+        });
+        await delay(15);
+        expect(spy).toBeCalledWithArgs([ 'foo10' ], [ 'done' ]);
+      });
     });
   });
 

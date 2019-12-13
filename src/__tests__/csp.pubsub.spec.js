@@ -12,13 +12,12 @@ describe('Given a CSP pubsub extension', () => {
 
         const spyA = jest.fn();
         const spyB = jest.fn();
-        const t = topic('xxx');
 
         sub('xxx', spyA);
         sub('xxx', spyB);
 
-        t.put('foo');
-        t.put('bar');
+        topic('xxx').put('foo');
+        topic('xxx').put('bar');
 
         expect(spyA).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
         expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);

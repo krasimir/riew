@@ -47,16 +47,14 @@ export function go(func, done = () => {}, props = {}) {
       }
       return new Promise(resolve => action(resolve));
     },
-    sleep: (ch, ms = 0, callback = noop) => {
+    sleep: (ms = 0, callback = noop) => {
       if (typeof callback === 'function') {
         return setTimeout(() => {
-          ch.close();
           callback();
         }, ms);
       }
       return new Promise(resolve =>
         setTimeout(() => {
-          ch.close();
           resolve();
         }, ms)
       );
