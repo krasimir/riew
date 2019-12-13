@@ -1,4 +1,4 @@
-import { chan, isChannel } from '../index';
+import { chan, isChannel, ENDED, CLOSED } from '../index';
 
 let topics = {};
 const noop = () => {};
@@ -25,7 +25,7 @@ function Topic(key) {
       isListening = true;
       (function taker() {
         ch.take(value => {
-          if (value !== chan.CLOSED && value !== chan.ENDED) {
+          if (value !== CLOSED && value !== ENDED) {
             subscribers.forEach(callback => callback(value));
             taker();
           }
@@ -74,12 +74,12 @@ function Topic(key) {
 }
 
 export const topic = key => Topic(key);
-export const sub = (key, callback) => Topic(key).sub(callback);
-export const unsub = (key, callback) => Topic(key).unsub(callback);
-export const haltAll = () => {
-  Object.keys(topics).forEach(key => topics[ key ].halt());
-  topics = {};
-};
+// export const sub = (key, callback) => Topic(key).sub(callback);
+// export const unsub = (key, callback) => Topic(key).unsub(callback);
+// export const haltAll = () => {
+//   Object.keys(topics).forEach(key => topics[ key ].halt());
+//   topics = {};
+// };
 export const halt = key => {
   if (topics[ key ]) {
     topics[ key ].halt();

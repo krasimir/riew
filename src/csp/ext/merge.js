@@ -1,4 +1,4 @@
-import { chan } from '../index';
+import { chan, ENDED, CLOSED, OPEN } from '../index';
 
 export function merge(...channels) {
   const newCh = chan();
@@ -6,7 +6,7 @@ export function merge(...channels) {
   channels.forEach(ch => {
     (function taker() {
       ch.take(v => {
-        if (v !== chan.CLOSED && v !== chan.ENDED && newCh.state() === chan.OPEN) {
+        if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
           newCh.put(v, taker);
         }
       });

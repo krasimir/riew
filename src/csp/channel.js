@@ -1,49 +1,60 @@
 import { getId } from '../utils';
-import { OPEN, CLOSED, ENDED } from './constants';
+import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP } from './constants';
 import { grid } from '../index';
 import buffer from './buffer';
 
-// **************************************************** chan / channel
+let channels = {};
+let noop = () => {};
 
 export function chan(...args) {
   let state = OPEN;
   let [ id, buff ] = normalizeChannelArguments(args);
-  let api = { id, '@channel': true };
 
-  const initializeOp = next => {
-    let result;
-    let callback = next;
-    if (typeof next === 'undefined') {
-      result = new Promise(resolve => (callback = resolve));
+  if (channels[ id ]) {
+    return channels[ id ];
+  }
+
+  let api = (channels[ id ] = { id, '@channel': true });
+  let subscribers = [];
+  let onSubscriberAddedCallback = noop;
+  let onSubscriberRemovedCallback = noop;
+
+  let isListening = false;
+  let listen = () => {
+    if (!isListening) {
+      isListening = true;
+      (function taker() {
+        api.take(value => {
+          if (value !== CLOSED && value !== ENDED) {
+            subscribers.forEach(callback => callback(value));
+            taker();
+          }
+        });
+      })();
     }
-    return [ result, callback ];
   };
 
-  api.put = (item, next) => {
-    let [ result, callback ] = initializeOp(next);
+  api.put = (item, callback = () => {}) => {
     let state = api.state();
-    if (state === chan.CLOSED || state === chan.ENDED) {
+    if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
       api.buff.put(item, callback);
     }
-    return result;
   };
 
-  api.take = next => {
-    let [ result, callback ] = initializeOp(next);
+  api.take = callback => {
     let state = api.state();
-    if (state === chan.ENDED) {
-      callback((result = chan.ENDED));
+    if (state === ENDED) {
+      callback(ENDED);
     } else {
-      if (state === chan.CLOSED && api.buff.isEmpty()) {
-        api.state(chan.ENDED);
-        callback((result = chan.ENDED));
+      if (state === CLOSED && api.buff.isEmpty()) {
+        api.state(ENDED);
+        callback(ENDED);
       } else {
-        api.buff.take(r => callback((result = r)));
+        api.buff.take(r => callback(r));
       }
     }
-    return result;
   };
 
   api.close = () => {
@@ -52,6 +63,33 @@ export function chan(...args) {
     api.buff.puts.forEach(put => put(newState));
     api.buff.takes.forEach(take => take(newState));
     grid.remove(api);
+    subscribers = [];
+  };
+
+  api.sub = callback => {
+    if (!subscribers.find(c => c === callback)) {
+      subscribers.push(callback);
+      onSubscriberAddedCallback(callback);
+    }
+    listen();
+  };
+
+  api.unsub = callback => {
+    subscribers = subscribers.filter(c => {
+      if (c !== callback) {
+        return true;
+      }
+      onSubscriberRemovedCallback(c);
+      return false;
+    });
+  };
+
+  api.onSubscriberAdded = callback => {
+    onSubscriberAddedCallback = callback;
+  };
+
+  api.onSubscriberRemoved = callback => {
+    onSubscriberRemovedCallback = callback;
   };
 
   api.reset = () => {
@@ -79,17 +117,40 @@ export function chan(...args) {
   return api;
 }
 
-// **************************************************** constants
+export function put(id, item, callback) {
+  if (isChannel(id)) id = id.id;
+  if (typeof callback === 'function') {
+    chan(id).put(item, callback);
+  } else {
+    return { ch: chan(id), op: PUT, item };
+  }
+}
 
-chan.OPEN = OPEN;
-chan.CLOSED = CLOSED;
-chan.ENDED = ENDED;
+export function take(id, callback) {
+  if (isChannel(id)) id = id.id;
+  if (typeof callback === 'function') {
+    chan(id).take(callback);
+  } else {
+    return { ch: chan(id), op: TAKE };
+  }
+}
 
-// **************************************************** utils
+export function sleep(ms, callback) {
+  if (typeof callback === 'function') {
+    setTimeout(callback, ms);
+  } else {
+    return { op: SLEEP, ms };
+  }
+}
+
+export const sub = (id, callback) => chan(id).sub(callback);
+export const unsub = (id, callback) => chan(id).unsub(callback);
 
 export function isChannel(ch) {
   return ch && ch[ '@channel' ] === true;
 }
+
+// **************************************************** utils
 
 function normalizeChannelArguments(args) {
   let id, buff;
@@ -108,3 +169,7 @@ function normalizeChannelArguments(args) {
   }
   return [ id, buff ];
 }
+
+export const cspReset = () => {
+  channels = {};
+};

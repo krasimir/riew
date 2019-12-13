@@ -26,9 +26,3 @@ export const accumulate = (current, newData) => ({ ...current, ...newData });
 export const isPromise = obj => obj && typeof obj[ 'then' ] === 'function';
 export const isGenerator = obj => obj && typeof obj[ 'next' ] === 'function' && typeof obj[ 'throw' ] === 'function';
 export const isObjectLiteral = obj => (obj ? obj.constructor === {}.constructor : false);
-export const isGeneratorFunction = obj => {
-  var constructor = obj.constructor;
-  if (!constructor) return false;
-  if (constructor.name === 'GeneratorFunction' || constructor.displayName === 'GeneratorFunction') return true;
-  return isGenerator(constructor.prototype);
-};

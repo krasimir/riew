@@ -1,34 +1,21 @@
-import { chan, buffer, timeout, go, merge, mult, unmult, unmultAll } from '../index';
+import { chan, buffer, timeout, go, merge, mult, unmult, unmultAll, reset, put, take, sleep } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
 describe('Given a CSP', () => {
+  beforeEach(() => {
+    reset();
+  });
   describe('when we have a channel', () => {
     it('should allow us to put and take from it', () => {
       const spy = jest.fn();
-      const ch = chan();
 
-      ch.take(spy);
-      ch.put('foo', spy);
+      take('X', spy);
+      put('X', 'foo', spy);
 
-      ch.put('bar', spy);
-      ch.take(spy);
+      put('X', 'bar', spy);
+      take('X', spy);
 
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ true ], [ true ], [ 'bar' ]);
-    });
-    it('should allow us to await on putting and taking', () => {
-      const spy = jest.fn();
-      const ch = chan();
-
-      async function A() {
-        spy(await ch.put('foo'));
-      }
-      async function B() {
-        spy(await ch.take());
-      }
-
-      return Promise.all([ B(), A() ]).then(() => {
-        expect(spy).toBeCalledWithArgs([ 'foo' ], [ true ]);
-      });
     });
   });
 
@@ -43,87 +30,23 @@ describe('Given a CSP', () => {
         const cleanup2 = jest.fn();
 
         go(
-          function * ({ take, put, what }) {
+          function * (what) {
             spy(yield take(ch));
             yield put(ch, what);
             return 'a';
           },
           cleanup1,
-          { what: 'pong' }
+          'pong'
         );
         go(
-          function * ({ put, take, what }) {
+          function * (what) {
             yield put(ch, what);
             spy(yield take(ch));
             return 'b';
           },
           cleanup2,
-          { what: 'ping' }
+          'ping'
         );
-        expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
-        expect(cleanup1).toBeCalledWithArgs([ 'a' ]);
-        expect(cleanup2).toBeCalledWithArgs([ 'b' ]);
-      });
-    });
-    describe('which is a plain function', () => {
-      it('should put and take from channels', () => {
-        const ch = chan();
-        const spy = jest.fn();
-        const cleanup1 = jest.fn();
-        const cleanup2 = jest.fn();
-
-        go(
-          function ({ take, put, what }) {
-            take(ch, v => {
-              spy(v);
-              put(ch, what);
-            });
-            return 'a';
-          },
-          cleanup1,
-          { what: 'pong' }
-        );
-        go(
-          function ({ take, put, what }) {
-            put(ch, what, () => {
-              take(ch, spy);
-            });
-            return 'b';
-          },
-          cleanup2,
-          { what: 'ping' }
-        );
-        expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
-        expect(cleanup1).toBeCalledWithArgs([ 'a' ]);
-        expect(cleanup2).toBeCalledWithArgs([ 'b' ]);
-      });
-    });
-    describe('which is a async function', () => {
-      it('should put and take from channels', async () => {
-        const ch = chan();
-        const spy = jest.fn();
-        const cleanup1 = jest.fn();
-        const cleanup2 = jest.fn();
-
-        go(
-          async function ({ take, put, what }) {
-            spy(await take(ch));
-            await put(ch, what);
-            return 'a';
-          },
-          cleanup1,
-          { what: 'pong' }
-        );
-        go(
-          async function ({ put, take, what }) {
-            await put(ch, what);
-            spy(await take(ch));
-            return 'b';
-          },
-          cleanup2,
-          { what: 'ping' }
-        );
-        await delay(2);
         expect(spy).toBeCalledWithArgs([ 'ping' ], [ 'pong' ]);
         expect(cleanup1).toBeCalledWithArgs([ 'a' ]);
         expect(cleanup2).toBeCalledWithArgs([ 'b' ]);
@@ -131,7 +54,7 @@ describe('Given a CSP', () => {
     });
     it('should provide an API to stop the routine', async () => {
       const spy = jest.fn();
-      const routine = go(function * A({ sleep }) {
+      const routine = go(function * A() {
         yield sleep(4);
         spy('foo');
       });
@@ -144,13 +67,13 @@ describe('Given a CSP', () => {
     describe('and we use topics to control flow', () => {
       it('should work', async () => {
         const spy = jest.fn();
-        go(async function ({ take }) {
-          const value = await take('xxx');
+        go(function * () {
+          const value = yield take('xxx');
           spy('foo' + value);
         });
-        go(async function ({ sleep, put }) {
-          await sleep(10);
-          await put('xxx', 10);
+        go(function * () {
+          yield sleep(10);
+          yield put('xxx', 10);
           spy('done');
         });
         await delay(15);
@@ -170,11 +93,11 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ put, log }) {
+          function * A(log) {
             yield put(ch, 'foo');
             log('put successful');
           },
-          function * B({ take, log }) {
+          function * B(log) {
             log(`take=${yield take(ch)}`);
           }
         ),
@@ -188,12 +111,12 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log }) {
+          function * A() {
             ch.put('foo');
             ch.put('bar');
             ch.put('zar');
           },
-          function * B({ take, log }) {
+          function * B(log) {
             log(`take1=${yield take(ch)}`);
             log(`take2=${yield take(ch)}`);
             log(`take3=${yield take(ch)}`);
@@ -213,12 +136,12 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ put, log }) {
+          function * A(log) {
             log(`p1=${(yield put(ch, 'foo')).toString()}`);
             log(`p2=${(yield put(ch, 'bar')).toString()}`);
             log(`p3=${(yield put(ch, 'zar')).toString()}`);
           },
-          function * B({ take, log }) {
+          function * B(log) {
             log(`take1=${(yield take(ch)).toString()}`);
             ch.close();
             log(`take2=${(yield take(ch)).toString()}`);
@@ -244,7 +167,7 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log, take }) {
+          function * A(log) {
             log(`take1=${(yield take(ch)).toString()}`);
           },
           function * B() {
@@ -266,7 +189,7 @@ describe('Given a CSP', () => {
 
       return exercise(
         Test(
-          function * A({ put, log, sleep }) {
+          function * A(log) {
             log(`p1=${(yield put(ch, 'foo')).toString()}`);
             log(`p2=${(yield put(ch, 'bar')).toString()}`);
             ch.close();
@@ -274,7 +197,7 @@ describe('Given a CSP', () => {
             yield sleep(2);
             log(`p4=${(yield put(ch, 'moo')).toString()}`);
           },
-          function * B({ take, log, sleep }) {
+          function * B(log) {
             log(`take1=${(yield take(ch)).toString()}`);
             yield sleep(4);
             log(`take2=${(yield take(ch)).toString()}`);
@@ -302,7 +225,7 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log, take }) {
+          function * A(log) {
             log(`take1=${(yield take(ch)).toString()}`);
           },
           function * B() {
@@ -317,22 +240,22 @@ describe('Given a CSP', () => {
   // Types of buffers
 
   describe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
-    it('allow writing and reading', async () => {
+    it('allow writing and reading', () => {
       const ch = chan();
 
-      ch.put('foo');
-      expect(await ch.take()).toEqual('foo');
+      put(ch, 'foo');
+      take(ch, v => expect(v).toEqual('foo'));
     });
     it('should block the channel if there is no puts but we want to take', () => {
       const ch = chan();
 
       exercise(
         Test(
-          function * A({ log, take }) {
+          function * A(log) {
             log(`take1=${(yield take(ch)).toString()}`);
             log(`take2=${(yield take(ch)).toString()}`);
           },
-          function * B({ log, put }) {
+          function * B(log) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
           }
@@ -345,11 +268,11 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log, put }) {
+          function * A(log) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
           },
-          function * B({ log, take }) {
+          function * B(log) {
             log(`take1=${(yield take(ch)).toString()}`);
             log(`take2=${(yield take(ch)).toString()}`);
           }
@@ -365,7 +288,7 @@ describe('Given a CSP', () => {
 
       return exercise(
         Test(
-          function * A({ log, put }) {
+          function * A(log) {
             log(`value1=${ch.__value().toString()}`);
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`value2=${ch.__value().toString()}`);
@@ -376,7 +299,7 @@ describe('Given a CSP', () => {
             log(`put4=${(yield put(ch, 'mar')).toString()}`);
             log(`value5=${ch.__value().toString()}`);
           },
-          function * B({ log, take, sleep }) {
+          function * B(log) {
             yield sleep(5);
             log('end of waiting');
             log(`take1=${(yield take(ch)).toString()}`);
@@ -420,7 +343,7 @@ describe('Given a CSP', () => {
 
         return exercise(
           Test(
-            function * A({ log, put, sleep }) {
+            function * A(log) {
               log(`value=${ch.__value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
@@ -432,7 +355,7 @@ describe('Given a CSP', () => {
               log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
-            function * B({ log, take, sleep }) {
+            function * B(log) {
               yield sleep(5);
               log('---');
               log(`take1=${(yield take(ch)).toString()}`);
@@ -471,7 +394,7 @@ describe('Given a CSP', () => {
 
         return exercise(
           Test(
-            function * A({ log, put, sleep }) {
+            function * A(log) {
               log(`value=${ch.__value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
@@ -483,7 +406,7 @@ describe('Given a CSP', () => {
               log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
-            function * B({ log, take, sleep }) {
+            function * B(log) {
               yield sleep(5);
               log('---');
               log(`take1=${(yield take(ch)).toString()}`);
@@ -525,7 +448,7 @@ describe('Given a CSP', () => {
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         exercise(
-          Test(function * A({ log, take }) {
+          Test(function * A(log) {
             log(`take1=${(yield take(ch)).toString()}`);
             log(`take2=${(yield take(ch)).toString()}`);
           }),
@@ -543,7 +466,7 @@ describe('Given a CSP', () => {
 
         return exercise(
           Test(
-            function * A({ log, put, sleep }) {
+            function * A(log) {
               log(`value=${ch.__value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
@@ -555,7 +478,7 @@ describe('Given a CSP', () => {
               log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
-            function * B({ log, take, sleep }) {
+            function * B(log) {
               yield sleep(5);
               log('---');
               log(`take1=${(yield take(ch)).toString()}`);
@@ -594,7 +517,7 @@ describe('Given a CSP', () => {
 
         return exercise(
           Test(
-            function * A({ log, put, sleep }) {
+            function * A(log) {
               log(`value=${ch.__value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
@@ -606,7 +529,7 @@ describe('Given a CSP', () => {
               log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
-            function * B({ log, take, sleep }) {
+            function * B(log) {
               yield sleep(5);
               log('---');
               log(`take1=${(yield take(ch)).toString()}`);
@@ -651,13 +574,13 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log, put }) {
+          function * A(log) {
             log(`put1=${(yield put(ch1, 'foo')).toString()}`);
             log(`put2=${(yield put(ch2, 'bar')).toString()}`);
             log(`put3=${(yield put(ch3, 'zar')).toString()}`);
             log(`put4=${(yield put(ch4, 'moo')).toString()}`);
           },
-          function * B({ log, take }) {
+          function * B(log) {
             log(`take1=${(yield take(ch4)).toString()}`);
             log(`take2=${(yield take(ch4)).toString()}`);
             log(`take3=${(yield take(ch4)).toString()}`);
@@ -695,7 +618,7 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log }) {
+          function * A(log) {
             ch2.take(v => log(`take_ch2=${v}`));
             ch3.take(v => log(`take_ch3=${v}`));
             ch3.take(v => log(`take_ch3=${v}`));
@@ -720,12 +643,12 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ put }) {
+          function * A() {
             yield put(ch1, 'foo');
             yield put(ch1, 'bar');
             yield put(ch1, 'zar');
           },
-          function * B({ log }) {
+          function * B(log) {
             ch1.take(v => log(`take_ch1=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch3.take(v => log(`take_ch3=${v}`));
@@ -748,12 +671,12 @@ describe('Given a CSP', () => {
 
         exercise(
           Test(
-            function * A({ log, put }) {
+            function * A(log) {
               log('p1=' + (yield put(ch1, 'foo')));
               log('p2=' + (yield put(ch1, 'bar')));
               log('p3=' + (yield put(ch1, 'zar')));
             },
-            function * B({ log, take, put, sleep }) {
+            function * B(log) {
               ch2.take(v => log(`ch2_1=${v}`));
               ch3.take(v => log(`ch3_1=${v}`));
               ch2.take(v => log(`ch2_2=${v}`));
@@ -791,7 +714,7 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log }) {
+          function * A(log) {
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
@@ -831,7 +754,7 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log }) {
+          function * A(log) {
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
@@ -859,7 +782,7 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A({ log }) {
+          function * A(log) {
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
@@ -888,12 +811,12 @@ describe('Given a CSP', () => {
 
       return exercise(
         Test(
-          function * A({ log, put, sleep }) {
+          function * A(log) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             yield sleep(20);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
           },
-          function * B({ log, take, sleep }) {
+          function * B(log) {
             log(`take1=${(yield take(ch)).toString()}`);
             yield sleep(20);
             log(`take2=${(yield take(ch)).toString()}`);
@@ -914,7 +837,7 @@ describe('Given a CSP', () => {
 
       return exercise(
         Test(
-          function * A({ log, put, sleep }) {
+          function * A(log) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`value=${ch.__value().toString()}`);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
@@ -925,7 +848,7 @@ describe('Given a CSP', () => {
             log(`put4=${(yield put(ch, 'mar')).toString()}`);
             log(`value=${ch.__value().toString()}`);
           },
-          function * B({ log, sleep }) {
+          function * B(log) {
             yield sleep(5);
             ch.reset();
             log('reset');

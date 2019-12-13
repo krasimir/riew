@@ -1,5 +1,4 @@
 import { chan, sub, unsub, halt, topic, getTopics, go, topicExists, reset, grid } from '../index';
-import { delay } from '../__helpers__';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -129,34 +128,6 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyTake1).toBeCalledWithArgs([ 'value is 42' ]);
       expect(spyTake2).toBeCalledWithArgs([ 42 ], [ 100 ], [ 200 ]);
       expect(log).toBeCalledWithArgs([ '>A' ], [ '>B' ], [ '<A' ], [ '<B' ]);
-    });
-    describe('and the routine is a plain function', () => {
-      it('should still work', () => {
-        const spy = jest.fn();
-        topic('xxx');
-        go(function ({ take }) {
-          take('xxx', spy);
-        });
-        go(function ({ put }) {
-          put('xxx', 'foo');
-        });
-        expect(spy).toBeCalledWithArgs([ 'foo' ]);
-      });
-    });
-    describe('and the routine is an async function', () => {
-      it('should still work', async () => {
-        const spy = jest.fn();
-        topic('xxx');
-        go(async function ({ take }) {
-          spy(await take('xxx'));
-        });
-        go(async function ({ put }) {
-          await put('xxx', 'foo');
-          spy('bar');
-        });
-        await delay();
-        expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
-      });
     });
   });
   describe('when we check if a topic exists', () => {

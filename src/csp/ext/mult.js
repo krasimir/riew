@@ -1,4 +1,4 @@
-import { chan } from '../index';
+import { OPEN, ENDED, CLOSED } from '../index';
 
 export function mult(ch, to) {
   if (!ch._taps) ch._taps = [];
@@ -7,7 +7,7 @@ export function mult(ch, to) {
     ch._taps = ch._taps.concat(to);
     (function taker() {
       ch.take(v => {
-        if (v !== chan.CLOSED && v !== chan.ENDED) {
+        if (v !== CLOSED && v !== ENDED) {
           let numOfSuccessfulPuts = 0;
           let putFinished = chWithSuccessfulPut => {
             numOfSuccessfulPuts += 1;
@@ -16,7 +16,7 @@ export function mult(ch, to) {
             }
           };
           ch._taps.forEach((tapCh, idx) => {
-            if (ch.state() === chan.OPEN) {
+            if (ch.state() === OPEN) {
               tapCh.put(v, () => putFinished(ch));
             } else {
               numOfSuccessfulPuts += 1;
