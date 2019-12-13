@@ -2,9 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset, register, sub, pub } from '../index';
-
-import { react, state } from '../index';
+import { reset, register, sub, react, state, topic } from '../index';
 
 const { riew } = react;
 const DummyComponent = ({ text }) => <p>{ text }</p>;
@@ -139,7 +137,7 @@ describe('Given the Riew library', () => {
     it('should re-render the view with the new data', () => {
       return act(async () => {
         const repos = state([ { id: 'a', selected: false }, { id: 'b', selected: true } ]);
-        repos.write('update', (list = [], id) => {
+        repos.mutate('update', (list = [], id) => {
           return list.map(repo => {
             if (repo.id === id) {
               return {
@@ -150,9 +148,9 @@ describe('Given the Riew library', () => {
             return repo;
           });
         });
-        repos.read('selector', list => list.filter(({ selected }) => selected));
+        repos.select('selector', list => list.filter(({ selected }) => selected));
 
-        const change = id => pub('update', id);
+        const change = id => topic('update').put(id);
         const View = ({ selector }) => {
           return (
             <div>
@@ -197,13 +195,13 @@ describe('Given the Riew library', () => {
       it('should re-render the react component with the correct data', () => {
         return act(async () => {
           const s = state([ 15, 4, 12 ]);
-          s.read('moreThen10', nums => nums.filter(n => n > 10));
+          s.select('moreThen10', nums => nums.filter(n => n > 10));
           const Component = jest.fn().mockImplementation(() => null);
           const R = riew(Component).with({ $data: 'moreThen10' });
 
           render(<R />);
           await delay(3);
-          pub(s.WRITE, [ 5, 6, 7, 120 ]);
+          topic(s.SET).put([ 5, 6, 7, 120 ]);
           await delay(3);
           expect(Component).toBeCalledWithArgs([ { data: [ 15, 12 ] }, {} ], [ { data: [ 120 ] }, {} ]);
         });
@@ -215,7 +213,7 @@ describe('Given the Riew library', () => {
       it('should not produce an error', () => {
         return act(async () => {
           const s = state(true);
-          const changeToFalse = () => pub(s.WRITE, false);
+          const changeToFalse = () => topic(s.SET).put(false);
 
           register('whee', s);
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 import riew from '../react/index';
-import { state, reset, register, pub, sub } from '../index';
+import { state, reset, register, topic, sub } from '../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
@@ -44,9 +44,9 @@ describe('Given the React riew function', () => {
         * teardown the state when the component is unmounted`, () => {
         return act(async () => {
           const s = state('foo');
-          const R = riew(({ state }) => <p>{ state }</p>, async function () {
+          const R = riew(({ state }) => <p>{ state }</p>, async function ({ put }) {
             await delay(5);
-            pub(s.WRITE, 'bar');
+            put(s.SET, 'bar');
           }).with({ state: s });
           const { container, unmount } = render(<R />);
 
@@ -73,7 +73,7 @@ describe('Given the React riew function', () => {
 
             await delay(3);
             exerciseHTML(container, '<p>foo42</p>');
-            pub(s.WRITE, '200');
+            topic(s.SET).put('200');
             await delay(3);
             exerciseHTML(container, '<p>foo200</p>');
           });
@@ -134,7 +134,7 @@ describe('Given the React riew function', () => {
       return act(async () => {
         const routine = ({ render }) => {
           const s = state([ { value: 2, selected: true }, { value: 67, selected: true } ]);
-          s.write('select', (current = [], payload) => {
+          s.mutate('select', (current = [], payload) => {
             return current.map(item => {
               return {
                 ...item,
@@ -143,7 +143,7 @@ describe('Given the React riew function', () => {
             });
           });
           const change = payload => {
-            pub('select', payload);
+            topic('select').put(payload);
           };
 
           render({ value: s, change });
@@ -179,7 +179,7 @@ describe('Given the React riew function', () => {
     it('should provide the value to the react component', async () => {
       return act(async () => {
         const s = state(true);
-        const changeToFalse = () => pub(s.WRITE, false);
+        const changeToFalse = () => topic(s.SET).put(false);
         const spy = jest.fn();
 
         register('whee', s);
