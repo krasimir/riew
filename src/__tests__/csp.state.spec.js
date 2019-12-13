@@ -1,4 +1,4 @@
-import { state, pub, sub, reset, getTopics, go, take, put } from '../index';
+import { state, topic, sub, reset, getTopics, go } from '../index';
 
 describe('Given a CSP state extension', () => {
   beforeEach(() => {
@@ -16,9 +16,9 @@ describe('Given a CSP state extension', () => {
 
       sub('R', spy1);
       sub('R', spy2);
-      pub('W1', 4);
-      pub('W1', 12);
-      pub('W2', 3);
+      topic('W1').put(4);
+      topic('W1').put(12);
+      topic('W2').put(3);
 
       expect(spy1).toBeCalledWithArgs([ 'value is 10' ], [ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
       expect(spy2).toBeCalledWithArgs([ 'value is 10' ], [ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
@@ -54,8 +54,8 @@ describe('Given a CSP state extension', () => {
       sub(s.GET, spy);
       sub(s2.GET, spy2);
 
-      pub(s.SET, 'bar');
-      pub(s2.SET, 'b');
+      topic(s.SET).put('bar');
+      topic(s2.SET).put('b');
 
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
       expect(spy2).toBeCalledWithArgs([ 'a' ], [ 'b' ]);
@@ -66,7 +66,7 @@ describe('Given a CSP state extension', () => {
       const s = state('foo');
 
       expect(s.getValue()).toBe('foo');
-      pub(s.SET, 'bar');
+      topic(s.SET).put('bar');
       expect(s.getValue()).toBe('bar');
     });
   });
@@ -81,22 +81,20 @@ describe('Given a CSP state extension', () => {
       sub('up', value => log('sub=' + value));
 
       go(
-        function * A() {
+        function * A({ take }) {
           log('>A');
           log('take1=' + (yield take(s.GET)));
           log('take2=' + (yield take(s.GET)));
           log('take3=' + (yield take('up')));
         },
-        [],
         () => log('<A')
       );
       go(
-        function * B() {
+        function * B({ put }) {
           log('>B');
           log('put1=' + (yield put(s.SET, 'bar')));
           log('put2=' + (yield put('xxx', 'moo')));
         },
-        [],
         () => log('<B')
       );
 

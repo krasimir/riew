@@ -1,4 +1,4 @@
-import { halt, pub, sub, topic, topicExists } from '../index';
+import { halt, sub, topic, topicExists } from '../index';
 import { getId } from '../../utils';
 
 export function state(...args) {
@@ -36,7 +36,7 @@ export function state(...args) {
       sub(topicName, payload => {
         value = reducer(value, payload);
         readTopics.forEach(r => {
-          pub(r.topicName, r.func(value));
+          topic(r.topicName).put(r.func(value));
         });
       });
     },

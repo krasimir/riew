@@ -1,4 +1,5 @@
-import { sub, pub, unsub, halt, topic, getTopics, go, take, put, topicExists, reset, grid } from '../index';
+import { chan, sub, unsub, halt, topic, getTopics, go, topicExists, reset, grid } from '../index';
+import { delay } from '../__helpers__';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -11,12 +12,13 @@ describe('Given a CSP pubsub extension', () => {
 
         const spyA = jest.fn();
         const spyB = jest.fn();
+        const t = topic('xxx');
 
-        sub('topic', spyA);
-        sub('topic', spyB);
+        sub('xxx', spyA);
+        sub('xxx', spyB);
 
-        pub('topic', 'foo');
-        pub('topic', 'bar');
+        t.put('foo');
+        t.put('bar');
 
         expect(spyA).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
         expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
@@ -27,13 +29,14 @@ describe('Given a CSP pubsub extension', () => {
 
       const spyA = jest.fn();
       const spyB = jest.fn();
+      const t = topic('a');
 
       sub('a', spyA);
       sub('a', spyB);
 
-      pub('a', 'foo');
+      t.put('foo');
       unsub('a', spyA);
-      pub('a', 'bar');
+      t.put('bar');
 
       expect(spyA).toBeCalledWithArgs([ 'foo' ]);
       expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
@@ -43,13 +46,15 @@ describe('Given a CSP pubsub extension', () => {
 
       const spyA = jest.fn();
       const spyB = jest.fn();
+      const t1 = topic('topicA');
+      const t2 = topic('topicB');
 
       sub('topicA', spyA);
       sub('topicB', spyB);
 
-      pub('topicA', 'foo');
-      pub('topicA', 'bar');
-      pub('topicB', 'baz');
+      t1.put('foo');
+      t1.put('bar');
+      t2.put('baz');
 
       const gridNodes = grid.nodes().map(({ id }) => id);
 
@@ -61,13 +66,14 @@ describe('Given a CSP pubsub extension', () => {
 
       const spyA = jest.fn();
       const spyB = jest.fn();
+      const t = topic('a');
 
       sub('a', spyA);
       sub('a', spyB);
 
       expect(Object.keys(getTopics())).toHaveLength(1);
 
-      pub('a', 'foo');
+      t.put('foo');
       halt('a');
 
       expect(Object.keys(getTopics())).toHaveLength(0);
@@ -81,8 +87,9 @@ describe('Given a CSP pubsub extension', () => {
 
       const spyA = jest.fn();
       const spyB = jest.fn();
+      const t = topic('topic');
 
-      pub('topic', 'foo');
+      t.put('foo');
       sub('topic', spyA);
       sub('topic', spyB);
 
@@ -104,27 +111,53 @@ describe('Given a CSP pubsub extension', () => {
       sub('yyy', spyTake2);
 
       go(
-        function * A() {
+        function * A({ take }) {
           log('>A');
           spyTake1(`value is ${yield take('yyy')}`);
         },
-        [],
         () => log('<A')
       );
       go(
-        function * B() {
+        function * B({ put }) {
           log('>B');
           spyPut(`(1) ${yield put('yyy', 42)}`);
           spyPut(`(2) ${yield put('yyy', 100)}`);
           spyPut(`(3) ${yield put('yyy', 200)}`);
         },
-        [],
         () => log('<B')
       );
 
       expect(spyTake1).toBeCalledWithArgs([ 'value is 42' ]);
       expect(spyTake2).toBeCalledWithArgs([ 42 ], [ 100 ], [ 200 ]);
       expect(log).toBeCalledWithArgs([ '>A' ], [ '>B' ], [ '<A' ], [ '<B' ]);
+    });
+    describe('and the routine is a plain function', () => {
+      it('should still work', () => {
+        const spy = jest.fn();
+        topic('xxx');
+        go(function ({ take }) {
+          take('xxx', spy);
+        });
+        go(function ({ put }) {
+          put('xxx', 'foo');
+        });
+        expect(spy).toBeCalledWithArgs([ 'foo' ]);
+      });
+    });
+    describe('and the routine is an async function', () => {
+      it('should still work', async () => {
+        const spy = jest.fn();
+        topic('xxx');
+        go(async function ({ take }) {
+          spy(await take('xxx'));
+        });
+        go(async function ({ put }) {
+          await put('xxx', 'foo');
+          spy('bar');
+        });
+        await delay();
+        expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+      });
     });
   });
   describe('when we check if a topic exists', () => {
@@ -150,6 +183,19 @@ describe('Given a CSP pubsub extension', () => {
 
       expect(added).toBeCalledWithArgs([ callback ]);
       expect(removed).toBeCalledWithArgs([ callback ]);
+    });
+  });
+  describe('when we pass a channel instead of a string to the sub function', () => {
+    it('should return true or false', () => {
+      const spy = jest.fn();
+      const ch = chan();
+
+      sub(ch, spy);
+      ch.put('foo');
+      ch.close();
+      ch.put('bar');
+
+      expect(spy).toBeCalledWithArgs([ 'foo' ]);
     });
   });
 });

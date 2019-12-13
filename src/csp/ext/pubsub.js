@@ -1,29 +1,49 @@
-import { chan } from '../index';
+import { chan, isChannel } from '../index';
 
 let topics = {};
 const noop = () => {};
 
 function Topic(key) {
+  let ch;
+  if (isChannel(key)) {
+    ch = key;
+    key = ch.id;
+  } else {
+    ch = chan(key.toString());
+  }
   if (topics[ key ]) {
     return topics[ key ];
   }
 
   let subscribers = [];
   let isListening = false;
-  let ch = chan(key);
   let onSubscriberAddedCallback = noop;
   let onSubscriberRemovedCallback = noop;
 
+  let listen = () => {
+    if (!isListening) {
+      isListening = true;
+      (function taker() {
+        ch.take(value => {
+          if (value !== chan.CLOSED && value !== chan.ENDED) {
+            subscribers.forEach(callback => callback(value));
+            taker();
+          }
+        });
+      })();
+    }
+  };
+
   return (topics[ key ] = {
     ch,
-    addSubscriber(callback) {
+    sub(callback) {
       if (!subscribers.find(c => c === callback)) {
         subscribers.push(callback);
         onSubscriberAddedCallback(callback);
       }
-      return this;
+      listen();
     },
-    removeSubscriber(callback) {
+    unsub(callback) {
       subscribers = subscribers.filter(c => {
         if (c !== callback) {
           return true;
@@ -33,22 +53,9 @@ function Topic(key) {
       });
       return this;
     },
-    listen() {
-      if (!isListening) {
-        isListening = true;
-        (function taker() {
-          ch.take(value => {
-            if (value !== chan.CLOSED && value !== chan.ENDED) {
-              subscribers.forEach(callback => callback(value));
-              taker();
-            }
-          });
-        })();
-      }
-    },
-    publish(payload, callback) {
-      ch.put(payload, callback);
-      return this;
+    put(...args) {
+      listen();
+      return ch.put(...args);
     },
     halt() {
       ch.close();
@@ -67,15 +74,8 @@ function Topic(key) {
 }
 
 export const topic = key => Topic(key);
-export const sub = (key, callback) =>
-  Topic(key)
-    .addSubscriber(callback)
-    .listen();
-export const pub = (key, payload, callback) =>
-  Topic(key)
-    .publish(payload, callback)
-    .listen();
-export const unsub = (key, callback) => Topic(key).removeSubscriber(callback);
+export const sub = (key, callback) => Topic(key).sub(callback);
+export const unsub = (key, callback) => Topic(key).unsub(callback);
 export const haltAll = () => {
   Object.keys(topics).forEach(key => topics[ key ].halt());
   topics = {};

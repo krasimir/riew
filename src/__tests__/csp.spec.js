@@ -1,4 +1,4 @@
-import { chan, buffer, timeout, go } from '../index';
+import { chan, buffer, timeout, go, merge, mult, unmult, unmultAll } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
 describe('Given a CSP', () => {
@@ -14,6 +14,21 @@ describe('Given a CSP', () => {
       ch.take(spy);
 
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ true ], [ true ], [ 'bar' ]);
+    });
+    it('should allow us to await on putting and taking', () => {
+      const spy = jest.fn();
+      const ch = chan();
+
+      async function A() {
+        spy(await ch.put('foo'));
+      }
+      async function B() {
+        spy(await ch.take());
+      }
+
+      return Promise.all([ B(), A() ]).then(() => {
+        expect(spy).toBeCalledWithArgs([ 'foo' ], [ true ]);
+      });
     });
   });
 
@@ -172,7 +187,7 @@ describe('Given a CSP', () => {
     });
   });
   describe('and we close a non-buffered channel', () => {
-    xit(`should
+    it(`should
       - resolve the pending puts with ENDED
       - resolve the future puts with ENDED
       - allow takes if the buffer is not empty
@@ -181,12 +196,12 @@ describe('Given a CSP', () => {
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ put, log }) {
             log(`p1=${(yield put(ch, 'foo')).toString()}`);
             log(`p2=${(yield put(ch, 'bar')).toString()}`);
             log(`p3=${(yield put(ch, 'zar')).toString()}`);
           },
-          function * B(log) {
+          function * B({ take, log }) {
             log(`take1=${(yield take(ch)).toString()}`);
             ch.close();
             log(`take2=${(yield take(ch)).toString()}`);
@@ -207,12 +222,12 @@ describe('Given a CSP', () => {
         ]
       );
     });
-    xit('should resolve the pending takes with ENDED', () => {
+    it('should resolve the pending takes with ENDED', () => {
       const ch = chan();
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log, take }) {
             log(`take1=${(yield take(ch)).toString()}`);
           },
           function * B() {
@@ -224,7 +239,7 @@ describe('Given a CSP', () => {
     });
   });
   describe('and we close a buffered channel', () => {
-    xit(`should
+    it(`should
       - resolve the pending puts with CLOSED
       - resolve the future puts with CLOSED if the buffer is not empty
       - resolve the future puts with ENDED if the buffer is empty
@@ -234,7 +249,7 @@ describe('Given a CSP', () => {
 
       return exercise(
         Test(
-          function * A(log) {
+          function * A({ put, log, sleep }) {
             log(`p1=${(yield put(ch, 'foo')).toString()}`);
             log(`p2=${(yield put(ch, 'bar')).toString()}`);
             ch.close();
@@ -242,7 +257,7 @@ describe('Given a CSP', () => {
             yield sleep(2);
             log(`p4=${(yield put(ch, 'moo')).toString()}`);
           },
-          function * B(log) {
+          function * B({ take, log, sleep }) {
             log(`take1=${(yield take(ch)).toString()}`);
             yield sleep(4);
             log(`take2=${(yield take(ch)).toString()}`);
@@ -265,12 +280,12 @@ describe('Given a CSP', () => {
         10
       );
     });
-    xit('should resolve the pending takes with ENDED', () => {
+    it('should resolve the pending takes with ENDED', () => {
       const ch = chan();
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log, take }) {
             log(`take1=${(yield take(ch)).toString()}`);
           },
           function * B() {
@@ -285,22 +300,22 @@ describe('Given a CSP', () => {
   // Types of buffers
 
   describe('when we create a channel with the default buffer (fixed buffer with size 0)', () => {
-    xit('allow writing and reading', async () => {
+    it('allow writing and reading', async () => {
       const ch = chan();
 
       ch.put('foo');
       expect(await ch.take()).toEqual('foo');
     });
-    xit('should block the channel if there is no puts but we want to take', () => {
+    it('should block the channel if there is no puts but we want to take', () => {
       const ch = chan();
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log, take }) {
             log(`take1=${(yield take(ch)).toString()}`);
             log(`take2=${(yield take(ch)).toString()}`);
           },
-          function * B(log) {
+          function * B({ log, put }) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
           }
@@ -308,16 +323,16 @@ describe('Given a CSP', () => {
         [ '>A', '>B', 'take1=foo', 'put1=true', 'take2=bar', '<A', 'put2=true', '<B' ]
       );
     });
-    xit('should block the channel if there is no takers but we want to put', () => {
+    it('should block the channel if there is no takers but we want to put', () => {
       const ch = chan();
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log, put }) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
           },
-          function * B(log) {
+          function * B({ log, take }) {
             log(`take1=${(yield take(ch)).toString()}`);
             log(`take2=${(yield take(ch)).toString()}`);
           }
@@ -327,13 +342,13 @@ describe('Given a CSP', () => {
     });
   });
   describe('when we create a channel with a fixed buffer with size > 0', () => {
-    xit('should allow as many puts as we have space', () => {
+    it('should allow as many puts as we have space', () => {
       const ch = chan(buffer.fixed(2));
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       return exercise(
         Test(
-          function * A(log) {
+          function * A({ log, put }) {
             log(`value1=${ch.__value().toString()}`);
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`value2=${ch.__value().toString()}`);
@@ -344,7 +359,7 @@ describe('Given a CSP', () => {
             log(`put4=${(yield put(ch, 'mar')).toString()}`);
             log(`value5=${ch.__value().toString()}`);
           },
-          function * B(log) {
+          function * B({ log, take, sleep }) {
             yield sleep(5);
             log('end of waiting');
             log(`take1=${(yield take(ch)).toString()}`);
@@ -382,13 +397,13 @@ describe('Given a CSP', () => {
   });
   describe('when we create a channel with a dropping buffer', () => {
     describe("and the buffer's size is 0", () => {
-      xit("shouldn't block the puts but only the takes", () => {
+      it("shouldn't block the puts but only the takes", () => {
         const ch = chan(buffer.dropping());
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         return exercise(
           Test(
-            function * A(log) {
+            function * A({ log, put, sleep }) {
               log(`value=${ch.__value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
@@ -400,7 +415,7 @@ describe('Given a CSP', () => {
               log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
-            function * B(log) {
+            function * B({ log, take, sleep }) {
               yield sleep(5);
               log('---');
               log(`take1=${(yield take(ch)).toString()}`);
@@ -433,13 +448,13 @@ describe('Given a CSP', () => {
       });
     });
     describe("and the buffer's size is > 0", () => {
-      xit("shouldn't block and it should buffer more values", () => {
+      it("shouldn't block and it should buffer more values", () => {
         const ch = chan(buffer.dropping(2));
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         return exercise(
           Test(
-            function * A(log) {
+            function * A({ log, put, sleep }) {
               log(`value=${ch.__value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
@@ -451,7 +466,7 @@ describe('Given a CSP', () => {
               log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
-            function * B(log) {
+            function * B({ log, take, sleep }) {
               yield sleep(5);
               log('---');
               log(`take1=${(yield take(ch)).toString()}`);
@@ -486,14 +501,14 @@ describe('Given a CSP', () => {
       });
     });
     describe('and we have a pre-set value', () => {
-      xit('should allow a non-blocking take', () => {
+      it('should allow a non-blocking take', () => {
         const ch = chan(buffer.dropping(2));
         ch.put('a');
         ch.put('b');
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         exercise(
-          Test(function * A(log) {
+          Test(function * A({ log, take }) {
             log(`take1=${(yield take(ch)).toString()}`);
             log(`take2=${(yield take(ch)).toString()}`);
           }),
@@ -505,13 +520,13 @@ describe('Given a CSP', () => {
   });
   describe('when we create a channel with a sliding buffer', () => {
     describe("and the buffer's size is 0", () => {
-      xit("shouldn't block but keep the latest pushed value", () => {
+      it("shouldn't block but keep the latest pushed value", () => {
         const ch = chan(buffer.sliding());
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         return exercise(
           Test(
-            function * A(log) {
+            function * A({ log, put, sleep }) {
               log(`value=${ch.__value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
@@ -523,7 +538,7 @@ describe('Given a CSP', () => {
               log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
-            function * B(log) {
+            function * B({ log, take, sleep }) {
               yield sleep(5);
               log('---');
               log(`take1=${(yield take(ch)).toString()}`);
@@ -556,13 +571,13 @@ describe('Given a CSP', () => {
       });
     });
     describe("and the buffer's size is > 0", () => {
-      xit("shouldn't block but drop values from the other side", () => {
+      it("shouldn't block but drop values from the other side", () => {
         const ch = chan(buffer.sliding(2));
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         return exercise(
           Test(
-            function * A(log) {
+            function * A({ log, put, sleep }) {
               log(`value=${ch.__value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
               log(`value=${ch.__value().toString()}`);
@@ -574,7 +589,7 @@ describe('Given a CSP', () => {
               log(`put4=${(yield put(ch, 'final')).toString()}`);
               log(`value=${ch.__value().toString()}`);
             },
-            function * B(log) {
+            function * B({ log, take, sleep }) {
               yield sleep(5);
               log('---');
               log(`take1=${(yield take(ch)).toString()}`);
@@ -611,21 +626,21 @@ describe('Given a CSP', () => {
   // merge
 
   describe('when we merge channels', () => {
-    xit('should merge two and more into a single channel', () => {
+    it('should merge two and more into a single channel', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
-      const ch4 = ch1.merge(ch2, ch3);
+      const ch4 = merge(ch1, ch2, ch3);
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log, put }) {
             log(`put1=${(yield put(ch1, 'foo')).toString()}`);
             log(`put2=${(yield put(ch2, 'bar')).toString()}`);
             log(`put3=${(yield put(ch3, 'zar')).toString()}`);
             log(`put4=${(yield put(ch4, 'moo')).toString()}`);
           },
-          function * B(log) {
+          function * B({ log, take }) {
             log(`take1=${(yield take(ch4)).toString()}`);
             log(`take2=${(yield take(ch4)).toString()}`);
             log(`take3=${(yield take(ch4)).toString()}`);
@@ -653,17 +668,17 @@ describe('Given a CSP', () => {
   // mult
 
   describe('when we pipe to other channels', () => {
-    xit('should distribute a single value to multiple channels', () => {
+    it('should distribute a single value to multiple channels', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
-      ch1.mult(ch2);
-      ch2.mult(ch3);
+      mult(ch1, [ ch2 ]);
+      mult(ch2, [ ch3 ]);
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log }) {
             ch2.take(v => log(`take_ch2=${v}`));
             ch3.take(v => log(`take_ch3=${v}`));
             ch3.take(v => log(`take_ch3=${v}`));
@@ -677,23 +692,23 @@ describe('Given a CSP', () => {
         [ '>A', '<A', '>B', 'take_ch3=foo', 'take_ch2=bar', 'take_ch3=zar', '<B' ]
       );
     });
-    xit('should support nested piping', () => {
+    it('should support nested piping', () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
       const ch3 = chan('ch3');
       const ch4 = chan('ch4');
 
-      ch1.mult(ch2, ch3);
-      ch2.mult(ch4);
+      mult(ch1, [ ch2, ch3 ]);
+      mult(ch2, [ ch4 ]);
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ put }) {
             yield put(ch1, 'foo');
             yield put(ch1, 'bar');
             yield put(ch1, 'zar');
           },
-          function * B(log) {
+          function * B({ log }) {
             ch1.take(v => log(`take_ch1=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch3.take(v => log(`take_ch3=${v}`));
@@ -704,24 +719,24 @@ describe('Given a CSP', () => {
       );
     });
     describe('and we tap multiple times to the same channel', () => {
-      xit('should register the channel only once', () => {
+      it('should register the channel only once', () => {
         const ch1 = chan('ch1');
         const ch2 = chan('ch2');
         const ch3 = chan('ch3');
 
-        ch1.mult(ch2);
-        ch1.mult(ch2);
-        ch1.mult(ch2);
-        ch1.mult(ch3);
+        mult(ch1, [ ch2 ]);
+        mult(ch1, [ ch2 ]);
+        mult(ch1, [ ch2 ]);
+        mult(ch1, [ ch3 ]);
 
         exercise(
           Test(
-            function * A(log) {
+            function * A({ log, put }) {
               log('p1=' + (yield put(ch1, 'foo')));
               log('p2=' + (yield put(ch1, 'bar')));
               log('p3=' + (yield put(ch1, 'zar')));
             },
-            function * B(log) {
+            function * B({ log, take, put, sleep }) {
               ch2.take(v => log(`ch2_1=${v}`));
               ch3.take(v => log(`ch3_1=${v}`));
               ch2.take(v => log(`ch2_2=${v}`));
@@ -750,16 +765,16 @@ describe('Given a CSP', () => {
         );
       });
     });
-    xit('should properly handle the situation when a tapped channel is not open anymore', () => {
+    it('should properly handle the situation when a tapped channel is not open anymore', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
-      ch1.mult(ch2, ch3);
+      mult(ch1, [ ch2, ch3 ]);
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log }) {
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
@@ -790,22 +805,22 @@ describe('Given a CSP', () => {
         ]
       );
     });
-    xit('should allow us to unmult', () => {
+    it('should allow us to unmult', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
-      ch1.mult(ch2, ch3);
+      mult(ch1, [ ch2, ch3 ]);
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log }) {
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch3.take(v => {
               log(`take_ch3=${v}`);
-              ch1.unmult(ch3);
+              unmult(ch1, ch3);
             });
             ch3.take(v => log(`take_ch3=${v.toString()}`));
           },
@@ -818,22 +833,22 @@ describe('Given a CSP', () => {
         [ '>A', '<A', '>B', 'take_ch2=foo', 'take_ch3=foo', 'take_ch2=bar', 'take_ch2=zar', '<B' ]
       );
     });
-    xit('should allow us to unmult all', () => {
+    it('should allow us to unmult all', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
-      ch1.mult(ch2, ch3);
+      mult(ch1, [ ch2, ch3 ]);
 
       exercise(
         Test(
-          function * A(log) {
+          function * A({ log }) {
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch2.take(v => log(`take_ch2=${v}`));
             ch3.take(v => {
               log(`take_ch3=${v}`);
-              ch1.unmultAll();
+              unmultAll(ch1);
             });
             ch3.take(v => log(`take_ch3=${v.toString()}`));
           },
@@ -851,17 +866,17 @@ describe('Given a CSP', () => {
   // timeout
 
   describe('when we use the timeout method', () => {
-    xit('should create a channel that is self closing after X amount of time', () => {
+    it('should create a channel that is self closing after X amount of time', () => {
       const ch = timeout(10);
 
       return exercise(
         Test(
-          function * A(log) {
+          function * A({ log, put, sleep }) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             yield sleep(20);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
           },
-          function * B(log) {
+          function * B({ log, take, sleep }) {
             log(`take1=${(yield take(ch)).toString()}`);
             yield sleep(20);
             log(`take2=${(yield take(ch)).toString()}`);
@@ -876,13 +891,13 @@ describe('Given a CSP', () => {
   // reset
 
   describe('when we use the `reset` method', () => {
-    xit('should put the channel in its initial state', () => {
+    it('should put the channel in its initial state', () => {
       const ch = chan(buffer.sliding(2));
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       return exercise(
         Test(
-          function * A(log) {
+          function * A({ log, put, sleep }) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
             log(`value=${ch.__value().toString()}`);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
@@ -893,7 +908,7 @@ describe('Given a CSP', () => {
             log(`put4=${(yield put(ch, 'mar')).toString()}`);
             log(`value=${ch.__value().toString()}`);
           },
-          function * B(log) {
+          function * B({ log, sleep }) {
             yield sleep(5);
             ch.reset();
             log('reset');
