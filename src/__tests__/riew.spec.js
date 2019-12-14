@@ -1,6 +1,6 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { register, riew, reset, grid, state, sub, topic, channelExists } from '../index';
+import { register, riew, reset, grid, state, sub, topic, channelExists, sleep, put } from '../index';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {
@@ -22,9 +22,13 @@ describe('Given the `riew` factory function', () => {
       * run the clean-up functions of each routine`, async () => {
       const view = jest.fn();
       const se1Cleanup = jest.fn();
-      const se1 = jest.fn().mockImplementation(() => se1Cleanup);
+      const se1 = jest.fn().mockImplementation(function * () {
+        return se1Cleanup;
+      });
       const se2Cleanup = jest.fn();
-      const se2 = jest.fn().mockImplementation(() => se2Cleanup);
+      const se2 = jest.fn().mockImplementation(function * () {
+        return se2Cleanup;
+      });
 
       const r = riew(view, se1, se2);
 
@@ -50,10 +54,10 @@ describe('Given the `riew` factory function', () => {
   describe('when mounting and we `put` to the view channel', () => {
     it('should aggregate the view props', () => {
       const viewFunc = jest.fn();
-      const routine1 = function ({ render }) {
+      const routine1 = function * ({ render }) {
         render({ r1: 'r1' });
       };
-      const routine2 = function ({ render }) {
+      const routine2 = function * ({ render }) {
         render({ r2: 'r2' });
       };
       const r = riew(viewFunc, routine1, routine2);
@@ -71,25 +75,11 @@ describe('Given the `riew` factory function', () => {
       });
     });
   });
-  describe('when we have an async routine', () => {
-    it('should render the view without waiting the routine to finish', async () => {
-      const view = jest.fn();
-      const routine = async function ({ render }) {
-        await delay(3);
-        render({ hello: 'there' });
-      };
-      const r = riew(view, routine);
-
-      r.mount({ a: 'b' });
-      await delay(4);
-      expect(view).toBeCalledWithArgs([ { a: 'b' } ], [ { a: 'b', hello: 'there' } ]);
-    });
-  });
   describe('when we unmount', () => {
     it('should not continue the routine', async () => {
       const view = jest.fn();
       const spy = jest.fn();
-      const routine = function * ({ sleep }) {
+      const routine = function * () {
         yield sleep(4);
         spy('ops');
       };
@@ -107,7 +97,7 @@ describe('Given the `riew` factory function', () => {
       and should remove the channel from the grid`, async () => {
       let s;
       const view = jest.fn();
-      const routine = function ({ state }) {
+      const routine = function * ({ state }) {
         s = state('XXX');
       };
       const r = riew(view, routine);
@@ -116,20 +106,18 @@ describe('Given the `riew` factory function', () => {
 
       await delay(4);
 
-      expect(grid.getNodeById(s.SET)).toBeDefined();
-      expect(grid.getNodeById(s.GET)).toBeDefined();
+      expect(grid.getNodeById(s.id)).toBeDefined();
       r.unmount();
-      expect(grid.getNodeById(s.SET)).not.toBeDefined();
-      expect(grid.getNodeById(s.GET)).not.toBeDefined();
+      expect(grid.getNodeById(s.id)).not.toBeDefined();
       expect(view).toBeCalledWithArgs([ {} ]);
     });
-    it('should send the state value to the view', async () => {
+    fit('should send the state value to the view', async () => {
       const view = jest.fn();
-      const routine = async function ({ state, render, put }) {
+      const routine = function * ({ state, render }) {
         const s = state('foo');
         render({ s });
-        await delay(2);
-        put(s.SET, 'bar');
+        yield sleep(2);
+        s.set('bar');
       };
       const r = riew(view, routine);
 

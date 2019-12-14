@@ -1,5 +1,4 @@
-import { state, take, put, sub, reset, getChannels, go, sput } from '../index';
-import { delay } from '../__helpers__';
+import { state, take, put, sub, reset, getChannels, go, sput, stake } from '../index';
 
 describe('Given a CSP state extension', () => {
   beforeEach(() => {
@@ -60,7 +59,7 @@ describe('Given a CSP state extension', () => {
       s.select('RR');
       s.select('WW');
 
-      expect(Object.keys(getChannels())).toStrictEqual([ 'RR', 'WW' ]);
+      expect(Object.keys(getChannels())).toStrictEqual([ s.READ, s.WRITE, 'RR', 'WW' ]);
       s.destroy();
       expect(Object.keys(getChannels())).toStrictEqual([]);
     });
@@ -71,17 +70,16 @@ describe('Given a CSP state extension', () => {
       const s = state('foo');
       const log = jest.fn();
 
-      s.select('get');
-      s.mutate('set');
       s.mutate('xxx', (current, newV) => current + newV);
       s.select('up', current => current.toUpperCase());
+
       sub('up', value => log('sub=' + value));
 
       go(
         function * A() {
           log('>A');
-          log('take1=' + (yield take('get')));
-          log('take2=' + (yield take('get')));
+          log('take1=' + (yield take(s.READ)));
+          log('take2=' + (yield take('up')));
           log('take3=' + (yield take('up')));
         },
         () => log('<A')
@@ -89,9 +87,8 @@ describe('Given a CSP state extension', () => {
       go(
         function * B() {
           log('>B');
-          log('put1=' + (yield put('set', 'bar')));
+          log('put1=' + (yield put(s.WRITE, 'bar')));
           log('put2=' + (yield put('xxx', 'moo')));
-          log('put3=' + (yield put('xxx', 'ko')));
         },
         () => log('<B')
       );
@@ -102,15 +99,29 @@ describe('Given a CSP state extension', () => {
         [ '>B' ],
         [ 'take1=bar' ],
         [ 'sub=BAR' ],
+        [ 'take2=BAR' ],
         [ 'put1=true' ],
-        [ 'take2=barmoo' ],
         [ 'sub=BARMOO' ],
-        [ 'put2=true' ],
-        [ 'take3=BARMOOKO' ],
+        [ 'take3=BARMOO' ],
         [ '<A' ],
-        [ 'put3=true' ],
+        [ 'put2=true' ],
         [ '<B' ]
       );
+    });
+  });
+  describe('when using the built-in READ and WRITE channels', () => {
+    it('should work', () => {
+      const s = state('foo');
+      const spy = jest.fn();
+      const spy2 = jest.fn();
+
+      sub(s.READ, spy);
+      stake(s.READ, spy2);
+
+      sput(s.WRITE, 'bar');
+
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+      expect(spy2).toBeCalledWithArgs([ 'bar' ]);
     });
   });
 });

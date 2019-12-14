@@ -1,5 +1,6 @@
-import { sub, channelExists, chan, onSubscriberAdded, onSubscriberRemoved, sput, sclose } from '../index';
+import { sub, channelExists, chan, onSubscriberAdded, onSubscriberRemoved, sput, sclose, buffer } from '../index';
 import { getId } from '../../utils';
+import { grid } from '../../index';
 
 export function state(...args) {
   let value = args[ 0 ];
@@ -17,9 +18,11 @@ export function state(...args) {
   const api = {
     id,
     '@state': true,
+    'READ': id + '_read',
+    'WRITE': id + '_write',
     select(id, selector = v => v) {
       verifyChannel(id);
-      let ch = chan(id);
+      let ch = chan(id, buffer.broadcasting());
       readChannels.push({ ch, selector });
       onSubscriberAdded(ch, callback => {
         if (isThereInitialValue) {
@@ -29,7 +32,7 @@ export function state(...args) {
       onSubscriberRemoved(ch, callback => {});
     },
     mutate(id, reducer = (_, v) => v) {
-      verifyChannel(id);
+      verifyChannel(id, buffer.broadcasting());
       let ch = chan(id);
       writeChannels.push({ ch });
       sub(ch, payload => {
@@ -41,6 +44,7 @@ export function state(...args) {
       readChannels.forEach(({ ch }) => sclose(ch));
       writeChannels.forEach(({ ch }) => sclose(ch));
       value = undefined;
+      grid.remove(api);
     },
     get() {
       return value;
@@ -51,6 +55,10 @@ export function state(...args) {
     }
   };
 
+  api.select(api.READ);
+  api.mutate(api.WRITE);
+
+  grid.add(api);
   return api;
 }
 
