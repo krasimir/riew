@@ -1,7 +1,7 @@
-import { chan } from '../index';
+import { chan, close } from '../index';
 
 export function timeout(interval) {
   const ch = chan();
-  setTimeout(() => ch.close(), interval);
+  setTimeout(() => close(ch), interval);
   return ch;
 }

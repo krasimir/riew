@@ -1,19 +1,20 @@
-import { chan, buffer, timeout, go, merge, mult, unmult, unmultAll, reset, put, take, sleep, close } from '../index';
-import { delay, Test, exercise, ENDED } from '../__helpers__';
+import { chan, buffer, timeout, go, merge, mult, unmult, unmultAll, reset, put, sput, take, stake, sleep, close } from '../index';
+import { delay, Test, exercise } from '../__helpers__';
 
 describe('Given a CSP', () => {
   beforeEach(() => {
     reset();
   });
+
   describe('when we have a channel', () => {
     it('should allow us to put and take from it', () => {
       const spy = jest.fn();
 
-      take('X', spy);
-      put('X', 'foo', spy);
+      stake('X', spy);
+      sput('X', 'foo', spy);
 
-      put('X', 'bar', spy);
-      take('X', spy);
+      sput('X', 'bar', spy);
+      stake('X', spy);
 
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ true ], [ true ], [ 'bar' ]);
     });
@@ -112,9 +113,9 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A() {
-            ch.put('foo');
-            ch.put('bar');
-            ch.put('zar');
+            sput(ch, 'foo');
+            sput(ch, 'bar');
+            sput(ch, 'zar');
           },
           function * B(log) {
             log(`take1=${yield take(ch)}`);
@@ -171,7 +172,7 @@ describe('Given a CSP', () => {
             log(`take1=${(yield take(ch)).toString()}`);
           },
           function * B() {
-            ch.close();
+            close(ch);
           }
         ),
         [ '>A', '>B', 'take1=Symbol(ENDED)', '<A', '<B' ]
@@ -192,7 +193,7 @@ describe('Given a CSP', () => {
           function * A(log) {
             log(`p1=${(yield put(ch, 'foo')).toString()}`);
             log(`p2=${(yield put(ch, 'bar')).toString()}`);
-            ch.close();
+            close(ch);
             log(`p3=${(yield put(ch, 'zar')).toString()}`);
             yield sleep(2);
             log(`p4=${(yield put(ch, 'moo')).toString()}`);
@@ -229,7 +230,7 @@ describe('Given a CSP', () => {
             log(`take1=${(yield take(ch)).toString()}`);
           },
           function * B() {
-            ch.close();
+            close(ch);
           }
         ),
         [ '>A', '>B', 'take1=Symbol(ENDED)', '<A', '<B' ]
@@ -443,8 +444,8 @@ describe('Given a CSP', () => {
     describe('and we have a pre-set value', () => {
       it('should allow a non-blocking take', () => {
         const ch = chan(buffer.dropping(2));
-        ch.put('a');
-        ch.put('b');
+        sput(ch, 'a');
+        sput(ch, 'b');
         const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         exercise(
@@ -619,14 +620,14 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch3.take(v => log(`take_ch3=${v}`));
-            ch3.take(v => log(`take_ch3=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => log(`take_ch3=${v}`));
+            stake(ch3, v => log(`take_ch3=${v}`));
           },
           function * B() {
-            ch1.put('foo');
-            ch1.put('bar');
-            ch1.put('zar');
+            sput(ch1, 'foo');
+            sput(ch1, 'bar');
+            sput(ch1, 'zar');
           }
         ),
         [ '>A', '<A', '>B', 'take_ch3=foo', 'take_ch2=bar', 'take_ch3=zar', '<B' ]
@@ -649,10 +650,10 @@ describe('Given a CSP', () => {
             yield put(ch1, 'zar');
           },
           function * B(log) {
-            ch1.take(v => log(`take_ch1=${v}`));
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch3.take(v => log(`take_ch3=${v}`));
-            ch4.take(v => log(`take_ch4=${v}`));
+            stake(ch1, v => log(`take_ch1=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => log(`take_ch3=${v}`));
+            stake(ch4, v => log(`take_ch4=${v}`));
           }
         ),
         [ '>A', '>B', 'take_ch1=bar', '<A', 'take_ch2=zar', 'take_ch3=foo', 'take_ch4=foo', '<B' ]
@@ -677,14 +678,14 @@ describe('Given a CSP', () => {
               log('p3=' + (yield put(ch1, 'zar')));
             },
             function * B(log) {
-              ch2.take(v => log(`ch2_1=${v}`));
-              ch3.take(v => log(`ch3_1=${v}`));
-              ch2.take(v => log(`ch2_2=${v}`));
-              ch3.take(v => log(`ch3_2=${v}`));
-              ch2.take(v => log(`ch2_3=${v}`));
-              ch3.take(v => log(`ch3_3=${v}`));
-              ch2.take(v => log(`ch2_4=${v}`));
-              ch3.take(v => log(`ch3_4=${v}`));
+              stake(ch2, v => log(`ch2_1=${v}`));
+              stake(ch3, v => log(`ch3_1=${v}`));
+              stake(ch2, v => log(`ch2_2=${v}`));
+              stake(ch3, v => log(`ch3_2=${v}`));
+              stake(ch2, v => log(`ch2_3=${v}`));
+              stake(ch3, v => log(`ch3_3=${v}`));
+              stake(ch2, v => log(`ch2_4=${v}`));
+              stake(ch3, v => log(`ch3_4=${v}`));
             }
           ),
           [
@@ -715,20 +716,20 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch3.take(v => {
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => {
               log(`take_ch3=${v}`);
-              ch3.close();
+              close(ch3);
             });
-            ch3.take(v => log(`take_ch3=${v.toString()}`));
-            ch3.take(v => log(`take_ch3=${v.toString()}`));
+            stake(ch3, v => log(`take_ch3=${v.toString()}`));
+            stake(ch3, v => log(`take_ch3=${v.toString()}`));
           },
           function * B() {
-            ch1.put('foo');
-            ch1.put('bar');
-            ch1.put('zar');
+            sput(ch1, 'foo');
+            sput(ch1, 'bar');
+            sput(ch1, 'zar');
           }
         ),
         [
@@ -755,19 +756,19 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch3.take(v => {
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => {
               log(`take_ch3=${v}`);
               unmult(ch1, ch3);
             });
-            ch3.take(v => log(`take_ch3=${v.toString()}`));
+            stake(ch3, v => log(`take_ch3=${v.toString()}`));
           },
           function * B() {
-            ch1.put('foo');
-            ch1.put('bar');
-            ch1.put('zar');
+            sput(ch1, 'foo');
+            sput(ch1, 'bar');
+            sput(ch1, 'zar');
           }
         ),
         [ '>A', '<A', '>B', 'take_ch2=foo', 'take_ch3=foo', 'take_ch2=bar', 'take_ch2=zar', '<B' ]
@@ -783,19 +784,19 @@ describe('Given a CSP', () => {
       exercise(
         Test(
           function * A(log) {
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch2.take(v => log(`take_ch2=${v}`));
-            ch3.take(v => {
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => {
               log(`take_ch3=${v}`);
               unmultAll(ch1);
             });
-            ch3.take(v => log(`take_ch3=${v.toString()}`));
+            stake(ch3, v => log(`take_ch3=${v.toString()}`));
           },
           function * B() {
-            ch1.put('foo');
-            ch1.put('bar');
-            ch1.put('zar');
+            sput(ch1, 'foo');
+            sput(ch1, 'bar');
+            sput(ch1, 'zar');
           }
         ),
         [ '>A', '<A', '>B', 'take_ch2=foo', 'take_ch3=foo', '<B' ]

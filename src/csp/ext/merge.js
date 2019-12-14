@@ -1,13 +1,13 @@
-import { chan, ENDED, CLOSED, OPEN } from '../index';
+import { chan, ENDED, CLOSED, OPEN, sput, stake } from '../index';
 
 export function merge(...channels) {
   const newCh = chan();
 
   channels.forEach(ch => {
     (function taker() {
-      ch.take(v => {
+      stake(ch, v => {
         if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
-          newCh.put(v, taker);
+          sput(newCh, v, taker);
         }
       });
     })();

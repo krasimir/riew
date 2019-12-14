@@ -1,4 +1,4 @@
-import { OPEN, ENDED, CLOSED } from '../index';
+import { sput, stake, OPEN, ENDED, CLOSED } from '../index';
 
 export function mult(ch, to) {
   if (!ch._taps) ch._taps = [];
@@ -6,7 +6,7 @@ export function mult(ch, to) {
     ch._isMultTakerFired = true;
     ch._taps = ch._taps.concat(to);
     (function taker() {
-      ch.take(v => {
+      stake(ch, v => {
         if (v !== CLOSED && v !== ENDED) {
           let numOfSuccessfulPuts = 0;
           let putFinished = chWithSuccessfulPut => {
@@ -17,7 +17,7 @@ export function mult(ch, to) {
           };
           ch._taps.forEach((tapCh, idx) => {
             if (ch.state() === OPEN) {
-              tapCh.put(v, () => putFinished(ch));
+              sput(tapCh, v, () => putFinished(tapCh));
             } else {
               numOfSuccessfulPuts += 1;
               ch._taps.splice(idx, 1);

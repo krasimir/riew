@@ -14,8 +14,7 @@ export function chan(...args) {
     return channels[ id ];
   }
 
-  let api = (channels[ id ] = { id, '@channel': true });
-  let subscribers = [];
+  let api = (channels[ id ] = { id, '@channel': true, 'subscribers': [] });
   let onSubscriberAddedCallback = noop;
   let onSubscriberRemovedCallback = noop;
 
@@ -26,7 +25,7 @@ export function chan(...args) {
       (function taker() {
         api.take(value => {
           if (value !== CLOSED && value !== ENDED) {
-            subscribers.forEach(callback => callback(value));
+            api.subscribers.forEach(callback => callback(value));
             taker();
           }
         });
@@ -34,48 +33,16 @@ export function chan(...args) {
     }
   };
 
-  api.put = (item, callback = () => {}) => {
-    let state = api.state();
-    if (state === CLOSED || state === ENDED) {
-      callback(state);
-    } else {
-      api.buff.put(item, callback);
-    }
-  };
-
-  api.take = callback => {
-    let state = api.state();
-    if (state === ENDED) {
-      callback(ENDED);
-    } else {
-      if (state === CLOSED && api.buff.isEmpty()) {
-        api.state(ENDED);
-        callback(ENDED);
-      } else {
-        api.buff.take(r => callback(r));
-      }
-    }
-  };
-
-  api.close = () => {
-    const newState = api.buff.isEmpty() ? ENDED : CLOSED;
-    api.state(newState);
-    api.buff.puts.forEach(put => put(newState));
-    api.buff.takes.forEach(take => take(newState));
-    grid.remove(api);
-    subscribers = [];
-  };
-
   api.sub = callback => {
     listen();
-    if (!subscribers.find(c => c === callback)) {
-      subscribers.push(callback);
+    if (!api.subscribers.find(c => c === callback)) {
+      api.subscribers.push(callback);
       onSubscriberAddedCallback(callback);
     }
   };
 
   api.unsub = callback => {
-    subscribers = subscribers.filter(c => {
+    api.subscribers = api.subscribers.filter(c => {
       if (c !== callback) {
         return true;
       }
@@ -118,26 +85,60 @@ export function chan(...args) {
 }
 
 export function put(id, item, callback) {
-  if (isChannel(id)) id = id.id;
+  const doPut = (ch, item, callback) => {
+    let state = ch.state();
+    if (state === CLOSED || state === ENDED) {
+      callback(state);
+    } else {
+      ch.buff.put(item, callback);
+    }
+  };
+
+  let ch = isChannel(id) ? id : chan(id);
   if (typeof callback === 'function') {
-    chan(id).put(item, callback);
+    doPut(ch, item, callback);
   } else {
-    return { ch: chan(id), op: PUT, item };
+    return { ch, op: PUT, item };
   }
+}
+export function sput(id, item, callback) {
+  return put(id, item, callback || noop);
 }
 
 export function take(id, callback) {
-  if (isChannel(id)) id = id.id;
+  const doTake = (ch, callback) => {
+    let state = ch.state();
+    if (state === ENDED) {
+      callback(ENDED);
+    } else {
+      if (state === CLOSED && ch.buff.isEmpty()) {
+        ch.state(ENDED);
+        callback(ENDED);
+      } else {
+        ch.buff.take(r => callback(r));
+      }
+    }
+  };
+
+  let ch = isChannel(id) ? id : chan(id);
   if (typeof callback === 'function') {
-    chan(id).take(callback);
+    doTake(ch, callback);
   } else {
-    return { ch: chan(id), op: TAKE };
+    return { ch, op: TAKE };
   }
+}
+export function stake(id, callback) {
+  return take(id, callback || noop);
 }
 
 export function close(id) {
-  if (isChannel(id)) id = id.id;
-  chan(id).close();
+  let ch = isChannel(id) ? id : chan(id);
+  const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
+  ch.state(newState);
+  ch.buff.puts.forEach(put => put(newState));
+  ch.buff.takes.forEach(take => take(newState));
+  grid.remove(ch);
+  ch.subscribers = [];
   return { op: CLOSE };
 }
 
@@ -163,6 +164,50 @@ export const isChannel = ch => ch && ch[ '@channel' ] === true;
 export const cspReset = () => (channels = {});
 export const getChannels = () => channels;
 export const channelExists = id => !!channels[ id ];
+
+// **************************************************** routine
+
+export function go(func, done = () => {}, ...args) {
+  const RUNNING = 'RUNNING';
+  const STOPPED = 'STOPPED';
+  let state = RUNNING;
+
+  const routineApi = {
+    stop() {
+      state = STOPPED;
+    }
+  };
+
+  const gen = func(...args);
+  (function next(value) {
+    if (state === STOPPED) {
+      return;
+    }
+    const i = gen.next(value);
+    if (i.done === true) {
+      if (done) done(i.value);
+      return;
+    }
+    switch (i.value.op) {
+      case PUT:
+        put(i.value.ch, i.value.item, next);
+        break;
+      case TAKE:
+        take(i.value.ch, next);
+        break;
+      case CLOSE:
+        next();
+        break;
+      case SLEEP:
+        setTimeout(next, i.value.ms);
+        break;
+      default:
+        throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
+    }
+  })();
+
+  return routineApi;
+}
 
 // **************************************************** utils
 
