@@ -1,5 +1,5 @@
 import { getId } from '../utils';
-import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, CLOSE } from './constants';
+import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, NOOP } from './constants';
 import { grid } from '../index';
 import buffer from './buffer';
 
@@ -14,55 +14,14 @@ export function chan(...args) {
     return channels[ id ];
   }
 
-  let api = (channels[ id ] = { id, '@channel': true, 'subscribers': [] });
-  let onSubscriberAddedCallback = noop;
-  let onSubscriberRemovedCallback = noop;
-
-  let isListening = false;
-  let listen = () => {
-    if (!isListening) {
-      isListening = true;
-      (function taker() {
-        api.take(value => {
-          if (value !== CLOSED && value !== ENDED) {
-            api.subscribers.forEach(callback => callback(value));
-            taker();
-          }
-        });
-      })();
-    }
-  };
-
-  api.sub = callback => {
-    listen();
-    if (!api.subscribers.find(c => c === callback)) {
-      api.subscribers.push(callback);
-      onSubscriberAddedCallback(callback);
-    }
-  };
-
-  api.unsub = callback => {
-    api.subscribers = api.subscribers.filter(c => {
-      if (c !== callback) {
-        return true;
-      }
-      onSubscriberRemovedCallback(c);
-      return false;
-    });
-  };
-
-  api.onSubscriberAdded = callback => {
-    onSubscriberAddedCallback = callback;
-  };
-
-  api.onSubscriberRemoved = callback => {
-    onSubscriberRemovedCallback = callback;
-  };
-
-  api.reset = () => {
-    api.state(OPEN);
-    api.buff.reset();
-  };
+  let api = (channels[ id ] = {
+    id,
+    '@channel': true,
+    'subscribers': [],
+    'isListening': false,
+    'onSubscriberAddedCallback': noop,
+    'onSubscriberRemovedCallback': noop
+  });
 
   api.isActive = () => api.state() === OPEN;
   api.buff = buff;
@@ -84,6 +43,8 @@ export function chan(...args) {
   return api;
 }
 
+// **************************************************** PUT
+
 export function put(id, item, callback) {
   const doPut = (ch, item, callback) => {
     let state = ch.state();
@@ -104,6 +65,8 @@ export function put(id, item, callback) {
 export function sput(id, item, callback) {
   return put(id, item, callback || noop);
 }
+
+// **************************************************** TAKE
 
 export function take(id, callback) {
   const doTake = (ch, callback) => {
@@ -131,6 +94,8 @@ export function stake(id, callback) {
   return take(id, callback || noop);
 }
 
+// **************************************************** close & reset
+
 export function close(id) {
   let ch = isChannel(id) ? id : chan(id);
   const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
@@ -139,19 +104,53 @@ export function close(id) {
   ch.buff.takes.forEach(take => take(newState));
   grid.remove(ch);
   ch.subscribers = [];
-  return { op: CLOSE };
+  return { op: NOOP };
 }
+export function sclose(id) {
+  return close(id);
+}
+export function channelReset(id) {
+  let ch = isChannel(id) ? id : chan(id);
+  ch.state(OPEN);
+  ch.buff.reset();
+  return { ch, op: NOOP };
+}
+export function schannelReset(id) {
+  channelReset(id);
+}
+
+// **************************************************** pubsub
 
 export function sub(id, callback) {
-  if (isChannel(id)) id = id.id;
-  chan(id).sub(callback);
+  let ch = isChannel(id) ? id : chan(id);
+  // We trigger the listening on purpose BEFORE adding the subscriber.
+  // This way we ensure consistency between the subscribers.
+  if (!ch.isListening) {
+    ch.isListening = true;
+    (function taker() {
+      stake(ch, value => {
+        if (value !== CLOSED && value !== ENDED) {
+          ch.subscribers.forEach(callback => callback(value));
+          taker();
+        }
+      });
+    })();
+  }
+  if (!ch.subscribers.find(c => c === callback)) {
+    ch.subscribers.push(callback);
+    ch.onSubscriberAddedCallback(callback);
+  }
 }
-
 export function unsub(id, callback) {
-  if (isChannel(id)) id = id.id;
-  chan(id).unsub(callback);
+  let ch = isChannel(id) ? id : chan(id);
+  ch.subscribers = ch.subscribers.filter(c => {
+    if (c !== callback) {
+      return true;
+    }
+    ch.onSubscriberRemovedCallback(c);
+    return false;
+  });
 }
-
 export function sleep(ms, callback) {
   if (typeof callback === 'function') {
     setTimeout(callback, ms);
@@ -159,6 +158,16 @@ export function sleep(ms, callback) {
     return { op: SLEEP, ms };
   }
 }
+export function onSubscriberAdded(id, callback) {
+  let ch = isChannel(id) ? id : chan(id);
+  ch.onSubscriberAddedCallback = callback;
+}
+export function onSubscriberRemoved(id, callback) {
+  let ch = isChannel(id) ? id : chan(id);
+  ch.onSubscriberRemovedCallback = callback;
+}
+
+// **************************************************** other
 
 export const isChannel = ch => ch && ch[ '@channel' ] === true;
 export const cspReset = () => (channels = {});
@@ -195,7 +204,7 @@ export function go(func, done = () => {}, ...args) {
       case TAKE:
         take(i.value.ch, next);
         break;
-      case CLOSE:
+      case NOOP:
         next();
         break;
       case SLEEP:

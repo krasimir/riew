@@ -1,4 +1,21 @@
-import { chan, buffer, timeout, go, merge, mult, unmult, unmultAll, reset, put, sput, take, stake, sleep, close } from '../index';
+import {
+  chan,
+  buffer,
+  timeout,
+  go,
+  merge,
+  mult,
+  unmult,
+  unmultAll,
+  reset,
+  put,
+  sput,
+  take,
+  stake,
+  sleep,
+  close,
+  channelReset
+} from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
 describe('Given a CSP', () => {
@@ -563,6 +580,72 @@ describe('Given a CSP', () => {
       });
     });
   });
+  describe('when we create a channel with a broadcasting buffer', () => {
+    it('should flush all the pending takes at once', async () => {
+      const ch = chan(buffer.broadcasting());
+      const spyA = jest.fn();
+      const spyB = jest.fn();
+      const spyC = jest.fn();
+
+      go(function * () {
+        stake(ch, spyA);
+        stake(ch, spyB);
+        stake(ch, spyC);
+      });
+      go(function * () {
+        yield sleep();
+        yield put(ch, 'foo');
+        yield put(ch, 'bar'); // <- not happening because all the takes are flushed
+      });
+
+      await delay(5);
+      expect(spyA).toBeCalledWithArgs([ 'foo' ]);
+      expect(spyB).toBeCalledWithArgs([ 'foo' ]);
+      expect(spyC).toBeCalledWithArgs([ 'foo' ]);
+    });
+    describe('and we have pending puts', () => {
+      it('should execute puts with every take', async () => {
+        const ch = chan(buffer.broadcasting());
+        const spyA = jest.fn();
+        const spyB = jest.fn();
+
+        go(function * () {
+          sput(ch, 'foo');
+          sput(ch, 'bar');
+        });
+        go(function * () {
+          yield sleep();
+          stake(ch, spyA);
+          stake(ch, spyB);
+        });
+
+        await delay(5);
+        expect(spyA).toBeCalledWithArgs([ 'foo' ]);
+        expect(spyB).toBeCalledWithArgs([ 'bar' ]);
+      });
+    });
+    describe('and we have a new take added as part of another take callback', () => {
+      it('should execute puts with every take', async () => {
+        const ch = chan(buffer.broadcasting());
+        const spy = jest.fn();
+
+        go(function * () {
+          stake(ch, value => {
+            spy(value);
+            stake(ch, spy);
+          });
+        });
+        go(function * () {
+          sput(ch, 'foo');
+          yield sleep();
+          sput(ch, 'bar');
+        });
+
+        await delay(5);
+        expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+      });
+    });
+  });
 
   // merge
 
@@ -851,7 +934,7 @@ describe('Given a CSP', () => {
           },
           function * B(log) {
             yield sleep(5);
-            ch.reset();
+            channelReset(ch);
             log('reset');
           }
         ),

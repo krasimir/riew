@@ -1,4 +1,20 @@
-import { chan, sub, unsub, getChannels, go, channelExists, reset, grid, take, put, close } from '../index';
+import {
+  chan,
+  sub,
+  unsub,
+  getChannels,
+  go,
+  channelExists,
+  reset,
+  grid,
+  take,
+  put,
+  sput,
+  close,
+  buffer,
+  onSubscriberAdded,
+  onSubscriberRemoved
+} from '../index';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -66,7 +82,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we subscribe to a topic after someone publish on it', () => {
-    it('should NOT fire the callbacks', () => {
+    it(`should trigger the first subscriber only`, () => {
       expect(Object.keys(getChannels())).toHaveLength(0);
 
       const spyA = jest.fn();
@@ -83,10 +99,8 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyB).not.toBeCalled();
     });
   });
-  describe('when we want to use pubsub as part of routines', () => {
-    fit(`should be possible to
-      * put to the topic's channel
-      * take from the topic's channel`, () => {
+  describe('when we want use broadcasting buffer', () => {
+    it('should satisfy the subscription but also the takes in a routine', () => {
       expect(Object.keys(getChannels())).toHaveLength(0);
 
       const spyTake1 = jest.fn();
@@ -94,14 +108,13 @@ describe('Given a CSP pubsub extension', () => {
       const spyPut = jest.fn();
       const log = jest.fn();
 
+      chan('yyy', buffer.broadcasting());
       sub('yyy', spyTake2);
-      // ^
-      // we have overtaking of takes. The sub registers a listener taker
-      // and later we use a single take
 
       go(
         function * A() {
           log('>A');
+          spyTake1(`value is ${yield take('yyy')}`);
           spyTake1(`value is ${yield take('yyy')}`);
         },
         () => log('<A')
@@ -116,16 +129,17 @@ describe('Given a CSP pubsub extension', () => {
         () => log('<B')
       );
 
-      expect(spyTake1).toBeCalledWithArgs([ 'value is 42' ]);
+      expect(spyTake1).toBeCalledWithArgs([ 'value is 42' ], [ 'value is 100' ]);
       expect(spyTake2).toBeCalledWithArgs([ 42 ], [ 100 ], [ 200 ]);
       expect(log).toBeCalledWithArgs([ '>A' ], [ '>B' ], [ '<A' ], [ '<B' ]);
+      expect(spyPut).toBeCalledWithArgs([ '(1) true' ], [ '(2) true' ], [ '(3) true' ]);
     });
   });
   describe('when we check if a topic exists', () => {
     it('should return true or false', () => {
       expect(Object.keys(getChannels())).toHaveLength(0);
 
-      topic('AAA');
+      chan('AAA');
       expect(channelExists('AAA')).toBe(true);
       expect(channelExists('BBB')).toBe(false);
     });
@@ -136,9 +150,8 @@ describe('Given a CSP pubsub extension', () => {
       const removed = jest.fn();
       const callback = () => {};
 
-      topic('foo')
-        .onSubscriberAdded(added)
-        .onSubscriberRemoved(removed);
+      onSubscriberAdded('foo', added);
+      onSubscriberRemoved('foo', removed);
       sub('foo', callback);
       unsub('foo', callback);
 
@@ -152,9 +165,9 @@ describe('Given a CSP pubsub extension', () => {
       const ch = chan();
 
       sub(ch, spy);
-      ch.put('foo');
-      ch.close();
-      ch.put('bar');
+      sput(ch, 'foo');
+      close(ch);
+      sput(ch, 'bar');
 
       expect(spy).toBeCalledWithArgs([ 'foo' ]);
     });
