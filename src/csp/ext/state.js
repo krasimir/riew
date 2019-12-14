@@ -1,57 +1,55 @@
-import { halt, sub, topic, channelExists } from '../index';
+import { sub, channelExists, chan, onSubscriberAdded, onSubscriberRemoved, sput, sclose } from '../index';
 import { getId } from '../../utils';
 
 export function state(...args) {
   let value = args[ 0 ];
   const id = getId('state');
-  const readTopics = [];
-  const writeTopics = [];
+  const readChannels = [];
+  const writeChannels = [];
   const isThereInitialValue = args.length > 0;
 
-  function verifyTopic(topicName) {
-    if (channelExists(topicName)) {
-      throw new Error(`Topic with name ${topicName} already exists.`);
+  function verifyChannel(id) {
+    if (channelExists(id)) {
+      throw new Error(`Channel with name ${id} already exists.`);
     }
   }
 
   const api = {
     id,
     '@state': true,
-    'GET': id + '_GET',
-    'SET': id + '_SET',
-    select(topicName, func = v => v) {
-      verifyTopic(topicName);
-      readTopics.push({ topicName, func });
-      topic(topicName)
-        .onSubscriberAdded(callback => {
-          if (isThereInitialValue) {
-            callback(func(value));
-          }
-        })
-        .onSubscriberRemoved(callback => {});
+    select(id, selector = v => v) {
+      verifyChannel(id);
+      let ch = chan(id);
+      readChannels.push({ ch, selector });
+      onSubscriberAdded(ch, callback => {
+        if (isThereInitialValue) {
+          callback(selector(value));
+        }
+      });
+      onSubscriberRemoved(ch, callback => {});
     },
-    mutate(topicName, reducer = (_, v) => v) {
-      verifyTopic(topicName);
-      writeTopics.push({ topicName });
-      sub(topicName, payload => {
+    mutate(id, reducer = (_, v) => v) {
+      verifyChannel(id);
+      let ch = chan(id);
+      writeChannels.push({ ch });
+      sub(ch, payload => {
         value = reducer(value, payload);
-        readTopics.forEach(r => {
-          topic(r.topicName).put(r.func(value));
-        });
+        readChannels.forEach(r => sput(r.ch, r.selector(value)));
       });
     },
     destroy() {
-      readTopics.forEach(({ topicName }) => halt(topicName));
-      writeTopics.forEach(({ topicName }) => halt(topicName));
+      readChannels.forEach(({ ch }) => sclose(ch));
+      writeChannels.forEach(({ ch }) => sclose(ch));
       value = undefined;
     },
-    getValue() {
+    get() {
       return value;
+    },
+    set(newValue) {
+      value = newValue;
+      readChannels.forEach(r => sput(r.ch, r.selector(value)));
     }
   };
-
-  api.select(api.GET);
-  api.mutate(api.SET);
 
   return api;
 }

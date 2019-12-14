@@ -28,9 +28,6 @@ export function chan(...args) {
   api.state = s => {
     if (typeof s !== 'undefined') {
       state = s;
-      if (state === ENDED) {
-        grid.remove(api);
-      }
     }
     return state;
   };
@@ -104,6 +101,7 @@ export function close(id) {
   ch.buff.takes.forEach(take => take(newState));
   grid.remove(ch);
   ch.subscribers = [];
+  delete channels[ ch.id ];
   return { op: NOOP };
 }
 export function sclose(id) {
