@@ -2,61 +2,38 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import riew from 'riew/react';
+import { sput } from 'riew';
 
+import './Data';
 import List from './List';
 import Footer from './Footer';
-import { ToDo } from './Data';
-import { ENTER, ALL, ACTIVE, COMPLETED } from './constants';
+import {
+  ENTER,
+  ALL,
+  ACTIVE,
+  COMPLETED,
+  TOGGLE_TODO,
+  NEW_TODO,
+  DELETE_TODO,
+  EDIT_TODO,
+  UPDATE_TODO,
+  FILTER_CLEAR_COMPLETED
+} from './constants';
 
-const routine = function ({ render, state, todos }) {
-  let [ filter, changeFilter ] = state(ALL);
+const routine = function * ({ render, state }) {
+  let filter = state(ALL);
 
   render({
     filter,
-    viewAll: () => changeFilter.put(ALL),
-    viewActive: () => changeFilter.put(ACTIVE),
-    viewCompleted: () => changeFilter.put(COMPLETED),
-    toggle: todos.set((todos, payload) => {
-      return todos.map((todo, i) => {
-        if (i === payload) {
-          return {
-            ...todo,
-            completed: !todo.completed
-          };
-        }
-        return todo;
-      });
-    }).put,
-    newTodo: todos.set((todos, payload) => [ ...todos, ToDo(payload) ]).put,
-    deleteTodo: todos.set((todos, payload) => todos.filter((todo, i) => i !== payload)).put,
-    editingTodo: todos.set((todos, payload) => {
-      return todos.map((todo, i) => {
-        if (i === payload.index) {
-          return {
-            ...todo,
-            editing: payload.value
-          };
-        }
-        return todo;
-      });
-    }).put,
-    updateTodo: todos.set((todos, payload) => {
-      return todos.map((todo, i) => {
-        if (i === payload.index) {
-          return {
-            ...todo,
-            label: payload.label,
-            editing: false
-          };
-        }
-        return todo;
-      });
-    }).put,
-    clearCompleted: todos.set(todos => {
-      return todos.filter(todo => {
-        return !todo.completed;
-      });
-    }).put
+    viewAll: () => sput(filter.WRITE, ALL),
+    viewActive: () => sput(filter.WRITE, ACTIVE),
+    viewCompleted: () => sput(filter.WRITE, COMPLETED),
+    toggle: idx => sput(TOGGLE_TODO, idx),
+    newTodo: payload => sput(NEW_TODO, payload),
+    deleteTodo: idx => sput(DELETE_TODO, idx),
+    editingTodo: payload => sput(EDIT_TODO, payload),
+    updateTodo: payload => sput(UPDATE_TODO, payload),
+    clearCompleted: () => sput(FILTER_CLEAR_COMPLETED)
   });
 };
 
