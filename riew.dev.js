@@ -563,10 +563,18 @@ function state() {
         reducer = _ref2.reducer,
         onError = _ref2.onError;
 
-    try {
-      value = reducer(value, payload);
-    } catch (e) {
-      handleError(onError)(e);
+    if ((0, _utils.isGeneratorFunction)(reducer)) {
+      (0, _index.go)(reducer, function (v) {
+        return readChannels.forEach(function (r) {
+          return runSelector(r, v);
+        });
+      }, value, payload);
+    } else {
+      try {
+        value = reducer(value, payload);
+      } catch (e) {
+        handleError(onError)(e);
+      }
     }
     if ((0, _utils.isPromise)(value)) {
       value.then(function (v) {
@@ -1614,11 +1622,17 @@ var accumulate = exports.accumulate = function accumulate(current, newData) {
 var isPromise = exports.isPromise = function isPromise(obj) {
   return obj && typeof obj['then'] === 'function';
 };
+var isObjectLiteral = exports.isObjectLiteral = function isObjectLiteral(obj) {
+  return obj ? obj.constructor === {}.constructor : false;
+};
 var isGenerator = exports.isGenerator = function isGenerator(obj) {
   return obj && typeof obj['next'] === 'function' && typeof obj['throw'] === 'function';
 };
-var isObjectLiteral = exports.isObjectLiteral = function isObjectLiteral(obj) {
-  return obj ? obj.constructor === {}.constructor : false;
+var isGeneratorFunction = exports.isGeneratorFunction = function isGeneratorFunction(obj) {
+  var constructor = obj.constructor;
+  if (!constructor) return false;
+  if (constructor.name === 'GeneratorFunction' || constructor.displayName === 'GeneratorFunction') return true;
+  return isGenerator(constructor.prototype);
 };
 
 },{}]},{},[17])(17)

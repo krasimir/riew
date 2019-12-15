@@ -1,4 +1,4 @@
-import { state, take, put, sub, reset, CHANNELS, go, sput, stake } from '../index';
+import { state, take, put, sub, reset, CHANNELS, go, sput, stake, sleep } from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given a CSP state extension', () => {
@@ -142,6 +142,24 @@ describe('Given a CSP state extension', () => {
 
       await delay(10);
       expect(spy).toBeCalledWithArgs([ 'foobar' ]);
+    });
+  });
+  describe('when we have a routine as mutation', () => {
+    it('should wait till the routine is gone', async () => {
+      const spy = jest.fn();
+      const s = state('foo');
+      const s2 = state('bar');
+
+      s.mutate('W', function * (current, newOne) {
+        yield sleep(5);
+        return current + newOne + (yield take(s2.READ));
+      });
+
+      sub(s.READ, spy);
+      sput('W', 'zoo');
+
+      await delay(10);
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'foozoobar' ]);
     });
   });
 });

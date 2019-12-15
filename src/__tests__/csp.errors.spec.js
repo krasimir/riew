@@ -101,4 +101,16 @@ describe('Given csp features', () => {
       sput('W');
     });
   });
+  describe('when we have an error in a routine used as part of a state mutation', () => {
+    it('should wait till the routine is gone', async () => {
+      const s = state('foo');
+      const error = new Error('ops');
+
+      s.mutate('W', function * (current, newOne) {
+        throw error;
+      });
+
+      expect(() => sput('W', 'zoo')).toThrowError(error);
+    });
+  });
 });

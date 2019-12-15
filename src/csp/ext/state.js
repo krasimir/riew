@@ -1,5 +1,5 @@
-import { sub, CHANNELS, chan, sput, sclose, buffer } from '../../index';
-import { getId, isPromise } from '../../utils';
+import { go, sub, CHANNELS, chan, sput, sclose, buffer } from '../../index';
+import { getId, isPromise, isGeneratorFunction } from '../../utils';
 import { grid } from '../../index';
 
 export function state(...args) {
@@ -33,10 +33,14 @@ export function state(...args) {
     sput(ch, selectorValue);
   }
   function runWriter({ ch, reducer, onError }, payload) {
-    try {
-      value = reducer(value, payload);
-    } catch (e) {
-      handleError(onError)(e);
+    if (isGeneratorFunction(reducer)) {
+      go(reducer, v => readChannels.forEach(r => runSelector(r, v)), value, payload);
+    } else {
+      try {
+        value = reducer(value, payload);
+      } catch (e) {
+        handleError(onError)(e);
+      }
     }
     if (isPromise(value)) {
       value.then(v => readChannels.forEach(r => runSelector(r, v))).catch(handleError(onError));
