@@ -16,6 +16,8 @@ import {
   close,
   compose,
   state,
+  stop,
+  rerun,
   channelReset,
   CHANNELS,
   sub
@@ -86,6 +88,18 @@ describe('Given a CSP', () => {
       await delay(4);
       expect(spy).not.toBeCalled();
     });
+    it('should provide an API for rerunning the routine', async () => {
+      const spy = jest.fn();
+      const routine = go(function * A() {
+        yield sleep(2);
+        spy('foo');
+      });
+
+      await delay(4);
+      routine.rerun();
+      await delay(4);
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'foo' ]);
+    });
     describe('and we use channels to control flow', () => {
       it('should work', async () => {
         const spy = jest.fn();
@@ -112,6 +126,51 @@ describe('Given a CSP', () => {
 
         await delay(20);
         expect(spy).toBeCalledWithArgs([ 'bar' ], [ 'foo' ]);
+      });
+    });
+    describe('when we yield `stop`', () => {
+      it('should stop the routine', async () => {
+        const spy = jest.fn();
+        sub('XXX', value => {
+          spy(value);
+        });
+        go(function * () {
+          yield put('XXX', 'foo');
+          yield stop();
+          yield put('XXX', 'bar');
+        });
+        go(function * () {
+          yield take('XXX');
+          yield take('XXX');
+        });
+        expect(spy).toBeCalledWithArgs([ 'foo' ]);
+      });
+    });
+
+    describe('when we yield `rerun`', () => {
+      it('should re-run the routine', async () => {
+        const spy = jest.fn();
+        let counter = 0;
+
+        go(function * () {
+          const value = yield take('XXX');
+          if (value > 10) {
+            counter += 1;
+          }
+          spy(counter);
+          yield rerun();
+          spy('NEVER CALLED :)');
+        });
+        go(function * () {
+          yield put('XXX', 2);
+          yield put('XXX', 12);
+          yield put('XXX', 22);
+          yield put('XXX', 4);
+          yield put('XXX', 9);
+          yield put('XXX', 39);
+        });
+        expect(spy).toBeCalledWithArgs([ 0 ], [ 1 ], [ 2 ], [ 2 ], [ 2 ], [ 3 ]);
+        expect(counter).toBe(3);
       });
     });
   });

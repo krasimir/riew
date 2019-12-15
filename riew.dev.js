@@ -337,6 +337,8 @@ var PUT = exports.PUT = 'PUT';
 var TAKE = exports.TAKE = 'TAKE';
 var NOOP = exports.NOOP = 'NOOP';
 var SLEEP = exports.SLEEP = 'SLEEP';
+var STOP = exports.STOP = 'STOP';
+var RERUN = exports.RERUN = 'RERUN';
 
 var CHANNELS = exports.CHANNELS = {
   channels: {},
@@ -812,10 +814,12 @@ exports.channelReset = channelReset;
 exports.schannelReset = schannelReset;
 exports.sub = sub;
 exports.unsub = unsub;
-exports.sleep = sleep;
 exports.onSubscriberAdded = onSubscriberAdded;
 exports.onSubscriberRemoved = onSubscriberRemoved;
 exports.go = go;
+exports.sleep = sleep;
+exports.stop = stop;
+exports.rerun = rerun;
 
 var _constants = require('./constants');
 
@@ -930,13 +934,6 @@ function unsub(id, callback) {
     return false;
   });
 }
-function sleep(ms, callback) {
-  if (typeof callback === 'function') {
-    setTimeout(callback, ms);
-  } else {
-    return { op: _constants.SLEEP, ms: ms };
-  }
-}
 function onSubscriberAdded(id, callback) {
   var ch = isChannel(id) ? id : (0, _index.chan)(id);
   ch.onSubscriberAddedCallback = callback;
@@ -955,6 +952,10 @@ var isChannel = exports.isChannel = function isChannel(ch) {
 // **************************************************** routine
 
 function go(func) {
+  for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+    args[_key - 2] = arguments[_key];
+  }
+
   var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
   var RUNNING = 'RUNNING';
@@ -964,15 +965,15 @@ function go(func) {
   var routineApi = {
     stop: function stop() {
       state = STOPPED;
+    },
+    rerun: function rerun() {
+      gen = func.apply(undefined, args);
+      next();
     }
   };
 
-  for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-    args[_key - 2] = arguments[_key];
-  }
-
   var gen = func.apply(undefined, args);
-  (function next(value) {
+  function next(value) {
     if (state === STOPPED) {
       return;
     }
@@ -1000,12 +1001,37 @@ function go(func) {
       case _constants.SLEEP:
         setTimeout(next, i.value.ms);
         break;
+      case _constants.STOP:
+        state = STOPPED;
+        break;
+      case _constants.RERUN:
+        gen = func.apply(undefined, args);
+        next();
+        break;
       default:
         throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
     }
-  })();
+  }
+
+  next();
 
   return routineApi;
+}
+
+function sleep(ms, callback) {
+  if (typeof callback === 'function') {
+    setTimeout(callback, ms);
+  } else {
+    return { op: _constants.SLEEP, ms: ms };
+  }
+}
+
+function stop() {
+  return { op: _constants.STOP };
+}
+
+function rerun() {
+  return { op: _constants.RERUN };
 }
 
 },{"../index":17,"../utils":20,"./constants":7}],15:[function(require,module,exports){

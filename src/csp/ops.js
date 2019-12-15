@@ -1,4 +1,4 @@
-import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, NOOP, CHANNELS } from './constants';
+import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, NOOP, CHANNELS, STOP, RERUN } from './constants';
 import { grid, chan } from '../index';
 import { isPromise } from '../utils';
 
@@ -99,13 +99,6 @@ export function unsub(id, callback) {
     return false;
   });
 }
-export function sleep(ms, callback) {
-  if (typeof callback === 'function') {
-    setTimeout(callback, ms);
-  } else {
-    return { op: SLEEP, ms };
-  }
-}
 export function onSubscriberAdded(id, callback) {
   let ch = isChannel(id) ? id : chan(id);
   ch.onSubscriberAddedCallback = callback;
@@ -129,11 +122,15 @@ export function go(func, done = () => {}, ...args) {
   const routineApi = {
     stop() {
       state = STOPPED;
+    },
+    rerun() {
+      gen = func(...args);
+      next();
     }
   };
 
-  const gen = func(...args);
-  (function next(value) {
+  let gen = func(...args);
+  function next(value) {
     if (state === STOPPED) {
       return;
     }
@@ -159,10 +156,35 @@ export function go(func, done = () => {}, ...args) {
       case SLEEP:
         setTimeout(next, i.value.ms);
         break;
+      case STOP:
+        state = STOPPED;
+        break;
+      case RERUN:
+        gen = func(...args);
+        next();
+        break;
       default:
         throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
     }
-  })();
+  }
+
+  next();
 
   return routineApi;
+}
+
+export function sleep(ms, callback) {
+  if (typeof callback === 'function') {
+    setTimeout(callback, ms);
+  } else {
+    return { op: SLEEP, ms };
+  }
+}
+
+export function stop() {
+  return { op: STOP };
+}
+
+export function rerun() {
+  return { op: RERUN };
 }

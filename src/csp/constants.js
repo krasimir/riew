@@ -5,6 +5,8 @@ export const PUT = 'PUT';
 export const TAKE = 'TAKE';
 export const NOOP = 'NOOP';
 export const SLEEP = 'SLEEP';
+export const STOP = 'STOP';
+export const RERUN = 'RERUN';
 
 export const CHANNELS = {
   channels: {},
