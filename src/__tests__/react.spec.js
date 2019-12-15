@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 import riew from '../react/index';
-import { state, reset, register, topic, sub } from '../index';
+import { state, reset, register, topic, sub, sput, put, sleep } from '../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
@@ -24,8 +24,8 @@ describe('Given the React riew function', () => {
       * render once by default
       * render every time when we call the "data" method`, () => {
       return act(async () => {
-        const routine = jest.fn().mockImplementation(async ({ render }) => {
-          await delay(5);
+        const routine = jest.fn().mockImplementation(function * ({ render }) {
+          yield sleep(5);
           render({ foo: 'bar' });
         });
         const view = jest.fn().mockImplementation(() => null);
@@ -44,9 +44,9 @@ describe('Given the React riew function', () => {
         * teardown the state when the component is unmounted`, () => {
         return act(async () => {
           const s = state('foo');
-          const R = riew(({ state }) => <p>{ state }</p>, async function ({ put }) {
-            await delay(5);
-            put(s.SET, 'bar');
+          const R = riew(({ state }) => <p>{ state }</p>, function * () {
+            yield sleep(5);
+            yield put(s.WRITE, 'bar');
           }).with({ state: s });
           const { container, unmount } = render(<R />);
 
@@ -73,7 +73,7 @@ describe('Given the React riew function', () => {
 
             await delay(3);
             exerciseHTML(container, '<p>foo42</p>');
-            topic(s.SET).put('200');
+            sput(s.WRITE, '200');
             await delay(3);
             exerciseHTML(container, '<p>foo200</p>');
           });
@@ -102,7 +102,7 @@ describe('Given the React riew function', () => {
         return act(async () => {
           const propsSpy = jest.fn();
           const view = jest.fn().mockImplementation(() => null);
-          const I = riew(view, function ({ props }) {
+          const I = riew(view, function * ({ props }) {
             sub(props, propsSpy);
           });
 
@@ -132,7 +132,7 @@ describe('Given the React riew function', () => {
   describe('when we render a channel and pass a function to update the value of the channel', () => {
     it('when firing the mutation func should re-render with a new value', () => {
       return act(async () => {
-        const routine = ({ render }) => {
+        const routine = function * ({ render }) {
           const s = state([ { value: 2, selected: true }, { value: 67, selected: true } ]);
           s.mutate('select', (current = [], payload) => {
             return current.map(item => {
@@ -143,7 +143,7 @@ describe('Given the React riew function', () => {
             });
           });
           const change = payload => {
-            topic('select').put(payload);
+            sput('select', payload);
           };
 
           render({ value: s, change });
@@ -179,7 +179,7 @@ describe('Given the React riew function', () => {
     it('should provide the value to the react component', async () => {
       return act(async () => {
         const s = state(true);
-        const changeToFalse = () => topic(s.SET).put(false);
+        const changeToFalse = () => sput(s.WRITE, false);
         const spy = jest.fn();
 
         register('whee', s);
