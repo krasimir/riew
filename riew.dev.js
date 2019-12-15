@@ -217,7 +217,6 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.channelExists = exports.getChannels = exports.cspReset = exports.isChannel = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -251,21 +250,7 @@ var _slicedToArray = function () {
   };
 }();
 
-exports.chan = chan;
-exports.put = put;
-exports.sput = sput;
-exports.take = take;
-exports.stake = stake;
-exports.close = close;
-exports.sclose = sclose;
-exports.channelReset = channelReset;
-exports.schannelReset = schannelReset;
-exports.sub = sub;
-exports.unsub = unsub;
-exports.sleep = sleep;
-exports.onSubscriberAdded = onSubscriberAdded;
-exports.onSubscriberRemoved = onSubscriberRemoved;
-exports.go = go;
+exports.createChannel = createChannel;
 
 var _utils = require('../utils');
 
@@ -281,10 +266,7 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-var channels = {};
-var noop = function noop() {};
-
-function chan() {
+function createChannel() {
   var state = _constants.OPEN;
 
   for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -296,15 +278,15 @@ function chan() {
       id = _normalizeChannelArgu2[0],
       buff = _normalizeChannelArgu2[1];
 
-  if (channels[id]) {
-    return channels[id];
+  if (_index.CHANNELS.exists(id)) {
+    return _index.CHANNELS.get(id);
   }
 
-  var api = channels[id] = {
+  var api = _index.CHANNELS.set(id, {
     id: id,
     '@channel': true,
     'subscribers': []
-  };
+  });
 
   api.isActive = function () {
     return api.state() === _constants.OPEN;
@@ -322,194 +304,6 @@ function chan() {
   _index.grid.add(api);
   return api;
 }
-
-// **************************************************** PUT
-
-function put(id, item, callback) {
-  var doPut = function doPut(ch, item, callback) {
-    var state = ch.state();
-    if (state === _constants.CLOSED || state === _constants.ENDED) {
-      callback(state);
-    } else {
-      ch.subscribers.forEach(function (s) {
-        return s(item);
-      });
-      ch.buff.put(item, callback);
-    }
-  };
-
-  var ch = isChannel(id) ? id : chan(id);
-  if (typeof callback === 'function') {
-    doPut(ch, item, callback);
-  } else {
-    return { ch: ch, op: _constants.PUT, item: item };
-  }
-}
-function sput(id, item, callback) {
-  return put(id, item, callback || noop);
-}
-
-// **************************************************** TAKE
-
-function take(id, callback) {
-  var doTake = function doTake(ch, callback) {
-    var state = ch.state();
-    if (state === _constants.ENDED) {
-      callback(_constants.ENDED);
-    } else {
-      if (state === _constants.CLOSED && ch.buff.isEmpty()) {
-        ch.state(_constants.ENDED);
-        callback(_constants.ENDED);
-      } else {
-        ch.buff.take(function (r) {
-          return callback(r);
-        });
-      }
-    }
-  };
-
-  var ch = isChannel(id) ? id : chan(id);
-  if (typeof callback === 'function') {
-    doTake(ch, callback);
-  } else {
-    return { ch: ch, op: _constants.TAKE };
-  }
-}
-function stake(id, callback) {
-  return take(id, callback || noop);
-}
-
-// **************************************************** close & reset
-
-function close(id) {
-  var ch = isChannel(id) ? id : chan(id);
-  var newState = ch.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
-  ch.state(newState);
-  ch.buff.puts.forEach(function (put) {
-    return put(newState);
-  });
-  ch.buff.takes.forEach(function (take) {
-    return take(newState);
-  });
-  _index.grid.remove(ch);
-  ch.subscribers = [];
-  delete channels[ch.id];
-  return { op: _constants.NOOP };
-}
-function sclose(id) {
-  return close(id);
-}
-function channelReset(id) {
-  var ch = isChannel(id) ? id : chan(id);
-  ch.state(_constants.OPEN);
-  ch.buff.reset();
-  return { ch: ch, op: _constants.NOOP };
-}
-function schannelReset(id) {
-  channelReset(id);
-}
-
-// **************************************************** pubsub
-
-function sub(id, callback) {
-  var ch = isChannel(id) ? id : chan(id);
-  if (!ch.subscribers.find(function (c) {
-    return c === callback;
-  })) {
-    ch.subscribers.push(callback);
-  }
-}
-function unsub(id, callback) {
-  var ch = isChannel(id) ? id : chan(id);
-  ch.subscribers = ch.subscribers.filter(function (c) {
-    if (c !== callback) {
-      return true;
-    }
-    return false;
-  });
-}
-function sleep(ms, callback) {
-  if (typeof callback === 'function') {
-    setTimeout(callback, ms);
-  } else {
-    return { op: _constants.SLEEP, ms: ms };
-  }
-}
-function onSubscriberAdded(id, callback) {
-  var ch = isChannel(id) ? id : chan(id);
-  ch.onSubscriberAddedCallback = callback;
-}
-function onSubscriberRemoved(id, callback) {
-  var ch = isChannel(id) ? id : chan(id);
-  ch.onSubscriberRemovedCallback = callback;
-}
-
-// **************************************************** other
-
-var isChannel = exports.isChannel = function isChannel(ch) {
-  return ch && ch['@channel'] === true;
-};
-var cspReset = exports.cspReset = function cspReset() {
-  return channels = {};
-};
-var getChannels = exports.getChannels = function getChannels() {
-  return channels;
-};
-var channelExists = exports.channelExists = function channelExists(id) {
-  return !!channels[id];
-};
-
-// **************************************************** routine
-
-function go(func) {
-  var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
-
-  var RUNNING = 'RUNNING';
-  var STOPPED = 'STOPPED';
-  var state = RUNNING;
-
-  var routineApi = {
-    stop: function stop() {
-      state = STOPPED;
-    }
-  };
-
-  for (var _len2 = arguments.length, args = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
-    args[_key2 - 2] = arguments[_key2];
-  }
-
-  var gen = func.apply(undefined, args);
-  (function next(value) {
-    if (state === STOPPED) {
-      return;
-    }
-    var i = gen.next(value);
-    if (i.done === true) {
-      if (done) done(i.value);
-      return;
-    }
-    switch (i.value.op) {
-      case _constants.PUT:
-        put(i.value.ch, i.value.item, next);
-        break;
-      case _constants.TAKE:
-        take(i.value.ch, next);
-        break;
-      case _constants.NOOP:
-        next();
-        break;
-      case _constants.SLEEP:
-        setTimeout(next, i.value.ms);
-        break;
-      default:
-        throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
-    }
-  })();
-
-  return routineApi;
-}
-
-// **************************************************** utils
 
 function normalizeChannelArguments(args) {
   var id = void 0,
@@ -530,7 +324,7 @@ function normalizeChannelArguments(args) {
   return [id, buff];
 }
 
-},{"../index":15,"../utils":18,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
+},{"../index":16,"../utils":19,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -544,6 +338,29 @@ var TAKE = exports.TAKE = 'TAKE';
 var NOOP = exports.NOOP = 'NOOP';
 var SLEEP = exports.SLEEP = 'SLEEP';
 
+var CHANNELS = exports.CHANNELS = {
+  channels: {},
+  getAll: function getAll() {
+    return this.channels;
+  },
+  get: function get(id) {
+    return this.channels[id];
+  },
+  set: function set(id, ch) {
+    this.channels[id] = ch;
+    return ch;
+  },
+  del: function del(id) {
+    delete this.channels[id];
+  },
+  exists: function exists(id) {
+    return !!this.channels[id];
+  },
+  reset: function reset() {
+    this.channels = {};
+  }
+};
+
 },{}],8:[function(require,module,exports){
 'use strict';
 
@@ -552,7 +369,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.merge = merge;
 
-var _index = require('../index');
+var _index = require('../../index');
 
 function merge() {
   var newCh = (0, _index.chan)();
@@ -573,7 +390,7 @@ function merge() {
   return newCh;
 }
 
-},{"../index":12}],9:[function(require,module,exports){
+},{"../../index":16}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -643,11 +460,9 @@ Object.defineProperty(exports, "__esModule", {
 exports.state = state;
 exports.isState = isState;
 
-var _index = require('../index');
+var _index = require('../../index');
 
 var _utils = require('../../utils');
-
-var _index2 = require('../../index');
 
 function state() {
   var value = arguments.length <= 0 ? undefined : arguments[0];
@@ -657,7 +472,7 @@ function state() {
   var isThereInitialValue = arguments.length > 0;
 
   function verifyChannel(id) {
-    if ((0, _index.channelExists)(id)) {
+    if (_index.CHANNELS.exists(id)) {
       throw new Error('Channel with name ' + id + ' already exists.');
     }
   }
@@ -712,7 +527,7 @@ function state() {
         return (0, _index.sclose)(ch);
       });
       value = undefined;
-      _index2.grid.remove(api);
+      _index.grid.remove(api);
     },
     get: function get() {
       return value;
@@ -728,7 +543,7 @@ function state() {
   api.select(api.READ);
   api.mutate(api.WRITE);
 
-  _index2.grid.add(api);
+  _index.grid.add(api);
   return api;
 }
 
@@ -736,7 +551,7 @@ function isState(s) {
   return s && s['@state'] === true;
 }
 
-},{"../../index":15,"../../utils":18,"../index":12}],11:[function(require,module,exports){
+},{"../../index":16,"../../utils":19}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -744,7 +559,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.timeout = timeout;
 
-var _index = require('../index');
+var _index = require('../../index');
 
 function timeout(interval) {
   var ch = (0, _index.chan)();
@@ -754,7 +569,7 @@ function timeout(interval) {
   return ch;
 }
 
-},{"../index":12}],12:[function(require,module,exports){
+},{"../../index":16}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -778,6 +593,18 @@ Object.keys(_channel).forEach(function (key) {
     enumerable: true,
     get: function get() {
       return _channel[key];
+    }
+  });
+});
+
+var _ops = require('./ops');
+
+Object.keys(_ops).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _ops[key];
     }
   });
 });
@@ -846,7 +673,212 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-},{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/mult":9,"./ext/state":10,"./ext/timeout":11}],13:[function(require,module,exports){
+},{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/mult":9,"./ext/state":10,"./ext/timeout":11,"./ops":13}],13:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.isChannel = undefined;
+exports.put = put;
+exports.sput = sput;
+exports.take = take;
+exports.stake = stake;
+exports.close = close;
+exports.sclose = sclose;
+exports.channelReset = channelReset;
+exports.schannelReset = schannelReset;
+exports.sub = sub;
+exports.unsub = unsub;
+exports.sleep = sleep;
+exports.onSubscriberAdded = onSubscriberAdded;
+exports.onSubscriberRemoved = onSubscriberRemoved;
+exports.go = go;
+
+var _constants = require('./constants');
+
+var _index = require('../index');
+
+var noop = function noop() {};
+
+// **************************************************** PUT
+
+function put(id, item, callback) {
+  var doPut = function doPut(ch, item, callback) {
+    var state = ch.state();
+    if (state === _constants.CLOSED || state === _constants.ENDED) {
+      callback(state);
+    } else {
+      ch.subscribers.forEach(function (s) {
+        return s(item);
+      });
+      ch.buff.put(item, callback);
+    }
+  };
+
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  if (typeof callback === 'function') {
+    doPut(ch, item, callback);
+  } else {
+    return { ch: ch, op: _constants.PUT, item: item };
+  }
+}
+function sput(id, item, callback) {
+  return put(id, item, callback || noop);
+}
+
+// **************************************************** TAKE
+
+function take(id, callback) {
+  var doTake = function doTake(ch, callback) {
+    var state = ch.state();
+    if (state === _constants.ENDED) {
+      callback(_constants.ENDED);
+    } else {
+      if (state === _constants.CLOSED && ch.buff.isEmpty()) {
+        ch.state(_constants.ENDED);
+        callback(_constants.ENDED);
+      } else {
+        ch.buff.take(function (r) {
+          return callback(r);
+        });
+      }
+    }
+  };
+
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  if (typeof callback === 'function') {
+    doTake(ch, callback);
+  } else {
+    return { ch: ch, op: _constants.TAKE };
+  }
+}
+function stake(id, callback) {
+  return take(id, callback || noop);
+}
+
+// **************************************************** close & reset
+
+function close(id) {
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  var newState = ch.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
+  ch.state(newState);
+  ch.buff.puts.forEach(function (put) {
+    return put(newState);
+  });
+  ch.buff.takes.forEach(function (take) {
+    return take(newState);
+  });
+  _index.grid.remove(ch);
+  ch.subscribers = [];
+  _constants.CHANNELS.del(ch.id);
+  return { op: _constants.NOOP };
+}
+function sclose(id) {
+  return close(id);
+}
+function channelReset(id) {
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  ch.state(_constants.OPEN);
+  ch.buff.reset();
+  return { ch: ch, op: _constants.NOOP };
+}
+function schannelReset(id) {
+  channelReset(id);
+}
+
+// **************************************************** pubsub
+
+function sub(id, callback) {
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  if (!ch.subscribers.find(function (c) {
+    return c === callback;
+  })) {
+    ch.subscribers.push(callback);
+  }
+}
+function unsub(id, callback) {
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  ch.subscribers = ch.subscribers.filter(function (c) {
+    if (c !== callback) {
+      return true;
+    }
+    return false;
+  });
+}
+function sleep(ms, callback) {
+  if (typeof callback === 'function') {
+    setTimeout(callback, ms);
+  } else {
+    return { op: _constants.SLEEP, ms: ms };
+  }
+}
+function onSubscriberAdded(id, callback) {
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  ch.onSubscriberAddedCallback = callback;
+}
+function onSubscriberRemoved(id, callback) {
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  ch.onSubscriberRemovedCallback = callback;
+}
+
+// **************************************************** other
+
+var isChannel = exports.isChannel = function isChannel(ch) {
+  return ch && ch['@channel'] === true;
+};
+
+// **************************************************** routine
+
+function go(func) {
+  var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
+
+  var RUNNING = 'RUNNING';
+  var STOPPED = 'STOPPED';
+  var state = RUNNING;
+
+  var routineApi = {
+    stop: function stop() {
+      state = STOPPED;
+    }
+  };
+
+  for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+    args[_key - 2] = arguments[_key];
+  }
+
+  var gen = func.apply(undefined, args);
+  (function next(value) {
+    if (state === STOPPED) {
+      return;
+    }
+    var i = gen.next(value);
+    if (i.done === true) {
+      if (done) done(i.value);
+      return;
+    }
+    switch (i.value.op) {
+      case _constants.PUT:
+        put(i.value.ch, i.value.item, next);
+        break;
+      case _constants.TAKE:
+        take(i.value.ch, next);
+        break;
+      case _constants.NOOP:
+        next();
+        break;
+      case _constants.SLEEP:
+        setTimeout(next, i.value.ms);
+        break;
+      default:
+        throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
+    }
+  })();
+
+  return routineApi;
+}
+
+},{"../index":16,"./constants":7}],14:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -893,7 +925,7 @@ var grid = Grid();
 
 exports.default = grid;
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -911,6 +943,8 @@ var _react2 = _interopRequireDefault(_react);
 var _grid = require('./grid');
 
 var _grid2 = _interopRequireDefault(_grid);
+
+var _csp = require('./csp');
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -975,6 +1009,12 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
 
     return _react2.default.apply(undefined, [viewFunc].concat(controllers));
   });
+  h.defineProduct('channel', function () {
+    var channel = _csp.createChannel.apply(undefined, arguments);
+
+    _grid2.default.add(channel);
+    return channel;
+  });
 };
 
 var h = Harvester();
@@ -983,7 +1023,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./grid":13,"./react":16,"./riew":17}],15:[function(require,module,exports){
+},{"./csp":12,"./grid":14,"./react":17,"./riew":18}],16:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -991,7 +1031,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.grid = exports.harvester = exports.reset = exports.register = exports.use = exports.react = exports.riew = undefined;
+exports.grid = exports.harvester = exports.reset = exports.register = exports.use = exports.chan = exports.react = exports.riew = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -1039,9 +1079,16 @@ var react = exports.react = {
     return _harvester2.default.produce.apply(_harvester2.default, ['reactRiew'].concat(args));
   }
 };
+var chan = exports.chan = function chan() {
+  for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+    args[_key3] = arguments[_key3];
+  }
+
+  return _harvester2.default.produce.apply(_harvester2.default, ['channel'].concat(args));
+};
 var use = exports.use = function use(name) {
-  for (var _len3 = arguments.length, args = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
-    args[_key3 - 1] = arguments[_key3];
+  for (var _len4 = arguments.length, args = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
+    args[_key4 - 1] = arguments[_key4];
   }
 
   return _harvester2.default.produce.apply(_harvester2.default, [name].concat(args));
@@ -1056,12 +1103,12 @@ var register = exports.register = function register(name, whatever) {
   return whatever;
 };
 var reset = exports.reset = function reset() {
-  return _grid2.default.reset(), _harvester2.default.reset(), (0, _csp.cspReset)();
+  return _grid2.default.reset(), _harvester2.default.reset(), _csp.CHANNELS.reset();
 };
 var harvester = exports.harvester = _harvester2.default;
 var grid = exports.grid = _grid2.default;
 
-},{"./csp":12,"./grid":13,"./harvester":14}],16:[function(require,module,exports){
+},{"./csp":12,"./grid":14,"./harvester":15}],17:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1193,7 +1240,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":15,"../utils":18}],17:[function(require,module,exports){
+},{"../index":16,"../utils":19}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1386,7 +1433,7 @@ function createRiew(viewFunc) {
   return riew;
 }
 
-},{"./index":15,"./utils":18}],18:[function(require,module,exports){
+},{"./index":16,"./utils":19}],19:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1452,5 +1499,5 @@ var isObjectLiteral = exports.isObjectLiteral = function isObjectLiteral(obj) {
   return obj ? obj.constructor === {}.constructor : false;
 };
 
-},{}]},{},[15])(15)
+},{}]},{},[16])(16)
 });

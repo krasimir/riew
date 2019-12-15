@@ -1,4 +1,4 @@
-import { chan, ENDED, CLOSED, OPEN, sput, stake } from '../index';
+import { chan, ENDED, CLOSED, OPEN, sput, stake } from '../../index';
 
 export function merge(...channels) {
   const newCh = chan();

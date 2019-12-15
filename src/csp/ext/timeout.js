@@ -1,4 +1,4 @@
-import { chan, close } from '../index';
+import { chan, close } from '../../index';
 
 export function timeout(interval) {
   const ch = chan();

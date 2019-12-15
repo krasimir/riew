@@ -1,20 +1,4 @@
-import {
-  chan,
-  sub,
-  unsub,
-  getChannels,
-  go,
-  channelExists,
-  reset,
-  grid,
-  take,
-  put,
-  sput,
-  close,
-  buffer,
-  onSubscriberAdded,
-  onSubscriberRemoved
-} from '../index';
+import { chan, sub, unsub, CHANNELS, go, reset, grid, take, put, sput, close } from '../index';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -25,7 +9,7 @@ describe('Given a CSP pubsub extension', () => {
       it(`should
         * call our callbacks
         * should keep the blocking nature of the put operation`, () => {
-        expect(Object.keys(getChannels())).toHaveLength(0);
+        expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
         const spyA = jest.fn();
         const spyB = jest.fn();
@@ -48,7 +32,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     it('should provide an API for unsubscribing', () => {
-      expect(Object.keys(getChannels())).toHaveLength(0);
+      expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
@@ -69,7 +53,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
     });
     it('should create a dedicated channel for each subscription', () => {
-      expect(Object.keys(getChannels())).toHaveLength(0);
+      expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
@@ -97,7 +81,7 @@ describe('Given a CSP pubsub extension', () => {
   });
   describe('when we subscribe to a channel after someone publish on it', () => {
     it(`should not trigger any of the subscriptions`, () => {
-      expect(Object.keys(getChannels())).toHaveLength(0);
+      expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();

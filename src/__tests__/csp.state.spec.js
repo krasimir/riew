@@ -1,4 +1,4 @@
-import { state, take, put, sub, reset, getChannels, go, sput, stake } from '../index';
+import { state, take, put, sub, reset, CHANNELS, go, sput, stake } from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given a CSP state extension', () => {
@@ -74,9 +74,9 @@ describe('Given a CSP state extension', () => {
       s.select('RR');
       s.select('WW');
 
-      expect(Object.keys(getChannels())).toStrictEqual([ s.READ, s.WRITE, 'RR', 'WW' ]);
+      expect(Object.keys(CHANNELS.getAll())).toStrictEqual([ s.READ, s.WRITE, 'RR', 'WW' ]);
       s.destroy();
-      expect(Object.keys(getChannels())).toStrictEqual([]);
+      expect(Object.keys(CHANNELS.getAll())).toStrictEqual([]);
     });
   });
   describe('when we use state into a routine', () => {

@@ -1,6 +1,7 @@
 import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
+import { createChannel } from './csp';
 
 function Harvester() {
   const api = {};
@@ -46,6 +47,12 @@ const defineHarvesterBuiltInCapabilities = function (h) {
   });
   h.defineProduct('reactRiew', (viewFunc, ...controllers) => {
     return reactRiew(viewFunc, ...controllers);
+  });
+  h.defineProduct('channel', (...args) => {
+    const channel = createChannel(...args);
+
+    grid.add(channel);
+    return channel;
   });
 };
 

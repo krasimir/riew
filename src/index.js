@@ -1,6 +1,6 @@
 import h from './harvester';
 import g from './grid';
-import { cspReset } from './csp';
+import { CHANNELS } from './csp';
 export * from './csp';
 
 export const riew = (...args) => {
@@ -10,6 +10,9 @@ export const react = {
   riew: (...args) => {
     return h.produce('reactRiew', ...args);
   }
+};
+export const chan = (...args) => {
+  return h.produce('channel', ...args);
 };
 export const use = (name, ...args) => {
   return h.produce(name, ...args);
@@ -21,6 +24,6 @@ export const register = (name, whatever) => {
   h.defineProduct(name, () => whatever);
   return whatever;
 };
-export const reset = () => (g.reset(), h.reset(), cspReset());
+export const reset = () => (g.reset(), h.reset(), CHANNELS.reset());
 export const harvester = h;
 export const grid = g;

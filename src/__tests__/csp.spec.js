@@ -15,7 +15,7 @@ import {
   sleep,
   close,
   channelReset,
-  channelExists
+  CHANNELS
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -919,8 +919,8 @@ describe('Given a CSP', () => {
   describe('when we check if a channel exists', () => {
     it('should return true or false', () => {
       chan('AAA');
-      expect(channelExists('AAA')).toBe(true);
-      expect(channelExists('BBB')).toBe(false);
+      expect(CHANNELS.exists('AAA')).toBe(true);
+      expect(CHANNELS.exists('BBB')).toBe(false);
     });
   });
 });

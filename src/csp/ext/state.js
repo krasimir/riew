@@ -1,4 +1,4 @@
-import { sub, channelExists, chan, sput, sclose, buffer } from '../index';
+import { sub, CHANNELS, chan, sput, sclose, buffer } from '../../index';
 import { getId, isPromise } from '../../utils';
 import { grid } from '../../index';
 
@@ -10,7 +10,7 @@ export function state(...args) {
   const isThereInitialValue = args.length > 0;
 
   function verifyChannel(id) {
-    if (channelExists(id)) {
+    if (CHANNELS.exists(id)) {
       throw new Error(`Channel with name ${id} already exists.`);
     }
   }

@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 import riew from '../react/index';
-import { state, reset, register, topic, sub, sput, put, sleep } from '../index';
+import { state, reset, register, sub, sput, put, sleep } from '../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
