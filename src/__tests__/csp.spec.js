@@ -14,8 +14,11 @@ import {
   stake,
   sleep,
   close,
+  compose,
+  state,
   channelReset,
-  CHANNELS
+  CHANNELS,
+  sub
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -654,6 +657,95 @@ describe('Given a CSP', () => {
           '<B'
         ]
       );
+    });
+  });
+
+  // compose
+
+  describe('when composing two channels', () => {
+    it(`should
+      * aggregate value
+      * put to the 'to' channel only if all the source channels receive data`, () => {
+      const c1 = chan();
+      const c2 = chan();
+      const c3 = chan();
+      const spy = jest.fn();
+
+      compose(
+        c3,
+        [ c1, c2 ]
+      );
+      sub(c3, spy);
+      sput(c1, 'foo');
+      sput(c2, 'bar');
+      sput(c1, 'baz');
+
+      expect(spy).toBeCalledWithArgs([ [ 'foo', 'bar' ] ], [ [ 'baz', 'bar' ] ]);
+    });
+    it('should use the transform function', () => {
+      const c1 = chan();
+      const c2 = chan();
+      const c3 = chan();
+      const spy = jest.fn();
+
+      compose(
+        c3,
+        [ c1, c2 ],
+        (a, b) => {
+          return a.toUpperCase() + b.toUpperCase();
+        }
+      );
+      sub(c3, spy);
+      sput(c1, 'foo');
+      sput(c2, 'bar');
+      sput(c1, 'baz');
+
+      expect(spy).toBeCalledWithArgs([ 'FOOBAR' ], [ 'BAZBAR' ]);
+    });
+    describe('and when we use state', () => {
+      it('should aggregate state values', () => {
+        const users = state([ { name: 'Joe' }, { name: 'Steve' }, { name: 'Rebeka' } ]);
+        const currentUser = state(1);
+        const spy = jest.fn();
+
+        sub('app', spy);
+        compose(
+          'app',
+          [ users.READ, currentUser.READ ],
+          (users, currentUserIndex) => {
+            return users[ currentUserIndex ].name;
+          }
+        );
+
+        sput(currentUser.WRITE, 2);
+
+        expect(spy).toBeCalledWithArgs([ 'Steve' ], [ 'Rebeka' ]);
+      });
+    });
+    describe('when we use compose together with a routine', () => {
+      it('should work just fine', () => {
+        const users = state([ { name: 'Joe' }, { name: 'Steve' }, { name: 'Rebeka' } ]);
+        const currentUser = state(1);
+        const spy = jest.fn();
+
+        compose(
+          'app',
+          [ users.READ, currentUser.READ ],
+          (users, currentUserIndex) => {
+            return users[ currentUserIndex ].name;
+          }
+        );
+
+        go(function * () {
+          spy(yield take('app'));
+          spy(yield take('app'));
+        });
+        go(function * () {
+          spy(yield put(currentUser.WRITE, 2));
+        });
+
+        expect(spy).toBeCalledWithArgs([ 'Steve' ], [ 'Rebeka' ], [ true ]);
+      });
     });
   });
 

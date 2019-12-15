@@ -324,7 +324,7 @@ function normalizeChannelArguments(args) {
   return [id, buff];
 }
 
-},{"../index":16,"../utils":19,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
+},{"../index":17,"../utils":20,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -367,6 +367,65 @@ var CHANNELS = exports.CHANNELS = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.compose = compose;
+
+var _index = require('../../index');
+
+var _ops = require('../ops');
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+var NOTHING = Symbol('Nothing');
+
+function compose(to, channels) {
+  var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {
+    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    return args;
+  };
+
+  to = (0, _index.isChannel)(to) ? to : (0, _index.chan)(to);
+
+  var data = channels.map(function () {
+    return NOTHING;
+  });
+  var composedAtLeastOnce = false;
+  channels.forEach(function (id, idx) {
+    if (!(0, _index.isChannel)(id) && !_index.CHANNELS.exists(id)) {
+      throw new Error('Channel doesn\'t exists. ' + ch + ' passed to compose.');
+    }
+    var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
+    var doComposition = function doComposition(value) {
+      data[idx] = value;
+      if (composedAtLeastOnce || data.length === 1 || !data.includes(NOTHING)) {
+        composedAtLeastOnce = true;
+        (0, _ops.sput)(to, transform.apply(undefined, _toConsumableArray(data)));
+      }
+    };
+    (0, _index.sub)(ch, doComposition);
+    if ((0, _index.isStateChannel)(ch)) {
+      (0, _ops.stake)(ch, doComposition);
+    }
+  });
+  return to;
+}
+
+},{"../../index":17,"../ops":14}],9:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 exports.merge = merge;
 
 var _index = require('../../index');
@@ -390,7 +449,7 @@ function merge() {
   return newCh;
 }
 
-},{"../../index":16}],9:[function(require,module,exports){
+},{"../../index":17}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -451,7 +510,7 @@ function unmultAll(ch) {
   ch._taps = [];
 }
 
-},{"../index":12}],10:[function(require,module,exports){
+},{"../index":13}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -459,6 +518,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.state = state;
 exports.isState = isState;
+exports.isStateChannel = isStateChannel;
 
 var _index = require('../../index');
 
@@ -534,6 +594,7 @@ function state() {
 
       verifyChannel(id);
       var ch = (0, _index.chan)(id, _index.buffer.ever());
+      ch['@statechannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
       if (isThereInitialValue) {
@@ -548,6 +609,7 @@ function state() {
 
       verifyChannel(id);
       var ch = (0, _index.chan)(id, _index.buffer.ever());
+      ch['@statechannel'] = true;
       var writer = { ch: ch, reducer: reducer, onError: onError };
       writeChannels.push(writer);
       (0, _index.sub)(ch, function (payload) {
@@ -587,8 +649,11 @@ function state() {
 function isState(s) {
   return s && s['@state'] === true;
 }
+function isStateChannel(s) {
+  return s && s['@statechannel'] === true;
+}
 
-},{"../../index":16,"../../utils":19}],11:[function(require,module,exports){
+},{"../../index":17,"../../utils":20}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -606,7 +671,7 @@ function timeout(interval) {
   return ch;
 }
 
-},{"../../index":16}],12:[function(require,module,exports){
+},{"../../index":17}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -694,6 +759,18 @@ Object.keys(_state).forEach(function (key) {
   });
 });
 
+var _compose = require('./ext/compose');
+
+Object.keys(_compose).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _compose[key];
+    }
+  });
+});
+
 var _constants = require('./constants');
 
 Object.keys(_constants).forEach(function (key) {
@@ -710,7 +787,7 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-},{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/mult":9,"./ext/state":10,"./ext/timeout":11,"./ops":13}],13:[function(require,module,exports){
+},{"./buffer":5,"./channel":6,"./constants":7,"./ext/compose":8,"./ext/merge":9,"./ext/mult":10,"./ext/state":11,"./ext/timeout":12,"./ops":14}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -923,7 +1000,7 @@ function go(func) {
   return routineApi;
 }
 
-},{"../index":16,"../utils":19,"./constants":7}],14:[function(require,module,exports){
+},{"../index":17,"../utils":20,"./constants":7}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -970,7 +1047,7 @@ var grid = Grid();
 
 exports.default = grid;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1068,7 +1145,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./csp":12,"./grid":14,"./react":17,"./riew":18}],16:[function(require,module,exports){
+},{"./csp":13,"./grid":15,"./react":18,"./riew":19}],17:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1153,7 +1230,7 @@ var reset = exports.reset = function reset() {
 var harvester = exports.harvester = _harvester2.default;
 var grid = exports.grid = _grid2.default;
 
-},{"./csp":12,"./grid":14,"./harvester":15}],17:[function(require,module,exports){
+},{"./csp":13,"./grid":15,"./harvester":16}],18:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1285,7 +1362,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":16,"../utils":19}],18:[function(require,module,exports){
+},{"../index":17,"../utils":20}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1478,7 +1555,7 @@ function createRiew(viewFunc) {
   return riew;
 }
 
-},{"./index":16,"./utils":19}],19:[function(require,module,exports){
+},{"./index":17,"./utils":20}],20:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1544,5 +1621,5 @@ var isObjectLiteral = exports.isObjectLiteral = function isObjectLiteral(obj) {
   return obj ? obj.constructor === {}.constructor : false;
 };
 
-},{}]},{},[16])(16)
+},{}]},{},[17])(17)
 });

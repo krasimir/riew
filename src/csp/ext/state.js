@@ -53,6 +53,7 @@ export function state(...args) {
     select(id, selector = v => v, onError = null) {
       verifyChannel(id);
       let ch = chan(id, buffer.ever());
+      ch[ '@statechannel' ] = true;
       let reader = { ch, selector, onError };
       readChannels.push(reader);
       if (isThereInitialValue) {
@@ -62,6 +63,7 @@ export function state(...args) {
     mutate(id, reducer = (_, v) => v, onError = null) {
       verifyChannel(id);
       let ch = chan(id, buffer.ever());
+      ch[ '@statechannel' ] = true;
       let writer = { ch, reducer, onError };
       writeChannels.push(writer);
       sub(ch, payload => runWriter(writer, payload));
@@ -92,4 +94,7 @@ export function state(...args) {
 
 export function isState(s) {
   return s && s[ '@state' ] === true;
+}
+export function isStateChannel(s) {
+  return s && s[ '@statechannel' ] === true;
 }
