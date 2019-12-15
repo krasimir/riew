@@ -99,6 +99,18 @@ describe('Given a CSP', () => {
         expect(spy).toBeCalledWithArgs([ 'foo10' ], [ 'done' ]);
       });
     });
+    describe('when we yield a promise', () => {
+      it('should continue with the routing after the promise is resolved', async () => {
+        const spy = jest.fn();
+        go(function * () {
+          spy(yield new Promise(resolve => setTimeout(() => resolve('bar'), 10)));
+          return 'foo';
+        }, spy);
+
+        await delay(20);
+        expect(spy).toBeCalledWithArgs([ 'bar' ], [ 'foo' ]);
+      });
+    });
   });
 
   // CSP States

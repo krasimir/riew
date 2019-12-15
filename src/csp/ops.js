@@ -1,5 +1,6 @@
 import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, NOOP, CHANNELS } from './constants';
 import { grid, chan } from '../index';
+import { isPromise } from '../utils';
 
 let noop = () => {};
 
@@ -139,6 +140,10 @@ export function go(func, done = () => {}, ...args) {
     const i = gen.next(value);
     if (i.done === true) {
       if (done) done(i.value);
+      return;
+    }
+    if (isPromise(i.value)) {
+      i.value.then(next).catch(err => gen.throw(err));
       return;
     }
     switch (i.value.op) {

@@ -476,6 +476,50 @@ function state() {
       throw new Error('Channel with name ' + id + ' already exists.');
     }
   }
+  function handleError(onError) {
+    return function (e) {
+      if (onError !== null) {
+        onError(e);
+      } else {
+        throw e;
+      }
+    };
+  }
+  function runSelector(_ref, v) {
+    var ch = _ref.ch,
+        selector = _ref.selector,
+        onError = _ref.onError;
+
+    var selectorValue = void 0;
+    try {
+      selectorValue = selector(v);
+    } catch (e) {
+      handleError(onError)(e);
+    }
+    (0, _index.sput)(ch, selectorValue);
+  }
+  function runWriter(_ref2, payload) {
+    var ch = _ref2.ch,
+        reducer = _ref2.reducer,
+        onError = _ref2.onError;
+
+    try {
+      value = reducer(value, payload);
+    } catch (e) {
+      handleError(onError)(e);
+    }
+    if ((0, _utils.isPromise)(value)) {
+      value.then(function (v) {
+        return readChannels.forEach(function (r) {
+          return runSelector(r, v);
+        });
+      }).catch(handleError(onError));
+    } else {
+      readChannels.forEach(function (r) {
+        return runSelector(r, value);
+      });
+    }
+  }
 
   var api = {
     id: id,
@@ -486,44 +530,37 @@ function state() {
       var selector = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (v) {
         return v;
       };
+      var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
       verifyChannel(id);
       var ch = (0, _index.chan)(id, _index.buffer.ever());
-      readChannels.push({ ch: ch, selector: selector });
+      var reader = { ch: ch, selector: selector, onError: onError };
+      readChannels.push(reader);
       if (isThereInitialValue) {
-        (0, _index.sput)(ch, selector(value));
+        runSelector(reader, value);
       }
     },
     mutate: function mutate(id) {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (_, v) {
         return v;
       };
+      var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
       verifyChannel(id);
       var ch = (0, _index.chan)(id, _index.buffer.ever());
-      writeChannels.push({ ch: ch });
+      var writer = { ch: ch, reducer: reducer, onError: onError };
+      writeChannels.push(writer);
       (0, _index.sub)(ch, function (payload) {
-        value = reducer(value, payload);
-        if ((0, _utils.isPromise)(value)) {
-          value.then(function (v) {
-            readChannels.forEach(function (r) {
-              (0, _index.sput)(r.ch, r.selector(v));
-            });
-          });
-        } else {
-          readChannels.forEach(function (r) {
-            (0, _index.sput)(r.ch, r.selector(value));
-          });
-        }
+        return runWriter(writer, payload);
       });
     },
     destroy: function destroy() {
-      readChannels.forEach(function (_ref) {
-        var ch = _ref.ch;
+      readChannels.forEach(function (_ref3) {
+        var ch = _ref3.ch;
         return (0, _index.sclose)(ch);
       });
-      writeChannels.forEach(function (_ref2) {
-        var ch = _ref2.ch;
+      writeChannels.forEach(function (_ref4) {
+        var ch = _ref4.ch;
         return (0, _index.sclose)(ch);
       });
       value = undefined;
@@ -535,7 +572,7 @@ function state() {
     set: function set(newValue) {
       value = newValue;
       readChannels.forEach(function (r) {
-        return (0, _index.sput)(r.ch, r.selector(value));
+        runSelector(r, value);
       });
     }
   };
@@ -699,6 +736,8 @@ var _constants = require('./constants');
 
 var _index = require('../index');
 
+var _utils = require('../utils');
+
 var noop = function noop() {};
 
 // **************************************************** PUT
@@ -857,6 +896,12 @@ function go(func) {
       if (done) done(i.value);
       return;
     }
+    if ((0, _utils.isPromise)(i.value)) {
+      i.value.then(next).catch(function (err) {
+        return gen.throw(err);
+      });
+      return;
+    }
     switch (i.value.op) {
       case _constants.PUT:
         put(i.value.ch, i.value.item, next);
@@ -878,7 +923,7 @@ function go(func) {
   return routineApi;
 }
 
-},{"../index":16,"./constants":7}],14:[function(require,module,exports){
+},{"../index":16,"../utils":19,"./constants":7}],14:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

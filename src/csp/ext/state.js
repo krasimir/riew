@@ -14,38 +14,57 @@ export function state(...args) {
       throw new Error(`Channel with name ${id} already exists.`);
     }
   }
+  function handleError(onError) {
+    return e => {
+      if (onError !== null) {
+        onError(e);
+      } else {
+        throw e;
+      }
+    };
+  }
+  function runSelector({ ch, selector, onError }, v) {
+    let selectorValue;
+    try {
+      selectorValue = selector(v);
+    } catch (e) {
+      handleError(onError)(e);
+    }
+    sput(ch, selectorValue);
+  }
+  function runWriter({ ch, reducer, onError }, payload) {
+    try {
+      value = reducer(value, payload);
+    } catch (e) {
+      handleError(onError)(e);
+    }
+    if (isPromise(value)) {
+      value.then(v => readChannels.forEach(r => runSelector(r, v))).catch(handleError(onError));
+    } else {
+      readChannels.forEach(r => runSelector(r, value));
+    }
+  }
 
   const api = {
     id,
     '@state': true,
     'READ': id + '_read',
     'WRITE': id + '_write',
-    select(id, selector = v => v) {
+    select(id, selector = v => v, onError = null) {
       verifyChannel(id);
       let ch = chan(id, buffer.ever());
-      readChannels.push({ ch, selector });
+      let reader = { ch, selector, onError };
+      readChannels.push(reader);
       if (isThereInitialValue) {
-        sput(ch, selector(value));
+        runSelector(reader, value);
       }
     },
-    mutate(id, reducer = (_, v) => v) {
+    mutate(id, reducer = (_, v) => v, onError = null) {
       verifyChannel(id);
       let ch = chan(id, buffer.ever());
-      writeChannels.push({ ch });
-      sub(ch, payload => {
-        value = reducer(value, payload);
-        if (isPromise(value)) {
-          value.then(v => {
-            readChannels.forEach(r => {
-              sput(r.ch, r.selector(v));
-            });
-          });
-        } else {
-          readChannels.forEach(r => {
-            sput(r.ch, r.selector(value));
-          });
-        }
-      });
+      let writer = { ch, reducer, onError };
+      writeChannels.push(writer);
+      sub(ch, payload => runWriter(writer, payload));
     },
     destroy() {
       readChannels.forEach(({ ch }) => sclose(ch));
@@ -58,7 +77,9 @@ export function state(...args) {
     },
     set(newValue) {
       value = newValue;
-      readChannels.forEach(r => sput(r.ch, r.selector(value)));
+      readChannels.forEach(r => {
+        runSelector(r, value);
+      });
     }
   };
 
