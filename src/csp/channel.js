@@ -23,9 +23,7 @@ export function chan(...args) {
   api.isActive = () => api.state() === OPEN;
   api.buff = buff;
   api.state = s => {
-    if (typeof s !== 'undefined') {
-      state = s;
-    }
+    if (typeof s !== 'undefined') state = s;
     return state;
   };
   api.__value = () => {
