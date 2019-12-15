@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset, register, sub, react, state, topic } from '../index';
+import { reset, register, sub, react, state, topic, sleep, sput } from '../index';
 
 const { riew } = react;
 const DummyComponent = ({ text }) => <p>{ text }</p>;
@@ -14,9 +14,9 @@ describe('Given the Riew library', () => {
   describe('when we use an async effect', () => {
     it('should allow us to render multiple times', () => {
       return act(async () => {
-        const A = riew(DummyComponent, async ({ render }) => {
+        const A = riew(DummyComponent, function * ({ render }) {
           render({ text: 'Hello' });
-          await delay(20);
+          yield sleep(20);
           render({ text: 'world' });
         });
 
@@ -32,8 +32,8 @@ describe('Given the Riew library', () => {
     it('should not try to re-render if the bridge is unmounted', () => {
       return act(async () => {
         const spy = jest.spyOn(console, 'error');
-        const A = riew(DummyComponent, async ({ render }) => {
-          await delay(10);
+        const A = riew(DummyComponent, function * ({ render }) {
+          yield sleep(10);
           render({ text: 'world' });
         });
 
@@ -96,8 +96,10 @@ describe('Given the Riew library', () => {
     it('should get props callback fired every time when we update the state', () => {
       return act(async () => {
         const FetchTime = riew(
-          ({ location }) => (location ? <p>{ location }</p> : null),
-          async ({ render, props }) => {
+          function ({ location }) {
+            return location ? <p>{ location }</p> : null;
+          },
+          function * ({ render, props }) {
             sub(props, ({ city }) => render({ location: city }));
           }
         );
@@ -150,7 +152,7 @@ describe('Given the Riew library', () => {
         });
         repos.select('selector', list => list.filter(({ selected }) => selected));
 
-        const change = id => topic('update').put(id);
+        const change = id => sput('update', id);
         const View = ({ selector }) => {
           return (
             <div>
@@ -162,8 +164,8 @@ describe('Given the Riew library', () => {
             </div>
           );
         };
-        const routine = async ({ change }) => {
-          await delay(2);
+        const routine = function * ({ change }) {
+          yield sleep(2);
           change('b');
         };
         const R = riew(View, routine).with({ $selector: 'selector', change });
@@ -201,7 +203,7 @@ describe('Given the Riew library', () => {
 
           render(<R />);
           await delay(3);
-          topic(s.SET).put([ 5, 6, 7, 120 ]);
+          sput(s.WRITE, [ 5, 6, 7, 120 ]);
           await delay(3);
           expect(Component).toBeCalledWithArgs([ { data: [ 15, 12 ] }, {} ], [ { data: [ 120 ] }, {} ]);
         });
@@ -213,7 +215,7 @@ describe('Given the Riew library', () => {
       it('should not produce an error', () => {
         return act(async () => {
           const s = state(true);
-          const changeToFalse = () => topic(s.SET).put(false);
+          const changeToFalse = () => sput(s.WRITE, false);
 
           register('whee', s);
 
