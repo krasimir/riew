@@ -14,7 +14,8 @@ import {
   stake,
   sleep,
   close,
-  channelReset
+  channelReset,
+  channelExists
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -580,70 +581,25 @@ describe('Given a CSP', () => {
       });
     });
   });
-  describe('when we create a channel with a broadcasting buffer', () => {
-    it('should flush all the pending takes at once', async () => {
-      const ch = chan(buffer.broadcasting());
-      const spyA = jest.fn();
-      const spyB = jest.fn();
-      const spyC = jest.fn();
+  describe('when we create a channel with an ever buffer', () => {
+    it(`should
+      * have non-blocking puts
+      * have non-blocking takes
+      * resolve the puts with the latest put value`, () => {
+      const ch = chan(buffer.ever());
+      const takeSpy = jest.fn();
+      const putSpy = jest.fn();
 
       go(function * () {
-        stake(ch, spyA);
-        stake(ch, spyB);
-        stake(ch, spyC);
-      });
-      go(function * () {
-        yield sleep();
-        yield put(ch, 'foo');
-        yield put(ch, 'bar'); // <- not happening because all the takes are flushed
+        takeSpy(yield take(ch));
+        putSpy(yield put(ch, 'foo'));
+        takeSpy(yield take(ch));
+        putSpy(yield put(ch, 'bar'));
+        takeSpy(yield take(ch));
       });
 
-      await delay(5);
-      expect(spyA).toBeCalledWithArgs([ 'foo' ]);
-      expect(spyB).toBeCalledWithArgs([ 'foo' ]);
-      expect(spyC).toBeCalledWithArgs([ 'foo' ]);
-    });
-    describe('and we have pending puts', () => {
-      it('should execute puts with every take', async () => {
-        const ch = chan(buffer.broadcasting());
-        const spyA = jest.fn();
-        const spyB = jest.fn();
-
-        go(function * () {
-          sput(ch, 'foo');
-          sput(ch, 'bar');
-        });
-        go(function * () {
-          yield sleep();
-          stake(ch, spyA);
-          stake(ch, spyB);
-        });
-
-        await delay(5);
-        expect(spyA).toBeCalledWithArgs([ 'foo' ]);
-        expect(spyB).toBeCalledWithArgs([ 'bar' ]);
-      });
-    });
-    describe('and we have a new take added as part of another take callback', () => {
-      it('should execute puts with every take', async () => {
-        const ch = chan(buffer.broadcasting());
-        const spy = jest.fn();
-
-        go(function * () {
-          stake(ch, value => {
-            spy(value);
-            stake(ch, spy);
-          });
-        });
-        go(function * () {
-          sput(ch, 'foo');
-          yield sleep();
-          sput(ch, 'bar');
-        });
-
-        await delay(5);
-        expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
-      });
+      expect(takeSpy).toBeCalledWithArgs([ undefined ], [ 'foo' ], [ 'bar' ]);
+      expect(putSpy).toBeCalledWithArgs([ true ], [ true ]);
     });
   });
 
@@ -912,7 +868,7 @@ describe('Given a CSP', () => {
     });
   });
 
-  // reset
+  // utils
 
   describe('when we use the `reset` method', () => {
     it('should put the channel in its initial state', () => {
@@ -958,6 +914,13 @@ describe('Given a CSP', () => {
           spy.mockReset();
         }
       );
+    });
+  });
+  describe('when we check if a channel exists', () => {
+    it('should return true or false', () => {
+      chan('AAA');
+      expect(channelExists('AAA')).toBe(true);
+      expect(channelExists('BBB')).toBe(false);
     });
   });
 });

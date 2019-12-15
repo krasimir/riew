@@ -1,4 +1,4 @@
-import { sub, channelExists, chan, onSubscriberAdded, onSubscriberRemoved, sput, sclose, buffer } from '../index';
+import { sub, channelExists, chan, sput, sclose, buffer } from '../index';
 import { getId } from '../../utils';
 import { grid } from '../../index';
 
@@ -22,22 +22,21 @@ export function state(...args) {
     'WRITE': id + '_write',
     select(id, selector = v => v) {
       verifyChannel(id);
-      let ch = chan(id, buffer.broadcasting());
+      let ch = chan(id, buffer.ever());
       readChannels.push({ ch, selector });
-      onSubscriberAdded(ch, callback => {
-        if (isThereInitialValue) {
-          callback(selector(value));
-        }
-      });
-      onSubscriberRemoved(ch, callback => {});
+      if (isThereInitialValue) {
+        sput(ch, selector(value));
+      }
     },
     mutate(id, reducer = (_, v) => v) {
-      verifyChannel(id, buffer.broadcasting());
-      let ch = chan(id);
+      verifyChannel(id);
+      let ch = chan(id, buffer.ever());
       writeChannels.push({ ch });
       sub(ch, payload => {
         value = reducer(value, payload);
-        readChannels.forEach(r => sput(r.ch, r.selector(value)));
+        readChannels.forEach(r => {
+          sput(r.ch, r.selector(value));
+        });
       });
     },
     destroy() {

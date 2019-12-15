@@ -17,10 +17,7 @@ export function chan(...args) {
   let api = (channels[ id ] = {
     id,
     '@channel': true,
-    'subscribers': [],
-    'isListening': false,
-    'onSubscriberAddedCallback': noop,
-    'onSubscriberRemovedCallback': noop
+    'subscribers': []
   });
 
   api.isActive = () => api.state() === OPEN;
@@ -48,6 +45,7 @@ export function put(id, item, callback) {
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
+      ch.subscribers.forEach(s => s(item));
       ch.buff.put(item, callback);
     }
   };
@@ -121,22 +119,8 @@ export function schannelReset(id) {
 
 export function sub(id, callback) {
   let ch = isChannel(id) ? id : chan(id);
-  // We trigger the listening on purpose BEFORE adding the subscriber.
-  // This way we ensure consistency between the subscribers.
-  if (!ch.isListening) {
-    ch.isListening = true;
-    (function taker() {
-      stake(ch, value => {
-        if (value !== CLOSED && value !== ENDED) {
-          ch.subscribers.forEach(callback => callback(value));
-          taker();
-        }
-      });
-    })();
-  }
   if (!ch.subscribers.find(c => c === callback)) {
     ch.subscribers.push(callback);
-    ch.onSubscriberAddedCallback(callback);
   }
 }
 export function unsub(id, callback) {
@@ -145,7 +129,6 @@ export function unsub(id, callback) {
     if (c !== callback) {
       return true;
     }
-    ch.onSubscriberRemovedCallback(c);
     return false;
   });
 }

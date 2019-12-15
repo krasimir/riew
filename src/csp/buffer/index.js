@@ -1,12 +1,12 @@
 import FixedBuffer from './FixedBuffer';
 import DroppingBuffer from './DroppingBuffer';
-import Broadcasting from './BroadcastingBuffer';
+import Ever from './EverBuffer';
 
 const buffer = {
   fixed: FixedBuffer,
   dropping: DroppingBuffer,
   sliding: size => DroppingBuffer(size, true),
-  broadcasting: Broadcasting
+  ever: Ever
 };
 
 export default buffer;
