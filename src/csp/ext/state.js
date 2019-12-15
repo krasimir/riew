@@ -1,5 +1,5 @@
 import { sub, channelExists, chan, sput, sclose, buffer } from '../index';
-import { getId } from '../../utils';
+import { getId, isPromise } from '../../utils';
 import { grid } from '../../index';
 
 export function state(...args) {
@@ -34,9 +34,17 @@ export function state(...args) {
       writeChannels.push({ ch });
       sub(ch, payload => {
         value = reducer(value, payload);
-        readChannels.forEach(r => {
-          sput(r.ch, r.selector(value));
-        });
+        if (isPromise(value)) {
+          value.then(v => {
+            readChannels.forEach(r => {
+              sput(r.ch, r.selector(v));
+            });
+          });
+        } else {
+          readChannels.forEach(r => {
+            sput(r.ch, r.selector(value));
+          });
+        }
       });
     },
     destroy() {

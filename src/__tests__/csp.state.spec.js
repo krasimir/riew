@@ -1,4 +1,5 @@
 import { state, take, put, sub, reset, getChannels, go, sput, stake } from '../index';
+import { delay } from '../__helpers__';
 
 describe('Given a CSP state extension', () => {
   beforeEach(() => {
@@ -124,6 +125,23 @@ describe('Given a CSP state extension', () => {
         [ 'R=BARHELLO WORLD MY FRIEND' ],
         [ 'W=hello world my friend' ]
       );
+    });
+  });
+  describe('when we have async mutation', () => {
+    it('should wait till the mutation is done', async () => {
+      const spy = jest.fn();
+      const s = state('foo');
+
+      s.mutate('W', async (current, newOne) => {
+        await delay(5);
+        return current + newOne;
+      });
+
+      sub(s.READ, spy);
+      sput('W', 'bar');
+
+      await delay(10);
+      expect(spy).toBeCalledWithArgs([ 'foobar' ]);
     });
   });
 });

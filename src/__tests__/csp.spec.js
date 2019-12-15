@@ -83,7 +83,7 @@ describe('Given a CSP', () => {
       await delay(4);
       expect(spy).not.toBeCalled();
     });
-    describe('and we use topics to control flow', () => {
+    describe('and we use channels to control flow', () => {
       it('should work', async () => {
         const spy = jest.fn();
         go(function * () {

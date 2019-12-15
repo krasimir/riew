@@ -1,6 +1,6 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
-import { register, riew, reset, grid, state, sub, topic, channelExists, sleep, take, put, sput, chan } from '../index';
+import { register, riew, reset, grid, state, sub, channelExists, sleep, take, put, sput, chan } from '../index';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {

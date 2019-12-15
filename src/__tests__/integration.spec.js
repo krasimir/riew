@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset, register, sub, react, state, topic, sleep, sput } from '../index';
+import { reset, sub, react, state, sleep, sput } from '../index';
 
 const { riew } = react;
 const DummyComponent = ({ text }) => <p>{ text }</p>;
@@ -192,7 +192,7 @@ describe('Given the Riew library', () => {
       });
     });
   });
-  describe('when we have a topic passed to a React component', () => {
+  describe('when we have a channel passed to a React component', () => {
     describe('and we update the state', () => {
       it('should re-render the react component with the correct data', () => {
         return act(async () => {
@@ -206,44 +206,6 @@ describe('Given the Riew library', () => {
           sput(s.WRITE, [ 5, 6, 7, 120 ]);
           await delay(3);
           expect(Component).toBeCalledWithArgs([ { data: [ 15, 12 ] }, {} ], [ { data: [ 120 ] }, {} ]);
-        });
-      });
-    });
-  });
-  describe('when we have a state passed to two React component', () => {
-    describe('and unmount then update the state', () => {
-      it('should not produce an error', () => {
-        return act(async () => {
-          const s = state(true);
-          const changeToFalse = () => sput(s.WRITE, false);
-
-          register('whee', s);
-
-          const ParentParentParent = riew(function ParentParentParent({ whee }) {
-            return whee ? <ParentParent /> : 'boo';
-          }).with('whee');
-
-          const ParentParent = riew(function ParentParent({ whee }) {
-            return whee ? <Parent /> : 'boo';
-          }).with('whee');
-
-          const Parent = riew(function Parent() {
-            return <Component />;
-          });
-
-          const Component = riew(function Component({ whee }) {
-            return `Whee is ${whee}`;
-          }).with('whee');
-
-          const { container } = render(<ParentParentParent />);
-
-          await delay(30);
-          exerciseHTML(container, 'Whee is true');
-          act(() => {
-            changeToFalse();
-          });
-          await delay(30);
-          exerciseHTML(container, 'boo');
         });
       });
     });
