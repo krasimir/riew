@@ -403,6 +403,9 @@ function compose(to, channels) {
   });
   var composedAtLeastOnce = false;
   channels.forEach(function (id, idx) {
+    if ((0, _index.isState)(id)) {
+      throw new Error('The second parameter of \'compose\' accepts an array of channels. You passed a state (at index ' + idx + ').');
+    }
     if (!(0, _index.isChannel)(id) && !_index.CHANNELS.exists(id)) {
       throw new Error('Channel doesn\'t exists. ' + ch + ' passed to compose.');
     }
@@ -843,6 +846,9 @@ function put(id, item, callback) {
       ch.buff.put(item, callback);
     }
   };
+  if ((0, _index.isState)(id)) {
+    throw new Error('\'put\' accepts a channel as first argument. You passed a state.');
+  }
 
   var ch = isChannel(id) ? id : (0, _index.chan)(id);
   if (typeof callback === 'function') {

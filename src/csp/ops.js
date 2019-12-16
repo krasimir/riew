@@ -1,5 +1,5 @@
 import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, NOOP, CHANNELS, STOP, RERUN } from './constants';
-import { grid, chan } from '../index';
+import { grid, chan, isState } from '../index';
 import { isPromise } from '../utils';
 
 let noop = () => {};
@@ -16,6 +16,9 @@ export function put(id, item, callback) {
       ch.buff.put(item, callback);
     }
   };
+  if (isState(id)) {
+    throw new Error(`'put' accepts a channel as first argument. You passed a state.`);
+  }
 
   let ch = isChannel(id) ? id : chan(id);
   if (typeof callback === 'function') {

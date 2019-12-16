@@ -1,6 +1,7 @@
 /* eslint-disable quotes, max-len */
 import { delay } from '../__helpers__';
 import { register, riew, reset, grid, state, sub, CHANNELS, sleep, take, put, sput, chan } from '../index';
+import { compose } from '../csp';
 
 function expectRiew(callback, delay = 0) {
   return new Promise(resolve => {
@@ -521,6 +522,40 @@ describe('Given the `riew` factory function', () => {
         await delay(4);
         expect(view).toBeCalledWithArgs([ { counter: 12 } ], [ { counter: 13 } ]);
       });
+    });
+  });
+  describe('when using a composed channel as a dependency to a riew', () => {
+    it('should re-render when the composition is updated', async () => {
+      const view = jest.fn();
+      const s1 = state([ 'a', 'b', 'c', 'd' ]);
+      const s2 = state(1);
+
+      s1.mutate('WWW', arr => {
+        return arr.map((value, i) => {
+          if (i === 2) {
+            return 'X';
+          }
+          return value;
+        });
+      });
+
+      compose(
+        'current',
+        [ s1.READ, s2.READ ],
+        (arr, idx) => {
+          return arr[ idx ];
+        }
+      );
+
+      const r = riew(view).with({ $data: 'current' });
+
+      r.mount();
+      await delay();
+      sput(s2.WRITE, 2);
+      await delay();
+      sput('WWW');
+      await delay(5);
+      expect(view).toBeCalledWithArgs([ { data: 'b' } ], [ { data: 'c' } ], [ { data: 'X' } ]);
     });
   });
 });
