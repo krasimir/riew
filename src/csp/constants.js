@@ -7,6 +7,7 @@ export const NOOP = 'NOOP';
 export const SLEEP = 'SLEEP';
 export const STOP = 'STOP';
 export const RERUN = 'RERUN';
+export const SUB = 'SUB';
 
 export const CHANNELS = {
   channels: {},

@@ -1,4 +1,4 @@
-import { sub, chan, isChannel, CHANNELS, isStateChannel, buffer, isState } from '../../index';
+import { sub, chan, isChannel, CHANNELS, isStateReadChannel, buffer, isState } from '../../index';
 import { sput, stake } from '../ops';
 
 const NOTHING = Symbol('Nothing');
@@ -24,7 +24,7 @@ export function compose(to, channels, transform = (...args) => args) {
       }
     };
     sub(ch, doComposition);
-    if (isStateChannel(ch)) {
+    if (isStateReadChannel(ch)) {
       stake(ch, doComposition);
     }
   });

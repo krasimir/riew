@@ -107,24 +107,8 @@ describe('Given a CSP state extension', () => {
         spy(yield take('R'));
       });
 
-      expect(spy).toBeCalledWithArgs(
-        [ 'foo' ],
-        [ 'FOO' ],
-        [ true ],
-        [ 'bar' ],
-        [ 'BAR' ],
-        [ true ],
-        [ 'barhello world my friend' ],
-        [ 'BARHELLO WORLD MY FRIEND' ]
-      );
-      expect(listen).toBeCalledWithArgs(
-        [ 'READ=bar' ],
-        [ 'R=BAR' ],
-        [ 'WRITE=bar' ],
-        [ 'READ=barhello world my friend' ],
-        [ 'R=BARHELLO WORLD MY FRIEND' ],
-        [ 'W=hello world my friend' ]
-      );
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'FOO' ], [ true ], [ 'bar' ], [ 'BAR' ], [ true ], [ 'barhello world my friend' ], [ 'BARHELLO WORLD MY FRIEND' ]);
+      expect(listen).toBeCalledWithArgs([ 'READ=bar' ], [ 'R=BAR' ], [ 'WRITE=bar' ], [ 'READ=barhello world my friend' ], [ 'R=BARHELLO WORLD MY FRIEND' ], [ 'W=hello world my friend' ]);
     });
   });
   describe('when we have async mutation', () => {
@@ -233,6 +217,44 @@ describe('Given a CSP state extension', () => {
       sput(ch, 'e');
 
       expect(spy).toBeCalledWithArgs([ 'hello-' ], [ 'hello-d' ], [ 'hello-de' ]);
+    });
+  });
+  describe('when we define a mutation', () => {
+    it('should warn us if we try a take on a WRITE channel', () => {
+      const current = state(0);
+      const spy = jest.spyOn(console, 'warn').mockImplementation();
+
+      current.mutate('reset', () => 0);
+
+      go(function * () {
+        yield take('reset');
+      });
+
+      expect(spy).toBeCalledWithArgs([ 'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately.' ]);
+      spy.mockRestore();
+    });
+    it('should be possible to react on a mutation from within multiple routines', () => {
+      const current = state('xxx');
+      const spy = jest.fn();
+
+      current.mutate('reset', () => 'foobar');
+
+      go(function * () {
+        yield sub('reset');
+        spy('r1=' + (yield take(current.READ)));
+      });
+      go(function * () {
+        yield sub('reset');
+        spy('r2=' + (yield take(current.READ)));
+      });
+      go(function * () {
+        yield sub('reset');
+        spy('r3=' + (yield take(current.READ)));
+      });
+
+      sput('reset');
+
+      expect(spy).toBeCalledWithArgs([ 'r1=foobar' ], [ 'r2=foobar' ], [ 'r3=foobar' ]);
     });
   });
 });

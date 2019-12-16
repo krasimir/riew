@@ -9,11 +9,11 @@ export function state(...args) {
   const writeChannels = [];
   const isThereInitialValue = args.length > 0;
 
-  function createChannel(id) {
+  function createChannel(id, buffType) {
     if (CHANNELS.exists(id)) {
       throw new Error(`Channel with name ${id} already exists.`);
     }
-    return chan(id, buffer.ever());
+    return chan(id, buffer[ buffType ]());
   }
   function handleError(onError) {
     return e => {
@@ -72,8 +72,8 @@ export function state(...args) {
     'READ': id + '_read',
     'WRITE': id + '_write',
     select(id, selector = v => v, onError = null) {
-      let ch = isChannel(id) ? id : createChannel(id);
-      ch[ '@statechannel' ] = true;
+      let ch = isChannel(id) ? id : createChannel(id, 'ever');
+      ch[ '@statereadchannel' ] = true;
       let reader = { ch, selector, onError };
       readChannels.push(reader);
       if (isThereInitialValue) {
@@ -81,8 +81,8 @@ export function state(...args) {
       }
     },
     mutate(id, reducer = (_, v) => v, onError = null) {
-      let ch = isChannel(id) ? id : createChannel(id);
-      ch[ '@statechannel' ] = true;
+      let ch = isChannel(id) ? id : createChannel(id, 'ever');
+      ch[ '@statewritechannel' ] = true;
       let writer = { ch, reducer, onError };
       writeChannels.push(writer);
       sub(ch, payload => runWriter(writer, payload));
@@ -114,6 +114,9 @@ export function state(...args) {
 export function isState(s) {
   return s && s[ '@state' ] === true;
 }
-export function isStateChannel(s) {
-  return s && s[ '@statechannel' ] === true;
+export function isStateReadChannel(s) {
+  return s && s[ '@statereadchannel' ] === true;
+}
+export function isStateWriteChannel(s) {
+  return s && s[ '@statewritechannel' ] === true;
 }

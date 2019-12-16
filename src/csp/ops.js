@@ -1,5 +1,5 @@
-import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, NOOP, CHANNELS, STOP, RERUN } from './constants';
-import { grid, chan, isState } from '../index';
+import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, NOOP, CHANNELS, STOP, RERUN, SUB } from './constants';
+import { grid, chan, isState, isStateWriteChannel } from '../index';
 import { isPromise } from '../utils';
 
 let noop = () => {};
@@ -50,6 +50,9 @@ export function take(id, callback) {
 
   let ch = isChannel(id) ? id : chan(id);
   if (typeof callback === 'function') {
+    if (isStateWriteChannel(ch)) {
+      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately.');
+    }
     doTake(ch, callback);
   } else {
     return { ch, op: TAKE };
@@ -89,8 +92,21 @@ export function schannelReset(id) {
 
 export function sub(id, callback) {
   let ch = isChannel(id) ? id : chan(id);
+  if (typeof callback === 'undefined') {
+    return { ch, op: SUB };
+  }
   if (!ch.subscribers.find(c => c === callback)) {
     ch.subscribers.push(callback);
+  }
+}
+export function subOnce(id, callback) {
+  let ch = isChannel(id) ? id : chan(id);
+  let c = v => {
+    callback(v);
+    unsub(id, c);
+  };
+  if (!ch.subscribers.find(s => s === c)) {
+    ch.subscribers.push(c);
   }
 }
 export function unsub(id, callback) {
@@ -165,6 +181,9 @@ export function go(func, done = () => {}, ...args) {
       case RERUN:
         gen = func(...args);
         next();
+        break;
+      case SUB:
+        subOnce(i.value.ch, next);
         break;
       default:
         throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);

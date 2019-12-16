@@ -339,6 +339,7 @@ var NOOP = exports.NOOP = 'NOOP';
 var SLEEP = exports.SLEEP = 'SLEEP';
 var STOP = exports.STOP = 'STOP';
 var RERUN = exports.RERUN = 'RERUN';
+var SUB = exports.SUB = 'SUB';
 
 var CHANNELS = exports.CHANNELS = {
   channels: {},
@@ -418,7 +419,7 @@ function compose(to, channels) {
       }
     };
     (0, _index.sub)(ch, doComposition);
-    if ((0, _index.isStateChannel)(ch)) {
+    if ((0, _index.isStateReadChannel)(ch)) {
       (0, _ops.stake)(ch, doComposition);
     }
   });
@@ -523,7 +524,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.state = state;
 exports.isState = isState;
-exports.isStateChannel = isStateChannel;
+exports.isStateReadChannel = isStateReadChannel;
+exports.isStateWriteChannel = isStateWriteChannel;
 
 var _index = require('../../index');
 
@@ -536,11 +538,11 @@ function state() {
   var writeChannels = [];
   var isThereInitialValue = arguments.length > 0;
 
-  function createChannel(id) {
+  function createChannel(id, buffType) {
     if (_index.CHANNELS.exists(id)) {
       throw new Error('Channel with name ' + id + ' already exists.');
     }
-    return (0, _index.chan)(id, _index.buffer.ever());
+    return (0, _index.chan)(id, _index.buffer[buffType]());
   }
   function handleError(onError) {
     return function (e) {
@@ -619,8 +621,8 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(id) ? id : createChannel(id);
-      ch['@statechannel'] = true;
+      var ch = (0, _index.isChannel)(id) ? id : createChannel(id, 'ever');
+      ch['@statereadchannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
       if (isThereInitialValue) {
@@ -633,8 +635,8 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(id) ? id : createChannel(id);
-      ch['@statechannel'] = true;
+      var ch = (0, _index.isChannel)(id) ? id : createChannel(id, 'ever');
+      ch['@statewritechannel'] = true;
       var writer = { ch: ch, reducer: reducer, onError: onError };
       writeChannels.push(writer);
       (0, _index.sub)(ch, function (payload) {
@@ -674,8 +676,11 @@ function state() {
 function isState(s) {
   return s && s['@state'] === true;
 }
-function isStateChannel(s) {
-  return s && s['@statechannel'] === true;
+function isStateReadChannel(s) {
+  return s && s['@statereadchannel'] === true;
+}
+function isStateWriteChannel(s) {
+  return s && s['@statewritechannel'] === true;
 }
 
 },{"../../index":17,"../../utils":20}],12:[function(require,module,exports){
@@ -828,6 +833,7 @@ exports.sclose = sclose;
 exports.channelReset = channelReset;
 exports.schannelReset = schannelReset;
 exports.sub = sub;
+exports.subOnce = subOnce;
 exports.unsub = unsub;
 exports.onSubscriberAdded = onSubscriberAdded;
 exports.onSubscriberRemoved = onSubscriberRemoved;
@@ -894,6 +900,9 @@ function take(id, callback) {
 
   var ch = isChannel(id) ? id : (0, _index.chan)(id);
   if (typeof callback === 'function') {
+    if ((0, _index.isStateWriteChannel)(ch)) {
+      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately.');
+    }
     doTake(ch, callback);
   } else {
     return { ch: ch, op: _constants.TAKE };
@@ -937,10 +946,25 @@ function schannelReset(id) {
 
 function sub(id, callback) {
   var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  if (typeof callback === 'undefined') {
+    return { ch: ch, op: _constants.SUB };
+  }
   if (!ch.subscribers.find(function (c) {
     return c === callback;
   })) {
     ch.subscribers.push(callback);
+  }
+}
+function subOnce(id, callback) {
+  var ch = isChannel(id) ? id : (0, _index.chan)(id);
+  var c = function c(v) {
+    callback(v);
+    unsub(id, c);
+  };
+  if (!ch.subscribers.find(function (s) {
+    return s === c;
+  })) {
+    ch.subscribers.push(c);
   }
 }
 function unsub(id, callback) {
@@ -1025,6 +1049,9 @@ function go(func) {
       case _constants.RERUN:
         gen = func.apply(undefined, args);
         next();
+        break;
+      case _constants.SUB:
+        subOnce(i.value.ch, next);
         break;
       default:
         throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');

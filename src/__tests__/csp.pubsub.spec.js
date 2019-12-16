@@ -1,4 +1,4 @@
-import { chan, sub, unsub, CHANNELS, go, reset, grid, take, put, sput, close } from '../index';
+import { chan, sub, subOnce, unsub, CHANNELS, go, reset, grid, take, put, sput, close } from '../index';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -108,6 +108,38 @@ describe('Given a CSP pubsub extension', () => {
       sput(ch, 'bar');
 
       expect(spy).toBeCalledWithArgs([ 'foo' ]);
+    });
+  });
+  describe('when we use subOnce', () => {
+    it('should unsubscribe after the first call', () => {
+      const spy = jest.fn();
+      const ch = chan();
+
+      subOnce(ch, spy);
+
+      sput(ch, 'foo');
+      sput(ch, 'bar');
+      sput(ch, 'zar');
+
+      expect(spy).toBeCalledWithArgs([ 'foo' ]);
+    });
+  });
+  describe('when we sub inside a routine', () => {
+    it('should do a sub once', () => {
+      const spy = jest.fn();
+      const ch = chan();
+
+      go(function * () {
+        spy('start');
+        spy(yield sub(ch));
+        spy('end');
+      });
+
+      sput(ch, 'foo');
+      sput(ch, 'bar');
+      sput(ch, 'zar');
+
+      expect(spy).toBeCalledWithArgs([ 'start' ], [ 'foo' ], [ 'end' ]);
     });
   });
 });

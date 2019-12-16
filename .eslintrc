@@ -74,7 +74,7 @@
     "max-len": [
       2,
       {
-        "code": 130,
+        "code": 330,
         "ignoreTemplateLiterals": true
       }
     ],
