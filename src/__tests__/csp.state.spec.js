@@ -59,14 +59,6 @@ describe('Given a CSP state extension', () => {
       expect(spy2).toBeCalledWithArgs([ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
     });
   });
-  describe('when we try creating a channel with the same name', () => {
-    it('should throw an error', () => {
-      const s = state(10);
-
-      s.select('R');
-      expect(() => s.select('R')).toThrowError('Channel with name R already exists.');
-    });
-  });
   describe('when we destroy the state', () => {
     it('should close the created channels', () => {
       const s = state('foo');
@@ -230,7 +222,7 @@ describe('Given a CSP state extension', () => {
         yield take('reset');
       });
 
-      expect(spy).toBeCalledWithArgs([ 'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately.' ]);
+      expect(spy).toBeCalledWithArgs([ 'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.' ]);
       spy.mockRestore();
     });
     it('should be possible to react on a mutation from within multiple routines', () => {

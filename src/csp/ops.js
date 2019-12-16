@@ -51,7 +51,7 @@ export function take(id, callback) {
   let ch = isChannel(id) ? id : chan(id);
   if (typeof callback === 'function') {
     if (isStateWriteChannel(ch)) {
-      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately.');
+      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.');
     }
     doTake(ch, callback);
   } else {

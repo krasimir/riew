@@ -538,12 +538,6 @@ function state() {
   var writeChannels = [];
   var isThereInitialValue = arguments.length > 0;
 
-  function createChannel(id, buffType) {
-    if (_index.CHANNELS.exists(id)) {
-      throw new Error('Channel with name ' + id + ' already exists.');
-    }
-    return (0, _index.chan)(id, _index.buffer[buffType]());
-  }
   function handleError(onError) {
     return function (e) {
       if (onError !== null) {
@@ -621,7 +615,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(id) ? id : createChannel(id, 'ever');
+      var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id, _index.buffer.ever());
       ch['@statereadchannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
@@ -635,7 +629,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(id) ? id : createChannel(id, 'ever');
+      var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id, _index.buffer.ever());
       ch['@statewritechannel'] = true;
       var writer = { ch: ch, reducer: reducer, onError: onError };
       writeChannels.push(writer);
@@ -901,7 +895,7 @@ function take(id, callback) {
   var ch = isChannel(id) ? id : (0, _index.chan)(id);
   if (typeof callback === 'function') {
     if ((0, _index.isStateWriteChannel)(ch)) {
-      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately.');
+      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.');
     }
     doTake(ch, callback);
   } else {

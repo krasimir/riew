@@ -1,4 +1,4 @@
-import { go, sub, CHANNELS, chan, sput, sclose, buffer, isChannel } from '../../index';
+import { go, sub, chan, sput, sclose, buffer, isChannel } from '../../index';
 import { getId, isPromise, isGeneratorFunction } from '../../utils';
 import { grid } from '../../index';
 
@@ -9,12 +9,6 @@ export function state(...args) {
   const writeChannels = [];
   const isThereInitialValue = args.length > 0;
 
-  function createChannel(id, buffType) {
-    if (CHANNELS.exists(id)) {
-      throw new Error(`Channel with name ${id} already exists.`);
-    }
-    return chan(id, buffer[ buffType ]());
-  }
   function handleError(onError) {
     return e => {
       if (onError !== null) {
@@ -72,7 +66,7 @@ export function state(...args) {
     'READ': id + '_read',
     'WRITE': id + '_write',
     select(id, selector = v => v, onError = null) {
-      let ch = isChannel(id) ? id : createChannel(id, 'ever');
+      let ch = isChannel(id) ? id : chan(id, buffer.ever());
       ch[ '@statereadchannel' ] = true;
       let reader = { ch, selector, onError };
       readChannels.push(reader);
@@ -81,7 +75,7 @@ export function state(...args) {
       }
     },
     mutate(id, reducer = (_, v) => v, onError = null) {
-      let ch = isChannel(id) ? id : createChannel(id, 'ever');
+      let ch = isChannel(id) ? id : chan(id, buffer.ever());
       ch[ '@statewritechannel' ] = true;
       let writer = { ch, reducer, onError };
       writeChannels.push(writer);
