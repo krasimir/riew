@@ -388,7 +388,7 @@ function _toConsumableArray(arr) {
 
 var NOTHING = Symbol('Nothing');
 
-function compose(to, channels) {
+function compose(channels, to) {
   var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {
     for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
       args[_key] = arguments[_key];

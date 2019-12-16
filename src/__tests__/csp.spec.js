@@ -731,8 +731,8 @@ describe('Given a CSP', () => {
       const spy = jest.fn();
 
       compose(
-        c3,
-        [ c1, c2 ]
+        [ c1, c2 ],
+        c3
       );
       sub(c3, spy);
       sput(c1, 'foo');
@@ -748,8 +748,8 @@ describe('Given a CSP', () => {
       const spy = jest.fn();
 
       compose(
-        c3,
         [ c1, c2 ],
+        c3,
         (a, b) => {
           return a.toUpperCase() + b.toUpperCase();
         }
@@ -769,8 +769,8 @@ describe('Given a CSP', () => {
 
         sub('app', spy);
         compose(
-          chan('app'),
           [ users.READ, currentUser.READ ],
+          chan('app'),
           (users, currentUserIndex) => {
             return users[ currentUserIndex ].name;
           }
@@ -788,8 +788,8 @@ describe('Given a CSP', () => {
         const spy = jest.fn();
 
         compose(
-          chan('app'),
           [ users.READ, currentUser.READ ],
+          chan('app'),
           (users, currentUserIndex) => {
             return users[ currentUserIndex ].name;
           }
@@ -820,8 +820,8 @@ describe('Given a CSP', () => {
         });
 
         compose(
-          'app',
           [ users.READ, currentUser.READ ],
+          'app',
           (users, currentUserIndex) => {
             return users[ currentUserIndex ].name;
           }

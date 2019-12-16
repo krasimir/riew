@@ -3,7 +3,7 @@ import { sput, stake } from '../ops';
 
 const NOTHING = Symbol('Nothing');
 
-export function compose(to, channels, transform = (...args) => args) {
+export function compose(channels, to, transform = (...args) => args) {
   to = isChannel(to) ? to : chan(to, buffer.ever());
 
   const data = channels.map(() => NOTHING);

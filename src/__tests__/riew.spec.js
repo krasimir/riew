@@ -540,8 +540,8 @@ describe('Given the `riew` factory function', () => {
       });
 
       compose(
-        'current',
         [ s1.READ, s2.READ ],
+        'current',
         (arr, idx) => {
           return arr[ idx ];
         }
