@@ -396,7 +396,7 @@ function compose(to, channels) {
     return args;
   };
 
-  to = (0, _index.isChannel)(to) ? to : (0, _index.chan)(to);
+  to = (0, _index.isChannel)(to) ? to : (0, _index.chan)(to, _index.buffer.ever());
 
   var data = channels.map(function () {
     return NOTHING;

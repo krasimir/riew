@@ -769,7 +769,7 @@ describe('Given a CSP', () => {
 
         sub('app', spy);
         compose(
-          'app',
+          chan('app'),
           [ users.READ, currentUser.READ ],
           (users, currentUserIndex) => {
             return users[ currentUserIndex ].name;
@@ -788,7 +788,7 @@ describe('Given a CSP', () => {
         const spy = jest.fn();
 
         compose(
-          'app',
+          chan('app'),
           [ users.READ, currentUser.READ ],
           (users, currentUserIndex) => {
             return users[ currentUserIndex ].name;
@@ -804,6 +804,31 @@ describe('Given a CSP', () => {
         });
 
         expect(spy).toBeCalledWithArgs([ 'Steve' ], [ 'Rebeka' ], [ true ]);
+      });
+    });
+    describe('when we use compose by passing a string for a channel', () => {
+      it('should create a channel with a EverBuffer', () => {
+        const users = state([ { name: 'Joe' }, { name: 'Steve' }, { name: 'Rebeka' } ]);
+        const currentUser = state(1);
+        const spy = jest.fn();
+
+        compose(
+          'app',
+          [ users.READ, currentUser.READ ],
+          (users, currentUserIndex) => {
+            return users[ currentUserIndex ].name;
+          }
+        );
+
+        go(function * () {
+          spy(yield take('app'));
+          spy(yield take('app'));
+          spy(yield put(currentUser.WRITE, 2));
+          spy(yield take('app'));
+          spy(yield take('app'));
+        });
+
+        expect(spy).toBeCalledWithArgs([ 'Steve' ], [ 'Steve' ], [ true ], [ 'Rebeka' ], [ 'Rebeka' ]);
       });
     });
   });

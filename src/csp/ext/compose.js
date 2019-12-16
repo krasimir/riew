@@ -1,10 +1,10 @@
-import { sub, chan, isChannel, CHANNELS, isStateChannel } from '../../index';
+import { sub, chan, isChannel, CHANNELS, isStateChannel, buffer } from '../../index';
 import { sput, stake } from '../ops';
 
 const NOTHING = Symbol('Nothing');
 
 export function compose(to, channels, transform = (...args) => args) {
-  to = isChannel(to) ? to : chan(to);
+  to = isChannel(to) ? to : chan(to, buffer.ever());
 
   const data = channels.map(() => NOTHING);
   let composedAtLeastOnce = false;
