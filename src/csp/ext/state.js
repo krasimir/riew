@@ -34,7 +34,15 @@ export function state(...args) {
   }
   function runWriter({ ch, reducer, onError }, payload) {
     if (isGeneratorFunction(reducer)) {
-      go(reducer, v => readChannels.forEach(r => runSelector(r, v)), value, payload);
+      go(
+        reducer,
+        v => {
+          value = v;
+          readChannels.forEach(r => runSelector(r, v));
+        },
+        value,
+        payload
+      );
     } else {
       try {
         value = reducer(value, payload);

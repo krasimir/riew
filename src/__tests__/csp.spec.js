@@ -812,6 +812,13 @@ describe('Given a CSP', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
+        users.mutate('WWW', arr => {
+          return arr.map((user, i) => {
+            if (i === 2) return { name: 'Batman' };
+            return user;
+          });
+        });
+
         compose(
           'app',
           [ users.READ, currentUser.READ ],
@@ -825,10 +832,11 @@ describe('Given a CSP', () => {
           spy(yield take('app'));
           spy(yield put(currentUser.WRITE, 2));
           spy(yield take('app'));
+          spy(yield put('WWW'));
           spy(yield take('app'));
         });
 
-        expect(spy).toBeCalledWithArgs([ 'Steve' ], [ 'Steve' ], [ true ], [ 'Rebeka' ], [ 'Rebeka' ]);
+        expect(spy).toBeCalledWithArgs([ 'Steve' ], [ 'Steve' ], [ true ], [ 'Rebeka' ], [ true ], [ 'Batman' ]);
       });
     });
   });

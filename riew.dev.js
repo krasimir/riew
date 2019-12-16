@@ -570,7 +570,8 @@ function state() {
 
     if ((0, _utils.isGeneratorFunction)(reducer)) {
       (0, _index.go)(reducer, function (v) {
-        return readChannels.forEach(function (r) {
+        value = v;
+        readChannels.forEach(function (r) {
           return runSelector(r, v);
         });
       }, value, payload);

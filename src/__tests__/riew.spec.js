@@ -530,7 +530,7 @@ describe('Given the `riew` factory function', () => {
       const s1 = state([ 'a', 'b', 'c', 'd' ]);
       const s2 = state(1);
 
-      s1.mutate('WWW', arr => {
+      s1.mutate('WWW', function * (arr) {
         return arr.map((value, i) => {
           if (i === 2) {
             return 'X';
