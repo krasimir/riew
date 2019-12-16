@@ -536,10 +536,11 @@ function state() {
   var writeChannels = [];
   var isThereInitialValue = arguments.length > 0;
 
-  function verifyChannel(id) {
+  function createChannel(id) {
     if (_index.CHANNELS.exists(id)) {
       throw new Error('Channel with name ' + id + ' already exists.');
     }
+    return (0, _index.chan)(id, _index.buffer.ever());
   }
   function handleError(onError) {
     return function (e) {
@@ -555,13 +556,25 @@ function state() {
         selector = _ref.selector,
         onError = _ref.onError;
 
-    var selectorValue = void 0;
-    try {
-      selectorValue = selector(v);
-    } catch (e) {
-      handleError(onError)(e);
+    if ((0, _utils.isGeneratorFunction)(selector)) {
+      (0, _index.go)(selector, function (v) {
+        return (0, _index.sput)(ch, v);
+      }, value);
+    } else {
+      var selectorValue = void 0;
+      try {
+        selectorValue = selector(v);
+      } catch (e) {
+        handleError(onError)(e);
+      }
+      if ((0, _utils.isPromise)(selectorValue)) {
+        selectorValue.then(function (v) {
+          return (0, _index.sput)(ch, v);
+        }).catch(handleError(onError));
+      } else {
+        (0, _index.sput)(ch, selectorValue);
+      }
     }
-    (0, _index.sput)(ch, selectorValue);
   }
   function runWriter(_ref2, payload) {
     var ch = _ref2.ch,
@@ -606,8 +619,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      verifyChannel(id);
-      var ch = (0, _index.chan)(id, _index.buffer.ever());
+      var ch = (0, _index.isChannel)(id) ? id : createChannel(id);
       ch['@statechannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
@@ -621,8 +633,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      verifyChannel(id);
-      var ch = (0, _index.chan)(id, _index.buffer.ever());
+      var ch = (0, _index.isChannel)(id) ? id : createChannel(id);
       ch['@statechannel'] = true;
       var writer = { ch: ch, reducer: reducer, onError: onError };
       writeChannels.push(writer);

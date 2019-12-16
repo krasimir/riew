@@ -1,4 +1,4 @@
-import { state, take, put, sub, reset, CHANNELS, go, sput, stake, sleep } from '../index';
+import { state, take, put, sub, reset, CHANNELS, go, sput, stake, sleep, chan } from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given a CSP state extension', () => {
@@ -160,6 +160,79 @@ describe('Given a CSP state extension', () => {
 
       await delay(10);
       expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'foozoobar' ]);
+    });
+  });
+  describe('when we use a generator as a selector', () => {
+    it('should wait till the routine is gone', async () => {
+      const spy = jest.fn();
+      const s = state();
+
+      s.select('IS', function * (word) {
+        return word;
+      });
+
+      sub('IS', spy);
+      sput(s.WRITE, 'bar');
+      sput(s.WRITE, 'zar');
+
+      await delay(2);
+      expect(spy).toBeCalledWithArgs([ 'bar' ], [ 'zar' ]);
+    });
+  });
+  describe('when we use an async function as a selector', () => {
+    it('should wait till the routine is gone', async () => {
+      const spy = jest.fn();
+      const s = state('foo');
+
+      s.select('IS', async function (word) {
+        await delay(2);
+        return word;
+      });
+
+      await delay(4);
+      sub('IS', v => spy('sub=' + v));
+      stake('IS', v => spy('stake=' + v));
+      sput(s.WRITE, 'bar');
+      sput(s.WRITE, 'zar');
+
+      await delay(10);
+      expect(spy).toBeCalledWithArgs([ 'stake=foo' ], [ 'sub=bar' ], [ 'sub=zar' ]);
+    });
+  });
+  describe('when we pass an already existing channel as a selector', () => {
+    it('should put selected values to that channel', () => {
+      const ch = chan('XXX');
+      const s1 = state('foo');
+      const s2 = state([ { name: 'A' }, { name: 'B' } ]);
+      const spy = jest.fn();
+
+      sub(ch, spy);
+      s1.select(ch);
+      s2.select(ch, items => {
+        return items.map(({ name }) => name).join('-');
+      });
+      s2.mutate('add', (items, newItem) => [ ...items, newItem ]);
+
+      sput(s1.WRITE, 'bar');
+      sput('add', { name: 'C' });
+
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'A-B' ], [ 'bar' ], [ 'A-B-C' ]);
+    });
+  });
+  describe('when we pass an already existing channel as a mutator', () => {
+    it('should mutate every time when we put to that channel', () => {
+      const ch = chan();
+      const s = state('a');
+      const spy = jest.fn();
+
+      sub(s.READ, spy);
+      s.mutate(ch, (a, b) => a + b);
+
+      sput(s.WRITE, 'hello-');
+      sput(ch, 'd');
+      sput(ch, 'e');
+
+      expect(spy).toBeCalledWithArgs([ 'hello-' ], [ 'hello-d' ], [ 'hello-de' ]);
     });
   });
 });
