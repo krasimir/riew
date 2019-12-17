@@ -68,6 +68,7 @@ export function state(...args) {
     select(id, selector = v => v, onError = null) {
       let ch = isChannel(id) ? id : chan(id, buffer.ever());
       ch[ '@statereadchannel' ] = true;
+      ch[ 'isThereInitialValue' ] = isThereInitialValue;
       let reader = { ch, selector, onError };
       readChannels.push(reader);
       if (isThereInitialValue) {

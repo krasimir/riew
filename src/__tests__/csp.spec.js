@@ -719,8 +719,29 @@ describe('Given a CSP', () => {
     });
   });
 
-  // compose
+  // pubsub
 
+  describe('when piping', () => {
+    it('sub from one channel and pass it to another', () => {
+      const c1 = chan();
+      const c2 = chan();
+      const spy = jest.fn();
+
+      sub(c1, c2);
+
+      go(function * () {
+        spy('put1=' + (yield put(c1, 'foo')));
+        spy('put2=' + (yield put(c1, 'bar')));
+      });
+      go(function * () {
+        spy('take1=' + (yield take(c2)));
+        spy('take2=' + (yield take(c2)));
+      });
+      sput(c1, 'baz');
+
+      expect(spy).toBeCalledWithArgs([ 'take1=foo' ], [ 'take2=baz' ]);
+    });
+  });
   describe('when composing two channels', () => {
     it(`should
       * aggregate value
@@ -730,10 +751,7 @@ describe('Given a CSP', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      compose(
-        [ c1, c2 ],
-        c3
-      );
+      sub([ c1, c2 ], c3);
       sub(c3, spy);
       sput(c1, 'foo');
       sput(c2, 'bar');
@@ -747,13 +765,9 @@ describe('Given a CSP', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      compose(
-        [ c1, c2 ],
-        c3,
-        (a, b) => {
-          return a.toUpperCase() + b.toUpperCase();
-        }
-      );
+      sub([ c1, c2 ], c3, (a, b) => {
+        return a.toUpperCase() + b.toUpperCase();
+      });
       sub(c3, spy);
       sput(c1, 'foo');
       sput(c2, 'bar');
@@ -768,13 +782,9 @@ describe('Given a CSP', () => {
         const spy = jest.fn();
 
         sub('app', spy);
-        compose(
-          [ users.READ, currentUser.READ ],
-          chan('app'),
-          (users, currentUserIndex) => {
-            return users[ currentUserIndex ].name;
-          }
-        );
+        sub([ users.READ, currentUser.READ ], chan('app'), (users, currentUserIndex) => {
+          return users[ currentUserIndex ].name;
+        });
 
         sput(currentUser.WRITE, 2);
 
@@ -787,13 +797,9 @@ describe('Given a CSP', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        compose(
-          [ users.READ, currentUser.READ ],
-          chan('app'),
-          (users, currentUserIndex) => {
-            return users[ currentUserIndex ].name;
-          }
-        );
+        sub([ users.READ, currentUser.READ ], chan('app'), (users, currentUserIndex) => {
+          return users[ currentUserIndex ].name;
+        });
 
         go(function * () {
           spy(yield take('app'));
@@ -819,13 +825,9 @@ describe('Given a CSP', () => {
           });
         });
 
-        compose(
-          [ users.READ, currentUser.READ ],
-          'app',
-          (users, currentUserIndex) => {
-            return users[ currentUserIndex ].name;
-          }
-        );
+        sub([ users.READ, currentUser.READ ], 'app', (users, currentUserIndex) => {
+          return users[ currentUserIndex ].name;
+        });
 
         go(function * () {
           spy(yield take('app'));

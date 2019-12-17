@@ -99,8 +99,24 @@ describe('Given a CSP state extension', () => {
         spy(yield take('R'));
       });
 
-      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'FOO' ], [ true ], [ 'bar' ], [ 'BAR' ], [ true ], [ 'barhello world my friend' ], [ 'BARHELLO WORLD MY FRIEND' ]);
-      expect(listen).toBeCalledWithArgs([ 'READ=bar' ], [ 'R=BAR' ], [ 'WRITE=bar' ], [ 'READ=barhello world my friend' ], [ 'R=BARHELLO WORLD MY FRIEND' ], [ 'W=hello world my friend' ]);
+      expect(spy).toBeCalledWithArgs(
+        [ 'foo' ],
+        [ 'FOO' ],
+        [ true ],
+        [ 'bar' ],
+        [ 'BAR' ],
+        [ true ],
+        [ 'barhello world my friend' ],
+        [ 'BARHELLO WORLD MY FRIEND' ]
+      );
+      expect(listen).toBeCalledWithArgs(
+        [ 'READ=bar' ],
+        [ 'R=BAR' ],
+        [ 'WRITE=bar' ],
+        [ 'READ=barhello world my friend' ],
+        [ 'R=BARHELLO WORLD MY FRIEND' ],
+        [ 'W=hello world my friend' ]
+      );
     });
   });
   describe('when we have async mutation', () => {
@@ -121,7 +137,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we have a routine as mutation', () => {
-    it('should wait till the routine is gone', async () => {
+    fit('should wait till the routine is gone', async () => {
       const spy = jest.fn();
       const s = state('foo');
       const s2 = state('bar');
@@ -165,14 +181,14 @@ describe('Given a CSP state extension', () => {
         return word;
       });
 
-      await delay(4);
       sub('IS', v => spy('sub=' + v));
+      await delay(4);
       stake('IS', v => spy('stake=' + v));
       sput(s.WRITE, 'bar');
       sput(s.WRITE, 'zar');
 
       await delay(10);
-      expect(spy).toBeCalledWithArgs([ 'stake=foo' ], [ 'sub=bar' ], [ 'sub=zar' ]);
+      expect(spy).toBeCalledWithArgs([ 'sub=undefined' ], [ 'sub=foo' ], [ 'stake=foo' ], [ 'sub=bar' ], [ 'sub=zar' ]);
     });
   });
   describe('when we pass an already existing channel as a selector', () => {
@@ -208,7 +224,7 @@ describe('Given a CSP state extension', () => {
       sput(ch, 'd');
       sput(ch, 'e');
 
-      expect(spy).toBeCalledWithArgs([ 'hello-' ], [ 'hello-d' ], [ 'hello-de' ]);
+      expect(spy).toBeCalledWithArgs([ 'a' ], [ 'hello-' ], [ 'hello-d' ], [ 'hello-de' ]);
     });
   });
   describe('when we define a mutation', () => {
@@ -222,7 +238,9 @@ describe('Given a CSP state extension', () => {
         yield take('reset');
       });
 
-      expect(spy).toBeCalledWithArgs([ 'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.' ]);
+      expect(spy).toBeCalledWithArgs([
+        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.'
+      ]);
       spy.mockRestore();
     });
     it('should be possible to react on a mutation from within multiple routines', () => {

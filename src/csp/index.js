@@ -5,5 +5,5 @@ export * from './ext/merge';
 export * from './ext/mult';
 export * from './ext/timeout';
 export * from './ext/state';
-export * from './ext/compose';
+export * from './ext/pubsub';
 export * from './constants';
