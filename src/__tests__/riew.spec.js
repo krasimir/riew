@@ -213,7 +213,7 @@ describe('Given the `riew` factory function', () => {
       await delay();
       expect(CHANNELS.exists(s.WRITE)).toBeDefined();
       expect(view).toBeCalledWithArgs([ { s: 'baz' } ]);
-      expect(spy).toBeCalledWithArgs([ 'baz' ], [ 'zoo' ]);
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'baz' ], [ 'zoo' ]);
     });
   });
   describe('when we send a state to the view', () => {
@@ -539,13 +539,9 @@ describe('Given the `riew` factory function', () => {
         });
       });
 
-      compose(
-        [ s1.READ, s2.READ ],
-        'current',
-        (arr, idx) => {
-          return arr[ idx ];
-        }
-      );
+      sub([ s1.READ, s2.READ ], 'current', (arr, idx) => {
+        return arr[ idx ];
+      });
 
       const r = riew(view).with({ $data: 'current' });
 
