@@ -21,18 +21,18 @@ export function state(...args) {
   function runSelector({ ch, selector, onError }, v) {
     if (isGeneratorFunction(selector)) {
       go(selector, v => sput(ch, v), value);
+      return;
+    }
+    let selectorValue;
+    try {
+      selectorValue = selector(v);
+    } catch (e) {
+      handleError(onError)(e);
+    }
+    if (isPromise(selectorValue)) {
+      selectorValue.then(v => sput(ch, v)).catch(handleError(onError));
     } else {
-      let selectorValue;
-      try {
-        selectorValue = selector(v);
-      } catch (e) {
-        handleError(onError)(e);
-      }
-      if (isPromise(selectorValue)) {
-        selectorValue.then(v => sput(ch, v)).catch(handleError(onError));
-      } else {
-        sput(ch, selectorValue);
-      }
+      sput(ch, selectorValue);
     }
   }
   function runWriter({ ch, reducer, onError }, payload) {
@@ -46,12 +46,12 @@ export function state(...args) {
         value,
         payload
       );
-    } else {
-      try {
-        value = reducer(value, payload);
-      } catch (e) {
-        handleError(onError)(e);
-      }
+      return;
+    }
+    try {
+      value = reducer(value, payload);
+    } catch (e) {
+      handleError(onError)(e);
     }
     if (isPromise(value)) {
       value.then(v => readChannels.forEach(r => runSelector(r, v))).catch(handleError(onError));
@@ -68,7 +68,6 @@ export function state(...args) {
     select(id, selector = v => v, onError = null) {
       let ch = isChannel(id) ? id : chan(id, buffer.ever());
       ch[ '@statereadchannel' ] = true;
-      ch[ 'isThereInitialValue' ] = isThereInitialValue;
       let reader = { ch, selector, onError };
       readChannels.push(reader);
       if (isThereInitialValue) {

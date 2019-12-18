@@ -27,7 +27,7 @@ function defaultTransform(...args) {
   return args;
 }
 
-export function sub(channels, to, transform = defaultTransform) {
+export function sub(channels, to, transform = defaultTransform, initialCallIfBufValue = true) {
   // in a routine
   if (typeof to === 'undefined') {
     return { ch: channels, op: SUB };
@@ -40,18 +40,21 @@ export function sub(channels, to, transform = defaultTransform) {
   const data = channels.map(() => NOTHING);
   let composedAtLeastOnce = false;
   channels.forEach((ch, idx) => {
-    const doComposition = value => {
+    const notify = value => {
       data[ idx ] = value;
       if (composedAtLeastOnce || data.length === 1 || !data.includes(NOTHING)) {
         composedAtLeastOnce = true;
         to(transform(...data));
       }
     };
-    if (!ch.subscribers.find(c => c === to)) {
-      ch.subscribers.push(doComposition);
+    if (!ch.subscribers.find(({ to: t }) => t === to)) {
+      ch.subscribers.push({ to, notify });
     }
-    if (isStateReadChannel(ch) && ch.isThereInitialValue) {
-      stake(ch, doComposition);
+    // If there is already a value in the channel
+    // notify the subscribers.
+    const currentChannelBufValue = ch.value();
+    if (initialCallIfBufValue && currentChannelBufValue.length > 0) {
+      notify(currentChannelBufValue[ 0 ]);
     }
   });
   return to;
@@ -61,16 +64,16 @@ export function subOnce(id, callback) {
   let ch = isChannel(id) ? id : chan(id);
   let c = v => {
     callback(v);
-    unsub(id, c);
+    unsub(id, callback);
   };
   if (!ch.subscribers.find(s => s === c)) {
-    ch.subscribers.push(c);
+    ch.subscribers.push({ notify: c, to: callback });
   }
 }
 export function unsub(id, callback) {
   let ch = isChannel(id) ? id : chan(id);
-  ch.subscribers = ch.subscribers.filter(c => {
-    if (c !== callback) {
+  ch.subscribers = ch.subscribers.filter(({ to }) => {
+    if (to !== callback) {
       return true;
     }
     return false;

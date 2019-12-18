@@ -12,7 +12,7 @@ export function put(id, item, callback) {
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
-      ch.subscribers.forEach(s => s(item));
+      ch.subscribers.forEach(({ notify }) => notify(item));
       ch.buff.put(item, callback);
     }
   };

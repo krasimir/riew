@@ -1,4 +1,4 @@
-import { chan, sub, subOnce, unsub, CHANNELS, go, reset, grid, take, put, sput, close } from '../index';
+import { chan, buffer, sub, subOnce, unsub, CHANNELS, go, reset, grid, take, put, sput, close } from '../index';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -140,6 +140,34 @@ describe('Given a CSP pubsub extension', () => {
       sput(ch, 'zar');
 
       expect(spy).toBeCalledWithArgs([ 'start' ], [ 'foo' ], [ 'end' ]);
+    });
+  });
+  describe('when we sub and there is already a value in the channel', () => {
+    it('should fire the callback at least once with the value', () => {
+      const spy = jest.fn();
+      const ch = chan(buffer.fixed(1));
+
+      go(function * () {
+        yield put(ch, 'foo');
+        yield put(ch, 'bar'); // <-- here we stop
+        spy('never');
+      });
+      sub(ch, spy);
+
+      expect(spy).toBeCalledWithArgs([ 'foo' ]);
+    });
+    it('should allow us to turn that behavior off', () => {
+      const spy = jest.fn();
+      const ch = chan(buffer.fixed(1));
+
+      go(function * () {
+        yield put(ch, 'foo');
+        yield put(ch, 'bar'); // <-- here we stop
+        spy('never');
+      });
+      sub(ch, spy, undefined, false);
+
+      expect(spy).not.toBeCalled();
     });
   });
 });

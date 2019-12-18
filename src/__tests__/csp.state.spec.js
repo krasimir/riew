@@ -21,7 +21,7 @@ describe('Given a CSP state extension', () => {
       s.select('R', value => value.toUpperCase());
       sub('R', spy);
       s.set('bar');
-      expect(spy).toBeCalledWithArgs([ 'BAR' ]);
+      expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
     });
   });
   describe('when using the built-in READ and WRITE channels', () => {
@@ -35,7 +35,7 @@ describe('Given a CSP state extension', () => {
       sput(s.WRITE, 'bar');
       stake(s.READ, spy2);
 
-      expect(spy).toBeCalledWithArgs([ 'bar' ]);
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
       expect(spy2).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
     });
   });
@@ -55,8 +55,8 @@ describe('Given a CSP state extension', () => {
       sput('W1', 12);
       sput('W2', 3);
 
-      expect(spy1).toBeCalledWithArgs([ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
-      expect(spy2).toBeCalledWithArgs([ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
+      expect(spy1).toBeCalledWithArgs([ 'value is 10' ], [ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
+      expect(spy2).toBeCalledWithArgs([ 'value is 10' ], [ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
     });
   });
   describe('when we destroy the state', () => {
@@ -110,6 +110,8 @@ describe('Given a CSP state extension', () => {
         [ 'BARHELLO WORLD MY FRIEND' ]
       );
       expect(listen).toBeCalledWithArgs(
+        [ 'READ=foo' ],
+        [ 'R=FOO' ],
         [ 'READ=bar' ],
         [ 'R=BAR' ],
         [ 'WRITE=bar' ],
@@ -133,11 +135,11 @@ describe('Given a CSP state extension', () => {
       sput('W', 'bar');
 
       await delay(10);
-      expect(spy).toBeCalledWithArgs([ 'foobar' ]);
+      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'foobar' ]);
     });
   });
   describe('when we have a routine as mutation', () => {
-    fit('should wait till the routine is gone', async () => {
+    it('should wait till the routine is gone', async () => {
       const spy = jest.fn();
       const s = state('foo');
       const s2 = state('bar');
@@ -147,7 +149,9 @@ describe('Given a CSP state extension', () => {
         return current + newOne + (yield take(s2.READ));
       });
 
-      sub(s.READ, spy);
+      sub(s.READ, v => {
+        spy(v);
+      });
       sput('W', 'zoo');
 
       await delay(10);
@@ -172,23 +176,23 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we use an async function as a selector', () => {
-    it('should wait till the routine is gone', async () => {
+    it('should wait till the function is finished', async () => {
       const spy = jest.fn();
       const s = state('foo');
 
       s.select('IS', async function (word) {
         await delay(2);
-        return word;
+        return word.toUpperCase();
       });
 
       sub('IS', v => spy('sub=' + v));
-      await delay(4);
       stake('IS', v => spy('stake=' + v));
       sput(s.WRITE, 'bar');
       sput(s.WRITE, 'zar');
+      expect(spy).toBeCalledWithArgs([ 'stake=undefined' ]);
 
       await delay(10);
-      expect(spy).toBeCalledWithArgs([ 'sub=undefined' ], [ 'sub=foo' ], [ 'stake=foo' ], [ 'sub=bar' ], [ 'sub=zar' ]);
+      expect(spy).toBeCalledWithArgs([ 'stake=undefined' ], [ 'sub=FOO' ], [ 'sub=BAR' ], [ 'sub=ZAR' ]);
     });
   });
   describe('when we pass an already existing channel as a selector', () => {

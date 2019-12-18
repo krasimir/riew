@@ -23,8 +23,7 @@ export function createChannel(...args) {
     if (typeof s !== 'undefined') state = s;
     return state;
   };
-  api.__value = () => {
-    console.warn("Riew: you should not get the channel's value directly! This method is here purely for testing purposes.");
+  api.value = () => {
     return buff.getValue();
   };
 

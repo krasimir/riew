@@ -382,15 +382,15 @@ describe('Given a CSP', () => {
       return exercise(
         Test(
           function * A(log) {
-            log(`value1=${ch.__value().toString()}`);
+            log(`value1=${ch.value().toString()}`);
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
-            log(`value2=${ch.__value().toString()}`);
+            log(`value2=${ch.value().toString()}`);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
-            log(`value3=${ch.__value().toString()}`);
+            log(`value3=${ch.value().toString()}`);
             log(`put3=${(yield put(ch, 'zar')).toString()}`);
-            log(`value4=${ch.__value().toString()}`);
+            log(`value4=${ch.value().toString()}`);
             log(`put4=${(yield put(ch, 'mar')).toString()}`);
-            log(`value5=${ch.__value().toString()}`);
+            log(`value5=${ch.value().toString()}`);
           },
           function * B(log) {
             yield sleep(5);
@@ -437,16 +437,16 @@ describe('Given a CSP', () => {
         return exercise(
           Test(
             function * A(log) {
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put2=${(yield put(ch, 'bar')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put3=${(yield put(ch, 'zar')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               yield sleep(10);
               log(`put4=${(yield put(ch, 'final')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
             },
             function * B(log) {
               yield sleep(5);
@@ -488,16 +488,16 @@ describe('Given a CSP', () => {
         return exercise(
           Test(
             function * A(log) {
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put2=${(yield put(ch, 'bar')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put3=${(yield put(ch, 'zar')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               yield sleep(10);
               log(`put4=${(yield put(ch, 'final')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
             },
             function * B(log) {
               yield sleep(5);
@@ -560,16 +560,16 @@ describe('Given a CSP', () => {
         return exercise(
           Test(
             function * A(log) {
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put2=${(yield put(ch, 'bar')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put3=${(yield put(ch, 'zar')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               yield sleep(10);
               log(`put4=${(yield put(ch, 'final')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
             },
             function * B(log) {
               yield sleep(5);
@@ -611,16 +611,16 @@ describe('Given a CSP', () => {
         return exercise(
           Test(
             function * A(log) {
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put1=${(yield put(ch, 'foo')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put2=${(yield put(ch, 'bar')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               log(`put3=${(yield put(ch, 'zar')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
               yield sleep(10);
               log(`put4=${(yield put(ch, 'final')).toString()}`);
-              log(`value=${ch.__value().toString()}`);
+              log(`value=${ch.value().toString()}`);
             },
             function * B(log) {
               yield sleep(5);
@@ -812,7 +812,7 @@ describe('Given a CSP', () => {
         expect(spy).toBeCalledWithArgs([ 'Steve' ], [ 'Rebeka' ], [ true ]);
       });
     });
-    describe('when we use compose by passing a string for a channel', () => {
+    describe('when we use sub by passing a string for a channel', () => {
       it('should create a channel with a EverBuffer', () => {
         const users = state([ { name: 'Joe' }, { name: 'Steve' }, { name: 'Rebeka' } ]);
         const currentUser = state(1);
@@ -1077,14 +1077,14 @@ describe('Given a CSP', () => {
         Test(
           function * A(log) {
             log(`put1=${(yield put(ch, 'foo')).toString()}`);
-            log(`value=${ch.__value().toString()}`);
+            log(`value=${ch.value().toString()}`);
             log(`put2=${(yield put(ch, 'bar')).toString()}`);
-            log(`value=${ch.__value().toString()}`);
+            log(`value=${ch.value().toString()}`);
             log(`put3=${(yield put(ch, 'zar')).toString()}`);
-            log(`value=${ch.__value().toString()}`);
+            log(`value=${ch.value().toString()}`);
             yield sleep(10);
             log(`put4=${(yield put(ch, 'mar')).toString()}`);
-            log(`value=${ch.__value().toString()}`);
+            log(`value=${ch.value().toString()}`);
           },
           function * B(log) {
             yield sleep(5);
