@@ -4,7 +4,9 @@ function Grid() {
 
   gridAPI.add = product => {
     if (!product || !product.id) {
-      throw new Error(`Each node in the grid must be an object with "id" field. Instead "${product}" given.`);
+      throw new Error(
+        `Each node in the grid must be an object with "id" field. Instead "${product}" given.`
+      );
     }
     nodes.push(product);
   };

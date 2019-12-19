@@ -14,6 +14,9 @@ export const react = {
 export const chan = (...args) => {
   return h.produce('channel', ...args);
 };
+export const state = (...args) => {
+  return h.produce('state', ...args);
+};
 export const use = (name, ...args) => {
   return h.produce(name, ...args);
 };

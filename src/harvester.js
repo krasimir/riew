@@ -1,7 +1,7 @@
 import createRiew from './riew';
 import reactRiew from './react';
 import grid from './grid';
-import { createChannel } from './csp';
+import { createChannel, createState } from './csp';
 
 function Harvester() {
   const api = {};
@@ -53,6 +53,12 @@ const defineHarvesterBuiltInCapabilities = function (h) {
 
     grid.add(channel);
     return channel;
+  });
+  h.defineProduct('state', (...args) => {
+    const state = createState(...args);
+
+    grid.add(state);
+    return state;
   });
 };
 

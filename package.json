@@ -1,6 +1,6 @@
 {
   "name": "riew",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "description": "Reactive View Architecture",
   "main": "./lib/index.js",
   "scripts": {
@@ -53,7 +53,7 @@
     "regenerator-runtime": "0.12.1",
     "riew-logger": "0.1.2",
     "terser": "4.2.1",
-    "eslint": "3.19.0",
+    "eslint": "6.7.2",
     "eslint-plugin-react": "3.16.1",
     "babel-eslint": "9.0.0"
   },

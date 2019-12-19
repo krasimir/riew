@@ -55,7 +55,7 @@ function DroppingBuffer() {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = PersistingBuffer;
+exports.default = EverBuffer;
 
 var _Interface = require('./Interface');
 
@@ -65,9 +65,12 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function PersistingBuffer() {
+function EverBuffer() {
   var api = (0, _Interface2.default)();
 
+  if (arguments.length > 0) {
+    api.value = [arguments.length <= 0 ? undefined : arguments[0]];
+  }
   api.setValue = function (v) {
     return api.value = v;
   };
@@ -285,7 +288,7 @@ function createChannel() {
   var api = _index.CHANNELS.set(id, {
     id: id,
     '@channel': true,
-    'subscribers': []
+    subscribers: []
   });
 
   api.isActive = function () {
@@ -296,12 +299,10 @@ function createChannel() {
     if (typeof s !== 'undefined') state = s;
     return state;
   };
-  api.__value = function () {
-    console.warn("Riew: you should not get the channel's value directly! This method is here purely for testing purposes.");
+  api.value = function () {
     return buff.getValue();
   };
 
-  _index.grid.add(api);
   return api;
 }
 
@@ -370,68 +371,6 @@ var CHANNELS = exports.CHANNELS = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.compose = compose;
-
-var _index = require('../../index');
-
-var _ops = require('../ops');
-
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-}
-
-var NOTHING = Symbol('Nothing');
-
-function compose(channels, to) {
-  var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : function () {
-    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    return args;
-  };
-
-  to = (0, _index.isChannel)(to) ? to : (0, _index.chan)(to, _index.buffer.ever());
-
-  var data = channels.map(function () {
-    return NOTHING;
-  });
-  var composedAtLeastOnce = false;
-  channels.forEach(function (id, idx) {
-    if ((0, _index.isState)(id)) {
-      throw new Error('The second parameter of \'compose\' accepts an array of channels. You passed a state (at index ' + idx + ').');
-    }
-    if (!(0, _index.isChannel)(id) && !_index.CHANNELS.exists(id)) {
-      throw new Error('Channel doesn\'t exists. ' + ch + ' passed to compose.');
-    }
-    var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
-    var doComposition = function doComposition(value) {
-      data[idx] = value;
-      if (composedAtLeastOnce || data.length === 1 || !data.includes(NOTHING)) {
-        composedAtLeastOnce = true;
-        (0, _ops.sput)(to, transform.apply(undefined, _toConsumableArray(data)));
-      }
-    };
-    (0, _index.sub)(ch, doComposition);
-    if ((0, _index.isStateReadChannel)(ch)) {
-      (0, _ops.stake)(ch, doComposition);
-    }
-  });
-  return to;
-}
-
-},{"../../index":17,"../ops":14}],9:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
 exports.merge = merge;
 
 var _index = require('../../index');
@@ -455,7 +394,7 @@ function merge() {
   return newCh;
 }
 
-},{"../../index":17}],10:[function(require,module,exports){
+},{"../../index":17}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -516,13 +455,137 @@ function unmultAll(ch) {
   ch._taps = [];
 }
 
-},{"../index":13}],11:[function(require,module,exports){
+},{"../index":13}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.state = state;
+exports.sub = sub;
+exports.subOnce = subOnce;
+exports.unsub = unsub;
+
+var _index = require('../../index');
+
+var _constants = require('../constants');
+
+var _ops = require('../ops');
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
+
+var NOTHING = Symbol('Nothing');
+
+function normalizeChannels(channels) {
+  if (!Array.isArray(channels)) channels = [channels];
+  return channels.map(function (ch, idx) {
+    if ((0, _index.isState)(ch)) ch = ch.READ;
+    return (0, _index.isChannel)(ch) ? ch : (0, _index.chan)(ch);
+  });
+}
+function normalizeTo(to) {
+  if (typeof to === 'function') {
+    return to;
+  } else if ((0, _index.isChannel)(to)) {
+    return to.__subFunc || (to.__subFunc = function (v) {
+      return (0, _ops.sput)(to, v);
+    });
+  } else if (typeof to === 'string') {
+    var ch = (0, _index.chan)(to, _index.buffer.ever());
+    return ch.__subFunc = function (v) {
+      return (0, _ops.sput)(to, v);
+    };
+  }
+  throw new Error('\'sub\' accepts string, channel or a function as a second argument. ' + to + ' given.');
+}
+function defaultTransform() {
+  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+    args[_key] = arguments[_key];
+  }
+
+  if (args.length === 1) return args[0];
+  return args;
+}
+
+function sub(channels, to) {
+  var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : defaultTransform;
+  var initialCallIfBufValue = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+
+  // in a routine
+  if (typeof to === 'undefined') {
+    return { ch: channels, op: _constants.SUB };
+  }
+
+  // outside routine
+  channels = normalizeChannels(channels); // array of channels
+  to = normalizeTo(to); // function
+
+  var data = channels.map(function () {
+    return NOTHING;
+  });
+  var composedAtLeastOnce = false;
+  channels.forEach(function (ch, idx) {
+    var notify = function notify(value) {
+      data[idx] = value;
+      if (composedAtLeastOnce || data.length === 1 || !data.includes(NOTHING)) {
+        composedAtLeastOnce = true;
+        to(transform.apply(undefined, _toConsumableArray(data)));
+      }
+    };
+    if (!ch.subscribers.find(function (_ref) {
+      var t = _ref.to;
+      return t === to;
+    })) {
+      ch.subscribers.push({ to: to, notify: notify });
+    }
+    // If there is already a value in the channel
+    // notify the subscribers.
+    var currentChannelBufValue = ch.value();
+    if (initialCallIfBufValue && currentChannelBufValue.length > 0) {
+      notify(currentChannelBufValue[0]);
+    }
+  });
+  return to;
+}
+
+function subOnce(id, callback) {
+  var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
+  var c = function c(v) {
+    callback(v);
+    unsub(id, callback);
+  };
+  if (!ch.subscribers.find(function (s) {
+    return s === c;
+  })) {
+    ch.subscribers.push({ notify: c, to: callback });
+  }
+}
+function unsub(id, callback) {
+  var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
+  ch.subscribers = ch.subscribers.filter(function (_ref2) {
+    var to = _ref2.to;
+
+    if (to !== callback) {
+      return true;
+    }
+    return false;
+  });
+}
+
+},{"../../index":17,"../constants":7,"../ops":14}],11:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createState = createState;
 exports.isState = isState;
 exports.isStateReadChannel = isStateReadChannel;
 exports.isStateWriteChannel = isStateWriteChannel;
@@ -531,7 +594,7 @@ var _index = require('../../index');
 
 var _utils = require('../../utils');
 
-function state() {
+function createState() {
   var value = arguments.length <= 0 ? undefined : arguments[0];
   var id = (0, _utils.getId)('state');
   var readChannels = [];
@@ -556,20 +619,20 @@ function state() {
       (0, _index.go)(selector, function (v) {
         return (0, _index.sput)(ch, v);
       }, value);
+      return;
+    }
+    var selectorValue = void 0;
+    try {
+      selectorValue = selector(v);
+    } catch (e) {
+      handleError(onError)(e);
+    }
+    if ((0, _utils.isPromise)(selectorValue)) {
+      selectorValue.then(function (v) {
+        return (0, _index.sput)(ch, v);
+      }).catch(handleError(onError));
     } else {
-      var selectorValue = void 0;
-      try {
-        selectorValue = selector(v);
-      } catch (e) {
-        handleError(onError)(e);
-      }
-      if ((0, _utils.isPromise)(selectorValue)) {
-        selectorValue.then(function (v) {
-          return (0, _index.sput)(ch, v);
-        }).catch(handleError(onError));
-      } else {
-        (0, _index.sput)(ch, selectorValue);
-      }
+      (0, _index.sput)(ch, selectorValue);
     }
   }
   function runWriter(_ref2, payload) {
@@ -584,12 +647,12 @@ function state() {
           return runSelector(r, v);
         });
       }, value, payload);
-    } else {
-      try {
-        value = reducer(value, payload);
-      } catch (e) {
-        handleError(onError)(e);
-      }
+      return;
+    }
+    try {
+      value = reducer(value, payload);
+    } catch (e) {
+      handleError(onError)(e);
     }
     if ((0, _utils.isPromise)(value)) {
       value.then(function (v) {
@@ -607,8 +670,8 @@ function state() {
   var api = {
     id: id,
     '@state': true,
-    'READ': id + '_read',
-    'WRITE': id + '_write',
+    READ: id + '_read',
+    WRITE: id + '_write',
     select: function select(id) {
       var selector = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (v) {
         return v;
@@ -663,7 +726,6 @@ function state() {
   api.select(api.READ);
   api.mutate(api.WRITE);
 
-  _index.grid.add(api);
   return api;
 }
 
@@ -783,14 +845,14 @@ Object.keys(_state).forEach(function (key) {
   });
 });
 
-var _compose = require('./ext/compose');
+var _pubsub = require('./ext/pubsub');
 
-Object.keys(_compose).forEach(function (key) {
+Object.keys(_pubsub).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _compose[key];
+      return _pubsub[key];
     }
   });
 });
@@ -811,7 +873,7 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-},{"./buffer":5,"./channel":6,"./constants":7,"./ext/compose":8,"./ext/merge":9,"./ext/mult":10,"./ext/state":11,"./ext/timeout":12,"./ops":14}],14:[function(require,module,exports){
+},{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/mult":9,"./ext/pubsub":10,"./ext/state":11,"./ext/timeout":12,"./ops":14}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -826,11 +888,6 @@ exports.close = close;
 exports.sclose = sclose;
 exports.channelReset = channelReset;
 exports.schannelReset = schannelReset;
-exports.sub = sub;
-exports.subOnce = subOnce;
-exports.unsub = unsub;
-exports.onSubscriberAdded = onSubscriberAdded;
-exports.onSubscriberRemoved = onSubscriberRemoved;
 exports.go = go;
 exports.sleep = sleep;
 exports.stop = stop;
@@ -852,8 +909,9 @@ function put(id, item, callback) {
     if (state === _constants.CLOSED || state === _constants.ENDED) {
       callback(state);
     } else {
-      ch.subscribers.forEach(function (s) {
-        return s(item);
+      ch.subscribers.forEach(function (_ref) {
+        var notify = _ref.notify;
+        return notify(item);
       });
       ch.buff.put(item, callback);
     }
@@ -936,49 +994,6 @@ function schannelReset(id) {
   channelReset(id);
 }
 
-// **************************************************** pubsub
-
-function sub(id, callback) {
-  var ch = isChannel(id) ? id : (0, _index.chan)(id);
-  if (typeof callback === 'undefined') {
-    return { ch: ch, op: _constants.SUB };
-  }
-  if (!ch.subscribers.find(function (c) {
-    return c === callback;
-  })) {
-    ch.subscribers.push(callback);
-  }
-}
-function subOnce(id, callback) {
-  var ch = isChannel(id) ? id : (0, _index.chan)(id);
-  var c = function c(v) {
-    callback(v);
-    unsub(id, c);
-  };
-  if (!ch.subscribers.find(function (s) {
-    return s === c;
-  })) {
-    ch.subscribers.push(c);
-  }
-}
-function unsub(id, callback) {
-  var ch = isChannel(id) ? id : (0, _index.chan)(id);
-  ch.subscribers = ch.subscribers.filter(function (c) {
-    if (c !== callback) {
-      return true;
-    }
-    return false;
-  });
-}
-function onSubscriberAdded(id, callback) {
-  var ch = isChannel(id) ? id : (0, _index.chan)(id);
-  ch.onSubscriberAddedCallback = callback;
-}
-function onSubscriberRemoved(id, callback) {
-  var ch = isChannel(id) ? id : (0, _index.chan)(id);
-  ch.onSubscriberRemovedCallback = callback;
-}
-
 // **************************************************** other
 
 var isChannel = exports.isChannel = function isChannel(ch) {
@@ -1045,7 +1060,7 @@ function go(func) {
         next();
         break;
       case _constants.SUB:
-        subOnce(i.value.ch, next);
+        (0, _index.subOnce)(i.value.ch, next);
         break;
       default:
         throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
@@ -1210,6 +1225,12 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
     _grid2.default.add(channel);
     return channel;
   });
+  h.defineProduct('state', function () {
+    var state = _csp.createState.apply(undefined, arguments);
+
+    _grid2.default.add(state);
+    return state;
+  });
 };
 
 var h = Harvester();
@@ -1226,7 +1247,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.grid = exports.harvester = exports.reset = exports.register = exports.use = exports.chan = exports.react = exports.riew = undefined;
+exports.grid = exports.harvester = exports.reset = exports.register = exports.use = exports.state = exports.chan = exports.react = exports.riew = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -1281,9 +1302,16 @@ var chan = exports.chan = function chan() {
 
   return _harvester2.default.produce.apply(_harvester2.default, ['channel'].concat(args));
 };
+var state = exports.state = function state() {
+  for (var _len4 = arguments.length, args = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+    args[_key4] = arguments[_key4];
+  }
+
+  return _harvester2.default.produce.apply(_harvester2.default, ['state'].concat(args));
+};
 var use = exports.use = function use(name) {
-  for (var _len4 = arguments.length, args = Array(_len4 > 1 ? _len4 - 1 : 0), _key4 = 1; _key4 < _len4; _key4++) {
-    args[_key4 - 1] = arguments[_key4];
+  for (var _len5 = arguments.length, args = Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
+    args[_key5 - 1] = arguments[_key5];
   }
 
   return _harvester2.default.produce.apply(_harvester2.default, [name].concat(args));

@@ -1,8 +1,23 @@
 import { use } from './index';
-import { isObjectEmpty, getFuncName, getId, requireObject, accumulate } from './utils';
-import { chan as Channel, state as State, isState, go, sub as Sub, close, sput, stake } from './index';
+import {
+  isObjectEmpty,
+  getFuncName,
+  getId,
+  requireObject,
+  accumulate
+} from './utils';
+import {
+  chan as Channel,
+  state as State,
+  isState,
+  go,
+  sub as Sub,
+  close,
+  sput,
+  stake
+} from './index';
 
-const Renderer = function (viewFunc) {
+const Renderer = function(viewFunc) {
   let data = {};
   let inProgress = false;
   let active = true;
@@ -38,14 +53,14 @@ export default function createRiew(viewFunc, ...routines) {
   let runningRoutines = [];
   let externals = {};
   let subscriptions = {};
-  const state = function (...args) {
+  const state = function(...args) {
     const s = State(...args);
     states.push(s);
     return s;
   };
-  const sub = function (to, func) {
+  const sub = function(to, func) {
     if (!(to in subscriptions)) {
-      subscriptions[ to ] = true;
+      subscriptions[to] = true;
       Sub(to, func);
     }
   };
@@ -54,22 +69,22 @@ export default function createRiew(viewFunc, ...routines) {
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
-      if (isState(value[ key ])) {
-        sub(value[ key ].READ, v => sput(VIEW_CHANNEL, { [ key ]: v }));
-        stake(value[ key ].READ, v => sput(VIEW_CHANNEL, { [ key ]: v }));
+      if (isState(value[key])) {
+        sub(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
+        stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if (key.charAt(0) === '$') {
         const viewKey = key.substr(1, key.length);
-        sub(value[ key ], v => {
-          sput(VIEW_CHANNEL, { [ viewKey ]: v });
+        sub(value[key], v => {
+          sput(VIEW_CHANNEL, { [viewKey]: v });
         });
-        stake(value[ key ], v => sput(VIEW_CHANNEL, { [ viewKey ]: v }));
+        stake(value[key], v => sput(VIEW_CHANNEL, { [viewKey]: v }));
       } else {
-        obj[ key ] = value[ key ];
+        obj[key] = value[key];
       }
       return obj;
     }, {});
 
-  riew.mount = function (props = {}) {
+  riew.mount = function(props = {}) {
     requireObject(props);
     sub(PROPS_CHANNEL, newProps => sput(VIEW_CHANNEL, newProps));
     sub(VIEW_CHANNEL, renderer.push);
@@ -98,7 +113,7 @@ export default function createRiew(viewFunc, ...routines) {
     sput(PROPS_CHANNEL, props);
   };
 
-  riew.unmount = function () {
+  riew.unmount = function() {
     cleanups.forEach(c => c());
     cleanups = [];
     states.forEach(s => s.destroy());
@@ -110,7 +125,7 @@ export default function createRiew(viewFunc, ...routines) {
     close(VIEW_CHANNEL);
   };
 
-  riew.update = function (props = {}) {
+  riew.update = function(props = {}) {
     requireObject(props);
     sput(PROPS_CHANNEL, props);
   };
@@ -123,14 +138,14 @@ export default function createRiew(viewFunc, ...routines) {
   riew.test = map => {
     const newInstance = createRiew(viewFunc, ...routines);
 
-    newInstance.__setExternals([ map ]);
+    newInstance.__setExternals([map]);
     return newInstance;
   };
 
   riew.__setExternals = maps => {
     maps = maps.reduce((map, item) => {
       if (typeof item === 'string') {
-        map = { ...map, [ item ]: use(item) };
+        map = { ...map, [item]: use(item) };
       } else {
         map = { ...map, ...item };
       }
