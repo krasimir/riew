@@ -33,7 +33,9 @@ go(function * B() {
 });
 ```
 
-We have two routines `A` and `B`. They start at synchronously one after each other. However, `A` is blocked at the `yield take` statement because it wants to read from the channel `ch` but there is nothing inside (yet). Then routine `B` puts `Steve` in there and routine `A` resumes. Now `B` is blocked because it tries to read from the channel but `Steve` is already consumed by the other routine. It waits till `A` puts `Hello Steve, how are you?`. At the end the `console.log` happens and we see the message in the console.
+We have two routines `A` and `B`. They start synchronously one after each other. However, `A` is blocked at the `yield take` statement because it wants to read from the channel `ch` but there is nothing inside. Then routine `B` puts `Steve` in there and routine `A` resumes. Now `B` is blocked because it tries to read from the same channel. `Steve` is already consumed by the other routine so we are again at the same situation. `B` waits till `A` puts `Hello Steve, how are you?`. At the end the `console.log` happens and we see the message in the console.
+
+That's the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes). We have channels that are used for communication and synchronization. By default the channel operations are blocking. Putting can't happen until there is someone to take and the opposite - taking can't happen until there is someone to put. This is the behavior of the standard non-buffered channel. We have couple of buffer types here in Riew and you can learn more about them below.
 
 ## Riews
 
