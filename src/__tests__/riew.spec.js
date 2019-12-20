@@ -165,7 +165,7 @@ describe('Given the `riew` factory function', () => {
           message.select('up', v => v.toUpperCase());
           message.select('lower', v => v.toLowerCase());
 
-          render({ $up: 'up', $lower: 'lower' });
+          render({ up: 'up', lower: 'lower' });
           yield sleep(2);
           yield put(message, 'Hello World');
           yield sleep(2);
@@ -240,9 +240,9 @@ describe('Given the `riew` factory function', () => {
         s.select('up', v => v.toUpperCase());
         const change = () => sput(s, 'bar');
 
-        render({ $s: 'up', change });
-        render({ $s: 'up', change });
-        render({ $s: 'up', change });
+        render({ s: 'up', change });
+        render({ s: 'up', change });
+        render({ s: 'up', change });
       };
       const r = riew(view, routine);
 
@@ -357,7 +357,7 @@ describe('Given the `riew` factory function', () => {
         const spy = jest.fn();
         const r = riew(view, function*() {
           sub('firstName', spy);
-        }).with({ $firstName: 'firstName' });
+        }).with({ firstName: 'firstName' });
 
         r.mount();
         sput(s, { firstName: 'John', lastName: 'Doe' });
@@ -588,7 +588,7 @@ describe('Given the `riew` factory function', () => {
         return arr[idx];
       });
 
-      const r = riew(view).with({ $data: 'current' });
+      const r = riew(view).with({ data: 'current' });
 
       r.mount();
       await delay();
@@ -607,7 +607,7 @@ describe('Given the `riew` factory function', () => {
     it('should consider we send the READ channel of the state', async () => {
       const s = state('foo');
       const view = jest.fn();
-      const r = riew(view).with({ $data: s });
+      const r = riew(view).with({ data: s });
 
       r.mount();
       await delay();

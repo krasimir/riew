@@ -1,6 +1,6 @@
 {
   "name": "riew",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "description": "Reactive View Architecture",
   "main": "./lib/index.js",
   "scripts": {

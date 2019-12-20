@@ -14,7 +14,8 @@ import {
   sub as Sub,
   close,
   sput,
-  stake
+  stake,
+  CHANNELS
 } from './index';
 
 const Renderer = function(viewFunc) {
@@ -69,12 +70,11 @@ export default function createRiew(viewFunc, ...routines) {
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
-      if (key.charAt(0) === '$') {
-        const viewKey = key.substr(1, key.length);
+      if (CHANNELS.exists(value[key])) {
         sub(value[key], v => {
-          sput(VIEW_CHANNEL, { [viewKey]: v });
+          sput(VIEW_CHANNEL, { [key]: v });
         });
-        stake(value[key], v => sput(VIEW_CHANNEL, { [viewKey]: v }));
+        stake(value[key], v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if (isState(value[key])) {
         sub(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
         stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));

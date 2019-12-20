@@ -181,7 +181,7 @@ describe('Given the Riew library', () => {
           yield sleep(2);
           change('b');
         };
-        const R = riew(View, routine).with({ $selector: 'selector', change });
+        const R = riew(View, routine).with({ selector: 'selector', change });
         const { container } = render(<R />);
 
         await delay();
@@ -212,7 +212,7 @@ describe('Given the Riew library', () => {
           const s = state([15, 4, 12]);
           s.select('moreThen10', nums => nums.filter(n => n > 10));
           const Component = jest.fn().mockImplementation(() => null);
-          const R = riew(Component).with({ $data: 'moreThen10' });
+          const R = riew(Component).with({ data: 'moreThen10' });
 
           render(<R />);
           await delay(3);
