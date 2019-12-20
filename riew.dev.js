@@ -1554,20 +1554,20 @@ function createRiew(viewFunc) {
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
-      if ((0, _index.isState)(value[key])) {
-        sub(value[key].READ, function (v) {
-          return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
-        });
-        (0, _index.stake)(value[key].READ, function (v) {
-          return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
-        });
-      } else if (key.charAt(0) === '$') {
+      if (key.charAt(0) === '$') {
         var viewKey = key.substr(1, key.length);
         sub(value[key], function (v) {
           (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, viewKey, v));
         });
         (0, _index.stake)(value[key], function (v) {
           return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, viewKey, v));
+        });
+      } else if ((0, _index.isState)(value[key])) {
+        sub(value[key].READ, function (v) {
+          return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
+        });
+        (0, _index.stake)(value[key].READ, function (v) {
+          return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
       } else {
         obj[key] = value[key];

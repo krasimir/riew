@@ -69,15 +69,15 @@ export default function createRiew(viewFunc, ...routines) {
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
-      if (isState(value[key])) {
-        sub(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
-        stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
-      } else if (key.charAt(0) === '$') {
+      if (key.charAt(0) === '$') {
         const viewKey = key.substr(1, key.length);
         sub(value[key], v => {
           sput(VIEW_CHANNEL, { [viewKey]: v });
         });
         stake(value[key], v => sput(VIEW_CHANNEL, { [viewKey]: v }));
+      } else if (isState(value[key])) {
+        sub(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
+        stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else {
         obj[key] = value[key];
       }

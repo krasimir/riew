@@ -603,4 +603,16 @@ describe('Given the `riew` factory function', () => {
       );
     });
   });
+  describe('when we inject a state directly', () => {
+    it('should consider we send the READ channel of the state', async () => {
+      const s = state('foo');
+      const view = jest.fn();
+      const r = riew(view).with({ $data: s });
+
+      r.mount();
+      await delay();
+
+      expect(view).toBeCalledWithArgs([{ data: 'foo' }]);
+    });
+  });
 });
