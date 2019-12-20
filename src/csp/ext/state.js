@@ -75,6 +75,7 @@ export function createState(...args) {
       if (isThereInitialValue) {
         runSelector(reader, value);
       }
+      return this;
     },
     mutate(id, reducer = (_, v) => v, onError = null) {
       let ch = isChannel(id) ? id : chan(id, buffer.ever());
@@ -82,12 +83,14 @@ export function createState(...args) {
       let writer = { ch, reducer, onError };
       writeChannels.push(writer);
       sub(ch, payload => runWriter(writer, payload));
+      return this;
     },
     destroy() {
       readChannels.forEach(({ ch }) => sclose(ch));
       writeChannels.forEach(({ ch }) => sclose(ch));
       value = undefined;
       grid.remove(api);
+      return this;
     },
     get() {
       return value;
@@ -97,6 +100,7 @@ export function createState(...args) {
       readChannels.forEach(r => {
         runSelector(r, value);
       });
+      return newValue;
     }
   };
 

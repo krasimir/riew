@@ -3,11 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getFuncName } from '../utils';
 import { riew as createRiew } from '../index';
 
-export default function riew(View, ...controllers) {
-  const createBridge = function (externals = []) {
-    const comp = function (outerProps) {
-      let [ instance, setInstance ] = useState(null);
-      let [ content, setContent ] = useState(null);
+export default function riew(View, ...routines) {
+  const createBridge = function(externals = []) {
+    const comp = function(outerProps) {
+      let [instance, setInstance] = useState(null);
+      let [content, setContent] = useState(null);
       let mounted = useRef(true);
 
       // updating props
@@ -15,7 +15,7 @@ export default function riew(View, ...controllers) {
         if (instance) {
           instance.update(outerProps);
         }
-      }, [ outerProps ]);
+      }, [outerProps]);
 
       // mounting
       useEffect(() => {
@@ -26,7 +26,7 @@ export default function riew(View, ...controllers) {
           } else {
             setContent(props);
           }
-        }, ...controllers);
+        }, ...routines);
 
         if (externals && externals.length > 0) {
           instance = instance.with(...externals);
@@ -36,7 +36,7 @@ export default function riew(View, ...controllers) {
         instance.mount(outerProps);
         mounted.current = true;
 
-        return function () {
+        return function() {
           mounted.current = false;
           instance.unmount();
         };

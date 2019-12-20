@@ -684,6 +684,7 @@ function createState() {
       if (isThereInitialValue) {
         runSelector(reader, value);
       }
+      return this;
     },
     mutate: function mutate(id) {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (_, v) {
@@ -698,6 +699,7 @@ function createState() {
       (0, _index.sub)(ch, function (payload) {
         return runWriter(writer, payload);
       });
+      return this;
     },
     destroy: function destroy() {
       readChannels.forEach(function (_ref3) {
@@ -710,6 +712,7 @@ function createState() {
       });
       value = undefined;
       _index.grid.remove(api);
+      return this;
     },
     get: function get() {
       return value;
@@ -719,6 +722,7 @@ function createState() {
       readChannels.forEach(function (r) {
         runSelector(r, value);
       });
+      return newValue;
     }
   };
 
@@ -1389,8 +1393,8 @@ function _toConsumableArray(arr) {
 }
 
 function riew(View) {
-  for (var _len = arguments.length, controllers = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    controllers[_key - 1] = arguments[_key];
+  for (var _len = arguments.length, routines = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    routines[_key - 1] = arguments[_key];
   }
 
   var createBridge = function createBridge() {
@@ -1425,7 +1429,7 @@ function riew(View) {
           } else {
             setContent(props);
           }
-        }].concat(controllers));
+        }].concat(routines));
 
         if (externals && externals.length > 0) {
           var _instance;
