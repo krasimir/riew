@@ -39,7 +39,7 @@ That's the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_s
 
 ## Riews
 
-The _riew_ is an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing a view functions and one or many routines.
+The _riew_ is an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing a view functions and one or many routines. The routines get executed when we mount the riew and they receive a `render` method so we can send data to the view function.
 
 ```js
 const ch = chan('MY_CHANNEL')
@@ -59,6 +59,10 @@ const r = riew(view, A, B);
 
 r.mount();
 ```
+
+This example prints out `{ message: "Hey Steve, how are you?" }` to the console. As we can see `B` routine waits till it receives the message formatted by routine `A` and sends it to the `view` function. This is one of the main ideas behind this library. To manage our views by using [go](https://golang.org/)-like routines.
+
+There is a React extension bundled with the library so if you use React you'll never call `mount`, `update` or `unmount` by yourself. This is done by using React hooks internally.
 
 ## State
 
