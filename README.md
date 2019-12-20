@@ -4,9 +4,7 @@
 
 <h3 align="center">Reactive View</h3>
 
----
-
-_Riew_ is a reactive library that uses [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) concepts for managing data and application flow.
+<p align="center"><b>Riew</b> is a reactive library that uses <a href="https://en.wikipedia.org/wiki/Communicating_sequential_processes">CSP</a> concepts for managing data and application flow.</p>
 
 ---
 
