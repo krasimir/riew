@@ -326,20 +326,22 @@ function normalizeChannelArguments(args) {
 }
 
 },{"../index":17,"../utils":20,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var OPEN = exports.OPEN = Symbol('OPEN');
-var CLOSED = exports.CLOSED = Symbol('CLOSED');
-var ENDED = exports.ENDED = Symbol('ENDED');
-var PUT = exports.PUT = 'PUT';
-var TAKE = exports.TAKE = 'TAKE';
-var NOOP = exports.NOOP = 'NOOP';
-var SLEEP = exports.SLEEP = 'SLEEP';
-var STOP = exports.STOP = 'STOP';
-var SUB = exports.SUB = 'SUB';
+var OPEN = exports.OPEN = Symbol("OPEN");
+var CLOSED = exports.CLOSED = Symbol("CLOSED");
+var ENDED = exports.ENDED = Symbol("ENDED");
+var PUT = exports.PUT = "PUT";
+var TAKE = exports.TAKE = "TAKE";
+var NOOP = exports.NOOP = "NOOP";
+var SLEEP = exports.SLEEP = "SLEEP";
+var STOP = exports.STOP = "STOP";
+var SUB = exports.SUB = "SUB";
+var CALL_ROUTINE = exports.CALL_ROUTINE = "CALL_ROUTINE";
+var FORK_ROUTINE = exports.FORK_ROUTINE = "FORK_ROUTINE";
 
 var CHANNELS = exports.CHANNELS = {
   channels: {},
@@ -455,7 +457,7 @@ function unmultAll(ch) {
 }
 
 },{"../index":13}],10:[function(require,module,exports){
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -463,12 +465,13 @@ Object.defineProperty(exports, "__esModule", {
 exports.sub = sub;
 exports.subOnce = subOnce;
 exports.unsub = unsub;
+exports.read = read;
 
-var _index = require('../../index');
+var _index = require("../../index");
 
-var _constants = require('../constants');
+var _constants = require("../constants");
 
-var _ops = require('../ops');
+var _ops = require("../ops");
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -480,7 +483,7 @@ function _toConsumableArray(arr) {
   }
 }
 
-var NOTHING = Symbol('Nothing');
+var NOTHING = Symbol("Nothing");
 
 function normalizeChannels(channels) {
   if (!Array.isArray(channels)) channels = [channels];
@@ -490,19 +493,19 @@ function normalizeChannels(channels) {
   });
 }
 function normalizeTo(to) {
-  if (typeof to === 'function') {
+  if (typeof to === "function") {
     return to;
   } else if ((0, _index.isChannel)(to)) {
     return to.__subFunc || (to.__subFunc = function (v) {
       return (0, _ops.sput)(to, v);
     });
-  } else if (typeof to === 'string') {
+  } else if (typeof to === "string") {
     var ch = (0, _index.chan)(to, _index.buffer.ever());
     return ch.__subFunc = function (v) {
       return (0, _ops.sput)(to, v);
     };
   }
-  throw new Error('\'sub\' accepts string, channel or a function as a second argument. ' + to + ' given.');
+  throw new Error("'sub' accepts string, channel or a function as a second argument. " + to + " given.");
 }
 function defaultTransform() {
   for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -518,7 +521,7 @@ function sub(channels, to) {
   var initialCallIfBufValue = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
 
   // in a routine
-  if (typeof to === 'undefined') {
+  if (typeof to === "undefined") {
     return { ch: channels, op: _constants.SUB };
   }
 
@@ -576,6 +579,10 @@ function unsub(id, callback) {
     }
     return false;
   });
+}
+
+function read() {
+  return sub.apply(undefined, arguments);
 }
 
 },{"../../index":17,"../constants":7,"../ops":14}],11:[function(require,module,exports){
@@ -877,7 +884,7 @@ function _interopRequireDefault(obj) {
 }
 
 },{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/mult":9,"./ext/pubsub":10,"./ext/state":11,"./ext/timeout":12,"./ops":14}],14:[function(require,module,exports){
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -891,19 +898,31 @@ exports.close = close;
 exports.sclose = sclose;
 exports.channelReset = channelReset;
 exports.schannelReset = schannelReset;
+exports.call = call;
+exports.fork = fork;
 exports.go = go;
 exports.sleep = sleep;
 exports.stop = stop;
 
-var _constants = require('./constants');
+var _constants = require("./constants");
 
-var _index = require('../index');
+var _index = require("../index");
 
-var _utils = require('../utils');
+var _utils = require("../utils");
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+}
 
 var noop = function noop() {};
 var normalizeChannel = function normalizeChannel(id) {
-  var stateOp = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'READ';
+  var stateOp = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "READ";
 
   if (isChannel(id)) return id;
   if ((0, _index.isState)(id)) return (0, _index.chan)(id[stateOp]);
@@ -926,8 +945,8 @@ function put(id, item, callback) {
     }
   };
 
-  var ch = normalizeChannel(id, 'WRITE');
-  if (typeof callback === 'function') {
+  var ch = normalizeChannel(id, "WRITE");
+  if (typeof callback === "function") {
     doPut(ch, item, callback);
   } else {
     return { ch: ch, op: _constants.PUT, item: item };
@@ -957,9 +976,9 @@ function take(id, callback) {
   };
 
   var ch = normalizeChannel(id);
-  if (typeof callback === 'function') {
+  if (typeof callback === "function") {
     if ((0, _index.isStateWriteChannel)(ch)) {
-      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.');
+      console.warn("You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.");
     }
     doTake(ch, callback);
   } else {
@@ -970,7 +989,7 @@ function stake(id, callback) {
   return take(id, callback || noop);
 }
 
-// **************************************************** close & reset
+// **************************************************** close, reset, call, fork
 
 function close(id) {
   var ch = normalizeChannel(id);
@@ -999,34 +1018,55 @@ function channelReset(id) {
 function schannelReset(id) {
   channelReset(id);
 }
+function call(routine) {
+  for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    args[_key - 1] = arguments[_key];
+  }
+
+  return { op: _constants.CALL_ROUTINE, routine: routine, args: args };
+}
+function fork(routine) {
+  for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+    args[_key2 - 1] = arguments[_key2];
+  }
+
+  return { op: _constants.FORK_ROUTINE, routine: routine, args: args };
+}
 
 // **************************************************** other
 
 var isChannel = exports.isChannel = function isChannel(ch) {
-  return ch && ch['@channel'] === true;
+  return ch && ch["@channel"] === true;
 };
 
 // **************************************************** routine
 
 function go(func) {
-  for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-    args[_key - 2] = arguments[_key];
+  for (var _len3 = arguments.length, args = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
+    args[_key3 - 2] = arguments[_key3];
   }
 
   var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
-  var RUNNING = 'RUNNING';
-  var STOPPED = 'STOPPED';
+  var RUNNING = "RUNNING";
+  var STOPPED = "STOPPED";
   var state = RUNNING;
 
-  var routineApi = {
+  var api = {
+    children: [],
     stop: function stop() {
       state = STOPPED;
+      this.children.forEach(function (r) {
+        return r.stop();
+      });
     },
     rerun: function rerun() {
       gen = func.apply(undefined, args);
       next();
     }
+  };
+  var addSubRoutine = function addSubRoutine(r) {
+    return api.children.push(r);
   };
 
   var gen = func.apply(undefined, args);
@@ -1037,7 +1077,7 @@ function go(func) {
     var i = gen.next(value);
     if (i.done === true) {
       if (done) done(i.value);
-      if (i.value && i.value['@go'] === true) {
+      if (i.value && i.value["@go"] === true) {
         gen = func.apply(undefined, args);
         next();
       }
@@ -1068,19 +1108,26 @@ function go(func) {
       case _constants.SUB:
         (0, _index.subOnce)(i.value.ch, next);
         break;
+      case _constants.CALL_ROUTINE:
+        addSubRoutine(go.apply(undefined, [i.value.routine, next].concat(args, _toConsumableArray(i.value.args))));
+        break;
+      case _constants.FORK_ROUTINE:
+        addSubRoutine(go.apply(undefined, [i.value.routine, function () {}].concat(args, _toConsumableArray(i.value.args))));
+        next();
+        break;
       default:
-        throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
+        throw new Error("Unrecognized operation " + i.value.op + " for a routine.");
     }
   }
 
   next();
 
-  return routineApi;
+  return api;
 }
-go['@go'] = true;
+go["@go"] = true;
 
 function sleep(ms, callback) {
-  if (typeof callback === 'function') {
+  if (typeof callback === "function") {
     setTimeout(callback, ms);
   } else {
     return { op: _constants.SLEEP, ms: ms };

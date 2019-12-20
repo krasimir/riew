@@ -4,11 +4,11 @@ import {
   isStateReadChannel,
   buffer,
   isState
-} from '../../index';
-import { SUB } from '../constants';
-import { sput, stake } from '../ops';
+} from "../../index";
+import { SUB } from "../constants";
+import { sput, stake } from "../ops";
 
-const NOTHING = Symbol('Nothing');
+const NOTHING = Symbol("Nothing");
 
 function normalizeChannels(channels) {
   if (!Array.isArray(channels)) channels = [channels];
@@ -18,11 +18,11 @@ function normalizeChannels(channels) {
   });
 }
 function normalizeTo(to) {
-  if (typeof to === 'function') {
+  if (typeof to === "function") {
     return to;
   } else if (isChannel(to)) {
     return to.__subFunc || (to.__subFunc = v => sput(to, v));
-  } else if (typeof to === 'string') {
+  } else if (typeof to === "string") {
     const ch = chan(to, buffer.ever());
     return (ch.__subFunc = v => sput(to, v));
   }
@@ -42,7 +42,7 @@ export function sub(
   initialCallIfBufValue = true
 ) {
   // in a routine
-  if (typeof to === 'undefined') {
+  if (typeof to === "undefined") {
     return { ch: channels, op: SUB };
   }
 
@@ -91,4 +91,8 @@ export function unsub(id, callback) {
     }
     return false;
   });
+}
+
+export function read(...args) {
+  return sub(...args);
 }

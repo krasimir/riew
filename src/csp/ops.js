@@ -8,13 +8,15 @@ import {
   NOOP,
   CHANNELS,
   STOP,
-  SUB
-} from './constants';
-import { grid, chan, isState, isStateWriteChannel, subOnce } from '../index';
-import { isPromise } from '../utils';
+  SUB,
+  CALL_ROUTINE,
+  FORK_ROUTINE
+} from "./constants";
+import { grid, chan, isState, isStateWriteChannel, subOnce } from "../index";
+import { isPromise } from "../utils";
 
 let noop = () => {};
-let normalizeChannel = (id, stateOp = 'READ') => {
+let normalizeChannel = (id, stateOp = "READ") => {
   if (isChannel(id)) return id;
   if (isState(id)) return chan(id[stateOp]);
   return chan(id);
@@ -33,8 +35,8 @@ export function put(id, item, callback) {
     }
   };
 
-  let ch = normalizeChannel(id, 'WRITE');
-  if (typeof callback === 'function') {
+  let ch = normalizeChannel(id, "WRITE");
+  if (typeof callback === "function") {
     doPut(ch, item, callback);
   } else {
     return { ch, op: PUT, item };
@@ -62,10 +64,10 @@ export function take(id, callback) {
   };
 
   let ch = normalizeChannel(id);
-  if (typeof callback === 'function') {
+  if (typeof callback === "function") {
     if (isStateWriteChannel(ch)) {
       console.warn(
-        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.'
+        "You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`."
       );
     }
     doTake(ch, callback);
@@ -77,7 +79,7 @@ export function stake(id, callback) {
   return take(id, callback || noop);
 }
 
-// **************************************************** close & reset
+// **************************************************** close, reset, call, fork
 
 export function close(id) {
   let ch = normalizeChannel(id);
@@ -102,27 +104,36 @@ export function channelReset(id) {
 export function schannelReset(id) {
   channelReset(id);
 }
+export function call(routine, ...args) {
+  return { op: CALL_ROUTINE, routine, args };
+}
+export function fork(routine, ...args) {
+  return { op: FORK_ROUTINE, routine, args };
+}
 
 // **************************************************** other
 
-export const isChannel = ch => ch && ch['@channel'] === true;
+export const isChannel = ch => ch && ch["@channel"] === true;
 
 // **************************************************** routine
 
 export function go(func, done = () => {}, ...args) {
-  const RUNNING = 'RUNNING';
-  const STOPPED = 'STOPPED';
+  const RUNNING = "RUNNING";
+  const STOPPED = "STOPPED";
   let state = RUNNING;
 
-  const routineApi = {
+  const api = {
+    children: [],
     stop() {
       state = STOPPED;
+      this.children.forEach(r => r.stop());
     },
     rerun() {
       gen = func(...args);
       next();
     }
   };
+  const addSubRoutine = r => api.children.push(r);
 
   let gen = func(...args);
   function next(value) {
@@ -132,7 +143,7 @@ export function go(func, done = () => {}, ...args) {
     const i = gen.next(value);
     if (i.done === true) {
       if (done) done(i.value);
-      if (i.value && i.value['@go'] === true) {
+      if (i.value && i.value["@go"] === true) {
         gen = func(...args);
         next();
       }
@@ -161,6 +172,13 @@ export function go(func, done = () => {}, ...args) {
       case SUB:
         subOnce(i.value.ch, next);
         break;
+      case CALL_ROUTINE:
+        addSubRoutine(go(i.value.routine, next, ...args, ...i.value.args));
+        break;
+      case FORK_ROUTINE:
+        addSubRoutine(go(i.value.routine, () => {}, ...args, ...i.value.args));
+        next();
+        break;
       default:
         throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
     }
@@ -168,12 +186,12 @@ export function go(func, done = () => {}, ...args) {
 
   next();
 
-  return routineApi;
+  return api;
 }
-go['@go'] = true;
+go["@go"] = true;
 
 export function sleep(ms, callback) {
-  if (typeof callback === 'function') {
+  if (typeof callback === "function") {
     setTimeout(callback, ms);
   } else {
     return { op: SLEEP, ms };
