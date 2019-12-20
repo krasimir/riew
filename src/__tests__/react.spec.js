@@ -24,7 +24,7 @@ describe('Given the React riew function', () => {
       * render once by default
       * render every time when we call the "data" method`, () => {
       return act(async () => {
-        const routine = jest.fn().mockImplementation(function * ({ render }) {
+        const routine = jest.fn().mockImplementation(function*({ render }) {
           yield sleep(5);
           render({ foo: 'bar' });
         });
@@ -34,7 +34,7 @@ describe('Given the React riew function', () => {
         render(<R />);
         await delay(10);
 
-        expect(view).toBeCalledWithArgs([ {}, {} ], [ { foo: 'bar' }, {} ]);
+        expect(view).toBeCalledWithArgs([{}, {}], [{ foo: 'bar' }, {}]);
       });
     });
     describe('and we use a state', () => {
@@ -44,10 +44,13 @@ describe('Given the React riew function', () => {
         * teardown the state when the component is unmounted`, () => {
         return act(async () => {
           const s = state('foo');
-          const R = riew(({ state }) => <p>{ state }</p>, function * () {
-            yield sleep(5);
-            yield put(s.WRITE, 'bar');
-          }).with({ state: s });
+          const R = riew(
+            ({ state }) => <p>{state}</p>,
+            function*() {
+              yield sleep(5);
+              yield put(s, 'bar');
+            }
+          ).with({ state: s });
           const { container, unmount } = render(<R />);
 
           await delay(3);
@@ -66,14 +69,14 @@ describe('Given the React riew function', () => {
             register('hello', s);
 
             const View = ({ state, hello }) => {
-              return <p>{ (state + hello).toString() }</p>;
+              return <p>{(state + hello).toString()}</p>;
             };
             const R = riew(View).with({ state: s2 }, 'hello');
             const { container } = render(<R />);
 
             await delay(3);
             exerciseHTML(container, '<p>foo42</p>');
-            sput(s.WRITE, '200');
+            sput(s, '200');
             await delay(3);
             exerciseHTML(container, '<p>foo200</p>');
           });
@@ -90,7 +93,10 @@ describe('Given the React riew function', () => {
           render(<RB />);
 
           await delay(5);
-          expect(spy).toBeCalledWithArgs([ { state: { foo: 'a' } }, {} ], [ { state: { foo: 'b' } }, {} ]);
+          expect(spy).toBeCalledWithArgs(
+            [{ state: { foo: 'a' } }, {}],
+            [{ state: { foo: 'b' } }, {}]
+          );
           expect('with' in RA).toBe(true);
         });
       });
@@ -102,18 +108,25 @@ describe('Given the React riew function', () => {
         return act(async () => {
           const propsSpy = jest.fn();
           const view = jest.fn().mockImplementation(() => null);
-          const I = riew(view, function * ({ props }) {
+          const I = riew(view, function*({ props }) {
             sub(props, propsSpy);
           });
 
-          const { rerender } = render(<I foo='bar' />);
+          const { rerender } = render(<I foo="bar" />);
 
           await delay(3);
-          rerender(<I zoo='mar' />);
+          rerender(<I zoo="mar" />);
 
           await delay(5);
-          expect(view).toBeCalledWithArgs([ { foo: 'bar' }, {} ], [ { foo: 'bar' }, {} ], [ { zoo: 'mar', foo: 'bar' }, {} ]);
-          expect(propsSpy).toBeCalledWithArgs([ { foo: 'bar' } ], [ { zoo: 'mar' } ]);
+          expect(view).toBeCalledWithArgs(
+            [{ foo: 'bar' }, {}],
+            [{ foo: 'bar' }, {}],
+            [{ zoo: 'mar', foo: 'bar' }, {}]
+          );
+          expect(propsSpy).toBeCalledWithArgs(
+            [{ foo: 'bar' }],
+            [{ zoo: 'mar' }]
+          );
         });
       });
     });
@@ -122,7 +135,7 @@ describe('Given the React riew function', () => {
     it('should work', () => {
       return act(async () => {
         const R = riew(({ children }) => children('John'));
-        const { container } = render(<R>{ name => `Hello ${name}!` }</R>);
+        const { container } = render(<R>{name => `Hello ${name}!`}</R>);
 
         await delay(5);
         exerciseHTML(container, 'Hello John!');
@@ -132,8 +145,11 @@ describe('Given the React riew function', () => {
   describe('when we render a channel and pass a function to update the value of the channel', () => {
     it('when firing the mutation func should re-render with a new value', () => {
       return act(async () => {
-        const routine = function * ({ render }) {
-          const s = state([ { value: 2, selected: true }, { value: 67, selected: true } ]);
+        const routine = function*({ render }) {
+          const s = state([
+            { value: 2, selected: true },
+            { value: 67, selected: true }
+          ]);
           s.mutate('select', (current = [], payload) => {
             return current.map(item => {
               return {
@@ -152,13 +168,13 @@ describe('Given the React riew function', () => {
           return (
             <div>
               <div>
-                value:{ ' ' }
-                { value
+                value:{' '}
+                {value
                   .filter(({ selected }) => selected)
                   .map(({ value }) => value)
-                  .join(', ') }
+                  .join(', ')}
               </div>
-              <button onClick={ () => change(67) }>click me</button>
+              <button onClick={() => change(67)}>click me</button>
             </div>
           );
         };
@@ -166,12 +182,18 @@ describe('Given the React riew function', () => {
         const { container, getByText } = render(<R />);
 
         await delay(5);
-        exerciseHTML(container, '<div><div>value: 2, 67</div><button>click me</button></div>');
+        exerciseHTML(
+          container,
+          '<div><div>value: 2, 67</div><button>click me</button></div>'
+        );
 
         fireEvent.click(getByText(/click me/));
 
         await delay(10);
-        exerciseHTML(container, '<div><div>value: 2</div><button>click me</button></div>');
+        exerciseHTML(
+          container,
+          '<div><div>value: 2</div><button>click me</button></div>'
+        );
       });
     });
   });
@@ -179,7 +201,7 @@ describe('Given the React riew function', () => {
     it('should provide the value to the react component', async () => {
       return act(async () => {
         const s = state(true);
-        const changeToFalse = () => sput(s.WRITE, false);
+        const changeToFalse = () => sput(s, false);
         const spy = jest.fn();
 
         register('whee', s);
@@ -196,7 +218,7 @@ describe('Given the React riew function', () => {
         changeToFalse();
         await delay();
         exerciseHTML(container, 'bar');
-        expect(spy).toBeCalledWithArgs([ true ], [ false ]);
+        expect(spy).toBeCalledWithArgs([true], [false]);
       });
     });
   });

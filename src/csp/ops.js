@@ -15,6 +15,11 @@ import { grid, chan, isState, isStateWriteChannel, subOnce } from '../index';
 import { isPromise } from '../utils';
 
 let noop = () => {};
+let normalizeChannel = (id, stateOp = 'READ') => {
+  if (isChannel(id)) return id;
+  if (isState(id)) return chan(id[stateOp]);
+  return chan(id);
+};
 
 // **************************************************** PUT
 
@@ -28,13 +33,8 @@ export function put(id, item, callback) {
       ch.buff.put(item, callback);
     }
   };
-  if (isState(id)) {
-    throw new Error(
-      `'put' accepts a channel as first argument. You passed a state.`
-    );
-  }
 
-  let ch = isChannel(id) ? id : chan(id);
+  let ch = normalizeChannel(id, 'WRITE');
   if (typeof callback === 'function') {
     doPut(ch, item, callback);
   } else {
@@ -62,7 +62,7 @@ export function take(id, callback) {
     }
   };
 
-  let ch = isChannel(id) ? id : chan(id);
+  let ch = normalizeChannel(id);
   if (typeof callback === 'function') {
     if (isStateWriteChannel(ch)) {
       console.warn(
@@ -81,7 +81,7 @@ export function stake(id, callback) {
 // **************************************************** close & reset
 
 export function close(id) {
-  let ch = isChannel(id) ? id : chan(id);
+  let ch = normalizeChannel(id);
   const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
   ch.state(newState);
   ch.buff.puts.forEach(put => put(newState));
@@ -95,7 +95,7 @@ export function sclose(id) {
   return close(id);
 }
 export function channelReset(id) {
-  let ch = isChannel(id) ? id : chan(id);
+  let ch = normalizeChannel(id);
   ch.state(OPEN);
   ch.buff.reset();
   return { ch, op: NOOP };

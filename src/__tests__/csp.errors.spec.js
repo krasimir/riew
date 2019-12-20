@@ -8,7 +8,7 @@ describe('Given csp features', () => {
   describe('when we have an error inside a routine', () => {
     it('should allow us to catch the error', () => {
       expect(() => {
-        go(function * () {
+        go(function*() {
           throw new Error('boo');
         });
       }).toThrowError('boo');
@@ -18,7 +18,7 @@ describe('Given csp features', () => {
     it('should pass back the error to the routine', async () => {
       const error = new Error('ops');
 
-      go(function * () {
+      go(function*() {
         try {
           yield new Promise((_, reject) => setTimeout(() => reject(error), 10));
         } catch (e) {
@@ -32,14 +32,14 @@ describe('Given csp features', () => {
     it('should allow us to catch the error', () => {
       const s = state('foo');
 
-      s.select('R', function (value) {
+      s.select('R', function(value) {
         if (value === 'a-ha') {
           throw new Error('foo');
         }
         return value;
       });
 
-      expect(() => sput(s.WRITE, 'a-ha')).toThrowError('foo');
+      expect(() => sput(s, 'a-ha')).toThrowError('foo');
     });
     it('should allow us to catch the error with a callback', done => {
       const s = state('foo');
@@ -47,7 +47,7 @@ describe('Given csp features', () => {
 
       s.select(
         'R',
-        function (value) {
+        function(value) {
           if (value === 'a-ha') {
             throw error;
           }
@@ -59,7 +59,7 @@ describe('Given csp features', () => {
         }
       );
 
-      sput(s.WRITE, 'a-ha');
+      sput(s, 'a-ha');
     });
     describe('and when we have am async mutator', () => {
       it('should allow us to catch the error', done => {
@@ -76,7 +76,7 @@ describe('Given csp features', () => {
             done();
           }
         );
-        s.mutate('W', async function (_, value) {
+        s.mutate('W', async function(_, value) {
           return value;
         });
         sput('W');
@@ -90,7 +90,7 @@ describe('Given csp features', () => {
 
       s.mutate(
         'W',
-        async function (value) {
+        async function(value) {
           throw error;
         },
         e => {
@@ -106,7 +106,7 @@ describe('Given csp features', () => {
       const s = state('foo');
       const error = new Error('ops');
 
-      s.mutate('W', function * (current, newOne) {
+      s.mutate('W', function*(current, newOne) {
         throw error;
       });
 

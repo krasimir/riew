@@ -148,7 +148,7 @@ describe('Given the `riew` factory function', () => {
         render({ s });
         render({ s });
         yield sleep(4);
-        yield put(s.WRITE, 'bar');
+        yield put(s, 'bar');
         expect(chan(s.READ).subscribers).toHaveLength(1);
       };
       const r = riew(view, se);
@@ -167,9 +167,9 @@ describe('Given the `riew` factory function', () => {
 
           render({ $up: 'up', $lower: 'lower' });
           yield sleep(2);
-          yield put(message.WRITE, 'Hello World');
+          yield put(message, 'Hello World');
           yield sleep(2);
-          yield put(message.WRITE, 'cHao');
+          yield put(message, 'cHao');
           yield sleep(2);
           render({ a: 10 });
         };
@@ -192,7 +192,7 @@ describe('Given the `riew` factory function', () => {
 
         render({ message });
         yield sleep(3);
-        yield put(message.WRITE, 'foo');
+        yield put(message, 'foo');
       };
       const r = riew(view, routine);
 
@@ -215,15 +215,15 @@ describe('Given the `riew` factory function', () => {
       };
       const r = riew(view, routine);
 
-      sub(s.READ, spy);
+      sub(s, spy);
 
       r.mount();
-      sput(s.WRITE, 'baz');
+      sput(s, 'baz');
       await delay();
       r.unmount();
-      sput(s.WRITE, 'zoo');
+      sput(s, 'zoo');
       await delay();
-      expect(CHANNELS.exists(s.WRITE)).toBeDefined();
+      expect(CHANNELS.exists(s)).toBeDefined();
       expect(view).toBeCalledWithArgs([{ s: 'baz' }]);
       expect(spy).toBeCalledWithArgs(['foo'], ['baz'], ['zoo']);
     });
@@ -238,7 +238,7 @@ describe('Given the `riew` factory function', () => {
       const routine = function*({ render, state }) {
         const s = state('foo');
         s.select('up', v => v.toUpperCase());
-        const change = () => sput(s.WRITE, 'bar');
+        const change = () => sput(s, 'bar');
 
         render({ $s: 'up', change });
         render({ $s: 'up', change });
@@ -334,8 +334,8 @@ describe('Given the `riew` factory function', () => {
 
         r.mount();
         await delay(5);
-        sput(s1.WRITE, 'foo');
-        sput(s2.WRITE, 'bar');
+        sput(s1, 'foo');
+        sput(s2, 'bar');
         await delay();
 
         expect(view).toBeCalledWithArgs(
@@ -360,9 +360,9 @@ describe('Given the `riew` factory function', () => {
         }).with({ $firstName: 'firstName' });
 
         r.mount();
-        sput(s.WRITE, { firstName: 'John', lastName: 'Doe' });
+        sput(s, { firstName: 'John', lastName: 'Doe' });
         await delay(5);
-        sput(s.WRITE, { firstName: 'Jon', lastName: 'Snow' });
+        sput(s, { firstName: 'Jon', lastName: 'Snow' });
         await delay(5);
 
         expect(view).toBeCalledWithArgs(
@@ -384,7 +384,7 @@ describe('Given the `riew` factory function', () => {
 
         r.mount();
         await delay();
-        sput(s.WRITE, 'bar');
+        sput(s, 'bar');
         await delay();
 
         expect(view).toBeCalledWithArgs([{ xxx: 'foo' }], [{ xxx: 'bar' }]);
@@ -458,7 +458,7 @@ describe('Given the `riew` factory function', () => {
       const s2 = state('bar');
       const routine = jest.fn().mockImplementation(function*({ s }) {
         yield sleep();
-        yield put(s.WRITE, 'baz');
+        yield put(s, 'baz');
       });
       const view = jest.fn();
       const r = riew(view, routine).with({ s });
@@ -495,9 +495,9 @@ describe('Given the `riew` factory function', () => {
       r2.mount();
 
       await delay();
-      sput(s.WRITE, 'foo');
+      sput(s, 'foo');
       await delay();
-      sput(s.WRITE, 'bar');
+      sput(s, 'bar');
       await delay(5);
 
       expect(view1).toBeCalledWithArgs(
@@ -534,7 +534,7 @@ describe('Given the `riew` factory function', () => {
         await delay(4);
         r.unmount();
         expect(view).toBeCalledWithArgs([{ s: 'foo' }], [{ s: 'baz' }]);
-        states.forEach(s => expect(CHANNELS.exists(s.WRITE)).toBe(false));
+        states.forEach(s => expect(CHANNELS.exists(s)).toBe(false));
       });
       it('should accept a state via the `render` method', async () => {
         const routine = function*({ state, render }) {
@@ -584,7 +584,7 @@ describe('Given the `riew` factory function', () => {
         });
       });
 
-      sub([s1.READ, s2.READ], 'current', (arr, idx) => {
+      sub([s1, s2], 'current', (arr, idx) => {
         return arr[idx];
       });
 
@@ -592,7 +592,7 @@ describe('Given the `riew` factory function', () => {
 
       r.mount();
       await delay();
-      sput(s2.WRITE, 2);
+      sput(s2, 2);
       await delay();
       sput('WWW');
       await delay(5);

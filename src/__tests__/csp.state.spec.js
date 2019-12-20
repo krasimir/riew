@@ -1,4 +1,16 @@
-import { state, take, put, sub, reset, CHANNELS, go, sput, stake, sleep, chan } from '../index';
+import {
+  state,
+  take,
+  put,
+  sub,
+  reset,
+  CHANNELS,
+  go,
+  sput,
+  stake,
+  sleep,
+  chan
+} from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given a CSP state extension', () => {
@@ -21,7 +33,7 @@ describe('Given a CSP state extension', () => {
       s.select('R', value => value.toUpperCase());
       sub('R', spy);
       s.set('bar');
-      expect(spy).toBeCalledWithArgs([ 'FOO' ], [ 'BAR' ]);
+      expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
     });
   });
   describe('when using the built-in READ and WRITE channels', () => {
@@ -30,13 +42,13 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
       const spy2 = jest.fn();
 
-      sub(s.READ, spy);
-      stake(s.READ, spy2);
-      sput(s.WRITE, 'bar');
-      stake(s.READ, spy2);
+      sub(s, spy);
+      stake(s, spy2);
+      sput(s, 'bar');
+      stake(s, spy2);
 
-      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
-      expect(spy2).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+      expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
+      expect(spy2).toBeCalledWithArgs(['foo'], ['bar']);
     });
   });
   describe("when we use channels to manage state's value", () => {
@@ -55,8 +67,18 @@ describe('Given a CSP state extension', () => {
       sput('W1', 12);
       sput('W2', 3);
 
-      expect(spy1).toBeCalledWithArgs([ 'value is 10' ], [ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
-      expect(spy2).toBeCalledWithArgs([ 'value is 10' ], [ 'value is 14' ], [ 'value is 26' ], [ 'value is 78' ]);
+      expect(spy1).toBeCalledWithArgs(
+        ['value is 10'],
+        ['value is 14'],
+        ['value is 26'],
+        ['value is 78']
+      );
+      expect(spy2).toBeCalledWithArgs(
+        ['value is 10'],
+        ['value is 14'],
+        ['value is 26'],
+        ['value is 78']
+      );
     });
   });
   describe('when we destroy the state', () => {
@@ -66,7 +88,12 @@ describe('Given a CSP state extension', () => {
       s.select('RR');
       s.select('WW');
 
-      expect(Object.keys(CHANNELS.getAll())).toStrictEqual([ s.READ, s.WRITE, 'RR', 'WW' ]);
+      expect(Object.keys(CHANNELS.getAll())).toStrictEqual([
+        s.READ,
+        s.WRITE,
+        'RR',
+        'WW'
+      ]);
       s.destroy();
       expect(Object.keys(CHANNELS.getAll())).toStrictEqual([]);
     });
@@ -83,41 +110,41 @@ describe('Given a CSP state extension', () => {
       s.select('R', value => value.toUpperCase());
       s.mutate('W', (a, b) => a + b);
 
-      sub(s.READ, v => listen('READ=' + v));
+      sub(s, v => listen('READ=' + v));
       sub(s.WRITE, v => listen('WRITE=' + v));
       sub('R', v => listen('R=' + v));
       sub('W', v => listen('W=' + v));
 
-      go(function * () {
-        spy(yield take(s.READ));
+      go(function*() {
+        spy(yield take(s));
         spy(yield take('R'));
-        spy(yield put(s.WRITE, 'bar'));
-        spy(yield take(s.READ));
+        spy(yield put(s, 'bar'));
+        spy(yield take(s));
         spy(yield take('R'));
         spy(yield put('W', 'hello world my friend'));
-        spy(yield take(s.READ));
+        spy(yield take(s));
         spy(yield take('R'));
       });
 
       expect(spy).toBeCalledWithArgs(
-        [ 'foo' ],
-        [ 'FOO' ],
-        [ true ],
-        [ 'bar' ],
-        [ 'BAR' ],
-        [ true ],
-        [ 'barhello world my friend' ],
-        [ 'BARHELLO WORLD MY FRIEND' ]
+        ['foo'],
+        ['FOO'],
+        [true],
+        ['bar'],
+        ['BAR'],
+        [true],
+        ['barhello world my friend'],
+        ['BARHELLO WORLD MY FRIEND']
       );
       expect(listen).toBeCalledWithArgs(
-        [ 'READ=foo' ],
-        [ 'R=FOO' ],
-        [ 'READ=bar' ],
-        [ 'R=BAR' ],
-        [ 'WRITE=bar' ],
-        [ 'READ=barhello world my friend' ],
-        [ 'R=BARHELLO WORLD MY FRIEND' ],
-        [ 'W=hello world my friend' ]
+        ['READ=foo'],
+        ['R=FOO'],
+        ['READ=bar'],
+        ['R=BAR'],
+        ['WRITE=bar'],
+        ['READ=barhello world my friend'],
+        ['R=BARHELLO WORLD MY FRIEND'],
+        ['W=hello world my friend']
       );
     });
   });
@@ -131,11 +158,11 @@ describe('Given a CSP state extension', () => {
         return current + newOne;
       });
 
-      sub(s.READ, spy);
+      sub(s, spy);
       sput('W', 'bar');
 
       await delay(10);
-      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'foobar' ]);
+      expect(spy).toBeCalledWithArgs(['foo'], ['foobar']);
     });
   });
   describe('when we have a routine as mutation', () => {
@@ -144,18 +171,18 @@ describe('Given a CSP state extension', () => {
       const s = state('foo');
       const s2 = state('bar');
 
-      s.mutate('W', function * (current, newOne) {
+      s.mutate('W', function*(current, newOne) {
         yield sleep(5);
-        return current + newOne + (yield take(s2.READ));
+        return current + newOne + (yield take(s2));
       });
 
-      sub(s.READ, v => {
+      sub(s, v => {
         spy(v);
       });
       sput('W', 'zoo');
 
       await delay(10);
-      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'foozoobar' ]);
+      expect(spy).toBeCalledWithArgs(['foo'], ['foozoobar']);
     });
   });
   describe('when we use a generator as a selector', () => {
@@ -163,16 +190,16 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
       const s = state();
 
-      s.select('IS', function * (word) {
+      s.select('IS', function*(word) {
         return word;
       });
 
       sub('IS', spy);
-      sput(s.WRITE, 'bar');
-      sput(s.WRITE, 'zar');
+      sput(s, 'bar');
+      sput(s, 'zar');
 
       await delay(2);
-      expect(spy).toBeCalledWithArgs([ 'bar' ], [ 'zar' ]);
+      expect(spy).toBeCalledWithArgs(['bar'], ['zar']);
     });
   });
   describe('when we use an async function as a selector', () => {
@@ -180,26 +207,31 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
       const s = state('foo');
 
-      s.select('IS', async function (word) {
+      s.select('IS', async function(word) {
         await delay(2);
         return word.toUpperCase();
       });
 
       sub('IS', v => spy('sub=' + v));
       stake('IS', v => spy('stake=' + v));
-      sput(s.WRITE, 'bar');
-      sput(s.WRITE, 'zar');
-      expect(spy).toBeCalledWithArgs([ 'stake=undefined' ]);
+      sput(s, 'bar');
+      sput(s, 'zar');
+      expect(spy).toBeCalledWithArgs(['stake=undefined']);
 
       await delay(10);
-      expect(spy).toBeCalledWithArgs([ 'stake=undefined' ], [ 'sub=FOO' ], [ 'sub=BAR' ], [ 'sub=ZAR' ]);
+      expect(spy).toBeCalledWithArgs(
+        ['stake=undefined'],
+        ['sub=FOO'],
+        ['sub=BAR'],
+        ['sub=ZAR']
+      );
     });
   });
   describe('when we pass an already existing channel as a selector', () => {
     it('should put selected values to that channel', () => {
       const ch = chan('XXX');
       const s1 = state('foo');
-      const s2 = state([ { name: 'A' }, { name: 'B' } ]);
+      const s2 = state([{ name: 'A' }, { name: 'B' }]);
       const spy = jest.fn();
 
       sub(ch, spy);
@@ -207,12 +239,12 @@ describe('Given a CSP state extension', () => {
       s2.select(ch, items => {
         return items.map(({ name }) => name).join('-');
       });
-      s2.mutate('add', (items, newItem) => [ ...items, newItem ]);
+      s2.mutate('add', (items, newItem) => [...items, newItem]);
 
-      sput(s1.WRITE, 'bar');
+      sput(s1, 'bar');
       sput('add', { name: 'C' });
 
-      expect(spy).toBeCalledWithArgs([ 'foo' ], [ 'A-B' ], [ 'bar' ], [ 'A-B-C' ]);
+      expect(spy).toBeCalledWithArgs(['foo'], ['A-B'], ['bar'], ['A-B-C']);
     });
   });
   describe('when we pass an already existing channel as a mutator', () => {
@@ -221,14 +253,19 @@ describe('Given a CSP state extension', () => {
       const s = state('a');
       const spy = jest.fn();
 
-      sub(s.READ, spy);
+      sub(s, spy);
       s.mutate(ch, (a, b) => a + b);
 
-      sput(s.WRITE, 'hello-');
+      sput(s, 'hello-');
       sput(ch, 'd');
       sput(ch, 'e');
 
-      expect(spy).toBeCalledWithArgs([ 'a' ], [ 'hello-' ], [ 'hello-d' ], [ 'hello-de' ]);
+      expect(spy).toBeCalledWithArgs(
+        ['a'],
+        ['hello-'],
+        ['hello-d'],
+        ['hello-de']
+      );
     });
   });
   describe('when we define a mutation', () => {
@@ -238,7 +275,7 @@ describe('Given a CSP state extension', () => {
 
       current.mutate('reset', () => 0);
 
-      go(function * () {
+      go(function*() {
         yield take('reset');
       });
 
@@ -253,22 +290,26 @@ describe('Given a CSP state extension', () => {
 
       current.mutate('reset', () => 'foobar');
 
-      go(function * () {
+      go(function*() {
         yield sub('reset');
-        spy('r1=' + (yield take(current.READ)));
+        spy('r1=' + (yield take(current)));
       });
-      go(function * () {
+      go(function*() {
         yield sub('reset');
-        spy('r2=' + (yield take(current.READ)));
+        spy('r2=' + (yield take(current)));
       });
-      go(function * () {
+      go(function*() {
         yield sub('reset');
-        spy('r3=' + (yield take(current.READ)));
+        spy('r3=' + (yield take(current)));
       });
 
       sput('reset');
 
-      expect(spy).toBeCalledWithArgs([ 'r1=foobar' ], [ 'r2=foobar' ], [ 'r3=foobar' ]);
+      expect(spy).toBeCalledWithArgs(
+        ['r1=foobar'],
+        ['r2=foobar'],
+        ['r3=foobar']
+      );
     });
   });
   describe('when we use the same channel for mutations', () => {

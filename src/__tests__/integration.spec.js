@@ -150,7 +150,7 @@ describe('Given the Riew library', () => {
           { id: 'a', selected: false },
           { id: 'b', selected: true }
         ]);
-        repos.mutate('update', (list = [], id) => {
+        repos.mutate('update', (list, id) => {
           return list.map(repo => {
             if (repo.id === id) {
               return {
@@ -216,7 +216,7 @@ describe('Given the Riew library', () => {
 
           render(<R />);
           await delay(3);
-          sput(s.WRITE, [5, 6, 7, 120]);
+          sput(s, [5, 6, 7, 120]);
           await delay(3);
           expect(Component).toBeCalledWithArgs(
             [{ data: [15, 12] }, {}],
