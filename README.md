@@ -18,7 +18,7 @@
 
 ## Routines & channels
 
-Imagine that you need to transfer messages between two entities in your system. They don't know about each other but they can use a _channel_. We can put and take messages from the channel and as long as we have access to it we are able to communicate.
+Imagine that you need to transfer messages between two entities in your system. They don't know about each other. With Riew you can use use a _channel_. We can put and take messages from the channel and as long as your entities have access to it they'll be able to exchange data. Consider the following example.
 
 ```js
 const ch = chan("MY_CHANNEL");
