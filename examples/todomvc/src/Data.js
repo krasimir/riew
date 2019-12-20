@@ -1,5 +1,12 @@
 import { state, register, sub } from 'riew';
-import { TOGGLE_TODO, NEW_TODO, DELETE_TODO, EDIT_TODO, UPDATE_TODO, FILTER_CLEAR_COMPLETED } from './constants';
+import {
+  TOGGLE_TODO,
+  NEW_TODO,
+  DELETE_TODO,
+  EDIT_TODO,
+  UPDATE_TODO,
+  FILTER_CLEAR_COMPLETED
+} from './constants';
 
 export const ToDo = label => ({ label, completed: false, editing: false });
 
@@ -12,7 +19,9 @@ const saveTodosData = todos => {
   localStorage.setItem('todos', JSON.stringify(todos));
 };
 
-export const todos = state(JSON.parse(localStorage.getItem('todos') || initialValue));
+export const todos = state(
+  JSON.parse(localStorage.getItem('todos') || initialValue)
+);
 
 todos.mutate(TOGGLE_TODO, (todos, payload) => {
   return todos.map((todo, i) => {
@@ -25,8 +34,10 @@ todos.mutate(TOGGLE_TODO, (todos, payload) => {
     return todo;
   });
 });
-todos.mutate(NEW_TODO, (todos, payload) => [ ...todos, ToDo(payload) ]);
-todos.mutate(DELETE_TODO, (todos, payload) => todos.filter((todo, i) => i !== payload));
+todos.mutate(NEW_TODO, (todos, payload) => [...todos, ToDo(payload)]);
+todos.mutate(DELETE_TODO, (todos, payload) =>
+  todos.filter((todo, i) => i !== payload)
+);
 todos.mutate(EDIT_TODO, (todos, payload) => {
   return todos.map((todo, i) => {
     if (i === payload.index) {
@@ -58,4 +69,4 @@ todos.mutate(FILTER_CLEAR_COMPLETED, todos => {
 
 register('todos', todos);
 
-sub(todos.READ, saveTodosData);
+sub(todos, saveTodosData);
