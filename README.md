@@ -39,10 +39,29 @@ That's the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_s
 
 ## Riews
 
+The _riew_ is an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing a view functions and one or many routines.
+
+```js
+const ch = chan('MY_CHANNEL')
+const view = function (props) {
+  console.log(props);
+}
+function * A() {
+  const name = yield take(ch);
+  yield put(ch, `Hey ${ name }, how are you?`);
+}
+function * B({ render }) {
+  yield put(ch, 'Steve');
+  render({ message: yield take(ch) });
+};
+
+const r = riew(view, A, B);
+
+r.mount();
+```
+
 ## State
 
 ## Pubsub
-
-## React
 
 ## API
