@@ -1,4 +1,19 @@
-import { chan, buffer, sub, subOnce, unsub, CHANNELS, go, reset, grid, take, put, sput, close } from '../index';
+import {
+  chan,
+  buffer,
+  sub,
+  subOnce,
+  unsub,
+  CHANNELS,
+  go,
+  reset,
+  grid,
+  take,
+  put,
+  sput,
+  close,
+  rerun
+} from '../index';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -18,17 +33,17 @@ describe('Given a CSP pubsub extension', () => {
         sub('xxx', spyA);
         sub('xxx', spyB);
 
-        go(function * () {
+        go(function*() {
           spyC(yield put('xxx', 'foo'));
           spyC(yield put('xxx', 'bar'));
         });
-        go(function * () {
+        go(function*() {
           yield take('xxx');
         });
 
-        expect(spyA).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
-        expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
-        expect(spyC).toBeCalledWithArgs([ true ]);
+        expect(spyA).toBeCalledWithArgs(['foo'], ['bar']);
+        expect(spyB).toBeCalledWithArgs(['foo'], ['bar']);
+        expect(spyC).toBeCalledWithArgs([true]);
       });
     });
     it('should provide an API for unsubscribing', () => {
@@ -40,17 +55,17 @@ describe('Given a CSP pubsub extension', () => {
       sub('a', spyA);
       sub('a', spyB);
 
-      go(function * () {
+      go(function*() {
         yield put('a', 'foo');
         unsub('a', spyA);
         yield put('a', 'bar');
       });
-      go(function * () {
+      go(function*() {
         yield take('a');
       });
 
-      expect(spyA).toBeCalledWithArgs([ 'foo' ]);
-      expect(spyB).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
+      expect(spyA).toBeCalledWithArgs(['foo']);
+      expect(spyB).toBeCalledWithArgs(['foo'], ['bar']);
     });
     it('should create a dedicated channel for each subscription', () => {
       expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
@@ -61,12 +76,12 @@ describe('Given a CSP pubsub extension', () => {
       sub('topicA', spyA);
       sub('topicB', spyB);
 
-      go(function * () {
+      go(function*() {
         yield put('topicA', 'foo');
         yield put('topicA', 'bar');
         yield put('topicB', 'baz');
       });
-      go(function * () {
+      go(function*() {
         yield take('topicA');
         yield take('topicA');
       });
@@ -75,8 +90,8 @@ describe('Given a CSP pubsub extension', () => {
 
       expect(gridNodes.includes('topicA')).toBe(true);
       expect(gridNodes.includes('topicB')).toBe(true);
-      expect(spyA).toBeCalledWithArgs([ 'foo' ], [ 'bar' ]);
-      expect(spyB).toBeCalledWithArgs([ 'baz' ]);
+      expect(spyA).toBeCalledWithArgs(['foo'], ['bar']);
+      expect(spyB).toBeCalledWithArgs(['baz']);
     });
   });
   describe('when we subscribe to a channel after someone publish on it', () => {
@@ -86,7 +101,7 @@ describe('Given a CSP pubsub extension', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      go(function * () {
+      go(function*() {
         yield put('topic', 'foo');
       });
 
@@ -107,7 +122,7 @@ describe('Given a CSP pubsub extension', () => {
       close(ch);
       sput(ch, 'bar');
 
-      expect(spy).toBeCalledWithArgs([ 'foo' ]);
+      expect(spy).toBeCalledWithArgs(['foo']);
     });
   });
   describe('when we use subOnce', () => {
@@ -121,7 +136,25 @@ describe('Given a CSP pubsub extension', () => {
       sput(ch, 'bar');
       sput(ch, 'zar');
 
-      expect(spy).toBeCalledWithArgs([ 'foo' ]);
+      expect(spy).toBeCalledWithArgs(['foo']);
+    });
+    describe('and when we subOnce as part of another subOnce', () => {
+      it('should subOnce again', () => {
+        const spy = jest.fn();
+        const ch = chan();
+        const callback = v => {
+          subOnce(ch, callback);
+          spy(v);
+        };
+
+        subOnce(ch, callback);
+
+        sput(ch, 'foo');
+        sput(ch, 'bar');
+        sput(ch, 'zar');
+
+        expect(spy).toBeCalledWithArgs(['foo'], ['bar'], ['zar']);
+      });
     });
   });
   describe('when we sub inside a routine', () => {
@@ -129,7 +162,7 @@ describe('Given a CSP pubsub extension', () => {
       const spy = jest.fn();
       const ch = chan();
 
-      go(function * () {
+      go(function*() {
         spy('start');
         spy(yield sub(ch));
         spy('end');
@@ -139,7 +172,33 @@ describe('Given a CSP pubsub extension', () => {
       sput(ch, 'bar');
       sput(ch, 'zar');
 
-      expect(spy).toBeCalledWithArgs([ 'start' ], [ 'foo' ], [ 'end' ]);
+      expect(spy).toBeCalledWithArgs(['start'], ['foo'], ['end']);
+    });
+    describe('and we want to make a loop inside the routine', () => {
+      it('should allow us to wait for the same channel many times', () => {
+        const spy = jest.fn();
+        let counter = 0;
+
+        go(function*() {
+          spy(yield sub('XXX'));
+          counter += 1;
+          spy('foo' + counter);
+          yield rerun();
+        });
+
+        sput('XXX', 'a');
+        sput('XXX', 'b');
+        sput('XXX', 'c');
+
+        expect(spy).toBeCalledWithArgs(
+          ['a'],
+          ['foo1'],
+          ['b'],
+          ['foo2'],
+          ['c'],
+          ['foo3']
+        );
+      });
     });
   });
   describe('when we sub and there is already a value in the channel', () => {
@@ -147,20 +206,20 @@ describe('Given a CSP pubsub extension', () => {
       const spy = jest.fn();
       const ch = chan(buffer.fixed(1));
 
-      go(function * () {
+      go(function*() {
         yield put(ch, 'foo');
         yield put(ch, 'bar'); // <-- here we stop
         spy('never');
       });
       sub(ch, spy);
 
-      expect(spy).toBeCalledWithArgs([ 'foo' ]);
+      expect(spy).toBeCalledWithArgs(['foo']);
     });
     it('should allow us to turn that behavior off', () => {
       const spy = jest.fn();
       const ch = chan(buffer.fixed(1));
 
-      go(function * () {
+      go(function*() {
         yield put(ch, 'foo');
         yield put(ch, 'bar'); // <-- here we stop
         spy('never');

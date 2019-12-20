@@ -1,11 +1,17 @@
-import { chan, isChannel, isStateReadChannel, buffer, isState } from '../../index';
+import {
+  chan,
+  isChannel,
+  isStateReadChannel,
+  buffer,
+  isState
+} from '../../index';
 import { SUB } from '../constants';
 import { sput, stake } from '../ops';
 
 const NOTHING = Symbol('Nothing');
 
 function normalizeChannels(channels) {
-  if (!Array.isArray(channels)) channels = [ channels ];
+  if (!Array.isArray(channels)) channels = [channels];
   return channels.map((ch, idx) => {
     if (isState(ch)) ch = ch.READ;
     return isChannel(ch) ? ch : chan(ch);
@@ -20,14 +26,21 @@ function normalizeTo(to) {
     const ch = chan(to, buffer.ever());
     return (ch.__subFunc = v => sput(to, v));
   }
-  throw new Error(`'sub' accepts string, channel or a function as a second argument. ${to} given.`);
+  throw new Error(
+    `'sub' accepts string, channel or a function as a second argument. ${to} given.`
+  );
 }
 function defaultTransform(...args) {
-  if (args.length === 1) return args[ 0 ];
+  if (args.length === 1) return args[0];
   return args;
 }
 
-export function sub(channels, to, transform = defaultTransform, initialCallIfBufValue = true) {
+export function sub(
+  channels,
+  to,
+  transform = defaultTransform,
+  initialCallIfBufValue = true
+) {
   // in a routine
   if (typeof to === 'undefined') {
     return { ch: channels, op: SUB };
@@ -41,7 +54,7 @@ export function sub(channels, to, transform = defaultTransform, initialCallIfBuf
   let composedAtLeastOnce = false;
   channels.forEach((ch, idx) => {
     const notify = value => {
-      data[ idx ] = value;
+      data[idx] = value;
       if (composedAtLeastOnce || data.length === 1 || !data.includes(NOTHING)) {
         composedAtLeastOnce = true;
         to(transform(...data));
@@ -54,7 +67,7 @@ export function sub(channels, to, transform = defaultTransform, initialCallIfBuf
     // notify the subscribers.
     const currentChannelBufValue = ch.value();
     if (initialCallIfBufValue && currentChannelBufValue.length > 0) {
-      notify(currentChannelBufValue[ 0 ]);
+      notify(currentChannelBufValue[0]);
     }
   });
   return to;
@@ -63,8 +76,8 @@ export function sub(channels, to, transform = defaultTransform, initialCallIfBuf
 export function subOnce(id, callback) {
   let ch = isChannel(id) ? id : chan(id);
   let c = v => {
-    callback(v);
     unsub(id, callback);
+    callback(v);
   };
   if (!ch.subscribers.find(s => s === c)) {
     ch.subscribers.push({ notify: c, to: callback });

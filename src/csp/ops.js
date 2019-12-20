@@ -1,4 +1,16 @@
-import { OPEN, CLOSED, ENDED, PUT, TAKE, SLEEP, NOOP, CHANNELS, STOP, RERUN, SUB } from './constants';
+import {
+  OPEN,
+  CLOSED,
+  ENDED,
+  PUT,
+  TAKE,
+  SLEEP,
+  NOOP,
+  CHANNELS,
+  STOP,
+  RERUN,
+  SUB
+} from './constants';
 import { grid, chan, isState, isStateWriteChannel, subOnce } from '../index';
 import { isPromise } from '../utils';
 
@@ -17,7 +29,9 @@ export function put(id, item, callback) {
     }
   };
   if (isState(id)) {
-    throw new Error(`'put' accepts a channel as first argument. You passed a state.`);
+    throw new Error(
+      `'put' accepts a channel as first argument. You passed a state.`
+    );
   }
 
   let ch = isChannel(id) ? id : chan(id);
@@ -92,7 +106,7 @@ export function schannelReset(id) {
 
 // **************************************************** other
 
-export const isChannel = ch => ch && ch[ '@channel' ] === true;
+export const isChannel = ch => ch && ch['@channel'] === true;
 
 // **************************************************** routine
 
