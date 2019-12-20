@@ -6,7 +6,6 @@ export const TAKE = 'TAKE';
 export const NOOP = 'NOOP';
 export const SLEEP = 'SLEEP';
 export const STOP = 'STOP';
-export const RERUN = 'RERUN';
 export const SUB = 'SUB';
 
 export const CHANNELS = {
@@ -15,17 +14,17 @@ export const CHANNELS = {
     return this.channels;
   },
   get(id) {
-    return this.channels[ id ];
+    return this.channels[id];
   },
   set(id, ch) {
-    this.channels[ id ] = ch;
+    this.channels[id] = ch;
     return ch;
   },
   del(id) {
-    delete this.channels[ id ];
+    delete this.channels[id];
   },
   exists(id) {
-    return !!this.channels[ id ];
+    return !!this.channels[id];
   },
   reset() {
     this.channels = {};

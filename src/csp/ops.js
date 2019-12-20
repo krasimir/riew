@@ -8,7 +8,6 @@ import {
   NOOP,
   CHANNELS,
   STOP,
-  RERUN,
   SUB
 } from './constants';
 import { grid, chan, isState, isStateWriteChannel, subOnce } from '../index';
@@ -133,6 +132,10 @@ export function go(func, done = () => {}, ...args) {
     const i = gen.next(value);
     if (i.done === true) {
       if (done) done(i.value);
+      if (i.value && i.value['@go'] === true) {
+        gen = func(...args);
+        next();
+      }
       return;
     }
     if (isPromise(i.value)) {
@@ -155,10 +158,6 @@ export function go(func, done = () => {}, ...args) {
       case STOP:
         state = STOPPED;
         break;
-      case RERUN:
-        gen = func(...args);
-        next();
-        break;
       case SUB:
         subOnce(i.value.ch, next);
         break;
@@ -171,6 +170,7 @@ export function go(func, done = () => {}, ...args) {
 
   return routineApi;
 }
+go['@go'] = true;
 
 export function sleep(ms, callback) {
   if (typeof callback === 'function') {
@@ -182,8 +182,4 @@ export function sleep(ms, callback) {
 
 export function stop() {
   return { op: STOP };
-}
-
-export function rerun() {
-  return { op: RERUN };
 }

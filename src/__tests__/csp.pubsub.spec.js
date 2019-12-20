@@ -11,8 +11,7 @@ import {
   take,
   put,
   sput,
-  close,
-  rerun
+  close
 } from '../index';
 
 describe('Given a CSP pubsub extension', () => {
@@ -183,7 +182,7 @@ describe('Given a CSP pubsub extension', () => {
           spy(yield sub('XXX'));
           counter += 1;
           spy('foo' + counter);
-          yield rerun();
+          return go;
         });
 
         sput('XXX', 'a');

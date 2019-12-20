@@ -339,7 +339,6 @@ var TAKE = exports.TAKE = 'TAKE';
 var NOOP = exports.NOOP = 'NOOP';
 var SLEEP = exports.SLEEP = 'SLEEP';
 var STOP = exports.STOP = 'STOP';
-var RERUN = exports.RERUN = 'RERUN';
 var SUB = exports.SUB = 'SUB';
 
 var CHANNELS = exports.CHANNELS = {
@@ -891,7 +890,6 @@ exports.schannelReset = schannelReset;
 exports.go = go;
 exports.sleep = sleep;
 exports.stop = stop;
-exports.rerun = rerun;
 
 var _constants = require('./constants');
 
@@ -1035,6 +1033,10 @@ function go(func) {
     var i = gen.next(value);
     if (i.done === true) {
       if (done) done(i.value);
+      if (i.value && i.value['@go'] === true) {
+        gen = func.apply(undefined, args);
+        next();
+      }
       return;
     }
     if ((0, _utils.isPromise)(i.value)) {
@@ -1059,10 +1061,6 @@ function go(func) {
       case _constants.STOP:
         state = STOPPED;
         break;
-      case _constants.RERUN:
-        gen = func.apply(undefined, args);
-        next();
-        break;
       case _constants.SUB:
         (0, _index.subOnce)(i.value.ch, next);
         break;
@@ -1075,6 +1073,7 @@ function go(func) {
 
   return routineApi;
 }
+go['@go'] = true;
 
 function sleep(ms, callback) {
   if (typeof callback === 'function') {
@@ -1086,10 +1085,6 @@ function sleep(ms, callback) {
 
 function stop() {
   return { op: _constants.STOP };
-}
-
-function rerun() {
-  return { op: _constants.RERUN };
 }
 
 },{"../index":17,"../utils":20,"./constants":7}],15:[function(require,module,exports){

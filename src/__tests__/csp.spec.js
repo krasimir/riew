@@ -17,7 +17,6 @@ import {
   compose,
   state,
   stop,
-  rerun,
   channelReset,
   CHANNELS,
   sub
@@ -160,8 +159,7 @@ describe('Given a CSP', () => {
             counter += 1;
           }
           spy(counter);
-          yield rerun();
-          spy('NEVER CALLED :)');
+          return go;
         });
         go(function*() {
           yield put('XXX', 2);
