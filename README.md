@@ -8,6 +8,8 @@
 
 ---
 
+* [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
+
 **Inspiration**
 
 - [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes)
@@ -16,7 +18,9 @@
 - [Redux](https://redux.js.org/) and [redux-saga](https://redux-saga.js.org/)
 - [JS-CSP](https://github.com/js-csp/js-csp)
 
-## Routines & channels
+## Ideas
+
+### Routines & channels
 
 Imagine that you need to transfer messages between two entities in your system. They don't know about each other. With Riew you can use a _channel_ to connect and synchronize them. We can put and take messages from the channel and as long as your entities have access to it they'll be able to exchange data. Consider the following example:
 
@@ -37,7 +41,7 @@ We have two routines `A` and `B`. They start synchronously one after each other.
 
 That's the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes). We have channels that are used for communication and synchronization. By default the channel operations are blocking. Putting can't happen until there is someone to take and the opposite - taking can't happen until there is someone to put. This is the behavior of the standard non-buffered channel. We have couple of buffer types here in Riew and you can learn more about them below.
 
-## Riews
+### Riews
 
 The _riew_ is an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing a view functions and one or many routines. The routines get executed when we mount the riew and they receive a `render` method so we can send data to the view function.
 
@@ -64,8 +68,8 @@ This example prints out `{ message: "Hey Steve, how are you?" }` to the console.
 
 There is a React extension bundled with the library so if you use React you'll never call `mount`, `update` or `unmount` by yourself. This is done by using React hooks internally.
 
-## State
+### State
 
-## Pubsub
+### Pubsub
 
 ## API
