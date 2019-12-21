@@ -22,7 +22,7 @@
 
 ### Routines & channels
 
-Imagine that you need to transfer messages between two entities in your system. They don't know about each other. With Riew you can use a _channel_ to connect and synchronize them. We can put and take messages from the channel and as long as your entities have access to it they'll be able to exchange data. Consider the following example:
+Imagine that you need to transfer messages between two entities in your system. They don't know about each other. With Riew you can use a _channel_ to connect and synchronize them. We can put and take messages from the channel and as long as your entities have access to it they'll be able to exchange information. Consider the following example:
 
 ```js
 const ch = chan("MY_CHANNEL");
@@ -37,9 +37,24 @@ go(function * B() {
 });
 ```
 
-We have two routines `A` and `B`. They start synchronously one after each other. However, `A` is blocked at the `yield take` statement because it wants to read from the channel `ch` but there is nothing inside. Then routine `B` puts `Steve` in there and routine `A` resumes. Now `B` is blocked because it tries to read from the same channel. `Steve` is already consumed by the other routine so we are again at the same situation. `B` waits till `A` puts `Hello Steve, how are you?`. At the end the `console.log` happens and we see the message in the console.
+We have two functions (routines) `A` and `B`. They start synchronously one after each other. However, `A` is blocked at the `yield take` statement because it wants to read from the channel `ch` but there is nothing inside. Then routine `B` puts `Steve` in there and routine `A` resumes. Now `B` is blocked because it tries to read from the same channel. `Steve` is already consumed by the other routine so we are again at the same situation. `B` waits till `A` puts `Hello Steve, how are you?`. At the end the log happens and we see the message into the console.
 
-That's the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes). We have channels that are used for communication and synchronization. By default the channel operations are blocking. Putting can't happen until there is someone to take and the opposite - taking can't happen until there is someone to put. This is the behavior of the standard non-buffered channel. We have couple of buffer types here in Riew and you can learn more about them below.
+That's the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes). We have channels that are used for communication and synchronization. By default the channel operations are blocking. Putting can't happen until there is someone to take and the opposite - taking can't happen until there is someone to put. This is the behavior of the standard non-buffered channel. We have couple of other buffer types here in Riew and you can learn more about them below.
+
+The _channel_ in Riew has an unique ID. In application there may be only one channel with a given ID. Every time when we want to create/use a channel we may pass the channel instance itself or just its ID. We may even skip the creation of the channel and simply use an ID. Riew will create the channel for us. For example, in the snippet above may be translated to the following:
+
+```js
+go(function * () {
+  const name = yield take('MY_CHANNEL');
+  yield put('MY_CHANNEL', `Hey ${ name }, how are you?`);
+});
+go(function * () {
+  yield put('MY_CHANNEL', 'Steve');
+  console.log(yield take('MY_CHANNEL'));
+});
+```
+
+This is intentional by design. It becomes much easier to use a channel from any point of the application because we just need to know the ID.
 
 ### Riews
 
@@ -70,9 +85,9 @@ There is a React extension bundled within the library so if you use React you'll
 
 ### State
 
-In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) there is no a concept for a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed and changed but is always available. The channels can keep values but by default they are consumed at some point. Or in other words taken.
+In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) there is no a concept of a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed and changed but is always available. The channels can keep values but by default they are consumed at some point. Or in other words taken.
 
-Riew brings the idea of a state by defining a value that is outside the channels. It can be however can accessed and modified by using channels. Let's see the following example:
+Riew brings the idea of a state by defining a value that is outside the channels. It can be however accessed and modified by using channels. Let's see the following example:
 
 ```js
 const users = state([]);
