@@ -1,22 +1,22 @@
-import { go, state, sput, reset } from '../index';
-import { delay } from '../__helpers__';
+import { go, state, sput, reset } from "../index";
+import { delay } from "../__helpers__";
 
-describe('Given csp features', () => {
+describe("Given csp features", () => {
   beforeEach(() => {
     reset();
   });
-  describe('when we have an error inside a routine', () => {
-    it('should allow us to catch the error', () => {
+  describe("when we have an error inside a routine", () => {
+    it("should allow us to catch the error", () => {
       expect(() => {
         go(function*() {
-          throw new Error('boo');
+          throw new Error("boo");
         });
-      }).toThrowError('boo');
+      }).toThrowError("boo");
     });
   });
-  describe('when we yield a promise and it gets rejected', () => {
-    it('should pass back the error to the routine', async () => {
-      const error = new Error('ops');
+  describe("when we yield a promise and it gets rejected", () => {
+    it("should pass back the error to the routine", async () => {
+      const error = new Error("ops");
 
       go(function*() {
         try {
@@ -28,27 +28,27 @@ describe('Given csp features', () => {
       await delay(20);
     });
   });
-  describe('when we have an error inside the state selectors', () => {
-    it('should allow us to catch the error', () => {
-      const s = state('foo');
+  describe("when we have an error inside the state selectors", () => {
+    it("should allow us to catch the error", () => {
+      const s = state("foo");
 
-      s.select('R', function(value) {
-        if (value === 'a-ha') {
-          throw new Error('foo');
+      s.select("R", function(value) {
+        if (value === "a-ha") {
+          throw new Error("foo");
         }
         return value;
       });
 
-      expect(() => sput(s, 'a-ha')).toThrowError('foo');
+      expect(() => sput(s, "a-ha")).toThrowError("foo");
     });
-    it('should allow us to catch the error with a callback', done => {
-      const s = state('foo');
-      const error = new Error('foo');
+    it("should allow us to catch the error with a callback", done => {
+      const s = state("foo");
+      const error = new Error("foo");
 
       s.select(
-        'R',
+        "R",
         function(value) {
-          if (value === 'a-ha') {
+          if (value === "a-ha") {
             throw error;
           }
           return value;
@@ -59,38 +59,61 @@ describe('Given csp features', () => {
         }
       );
 
-      sput(s, 'a-ha');
+      sput(s, "a-ha");
     });
-    describe('and when we have am async mutator', () => {
-      it('should allow us to catch the error', done => {
-        const s = state('foo');
-        const error = new Error('a-ha');
+    describe("and we use a routine", () => {
+      it("should allow us to catch the error", () => {
+        const s = state("foo");
+
+        s.select("R", function*(value) {
+          if (value === "a-ha") {
+            throw new Error("foo");
+          }
+          return value;
+        });
+
+        expect(() => sput(s, "a-ha")).toThrowError("foo");
+      });
+      it("should allow us to catch the error with a callback", done => {
+        const s = state("foo");
+        const error = new Error("foo");
 
         s.select(
-          'R',
-          () => {
-            throw error;
+          "R",
+          function*(value) {
+            if (value === "a-ha") {
+              throw error;
+            }
+            return value;
           },
           e => {
             expect(e).toBe(error);
             done();
           }
         );
-        s.mutate('W', async function(_, value) {
-          return value;
-        });
-        sput('W');
+
+        sput(s, "a-ha");
       });
     });
   });
-  describe('when we have an error inside the state mutator', () => {
-    it('should allow us to catch the error', done => {
-      const s = state('foo');
-      const error = new Error('a-ha');
+  describe("when we have an error in a mutator", () => {
+    it("should allow us to catch the error", async () => {
+      const s = state("foo");
+      const error = new Error("ops");
+
+      s.mutate("W", function(current, newOne) {
+        throw error;
+      });
+
+      expect(() => sput("W", "zoo")).toThrowError(error);
+    });
+    it("should allow us to catch the error with a callback", done => {
+      const s = state("foo");
+      const error = new Error("ops");
 
       s.mutate(
-        'W',
-        async function(value) {
+        "W",
+        function(current, newOne) {
           throw error;
         },
         e => {
@@ -98,19 +121,37 @@ describe('Given csp features', () => {
           done();
         }
       );
-      sput('W');
+
+      sput("W", "zoo");
     });
-  });
-  describe('when we have an error in a routine used as part of a state mutation', () => {
-    it('should wait till the routine is gone', async () => {
-      const s = state('foo');
-      const error = new Error('ops');
+    describe("and we use a routine", () => {
+      it("should allow us to catch the error", async () => {
+        const s = state("foo");
+        const error = new Error("ops");
 
-      s.mutate('W', function*(current, newOne) {
-        throw error;
+        s.mutate("W", function*(current, newOne) {
+          throw error;
+        });
+
+        expect(() => sput("W", "zoo")).toThrowError(error);
       });
+      it("should allow us to catch the error with a callback", done => {
+        const s = state("foo");
+        const error = new Error("ops");
 
-      expect(() => sput('W', 'zoo')).toThrowError(error);
+        s.mutate(
+          "W",
+          function*(current, newOne) {
+            throw error;
+          },
+          e => {
+            expect(e).toBe(error);
+            done();
+          }
+        );
+
+        sput("W", "zoo");
+      });
     });
   });
 });

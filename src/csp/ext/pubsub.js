@@ -23,7 +23,7 @@ function normalizeTo(to) {
   } else if (isChannel(to)) {
     return to.__subFunc || (to.__subFunc = v => sput(to, v));
   } else if (typeof to === "string") {
-    const ch = chan(to, buffer.ever());
+    const ch = chan(to, buffer.divorced());
     return (ch.__subFunc = v => sput(to, v));
   }
   throw new Error(

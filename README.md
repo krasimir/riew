@@ -85,14 +85,14 @@ users.select('GET_USERS', (users) => {
 })
 
 go(function * () {
-	yield put('ADD', { name: 'Steve', age: 24 });
-	yield put('ADD', { name: 'Ana', age: 25 });
-	yield put('ADD', { name: 'Peter', age: 22 });
-  console.log(yield take('GET_USERS'));
+  yield put('ADD', { name: 'Steve', age: 24 });
+  yield put('ADD', { name: 'Ana', age: 25 });
+  yield put('ADD', { name: 'Peter', age: 22 });
+  console.log(yield take('GET_USERS')); // Steve, Ana, Peter
 });
 ```
 
-We create a state that will keep an array of objects. After that we define two channels with identifiers `ADD` and `GET_USERS`. Because those are channels we can take and put values in them. I guess you already see where we are going here. Each state may have channels connected and they are two types - `selectors` and `mutators`. Every time when we `take` from a `selector` channel we receive the value of the state container and every time when we `put` to a `mutator` we are updating that value. To make this possible Riew defines these channels with a special type of non-blocking buffer. So the puts and takes are resolved immediately.
+We create a state that will keep an array of objects. After that we define two channels with identifiers `ADD` and `GET_USERS`. Because those are channels we can take and put values in them. I guess you already see where we are going here. Each state may have channels connected and they are two types - `selectors` and `mutators`. Every time when we `take` from a `selector` channel we receive the value of the state container and every time when we `put` to a `mutator` we are updating that value. To make this possible Riew defines these channels with a special type of non-blocking buffer. So the puts and takes are resolved (by default) immediately.
 
 ### Pubsub
 

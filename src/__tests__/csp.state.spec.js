@@ -10,168 +10,151 @@ import {
   stake,
   sleep,
   chan
-} from '../index';
-import { delay } from '../__helpers__';
+} from "../index";
+import { delay } from "../__helpers__";
 
-describe('Given a CSP state extension', () => {
+describe("Given a CSP state extension", () => {
   beforeEach(() => {
     reset();
   });
-  describe('when we use the imperative get and set api', () => {
-    it('should manage the state', () => {
-      const s = state('foo');
+  describe("when we use the imperative get and set api", () => {
+    it("should manage the state", () => {
+      const s = state("foo");
       const data = { bar: 42 };
 
-      expect(s.get()).toBe('foo');
+      expect(s.get()).toBe("foo");
       s.set(data);
       expect(s.get()).toBe(data);
     });
-    it('should trigger the defined selectors', () => {
-      const s = state('foo');
+    it("should trigger the defined selectors", () => {
+      const s = state("foo");
       const spy = jest.fn();
 
-      s.select('R', value => value.toUpperCase());
-      sub('R', spy);
-      s.set('bar');
-      expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
+      s.select("R", value => value.toUpperCase());
+      sub("R", spy);
+      s.set("bar");
+      expect(spy).toBeCalledWithArgs(["FOO"], ["BAR"]);
     });
   });
-  describe('when using the built-in READ and WRITE channels', () => {
-    it('should work', () => {
-      const s = state('foo');
+  describe("when using the built-in READ and WRITE channels", () => {
+    it("should work", () => {
+      const s = state("foo");
       const spy = jest.fn();
       const spy2 = jest.fn();
 
       sub(s, spy);
       stake(s, spy2);
-      sput(s, 'bar');
+      sput(s, "bar");
       stake(s, spy2);
 
-      expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
-      expect(spy2).toBeCalledWithArgs(['foo'], ['bar']);
+      expect(spy).toBeCalledWithArgs(["foo"], ["bar"]);
+      expect(spy2).toBeCalledWithArgs(["foo"], ["bar"]);
     });
   });
   describe("when we use channels to manage state's value", () => {
-    it('should retrieve and change the state value', () => {
+    it("should retrieve and change the state value", () => {
       const s = state(10);
       const spy1 = jest.fn();
       const spy2 = jest.fn();
 
-      s.select('R', value => `value is ${value}`);
-      s.mutate('W1', (current, newValue) => current + newValue);
-      s.mutate('W2', (current, newValue) => current * newValue);
+      s.select("R", value => `value is ${value}`);
+      s.mutate("W1", (current, newValue) => current + newValue);
+      s.mutate("W2", (current, newValue) => current * newValue);
 
-      sub('R', spy1);
-      sub('R', spy2);
-      sput('W1', 4);
-      sput('W1', 12);
-      sput('W2', 3);
+      sub("R", spy1);
+      sub("R", spy2);
+      sput("W1", 4);
+      sput("W1", 12);
+      sput("W2", 3);
 
       expect(spy1).toBeCalledWithArgs(
-        ['value is 10'],
-        ['value is 14'],
-        ['value is 26'],
-        ['value is 78']
+        ["value is 10"],
+        ["value is 14"],
+        ["value is 26"],
+        ["value is 78"]
       );
       expect(spy2).toBeCalledWithArgs(
-        ['value is 10'],
-        ['value is 14'],
-        ['value is 26'],
-        ['value is 78']
+        ["value is 10"],
+        ["value is 14"],
+        ["value is 26"],
+        ["value is 78"]
       );
     });
   });
-  describe('when we destroy the state', () => {
-    it('should close the created channels', () => {
-      const s = state('foo');
+  describe("when we destroy the state", () => {
+    it("should close the created channels", () => {
+      const s = state("foo");
 
-      s.select('RR');
-      s.select('WW');
+      s.select("RR");
+      s.select("WW");
 
       expect(Object.keys(CHANNELS.getAll())).toStrictEqual([
         s.READ,
         s.WRITE,
-        'RR',
-        'WW'
+        "RR",
+        "WW"
       ]);
       s.destroy();
       expect(Object.keys(CHANNELS.getAll())).toStrictEqual([]);
     });
   });
-  describe('when we use state into a routine', () => {
+  describe("when we use state into a routine", () => {
     it(`should
       * have non-blocking puts
       * have non-blocking takes
       * when no puts the take should resolve with the initial value`, () => {
-      const s = state('foo');
+      const s = state("foo");
       const spy = jest.fn();
       const listen = jest.fn();
 
-      s.select('R', value => value.toUpperCase());
-      s.mutate('W', (a, b) => a + b);
+      s.select("R", value => value.toUpperCase());
+      s.mutate("W", (a, b) => a + b);
 
-      sub(s, v => listen('READ=' + v));
-      sub(s.WRITE, v => listen('WRITE=' + v));
-      sub('R', v => listen('R=' + v));
-      sub('W', v => listen('W=' + v));
+      sub(s, v => listen("READ=" + v));
+      sub(s.WRITE, v => listen("WRITE=" + v));
+      sub("R", v => listen("R=" + v));
+      sub("W", v => listen("W=" + v));
 
       go(function*() {
         spy(yield take(s));
-        spy(yield take('R'));
-        spy(yield put(s, 'bar'));
+        spy(yield take("R"));
+        spy(yield put(s, "bar"));
         spy(yield take(s));
-        spy(yield take('R'));
-        spy(yield put('W', 'hello world my friend'));
+        spy(yield take("R"));
+        spy(yield put("W", "hello world my friend"));
         spy(yield take(s));
-        spy(yield take('R'));
+        spy(yield take("R"));
       });
 
       expect(spy).toBeCalledWithArgs(
-        ['foo'],
-        ['FOO'],
+        ["foo"],
+        ["FOO"],
         [true],
-        ['bar'],
-        ['BAR'],
+        ["bar"],
+        ["BAR"],
         [true],
-        ['barhello world my friend'],
-        ['BARHELLO WORLD MY FRIEND']
+        ["barhello world my friend"],
+        ["BARHELLO WORLD MY FRIEND"]
       );
       expect(listen).toBeCalledWithArgs(
-        ['READ=foo'],
-        ['R=FOO'],
-        ['READ=bar'],
-        ['R=BAR'],
-        ['WRITE=bar'],
-        ['READ=barhello world my friend'],
-        ['R=BARHELLO WORLD MY FRIEND'],
-        ['W=hello world my friend']
+        ["READ=foo"],
+        ["R=FOO"],
+        ["READ=bar"],
+        ["R=BAR"],
+        ["WRITE=bar"],
+        ["READ=barhello world my friend"],
+        ["R=BARHELLO WORLD MY FRIEND"],
+        ["W=hello world my friend"]
       );
     });
   });
-  describe('when we have async mutation', () => {
-    it('should wait till the mutation is done', async () => {
+  describe("when we have a routine as mutation", () => {
+    it("should wait till the routine is gone", async () => {
       const spy = jest.fn();
-      const s = state('foo');
+      const s = state("foo");
+      const s2 = state("bar");
 
-      s.mutate('W', async (current, newOne) => {
-        await delay(5);
-        return current + newOne;
-      });
-
-      sub(s, spy);
-      sput('W', 'bar');
-
-      await delay(10);
-      expect(spy).toBeCalledWithArgs(['foo'], ['foobar']);
-    });
-  });
-  describe('when we have a routine as mutation', () => {
-    it('should wait till the routine is gone', async () => {
-      const spy = jest.fn();
-      const s = state('foo');
-      const s2 = state('bar');
-
-      s.mutate('W', function*(current, newOne) {
+      s.mutate("W", function*(current, newOne) {
         yield sleep(5);
         return current + newOne + (yield take(s2));
       });
@@ -179,151 +162,143 @@ describe('Given a CSP state extension', () => {
       sub(s, v => {
         spy(v);
       });
-      sput('W', 'zoo');
+      sput("W", "zoo");
 
       await delay(10);
-      expect(spy).toBeCalledWithArgs(['foo'], ['foozoobar']);
+      expect(spy).toBeCalledWithArgs(["foo"], ["foozoobar"]);
+    });
+    fit("should block the put till the mutator is done", async () => {
+      const spy = jest.fn();
+      const s = state("foo");
+
+      s.mutate("W", function*(current, newOne) {
+        yield sleep(5);
+        return current + newOne;
+      });
+
+      go(function*() {
+        yield put("W", "bar");
+        spy(yield take(s));
+      });
+
+      await delay(10);
+      expect(spy).toBeCalledWithArgs();
     });
   });
-  describe('when we use a generator as a selector', () => {
-    it('should wait till the routine is gone', async () => {
+  describe("when we use a generator as a selector", () => {
+    it("should wait till the routine is gone", async () => {
       const spy = jest.fn();
       const s = state();
 
-      s.select('IS', function*(word) {
+      s.select("IS", function*(word) {
         return word;
       });
 
-      sub('IS', spy);
-      sput(s, 'bar');
-      sput(s, 'zar');
+      sub("IS", spy);
+      sput(s, "bar");
+      sput(s, "zar");
 
       await delay(2);
-      expect(spy).toBeCalledWithArgs(['bar'], ['zar']);
+      expect(spy).toBeCalledWithArgs(["bar"], ["zar"]);
     });
   });
-  describe('when we use an async function as a selector', () => {
-    it('should wait till the function is finished', async () => {
-      const spy = jest.fn();
-      const s = state('foo');
-
-      s.select('IS', async function(word) {
-        await delay(2);
-        return word.toUpperCase();
-      });
-
-      sub('IS', v => spy('sub=' + v));
-      stake('IS', v => spy('stake=' + v));
-      sput(s, 'bar');
-      sput(s, 'zar');
-      expect(spy).toBeCalledWithArgs(['stake=undefined']);
-
-      await delay(10);
-      expect(spy).toBeCalledWithArgs(
-        ['stake=undefined'],
-        ['sub=FOO'],
-        ['sub=BAR'],
-        ['sub=ZAR']
-      );
-    });
-  });
-  describe('when we pass an already existing channel as a selector', () => {
-    it('should put selected values to that channel', () => {
-      const ch = chan('XXX');
-      const s1 = state('foo');
-      const s2 = state([{ name: 'A' }, { name: 'B' }]);
+  describe("when we pass an already existing channel as a selector", () => {
+    it("should put selected values to that channel", () => {
+      const ch = chan("XXX");
+      const s1 = state("foo");
+      const s2 = state([{ name: "A" }, { name: "B" }]);
       const spy = jest.fn();
 
       sub(ch, spy);
       s1.select(ch);
       s2.select(ch, items => {
-        return items.map(({ name }) => name).join('-');
+        return items.map(({ name }) => name).join("-");
       });
-      s2.mutate('add', (items, newItem) => [...items, newItem]);
+      s2.mutate("add", (items, newItem) => [...items, newItem]);
 
-      sput(s1, 'bar');
-      sput('add', { name: 'C' });
+      sput(s1, "bar");
+      sput("add", { name: "C" });
 
-      expect(spy).toBeCalledWithArgs(['foo'], ['A-B'], ['bar'], ['A-B-C']);
+      expect(spy).toBeCalledWithArgs(["foo"], ["A-B"], ["bar"], ["A-B-C"]);
     });
   });
-  describe('when we pass an already existing channel as a mutator', () => {
-    it('should mutate every time when we put to that channel', () => {
+  describe("when we pass an already existing channel as a mutator", () => {
+    it("should mutate every time when we put to that channel", () => {
       const ch = chan();
-      const s = state('a');
+      const s = state("a");
       const spy = jest.fn();
 
       sub(s, spy);
       s.mutate(ch, (a, b) => a + b);
 
-      sput(s, 'hello-');
-      sput(ch, 'd');
-      sput(ch, 'e');
+      sput(s, "hello-");
+      sput(ch, "d");
+      sput(ch, "e");
 
       expect(spy).toBeCalledWithArgs(
-        ['a'],
-        ['hello-'],
-        ['hello-d'],
-        ['hello-de']
+        ["a"],
+        ["hello-"],
+        ["hello-d"],
+        ["hello-de"]
       );
     });
   });
-  describe('when we define a mutation', () => {
-    it('should warn us if we try a take on a WRITE channel', () => {
+  describe("when we define a mutation", () => {
+    it("should warn us if we try a take on a WRITE channel", () => {
       const current = state(0);
-      const spy = jest.spyOn(console, 'warn').mockImplementation();
+      const spy = jest.spyOn(console, "warn").mockImplementation();
 
-      current.mutate('reset', () => 0);
+      current.mutate("reset", () => 0);
 
       go(function*() {
-        yield take('reset');
+        yield take("reset");
       });
 
       expect(spy).toBeCalledWithArgs([
-        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.'
+        "You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`."
       ]);
       spy.mockRestore();
     });
-    it('should be possible to react on a mutation from within multiple routines', () => {
-      const current = state('xxx');
+    it("should be possible to react on a mutation from within multiple routines", () => {
+      const current = state("xxx");
       const spy = jest.fn();
 
-      current.mutate('reset', () => 'foobar');
+      current.mutate("reset", () => "foobar");
 
       go(function*() {
-        yield sub('reset');
-        spy('r1=' + (yield take(current)));
+        yield sub("reset");
+        spy("r1=" + (yield take(current)));
       });
       go(function*() {
-        yield sub('reset');
-        spy('r2=' + (yield take(current)));
+        yield sub("reset");
+        spy("r2=" + (yield take(current)));
       });
       go(function*() {
-        yield sub('reset');
-        spy('r3=' + (yield take(current)));
+        yield sub("reset");
+        spy("r3=" + (yield take(current)));
       });
 
-      sput('reset');
+      sput("reset");
 
       expect(spy).toBeCalledWithArgs(
-        ['r1=foobar'],
-        ['r2=foobar'],
-        ['r3=foobar']
+        ["r1=foobar"],
+        ["r2=foobar"],
+        ["r3=foobar"]
       );
     });
   });
-  describe('when we use the same channel for mutations', () => {
-    it('should mutate multiple states at once', () => {
-      const s1 = state('foo');
+  describe("when we use the same channel for mutations", () => {
+    it("should mutate multiple states at once", () => {
+      const s1 = state("foo");
       const s2 = state(12);
 
-      s1.mutate('X', (value, payload) => value + payload);
-      s2.mutate('X', (value, payload) => value * payload);
+      s1.mutate("X", (value, payload) => value + payload);
+      s2.mutate("X", (value, payload) => value * payload);
 
-      sput('X', 3);
-      sput('X', 10);
+      sput("X", 3);
+      sput("X", 10);
 
-      expect(s1.get()).toBe('foo310');
+      expect(s1.get()).toBe("foo310");
       expect(s2.get()).toBe(360);
     });
   });
