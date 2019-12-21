@@ -85,8 +85,21 @@ The core concept of this library is to keep the view pure and distribute the bus
 We may directly send a channel to the `render` function and whatever we `put` inside will reach the view. For example:
 
 ```js
+const view = function (props) {
+  console.log(props);
+}
+function * A({ render }) {
+  const ch = chan();
+  render({ name: ch })
+  yield put(ch, 'Martin');
+}
 
+const r = riew(view, A);
+
+r.mount();
 ```
+
+The result here is `{ name: 'Martin' }`.
 
 _(There is a React extension bundled within the library so if you use React you'll probably never call `mount`, `update` or `unmount` manually. This is done by using React hooks internally.)_
 
