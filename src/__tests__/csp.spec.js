@@ -747,7 +747,7 @@ describe("Given a CSP", () => {
       });
     });
   });
-  describe("when we create a channel with ever buffer", () => {
+  describe("when we create a channel with divorced buffer", () => {
     it(`should
       * have non-blocking puts
       * have non-blocking takes
@@ -766,77 +766,6 @@ describe("Given a CSP", () => {
 
       expect(takeSpy).toBeCalledWithArgs([undefined], ["foo"], ["bar"]);
       expect(putSpy).toBeCalledWithArgs([true], [true]);
-    });
-    describe("and we use transformations", () => {
-      it("should allow us to partially control the puts", async () => {
-        const ch = chan(
-          buffer.divorced((value, callback) => {
-            setTimeout(() => {
-              callback(value.toUpperCase());
-            }, 2);
-          })
-        );
-        const spy = jest.fn();
-
-        go(function* A() {
-          spy(">A");
-          yield put(ch, "foo");
-          spy("<A");
-        });
-        go(function* B() {
-          spy(">B");
-          spy(yield take(ch));
-          yield sleep(4);
-          spy(yield take(ch));
-          spy("<B");
-        });
-
-        await delay(10);
-        expect(spy).toBeCalledWithArgs(
-          [">A"],
-          [">B"],
-          [undefined],
-          ["<A"],
-          ["FOO"],
-          ["<B"]
-        );
-      });
-      it("should allow us to partially control the takes", async () => {
-        const ch = chan(
-          buffer.divorced(null, (value, callback) => {
-            setTimeout(() => {
-              callback("value is " + value.toUpperCase());
-            }, 4);
-          })
-        );
-        const spy = jest.fn();
-
-        go(function* A() {
-          spy(">A");
-          yield put(ch, "foo");
-          yield put(ch, "bar");
-          yield put(ch, "zar");
-          yield sleep(2);
-          yield put(ch, "moo");
-          spy("<A");
-        });
-        go(function* B() {
-          spy(">B");
-          spy(yield take(ch));
-          spy(yield take(ch));
-          spy("<B");
-        });
-
-        await delay(10);
-        expect(spy).toBeCalledWithArgs(
-          [">A"],
-          [">B"],
-          ["<A"],
-          ["value is ZAR"],
-          ["value is MOO"],
-          ["<B"]
-        );
-      });
     });
   });
 

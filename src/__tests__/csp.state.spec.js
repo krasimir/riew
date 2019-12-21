@@ -167,7 +167,7 @@ describe("Given a CSP state extension", () => {
       await delay(10);
       expect(spy).toBeCalledWithArgs(["foo"], ["foozoobar"]);
     });
-    fit("should block the put till the mutator is done", async () => {
+    it("should block the put till the mutator is done", async () => {
       const spy = jest.fn();
       const s = state("foo");
 

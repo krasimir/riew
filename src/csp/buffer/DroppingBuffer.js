@@ -1,4 +1,4 @@
-import BufferInterface from './Interface';
+import BufferInterface from "./Interface";
 
 export default function DroppingBuffer(size = 1, sliding = false) {
   const api = BufferInterface();

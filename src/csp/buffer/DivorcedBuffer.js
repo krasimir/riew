@@ -2,20 +2,16 @@ import BufferInterface from "./Interface";
 
 const noop = (v, c) => c(v);
 
-export default function DivorcedBuffer(putTransform, takeTransform) {
+export default function DivorcedBuffer() {
   const api = BufferInterface();
 
   api.setValue = v => (api.value = v);
   api.put = (item, callback) => {
-    (putTransform || noop)(item, transformedItem => {
-      api.value = [transformedItem];
-      callback(true);
-    });
+    api.value = [item];
+    callback(true);
   };
   api.take = callback => {
-    (takeTransform || noop)(api.value[0], transformedTake => {
-      callback(transformedTake);
-    });
+    callback(api.value[0]);
   };
 
   return api;

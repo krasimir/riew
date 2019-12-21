@@ -1,4 +1,4 @@
-import BufferInterface from './Interface';
+import BufferInterface from "./Interface";
 
 export default function FixedBuffer(size = 0) {
   const api = BufferInterface();
