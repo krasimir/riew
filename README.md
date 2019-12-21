@@ -58,20 +58,19 @@ This is intentional by design. It becomes much easier to use a channel from any 
 
 ### Riews
 
-A _riew_ is a combination between view and routines. At the end is an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing a view functions and one or many routines. The routines get executed when we mount the riew and they receive a `render` method so we can send data to the view function.
+The _riew_ is a combination between view function and routine functions. It's materialized into an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing the view functions and one or many routines. The routines get executed when we mount the riew. They receive a `render` method so we can send data to the view function.
 
 ```js
-const ch = chan('MY_CHANNEL')
 const view = function (props) {
   console.log(props);
 }
 function * A() {
-  const name = yield take(ch);
-  yield put(ch, `Hey ${ name }, how are you?`);
+  const name = yield take('MY_CHANNEL');
+  yield put('MY_CHANNEL', `Hey ${ name }, how are you?`);
 }
 function * B({ render }) {
-  yield put(ch, 'Steve');
-  render({ message: yield take(ch) });
+  yield put('MY_CHANNEL', 'Steve');
+  render({ message: yield take('MY_CHANNEL') });
 };
 
 const r = riew(view, A, B);
@@ -79,9 +78,17 @@ const r = riew(view, A, B);
 r.mount();
 ```
 
-This example prints out `{ message: "Hey Steve, how are you?" }` to the console. As we know from the previous section `B` routine waits till it receives the message formatted by routine `A`. It sends it to the `view` function with the `render` call. This is one of the main ideas behind this library. To manage our views by using [go](https://golang.org/)-like routines.
+This example prints out an object `{ message: "Hey Steve, how are you?" }`. As we know from the previous section `B` routine waits till it receives the message formatted by routine `A`. It sends it to the `view` function by using the `render` helper.
 
-There is a React extension bundled within the library so if you use React you'll probably never call `mount`, `update` or `unmount` manually. This is done by using React hooks internally.
+The core concept of this library is to keep the view pure and distribute the business logic across routines.
+
+We may directly send a channel to the `render` function and whatever we `put` inside will reach the view. For example:
+
+```js
+
+```
+
+_(There is a React extension bundled within the library so if you use React you'll probably never call `mount`, `update` or `unmount` manually. This is done by using React hooks internally.)_
 
 ### State
 

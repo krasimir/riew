@@ -1,11 +1,11 @@
-import { use } from './index';
+import { use } from "./index";
 import {
   isObjectEmpty,
   getFuncName,
   getId,
   requireObject,
   accumulate
-} from './utils';
+} from "./utils";
 import {
   chan as Channel,
   state as State,
@@ -15,8 +15,9 @@ import {
   close,
   sput,
   stake,
-  CHANNELS
-} from './index';
+  CHANNELS,
+  isChannel
+} from "./index";
 
 const Renderer = function(viewFunc) {
   let data = {};
@@ -70,7 +71,7 @@ export default function createRiew(viewFunc, ...routines) {
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
-      if (CHANNELS.exists(value[key])) {
+      if (CHANNELS.exists(value[key]) || isChannel(value[key])) {
         sub(value[key], v => {
           sput(VIEW_CHANNEL, { [key]: v });
         });
@@ -92,7 +93,7 @@ export default function createRiew(viewFunc, ...routines) {
       go(
         r,
         result => {
-          if (typeof result === 'function') {
+          if (typeof result === "function") {
             cleanups.push(result);
           }
         },
@@ -144,7 +145,7 @@ export default function createRiew(viewFunc, ...routines) {
 
   riew.__setExternals = maps => {
     maps = maps.reduce((map, item) => {
-      if (typeof item === 'string') {
+      if (typeof item === "string") {
         map = { ...map, [item]: use(item) };
       } else {
         map = { ...map, ...item };

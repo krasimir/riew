@@ -1505,7 +1505,7 @@ function riew(View) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../index":17,"../utils":20}],19:[function(require,module,exports){
-'use strict';
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -1523,9 +1523,9 @@ var _extends = Object.assign || function (target) {
 
 exports.default = createRiew;
 
-var _index = require('./index');
+var _index = require("./index");
 
-var _utils = require('./utils');
+var _utils = require("./utils");
 
 function _defineProperty(obj, key, value) {
   if (key in obj) {
@@ -1586,12 +1586,12 @@ function createRiew(viewFunc) {
       (0, _index.sub)(to, func);
     }
   };
-  var VIEW_CHANNEL = riew.id + '_view';
-  var PROPS_CHANNEL = riew.id + '_props';
+  var VIEW_CHANNEL = riew.id + "_view";
+  var PROPS_CHANNEL = riew.id + "_props";
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
-      if (_index.CHANNELS.exists(value[key])) {
+      if (_index.CHANNELS.exists(value[key]) || (0, _index.isChannel)(value[key])) {
         sub(value[key], function (v) {
           (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
@@ -1622,7 +1622,7 @@ function createRiew(viewFunc) {
     sub(VIEW_CHANNEL, renderer.push);
     runningRoutines = routines.map(function (r) {
       return (0, _index.go)(r, function (result) {
-        if (typeof result === 'function') {
+        if (typeof result === "function") {
           cleanups.push(result);
         }
       }, _extends({
@@ -1683,7 +1683,7 @@ function createRiew(viewFunc) {
 
   riew.__setExternals = function (maps) {
     maps = maps.reduce(function (map, item) {
-      if (typeof item === 'string') {
+      if (typeof item === "string") {
         map = _extends({}, map, _defineProperty({}, item, (0, _index.use)(item)));
       } else {
         map = _extends({}, map, item);
