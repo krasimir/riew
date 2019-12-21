@@ -18,7 +18,7 @@
 - [Redux](https://redux.js.org/) and [redux-saga](https://redux-saga.js.org/)
 - [JS-CSP](https://github.com/js-csp/js-csp)
 
-## Ideas
+## Concepts
 
 ### Routines & channels
 
@@ -43,7 +43,7 @@ That's the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_s
 
 ### Riews
 
-The _riew_ is an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing a view functions and one or many routines. The routines get executed when we mount the riew and they receive a `render` method so we can send data to the view function.
+A _riew_ is a combination between view and routines. At the end is an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing a view functions and one or many routines. The routines get executed when we mount the riew and they receive a `render` method so we can send data to the view function.
 
 ```js
 const ch = chan('MY_CHANNEL')
@@ -64,11 +64,35 @@ const r = riew(view, A, B);
 r.mount();
 ```
 
-This example prints out `{ message: "Hey Steve, how are you?" }` to the console. As we can see `B` routine waits till it receives the message formatted by routine `A` and sends it to the `view` function. This is one of the main ideas behind this library. To manage our views by using [go](https://golang.org/)-like routines.
+This example prints out `{ message: "Hey Steve, how are you?" }` to the console. As we know from the previous section `B` routine waits till it receives the message formatted by routine `A`. It sends it to the `view` function with the `render` call. This is one of the main ideas behind this library. To manage our views by using [go](https://golang.org/)-like routines.
 
-There is a React extension bundled with the library so if you use React you'll never call `mount`, `update` or `unmount` by yourself. This is done by using React hooks internally.
+There is a React extension bundled within the library so if you use React you'll probably never call `mount`, `update` or `unmount` manually. This is done by using React hooks internally.
 
 ### State
+
+In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) there is no a concept for a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed and changed but is always available. The channels can keep values but by default they are consumed at some point. Or in other words taken.
+
+Riew brings the idea of a state by defining a value that is outside the channels. It can be however can accessed and modified by using channels. Let's see the following example:
+
+```js
+const users = state([]);
+
+users.mutate('ADD', (currentUsers, newUser) => {
+  return [ ...currentUsers, newUser ];
+});
+users.select('GET_USERS', (users) => {
+  return users.map(({ name }) => name).join(', ');
+})
+
+go(function * () {
+	yield put('ADD', { name: 'Steve', age: 24 });
+	yield put('ADD', { name: 'Ana', age: 25 });
+	yield put('ADD', { name: 'Peter', age: 22 });
+  console.log(yield take('GET_USERS'));
+});
+```
+
+We create a state that will keep an array of objects. After that we define two channels with identifiers `ADD` and `GET_USERS`. Because those are channels we can take and put values in them. I guess you already see where we are going here. Each state may have channels connected and they are two types - `selectors` and `mutators`. Every time when we `take` from a `selector` channel we receive the value of the state container and every time when we `put` to a `mutator` we are updating that value. To make this possible Riew defines these channels with a special type of non-blocking buffer. So the puts and takes are resolved immediately.
 
 ### Pubsub
 
