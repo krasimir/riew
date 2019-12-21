@@ -30,8 +30,15 @@ export function put(id, item, callback) {
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
-      ch.subscribers.forEach(({ notify }) => notify(item));
-      ch.buff.put(item, callback);
+      if ("prePut" in ch.transforms) {
+        ch.transforms.prePut(item, newItem => {
+          ch.subscribers.forEach(({ notify }) => notify(newItem));
+          ch.buff.put(newItem, callback);
+        });
+      } else {
+        ch.subscribers.forEach(({ notify }) => notify(item));
+        ch.buff.put(item, callback);
+      }
     }
   };
 

@@ -11,53 +11,22 @@ export function createState(...args) {
 
   function handleError(onError) {
     return e => {
-      if (onError !== null) {
-        onError(e);
-      } else {
+      if (onError === null) {
         throw e;
       }
+      onError(e);
     };
   }
   function runSelector({ ch, selector, onError }, v) {
-    if (isGeneratorFunction(selector)) {
-      try {
+    try {
+      if (isGeneratorFunction(selector)) {
         go(selector, v => sput(ch, v), value);
-      } catch (e) {
-        handleError(onError)(e);
+        return;
       }
-      return;
-    }
-    let selectorValue;
-    try {
-      selectorValue = selector(v);
+      sput(ch, selector(v));
     } catch (e) {
       handleError(onError)(e);
     }
-    sput(ch, selectorValue);
-  }
-  function runWriter({ ch, reducer, onError }, payload) {
-    if (isGeneratorFunction(reducer)) {
-      try {
-        go(
-          reducer,
-          v => {
-            value = v;
-            readChannels.forEach(r => runSelector(r, v));
-          },
-          value,
-          payload
-        );
-      } catch (e) {
-        handleError(onError)(e);
-      }
-      return;
-    }
-    try {
-      value = reducer(value, payload);
-    } catch (e) {
-      handleError(onError)(e);
-    }
-    readChannels.forEach(r => runSelector(r, value));
   }
 
   const api = {
@@ -78,9 +47,25 @@ export function createState(...args) {
     mutate(id, reducer = (_, v) => v, onError = null) {
       let ch = isChannel(id) ? id : chan(id, buffer.divorced());
       ch["@statewritechannel"] = true;
-      let writer = { ch, reducer, onError };
+      ch.setTransforms({
+        prePut(payload, callback) {
+          try {
+            if (isGeneratorFunction(reducer)) {
+              go(reducer, callback, value, payload);
+              return;
+            }
+            callback(reducer(value, payload));
+          } catch (e) {
+            handleError(onError)(e);
+          }
+        }
+      });
+      let writer = { ch };
       writeChannels.push(writer);
-      sub(ch, payload => runWriter(writer, payload));
+      sub(ch, v => {
+        value = v;
+        readChannels.forEach(r => runSelector(r, value));
+      });
       return this;
     },
     destroy() {

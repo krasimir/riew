@@ -144,7 +144,7 @@ describe("Given a CSP state extension", () => {
         ["WRITE=bar"],
         ["READ=barhello world my friend"],
         ["R=BARHELLO WORLD MY FRIEND"],
-        ["W=hello world my friend"]
+        ["W=barhello world my friend"]
       );
     });
   });
@@ -182,7 +182,7 @@ describe("Given a CSP state extension", () => {
       });
 
       await delay(10);
-      expect(spy).toBeCalledWithArgs();
+      expect(spy).toBeCalledWithArgs(["foobar"]);
     });
   });
   describe("when we use a generator as a selector", () => {
@@ -285,21 +285,6 @@ describe("Given a CSP state extension", () => {
         ["r2=foobar"],
         ["r3=foobar"]
       );
-    });
-  });
-  describe("when we use the same channel for mutations", () => {
-    it("should mutate multiple states at once", () => {
-      const s1 = state("foo");
-      const s2 = state(12);
-
-      s1.mutate("X", (value, payload) => value + payload);
-      s2.mutate("X", (value, payload) => value * payload);
-
-      sput("X", 3);
-      sput("X", 10);
-
-      expect(s1.get()).toBe("foo310");
-      expect(s2.get()).toBe(360);
     });
   });
 });
