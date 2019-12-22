@@ -218,7 +218,7 @@ console.log(ch.isActive()); // true
 
 ### buffer
 
-> buffer.fixed()
+> `buffer.fixed()`
 
 It creates a fixed buffer with size 0. The `put` to the channel is blocked until a `take` happens. A `take` is blocked until a `put` happens.
 
