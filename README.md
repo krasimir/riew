@@ -193,11 +193,11 @@ The result of this snippet is only `Value: Foo`. The `sub` reads the put value b
 
 ### chan
 
-#### chan(id, buff) or chan(buff)
+*chan(id, buff)* or *chan(buff)*
 
 Creates a new channel with ID equal to `id` and buffer equal to `buff`.
 
 * `id` (`String`, optional) - must be unique for your system.
 * `buff` (`Buffer`, optional) - buffer created by using the `buffer` helpers.
 
-#### buffer
+### buffer
