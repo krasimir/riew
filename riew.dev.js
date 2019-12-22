@@ -289,8 +289,7 @@ function createChannel() {
   var api = _index.CHANNELS.set(id, {
     id: id,
     "@channel": true,
-    subscribers: [],
-    transforms: {}
+    subscribers: []
   });
 
   api.isActive = function () {
@@ -303,9 +302,6 @@ function createChannel() {
   };
   api.value = function () {
     return buff.getValue();
-  };
-  api.setTransforms = function (t) {
-    return api.transforms = t;
   };
 
   return api;
@@ -478,6 +474,8 @@ var _constants = require("../constants");
 
 var _ops = require("../ops");
 
+var _utils = require("../../utils");
+
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
@@ -524,6 +522,7 @@ function defaultTransform() {
 function sub(channels, to) {
   var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : defaultTransform;
   var initialCallIfBufValue = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+  var onError = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
 
   // in a routine
   if (typeof to === "undefined") {
@@ -540,10 +539,29 @@ function sub(channels, to) {
   var composedAtLeastOnce = false;
   channels.forEach(function (ch, idx) {
     var notify = function notify(value) {
+      var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
+
       data[idx] = value;
+      // Notify the subscriber only if all the sources are fulfilled.
+      // In case of one source we don't have to wait.
       if (composedAtLeastOnce || data.length === 1 || !data.includes(NOTHING)) {
         composedAtLeastOnce = true;
-        to(transform.apply(undefined, _toConsumableArray(data)));
+        try {
+          if ((0, _utils.isGeneratorFunction)(transform)) {
+            (0, _index.go)(transform, function (v) {
+              to(v);
+              done();
+            }, value);
+          } else {
+            to(transform.apply(undefined, _toConsumableArray(data)));
+            done();
+          }
+        } catch (e) {
+          if (onError === null) {
+            throw e;
+          }
+          onError(e);
+        }
       }
     };
     if (!ch.subscribers.find(function (_ref) {
@@ -590,7 +608,7 @@ function read() {
   return sub.apply(undefined, arguments);
 }
 
-},{"../../index":17,"../constants":7,"../ops":14}],11:[function(require,module,exports){
+},{"../../index":17,"../../utils":20,"../constants":7,"../ops":14}],11:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -666,19 +684,6 @@ function createState() {
 
       var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id, _index.buffer.divorced());
       ch["@statewritechannel"] = true;
-      ch.setTransforms({
-        prePut: function prePut(payload, callback) {
-          try {
-            if ((0, _utils.isGeneratorFunction)(reducer)) {
-              (0, _index.go)(reducer, callback, value, payload);
-              return;
-            }
-            callback(reducer(value, payload));
-          } catch (e) {
-            handleError(onError)(e);
-          }
-        }
-      });
       var writer = { ch: ch };
       writeChannels.push(writer);
       (0, _index.sub)(ch, function (v) {
@@ -686,7 +691,40 @@ function createState() {
         readChannels.forEach(function (r) {
           return runSelector(r, value);
         });
-      });
+      }, /*#__PURE__*/regeneratorRuntime.mark(function _callee(payload) {
+        return regeneratorRuntime.wrap(function _callee$(_context) {
+          while (1) {
+            switch (_context.prev = _context.next) {
+              case 0:
+                _context.prev = 0;
+
+                if (!(0, _utils.isGeneratorFunction)(reducer)) {
+                  _context.next = 5;
+                  break;
+                }
+
+                _context.next = 4;
+                return (0, _index.call)(reducer, value, payload);
+
+              case 4:
+                return _context.abrupt("return", _context.sent);
+
+              case 5:
+                return _context.abrupt("return", reducer(value, payload));
+
+              case 8:
+                _context.prev = 8;
+                _context.t0 = _context["catch"](0);
+
+                handleError(onError)(_context.t0);
+
+              case 11:
+              case "end":
+                return _context.stop();
+            }
+          }
+        }, _callee, this, [[0, 8]]);
+      }), true, handleError(onError));
       return this;
     },
     destroy: function destroy() {
@@ -918,21 +956,9 @@ function put(id, item, callback) {
     if (state === _constants.CLOSED || state === _constants.ENDED) {
       callback(state);
     } else {
-      if ("prePut" in ch.transforms) {
-        ch.transforms.prePut(item, function (newItem) {
-          ch.subscribers.forEach(function (_ref) {
-            var notify = _ref.notify;
-            return notify(newItem);
-          });
-          ch.buff.put(newItem, callback);
-        });
-      } else {
-        ch.subscribers.forEach(function (_ref2) {
-          var notify = _ref2.notify;
-          return notify(item);
-        });
-        ch.buff.put(item, callback);
-      }
+      callSubscribers(ch, item, function () {
+        return ch.buff.put(item, callback);
+      });
     }
   };
 
@@ -945,6 +971,18 @@ function put(id, item, callback) {
 }
 function sput(id, item, callback) {
   return put(id, item, callback || noop);
+}
+function callSubscribers(ch, item, callback) {
+  var subscribers = ch.subscribers.map(function () {
+    return 1;
+  });
+  if (subscribers.length === 0) return callback();
+  ch.subscribers.forEach(function (_ref) {
+    var notify = _ref.notify;
+    return notify(item, function () {
+      return subscribers.shift(), subscribers.length === 0 ? callback() : null;
+    });
+  });
 }
 
 // **************************************************** TAKE
@@ -1100,7 +1138,7 @@ function go(func) {
         (0, _index.subOnce)(i.value.ch, next);
         break;
       case _constants.CALL_ROUTINE:
-        addSubRoutine(go.apply(undefined, [i.value.routine, next].concat(args, _toConsumableArray(i.value.args))));
+        addSubRoutine(go.apply(undefined, [i.value.routine, next].concat(_toConsumableArray(i.value.args), args)));
         break;
       case _constants.FORK_ROUTINE:
         addSubRoutine(go.apply(undefined, [i.value.routine, function () {}].concat(args, _toConsumableArray(i.value.args))));
