@@ -192,7 +192,7 @@ describe("Given a CSP", () => {
         await delay(10);
         expect(spy).toBeCalledWithArgs(
           [">r2 1 2"],
-          ["r1 1 2 foo bar"],
+          ["r1 foo bar 1 2"],
           ["<r2 1 2"],
           ["done"]
         );
@@ -913,7 +913,7 @@ describe("Given a CSP", () => {
       });
     });
     describe("when we use sub by passing a string for a channel", () => {
-      it("should create a channel with a EverBuffer", () => {
+      it("should create a channel with a DivorceBuffer", () => {
         const users = state([
           { name: "Joe" },
           { name: "Steve" },

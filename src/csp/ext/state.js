@@ -1,4 +1,13 @@
-import { go, sub, chan, sput, sclose, buffer, isChannel } from "../../index";
+import {
+  go,
+  sub,
+  chan,
+  sput,
+  sclose,
+  buffer,
+  isChannel,
+  call
+} from "../../index";
 import { getId, isGeneratorFunction } from "../../utils";
 import { grid } from "../../index";
 
@@ -47,25 +56,27 @@ export function createState(...args) {
     mutate(id, reducer = (_, v) => v, onError = null) {
       let ch = isChannel(id) ? id : chan(id, buffer.divorced());
       ch["@statewritechannel"] = true;
-      ch.setTransforms({
-        prePut(payload, callback) {
+      let writer = { ch };
+      writeChannels.push(writer);
+      sub(
+        ch,
+        v => {
+          value = v;
+          readChannels.forEach(r => runSelector(r, value));
+        },
+        function*(payload) {
           try {
             if (isGeneratorFunction(reducer)) {
-              go(reducer, callback, value, payload);
-              return;
+              return yield call(reducer, value, payload);
             }
-            callback(reducer(value, payload));
+            return reducer(value, payload);
           } catch (e) {
             handleError(onError)(e);
           }
-        }
-      });
-      let writer = { ch };
-      writeChannels.push(writer);
-      sub(ch, v => {
-        value = v;
-        readChannels.forEach(r => runSelector(r, value));
-      });
+        },
+        true,
+        handleError(onError)
+      );
       return this;
     },
     destroy() {

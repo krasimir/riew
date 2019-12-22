@@ -111,8 +111,8 @@ describe("Given a CSP state extension", () => {
       s.mutate("W", (a, b) => a + b);
 
       sub(s, v => listen("READ=" + v));
-      sub(s.WRITE, v => listen("WRITE=" + v));
       sub("R", v => listen("R=" + v));
+      sub(s.WRITE, v => listen("WRITE=" + v));
       sub("W", v => listen("W=" + v));
 
       go(function*() {
@@ -144,7 +144,7 @@ describe("Given a CSP state extension", () => {
         ["WRITE=bar"],
         ["READ=barhello world my friend"],
         ["R=BARHELLO WORLD MY FRIEND"],
-        ["W=barhello world my friend"]
+        ["W=hello world my friend"]
       );
     });
   });
@@ -159,9 +159,7 @@ describe("Given a CSP state extension", () => {
         return current + newOne + (yield take(s2));
       });
 
-      sub(s, v => {
-        spy(v);
-      });
+      sub(s, spy);
       sput("W", "zoo");
 
       await delay(10);
@@ -285,6 +283,21 @@ describe("Given a CSP state extension", () => {
         ["r2=foobar"],
         ["r3=foobar"]
       );
+    });
+  });
+  describe("when we use the same channel for multiple mutations", () => {
+    it("should mutate multiple states at once", () => {
+      const s1 = state("foo");
+      const s2 = state(12);
+
+      s1.mutate("X", (value, payload) => value + payload);
+      s2.mutate("X", (value, payload) => value * payload);
+
+      sput("X", 3);
+      sput("X", 10);
+
+      expect(s1.get()).toBe("foo310");
+      expect(s2.get()).toBe(360);
     });
   });
 });

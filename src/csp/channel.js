@@ -14,8 +14,7 @@ export function createChannel(...args) {
   let api = CHANNELS.set(id, {
     id,
     "@channel": true,
-    subscribers: [],
-    transforms: {}
+    subscribers: []
   });
 
   api.isActive = () => api.state() === OPEN;
@@ -27,7 +26,6 @@ export function createChannel(...args) {
   api.value = () => {
     return buff.getValue();
   };
-  api.setTransforms = t => (api.transforms = t);
 
   return api;
 }

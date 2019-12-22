@@ -30,15 +30,7 @@ export function put(id, item, callback) {
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
-      if ("prePut" in ch.transforms) {
-        ch.transforms.prePut(item, newItem => {
-          ch.subscribers.forEach(({ notify }) => notify(newItem));
-          ch.buff.put(newItem, callback);
-        });
-      } else {
-        ch.subscribers.forEach(({ notify }) => notify(item));
-        ch.buff.put(item, callback);
-      }
+      callSubscribers(ch, item, () => ch.buff.put(item, callback));
     }
   };
 
@@ -51,6 +43,16 @@ export function put(id, item, callback) {
 }
 export function sput(id, item, callback) {
   return put(id, item, callback || noop);
+}
+function callSubscribers(ch, item, callback) {
+  const subscribers = ch.subscribers.map(() => 1);
+  if (subscribers.length === 0) return callback();
+  ch.subscribers.forEach(({ notify }) =>
+    notify(
+      item,
+      () => (subscribers.shift(), subscribers.length === 0 ? callback() : null)
+    )
+  );
 }
 
 // **************************************************** TAKE
@@ -180,7 +182,7 @@ export function go(func, done = () => {}, ...args) {
         subOnce(i.value.ch, next);
         break;
       case CALL_ROUTINE:
-        addSubRoutine(go(i.value.routine, next, ...args, ...i.value.args));
+        addSubRoutine(go(i.value.routine, next, ...i.value.args, ...args));
         break;
       case FORK_ROUTINE:
         addSubRoutine(go(i.value.routine, () => {}, ...args, ...i.value.args));

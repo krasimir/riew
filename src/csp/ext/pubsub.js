@@ -1,12 +1,7 @@
-import {
-  chan,
-  isChannel,
-  isStateReadChannel,
-  buffer,
-  isState
-} from "../../index";
+import { chan, isChannel, go, buffer, isState } from "../../index";
 import { SUB } from "../constants";
 import { sput, stake } from "../ops";
+import { isGeneratorFunction } from "../../utils";
 
 const NOTHING = Symbol("Nothing");
 
@@ -39,7 +34,8 @@ export function sub(
   channels,
   to,
   transform = defaultTransform,
-  initialCallIfBufValue = true
+  initialCallIfBufValue = true,
+  onError = null
 ) {
   // in a routine
   if (typeof to === "undefined") {
@@ -53,11 +49,32 @@ export function sub(
   const data = channels.map(() => NOTHING);
   let composedAtLeastOnce = false;
   channels.forEach((ch, idx) => {
-    const notify = value => {
+    const notify = (value, done = () => {}) => {
       data[idx] = value;
+      // Notify the subscriber only if all the sources are fulfilled.
+      // In case of one source we don't have to wait.
       if (composedAtLeastOnce || data.length === 1 || !data.includes(NOTHING)) {
         composedAtLeastOnce = true;
-        to(transform(...data));
+        try {
+          if (isGeneratorFunction(transform)) {
+            go(
+              transform,
+              v => {
+                to(v);
+                done();
+              },
+              value
+            );
+          } else {
+            to(transform(...data));
+            done();
+          }
+        } catch (e) {
+          if (onError === null) {
+            throw e;
+          }
+          onError(e);
+        }
       }
     };
     if (!ch.subscribers.find(({ to: t }) => t === to)) {
