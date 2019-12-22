@@ -10,6 +10,8 @@
 
 * Inspiration - [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes), [core.async](https://github.com/clojure/core.async), [Go](https://golang.org/), [Redux](https://redux.js.org/), [redux-saga](https://redux-saga.js.org/), [JS-CSP](https://github.com/js-csp/js-csp) 
 * Core concepts - [Routines & channels](https://github.com/krasimir/riew#routines--channels), [Riews](https://github.com/krasimir/riew#riews), [State](https://github.com/krasimir/riew#state), [Pubsub](https://github.com/krasimir/riew#pubsub)
+* API
+  * 
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -267,8 +269,34 @@ go(function * B() {
 });
 ```
 
-1. Routine A starts and we see `"a"` and `"b"` in the console. It's because we have a a buffer with size 2.
+1. Routine A starts and we see `"a"` and `"b"` in the console. It's because we have a buffer with size 2.
 3. Routine B starts and stops at `yield sleep(2000)` for two seconds.
-4. Routine B continues and consumes all the values from the channel.
+4. Routine B continues and consumes all the values from the channel including `"moo"`.
+
+> `buffer.sliding(n)`
+
+Similar to the fixed buffer except that the `put`s are never blocking. If the buffer is full a new item is added at the end but one item is removed from the beginning.
+
+Example:
+
+```js
+const ch = chan(buffer.sliding(2));
+
+go(function * A() {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar');
+  yield put(ch, 'moo');
+  yield put(ch, 'zoo');
+});
+go(function * B() {
+  yield sleep(2000);
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+});
+```
+
+1. Routine A starts and all the puts happen with no stopping of the generator.
+2. Routine B starts and in the channel we have `['moo', 'zoo']`.
+3. Routine B ends and in the console we see `"moo"` followed by `"zoo"`.
 
 
