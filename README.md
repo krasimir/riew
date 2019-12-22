@@ -8,7 +8,7 @@
 
 ---
 
-* Inspiration - [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes), [core.async](https://github.com/clojure/core.async), [Go](https://golang.org/), [Redux](https://redux.js.org/) and [redux-saga](https://redux-saga.js.org/), [JS-CSP](https://github.com/js-csp/js-csp) 
+* Inspiration - [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes), [core.async](https://github.com/clojure/core.async), [Go](https://golang.org/), [Redux](https://redux.js.org/), [redux-saga](https://redux-saga.js.org/), [JS-CSP](https://github.com/js-csp/js-csp) 
 * Core concepts - [Routines & channels](https://github.com/krasimir/riew#routines--channels), [Riews](https://github.com/krasimir/riew#riews), [State](https://github.com/krasimir/riew#state), [Pubsub](https://github.com/krasimir/riew#pubsub)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
@@ -173,7 +173,7 @@ Further more we can handle the request error inside the mutator and put somethin
 
 ### Pubsub
 
-The [pubsub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) pattern is widely used in JavaScript. There are tons of libraries that are using it and it's de-facto a standard these days. I (the author of this library) however think that this pattern doesn't play well with the [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) architecture. I've made couple of tests and tried implementing it with pure CSP patterns but it simply doesn't work as expected. That's because in the pubsub pattern we have a broadcasting system. A system in which the dispatcher of the message doesn't care what happens with the dispatched message. The act of message sending is not a blocking operation. In CSP is quite opposite. When we put something into the channel we are blocked until someone takes it. Also in pubsub we have one-to-many relation and all the subscribers receive the same message. While in CSP if we hook multiple takes to a channel they'll all receive different messages because once the message is consumed it disappears from the channel and the next taker will read the next message. CSP and pubsub are kind of similar concepts. They both follow the push model and could be used to write code in a reactive way. However, they act differently.
+The [pubsub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) pattern is widely used in JavaScript. There are tons of libraries that are using it and it's de-facto a standard these days. I (the author of this library) however think that this pattern doesn't play well with the [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) architecture. I've made couple of tests and tried implementing it with pure CSP patterns but it simply doesn't work as expected. That's because in the pubsub pattern we have a broadcasting system. A system in which the dispatcher of the message doesn't care what happens with the dispatched message. The act of message sending is not a blocking operation. In CSP is quite opposite. When we put something into the channel we are blocked until someone takes it. Also in pubsub we have one-to-many relation and all the subscribers receive the same message. While in CSP if we hook multiple takers to a channel they'll all receive different messages because once the message is consumed it disappears from the channel and the next taker will read the next message. CSP and pubsub are kind of similar concepts. They both follow the push model and could be used to write code in a reactive way. However, they act differently.
 
 Riew offers pubsub pattern capabilities. They are however added next to the core CSP processes and the developer needs to make a clear separation between the two. Consider the following example:
 
@@ -190,3 +190,5 @@ go(function * A() {
 The result of this snippet is only `Value: Foo`. The `sub` reads the put value but doesn't consume it from the channel. The routine `A` is still blocked because there is no `take` from the channel.
 
 ## API
+
+### `chan(id:<String>, buff:<Buffer>):<Channel>` or `chan(buff:<Buffer>):<Channel>`
