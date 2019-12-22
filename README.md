@@ -130,7 +130,25 @@ go(function * A() {
 
 The _mutator_ `ADD` accepts a channel (instance or ID) and a `reducer` function. That function is called against the current state value together with the item which is put into the channel. The _selector_ `GET_USERS` defines a channel which we can always read from and the value is whatever the `mapping` function returns. At the end the routine `A` adds `put`s three users and `take`s their names.
 
-This mechanics open space for a lot of patterns. 
+This mechanics open space for a lot of patterns. Imagine how your user adds elements to a table and you have a dedicated channel for this operation. Suddenly you have a requirement to count the number of the newly added elements. Sure you know the total number of elements in the table but not how many are just recently added in this session. With Riew you can just hook to the same channel that adds elements to the table and count.
+
+```js
+const table = state([]);
+table.mutate('ADD', (elements, newElement) => {
+  return [ ...elements, newElement ];
+});
+
+const counter = state(0);
+counter.mutate('ADD', (n) => n + 1); // We are hooking to the same channel `ADD`.
+
+go(function * A() {
+	yield put('ADD', 20);
+	yield put('ADD', 30);
+	yield put('ADD', 12);
+  console.log(yield take(table)); // 20,30,12
+  console.log(yield take(counter)); // 3
+});
+```
 
 ### Pubsub
 

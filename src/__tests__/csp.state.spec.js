@@ -299,5 +299,24 @@ describe("Given a CSP state extension", () => {
       expect(s1.get()).toBe("foo310");
       expect(s2.get()).toBe(360);
     });
+    it("should not mess up the state values", () => {
+      const spy = jest.fn();
+      const table = state([]);
+      table.mutate("ADD", (elements, newElement) => {
+        return [...elements, newElement];
+      });
+      const counter = state(0);
+      counter.mutate("ADD", n => n + 1);
+
+      go(function* A() {
+        yield put("ADD", 20);
+        yield put("ADD", 30);
+        yield put("ADD", 12);
+        spy(yield take(table));
+        spy(yield take(counter));
+      });
+
+      expect(spy).toBeCalledWithArgs([[20, 30, 12]], [3]);
+    });
   });
 });
