@@ -150,6 +150,31 @@ go(function * A() {
 });
 ```
 
+Another helpful pattern is to use a routine as a mutator. And because the routine may be asynchronous you may block until the it's done. Consider the trivial case where we have to get data from remote endpoint and show it to the user.
+
+```js
+const cat = state(null);
+cat.mutate('KITTY_PLEASE', function * () {
+  const { file } = yield fetch('https://aws.random.cat/meow').then(res => res.json());
+  return file;
+});
+
+go(function * A() {
+  console.log('I want a kitty!');
+  yield put('KITTY_PLEASE');
+  console.log(`Here we go ${ yield take(cat) }`);
+});
+```
+
+The routine `A` is blocked on the put to `KITTY_PLEASE`. Our mutator is picked up and makes a request to `https://aws.random.cat/meow`. Once it finishes it mutates the state and replaces `null` with a URL. Then our routine is resumed and we can print that URL.
+
+```js
+> I want a kitty.
+> Here we go https://purr.objects-us-east-1.dream.io/i/W6jh8.jpg
+```
+
+Further more we can handle the request error inside the mutator and put something else in the `cat` state. Or we can hook to the same `KITTY_PLEASE` channel and do something else.
+
 ### Pubsub
 
 ## API
