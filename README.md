@@ -225,6 +225,8 @@ It creates a fixed buffer with size 0. The `put` to the channel is blocked until
 Example:
 
 ```js
+const ch = chan(buffer.fixed());
+
 go(function * A() {
   yield put(ch, 'foo');
 });
@@ -235,9 +237,38 @@ go(function * B() {
 ```
 
 1. Routine A starts and stops at the `yield put`.
-2. Routine B starts and is paused at `yield sleep`.
-3. A second delay.
-4. Routine A is resumed because a `take` happens in routine `B`.
-5. `foo` gets assigned to `value` constant and routine B ends.
+2. Routine B starts and stops at `yield sleep` for one second.
+3. Routine B is resumed because and `take`s 'foo' from the channel.
+4. Routine A is resumed and it ends.
+5. Routine B ends with `value` equal to `foo`.
+
+> `buffer.fixed(n)`
+
+It creates a fixed buffer with size `n`. `n` number of puts are non-blocking and the buffer holds the values till they are consumed. The `n + 1` put is blocking.
+
+Example:
+
+```js
+const ch = chan(buffer.fixed(2));
+
+go(function * A() {
+  yield put(ch, 'foo');
+  console.log('a')
+  yield put(ch, 'bar');
+  console.log('b')
+  yield put(ch, 'moo');
+  console.log('c')
+});
+go(function * B() {
+  yield sleep(2000);
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+});
+```
+
+1. Routine A starts and we see `"a"` and `"b"` in the console. It's because we have a a buffer with size 2.
+3. Routine B starts and stops at `yield sleep(2000)` for two seconds.
+4. Routine B continues and consumes all the values from the channel.
 
 
