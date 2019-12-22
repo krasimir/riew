@@ -22,7 +22,7 @@
 
 ### Routines & channels
 
-Imagine that you need to transfer messages between two entities in your system. They don't know about each other. With Riew you can use a _channel_ to connect and synchronize them. We can put and take messages from the channel and as long as your entities have access to it they'll be able to exchange information. Consider the following example:
+Imagine that you need to transfer messages between two entities in your system. They don't know about each other. With Riew you can use a _channel_ to connect and synchronize them. We can put and take messages from the channel. Consider the following example:
 
 ```js
 const ch = chan("MY_CHANNEL");
@@ -37,11 +37,11 @@ go(function * B() {
 });
 ```
 
-We have two functions (routines) `A` and `B`. They start synchronously one after each other. However, `A` is blocked at the `yield take` statement because it wants to read from the channel `ch` but there is nothing inside. Then routine `B` puts `Steve` in there and routine `A` resumes. Now `B` is blocked because it tries to read from the same channel. `Steve` is already consumed by the other routine so we are again at the same situation. `B` waits till `A` puts `Hello Steve, how are you?`. At the end the log happens and we see the message into the console.
+We have two generator functions (routines) `A` and `B`. They start synchronously one after each other. However, `A` is paused (blocked) at the `yield take` statement because it wants to read from the channel `ch` but there is nothing inside. Then routine `B` puts `Steve` and routine `A` resumes back. Now `B` is blocked because it tries to read from the same channel. `Steve` is already consumed by the other routine so we are again at the same blocking situation. `B` waits till `A` puts `Hello Steve, how are you?`. At the end the log happens and we see the message into the console.
 
-That's the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes). We have channels that are used for communication and synchronization. By default the channel operations are blocking. Putting can't happen until there is someone to take and the opposite - taking can't happen until there is someone to put. This is the behavior of the standard non-buffered channel. We have couple of other buffer types here in Riew and you can learn more about them below.
+This is the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes). We have channels that are used for communication and synchronization. By default the channel operations are blocking. Putting can't happen until there is someone to take and the opposite - taking can't happen until there is someone to put. This is the behavior of the standard non-buffered channel. We have couple of other buffer types here in Riew to accommodate the needs that we have.
 
-The _channel_ in Riew has an unique ID. In application there may be only one channel with a given ID. Every time when we want to create/use a channel we may pass the channel instance itself or just its ID. We may even skip the creation of the channel and simply use an ID. Riew will create the channel for us. For example, in the snippet above may be translated to the following:
+The _channel_ in Riew has an unique ID. In one application there may be only one channel with a given ID. Every time when we want to create/use a channel we may pass the channel instance itself or just its ID. We may even skip the creation of the channel and simply use an ID. Riew will create the channel for us the first time it is used. The snippet above may be translated to the following:
 
 ```js
 go(function * () {
@@ -54,11 +54,11 @@ go(function * () {
 });
 ```
 
-This is intentional by design. It becomes much easier to use a channel from any point of the application because we just need to know the ID.
+This is intentional and it's by design. It becomes much easier to use a channel from any point of the application because we just need to know the ID.
 
 ### Riews
 
-The _riew_ is a combination between view function and routine functions. It's materialized into an object that has `mount`, `update` and `unmount` methods. We are creating a riew by providing the view functions and one or many routines. The routines get executed when we mount the riew. They receive a `render` method so we can send data to the view function.
+The _riew_ is a combination between view function and routine functions. It's materialized into an object that has `mount`, `update` and `unmount` methods. The routines get executed when we mount the riew. They receive a `render` method so we can send data to the view function.
 
 ```js
 const view = function (props) {
@@ -78,9 +78,7 @@ const r = riew(view, A, B);
 r.mount();
 ```
 
-This example prints out an object `{ message: "Hey Steve, how are you?" }`. As we know from the previous section `B` routine waits till it receives the message formatted by routine `A`. It sends it to the `view` function by using the `render` helper.
-
-The core concept of this library is to keep the view pure and distribute the business logic across routines.
+This example prints out an object `{ message: "Hey Steve, how are you?" }`. As we know from the previous section, `B` routine waits till it receives the message formatted by routine `A`. It sends it to the `view` function by using the `render` helper. This code sample illustrates the core concept behind this library - keep the view pure and distribute the business logic across routines.
 
 We may directly send a channel to the `render` function and whatever we `put` inside will reach the view. For example:
 
@@ -105,21 +103,24 @@ _(There is a React extension bundled within the library so if you use React you'
 
 ### State
 
-In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) there is no a concept of a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed and changed but is always available. The channels can keep values but by default they are consumed at some point. Or in other words taken.
+In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) there is no concept of a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed and changed but is always available. The channels can keep values but they are consumed at some point. Or in other words taken and don't exists as such on the channels anymore.
 
-Riew brings the idea of a state by defining a value that is outside the channels. It can be however accessed and modified by using channels. Let's see the following example:
+Riew brings the idea of a state by defining a value that is outside the channels. It can be however accessed and modified by using channels. Imagine the state as a black box with two channels - one for reading and one for writing. Riew extends this idea and allows the definition of many read channels called _selectors_ and many write channels called _mutators_. Let's see the following example:
 
 ```js
+// A state which value is an empty array.
 const users = state([]);
 
-users.mutate('ADD', (currentUsers, newUser) => {
+// Channel for updating the state value.
+users.mutate('ADD', function reducer(currentUsers, newUser) {
   return [ ...currentUsers, newUser ];
 });
-users.select('GET_USERS', (users) => {
+// Channel for reading the state value.
+users.select('GET_USERS', function mapping(users) {
   return users.map(({ name }) => name).join(', ');
 })
 
-go(function * () {
+go(function * A() {
   yield put('ADD', { name: 'Steve', age: 24 });
   yield put('ADD', { name: 'Ana', age: 25 });
   yield put('ADD', { name: 'Peter', age: 22 });
@@ -127,7 +128,9 @@ go(function * () {
 });
 ```
 
-We create a state that will keep an array of objects. After that we define two channels with identifiers `ADD` and `GET_USERS`. Because those are channels we can take and put values in them. I guess you already see where we are going here. Each state may have channels connected and they are two types - `selectors` and `mutators`. Every time when we `take` from a `selector` channel we receive the value of the state container and every time when we `put` to a `mutator` we are updating that value. To make this possible Riew defines these channels with a special type of non-blocking buffer. So the puts and takes are resolved (by default) immediately.
+The _mutator_ `ADD` accepts a channel (instance or ID) and a `reducer` function. That function is called against the current state value together with the item which is put into the channel. The _selector_ `GET_USERS` defines a channel which we can always read from and the value is whatever the `mapping` function returns. At the end the routine `A` adds `put`s three users and `take`s their names.
+
+This mechanics open space for a lot of patterns. 
 
 ### Pubsub
 
