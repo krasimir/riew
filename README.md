@@ -350,4 +350,37 @@ go(function * B() {
 2. Routine `B` starts and both `take`s are resolved with `"moo"`. The latest set value.
 3. Routine `B` ends.
 
+### `go`
 
+> go(routine, done, ...routineArgs)
+
+Runs a routine.
+
+* `routine` (`Generator`, required) - a generator function
+* `done` (`Function`, optional) - a callback function which is fired when the routine ends.
+* `routineArgs` (`Any`, optional) - any optional arguments that come as arguments to our generator.
+
+Example:
+
+```js
+const ch = chan();
+
+go(
+  function * A(greeting) {
+    const name = yield take(ch);
+    return `${ greeting }, ${ name }`;
+	},
+  (v) => {
+    console.log(v);
+  },
+  'Hey'
+);
+go(function * B() {
+	yield put(ch, 'Pablo')
+});
+```
+
+1. `go` runs a routine `A` with one argument `"Hey"`. The routine stops at `yield take(ch)`.
+2. Routine `B` starts and inside we put to the channel `"Pablo"` string.
+3. Routine `A` is resumed and forms its result which is `Hey, Pablo`.
+4. The routine done callback is called and we see the result in the console.
