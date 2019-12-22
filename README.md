@@ -228,16 +228,16 @@ Example:
 go(function * A() {
   yield put(ch, 'foo');
 });
-go(function * () {
+go(function * B() {
   yield sleep(1000);
   const value = yield take(ch);
 });
 ```
 
-1. Routine A starts.
-2. Routine B starts.
+1. Routine A starts and stops at the `yield put`.
+2. Routine B starts and is paused at `yield sleep`.
 3. A second delay.
-4. Routine A is resumed and ends.
+4. Routine A is resumed because a `take` happens in routine `B`.
 5. `foo` gets assigned to `value` constant and routine B ends.
 
 
