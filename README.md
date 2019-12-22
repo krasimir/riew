@@ -191,4 +191,4 @@ The result of this snippet is only `Value: Foo`. The `sub` reads the put value b
 
 ## API
 
-### `chan(id:<String>, buff:<Buffer>):<Channel>` or `chan(buff:<Buffer>):<Channel>`
+### `chan(id:<String>, buff:<Buffer>):<Channel>` or<br />`chan(buff:<Buffer>):<Channel>`
