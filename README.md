@@ -202,14 +202,18 @@ Creates a new channel with ID equal to `id` and buffer equal to `buff`.
 
 The function returns a channel object with the following methods/fields:
 
-* `channel.buff` - pointer to the buffer of the channel.
+* `channel.id` - the ID of the channel.
 * `channel.isActive()` - returns `true` if the channel is in an `OPEN` state.
 * `channel.state()` - returns one of the following: `OPEN`, `CLOSED` or `ENDED`. When the `channel` is `OPEN` we can put and take from it. When it is `CLOSED` every put gets resolved with `CLOSED`. The `take` on a `CLOSED` channel consumes the values left in the channel. If no values gets resolved with `CLOSED`. When a channel is `ENDED` both `put` and `take` are resolved with `ENDED`.
 
 Example:
 
 ```js
+const ch = chan('FOOBAR');
 
+console.log(ch.id); // FOOBAR
+console.log(ch.state()); // Symbol(OPEN)
+console.log(ch.isActive()); // true
 ```
 
 ### buffer
