@@ -1,7 +1,5 @@
 import BufferInterface from "./Interface";
 
-const noop = (v, c) => c(v);
-
 export default function DivorcedBuffer() {
   const api = BufferInterface();
 

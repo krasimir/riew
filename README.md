@@ -297,7 +297,57 @@ go(function * B() {
 ```
 
 1. Routine A starts and all the puts happen with no stopping of the generator.
-2. Routine B starts and in the channel we have `['moo', 'zoo']`.
+2. Routine B starts and in the channel we have `["moo", "zoo"]`.
 3. Routine B ends and in the console we see `"moo"` followed by `"zoo"`.
+
+> `buffer.dropping(n)`
+
+Similar to the fixed buffer except that every `put` outside of the buffer range is not blocking the routing. It resolves with `true` if there is space in the buffer and `false` if not. It's simply ignored.
+
+Example:
+
+```js
+const ch = chan(buffer.dropping(2));
+
+go(function * A() {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar');
+  yield put(ch, 'moo');
+  yield put(ch, 'zoo');
+});
+go(function * B() {
+  yield sleep(2000);
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+});
+```
+
+1. Routine A starts and all the puts happen with no stopping of the generator. It's just the last two do nothing.
+2. Routine B starts and in the channel we have `["foo", "bar"]`.
+3. Routine B ends and in the console we see `"foo"` followed by `"bar"`.
+
+> `buffer.divorced()`
+
+This type of buffer is a bit against the idea of the original CSP. The `put`s and `take`s to the channel with such buffer are always non-blocking. They resolve immediately. The `put`s always resolve with `true` while the `take`s with the latest value that was in the channel.
+
+Example:
+
+```js
+const ch = chan(buffer.divorced());
+
+go(function * A() {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar');
+  yield put(ch, 'moo');
+});
+go(function * B() {
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+});
+```
+
+1. Routine `A` starts and all the `put`'s are resolved with true. Routine `A` ends.
+2. Routine `B` starts and both `take`s are resolved with `"moo"`. The latest set value.
+3. Routine `B` ends.
 
 
