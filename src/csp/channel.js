@@ -1,6 +1,6 @@
 import { getId } from "../utils";
 import { OPEN } from "./constants";
-import { grid, CHANNELS } from "../index";
+import { CHANNELS } from "../index";
 import buffer from "./buffer";
 
 export function createChannel(...args) {
