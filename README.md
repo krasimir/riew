@@ -193,7 +193,7 @@ The result of this snippet is only `Value: Foo`. The `sub` reads the put value b
 
 ### chan
 
-**chan(id, buff)** or **chan(buff)**
+> chan(id, buff) or chan(buff)
 
 Creates a new channel with ID equal to `id` and buffer equal to `buff`.
 
@@ -205,5 +205,11 @@ The function returns a channel object with the following methods/fields:
 * `channel.buff` - pointer to the buffer of the channel.
 * `channel.isActive()` - returns `true` if the channel is in an `OPEN` state.
 * `channel.state()` - returns one of the following: `OPEN`, `CLOSED` or `ENDED`. When the `channel` is `OPEN` we can put and take from it. When it is `CLOSED` every put gets resolved with `CLOSED`. The `take` on a `CLOSED` channel consumes the values left in the channel. If no values gets resolved with `CLOSED`. When a channel is `ENDED` both `put` and `take` are resolved with `ENDED`.
+
+Example:
+
+```js
+
+```
 
 ### buffer
