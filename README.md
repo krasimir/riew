@@ -13,6 +13,7 @@
 * API
   * [chan](https://github.com/krasimir/riew#chan)
   * [buffer](https://github.com/krasimir/riew#buffer)
+  * [go](https://github.com/krasimir/riew#go)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -350,7 +351,7 @@ go(function * B() {
 2. Routine `B` starts and both `take`s are resolved with `"moo"`. The latest set value.
 3. Routine `B` ends.
 
-### `go`
+### go
 
 > go(routine, done, ...routineArgs)
 
@@ -384,3 +385,36 @@ go(function * B() {
 2. Routine `B` starts and inside we put to the channel `"Pablo"` string.
 3. Routine `A` is resumed and forms its result which is `Hey, Pablo`.
 4. The routine done callback is called and we see the result in the console.
+
+**Stopping the routine**
+
+The `go` function returns an object that has a `stop` method. Once you call it the routine will be terminated.
+
+```js
+const routine = go(function * () {
+  yield sleep(1000);
+  // This line will never be executed because
+  // the routine is terminated before it gets resumed.
+  console.log('Never called!'); 
+});
+
+routine.stop(); // <-- this terminates the routine
+```
+
+The routine is automatically terminated if it's part of a [riew](https://github.com/krasimir/riew#riew) and the riew is unmounted.
+
+```js
+const routine = function * () {
+  yield sleep(1000);
+  // This line will never be executed because
+  // the routine is terminated before it gets resumed.
+  console.log('Never called!');
+};
+
+const r = riew(() => {}, routine);
+
+r.mount();
+r.unmount(); // <-- this terminates the routine
+```
+
+
