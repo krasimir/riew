@@ -217,3 +217,27 @@ console.log(ch.isActive()); // true
 ```
 
 ### buffer
+
+> buffer.fixed()
+
+It creates a fixed buffer with size 0. The `put` to the channel is blocked until a `take` happens. A `take` is blocked until a `put` happens.
+
+Example:
+
+```js
+go(function * A() {
+  yield put(ch, 'foo');
+});
+go(function * () {
+  yield sleep(1000);
+  const value = yield take(ch);
+});
+```
+
+1. Routine A starts.
+2. Routine B starts.
+3. A second delay.
+4. Routine A is resumed and ends.
+5. `foo` gets assigned to `value` constant and routine B ends.
+
+
