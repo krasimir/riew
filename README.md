@@ -386,7 +386,7 @@ go(function * B() {
 3. Routine `A` is resumed and forms its result which is `Hey, Pablo`.
 4. The routine done callback is called and we see the result in the console.
 
-**Stopping the routine**
+#### Stopping a routine
 
 The `go` function returns an object that has a `stop` method. Once you call it the routine will be terminated.
 
@@ -415,6 +415,21 @@ const r = riew(() => {}, routine);
 
 r.mount();
 r.unmount(); // <-- this terminates the routine
+```
+
+#### Re-running a routine
+
+Rerunning a routine means terminating the current processes and running the generator again.
+
+The `go` function returns an object that has a `rerun` method. Once you call it the routine will be restarted.
+
+```js
+const routine = go(function * () {
+  console.log('Hello!');
+  yield sleep(1000);
+  console.log('Bye!');
+});
+routine.rerun();
 ```
 
 
