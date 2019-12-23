@@ -17,6 +17,7 @@
     * [Stop a routine](https://github.com/krasimir/riew#stopping-a-routine)
     * [Restarting a routine](https://github.com/krasimir/riew#restarting-the-routine)
     * [What you can yield](https://github.com/krasimir/riew#what-you-can-yield)
+  * [put](https://github.com/krasimir/riew#put)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -356,7 +357,7 @@ go(function * B() {
 
 ### go
 
-> go(routine, done, ...routineArgs)
+> `go(routine, done, ...routineArgs)`
 
 Runs a routine.
 
@@ -483,7 +484,26 @@ const routine = go(function * () {
 * [call](https://github.com/krasimir/riew#call)
 * [fork](https://github.com/krasimir/riew#fork)
 
+### put
 
+> `put(channel, anything)`
+
+Meant to be used only inside a routine. It puts items into a channel. Could be blocking. It depends on the channel's [buffer](https://github.com/krasimir/riew#buffer).
+
+* `channel` (`String` or a [`Channel` object](https://github.com/krasimir/riew#chan), required) - the channel which we want to put items in.
+* `anything` (`Any`, required) - the item that we want to put into the channel.
+
+The generator is resumed with `true` if the `put` is successful. `false` in the case of a channel with a dropping [buffer](https://github.com/krasimir/riew#buffer). Or it may return channel [statuses](https://github.com/krasimir/riew#chan) `CLOSED` or `ENDED`.
+
+Example:
+
+```js
+const ch = chan();
+
+go(function * () {
+	yield put(ch, 'foo');
+});
+```
 
 
 
