@@ -27,6 +27,7 @@
   * [stop](https://github.com/krasimir/riew#stop)
   * [timeout](https://github.com/krasimir/riew#timeout)
   * [merge](https://github.com/krasimir/riew#merge)
+  * [sub](https://github.com/krasimir/riew#sub)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -812,13 +813,72 @@ go(function * () {
 
 > `sub(sourceChannels, subscriber, transform, onError, initialCall)`
 
-The `sub` function is mainly about notifying a _subscriber_ when there is data in the _source_. We already talked about the [Pubsub](https://github.com/krasimir/riew#pubsub) pattern and how it's a bit against the CSP concepts. However, because this pattern is useful the `sub` function delivers it. Here are two very important things to remember:
-
-* `sub` does not consume values from the channels. Does not unblocks pending puts.
-* The subscriber is notified no matter if the `put` to the source is resolved.
-
-* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to.
+* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the subscriber is notified only when all the source channels have values.
 * `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel/s.
 * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
 * `onError` (`Function`, optional) - in case of an error of the `transform` function.
 * `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
+
+The `sub` function is mainly about notifying a _subscriber_ when there is data in the _source_ channels. We already talked about the [Pubsub](https://github.com/krasimir/riew#pubsub) pattern and how it's a bit against the CSP concept. However, because this pattern is handy Riew delivers it. Here are two very important things to remember:
+
+* `sub` does not consume values from the channels. Does not unblocks pending puts.
+* The subscriber is notified no matter if the `put` to the source is resolved.
+
+Examples:
+
+The most basic example is when we want to get values pushed to a channel into a regular JavaScript function.
+
+```js
+const ch = chan();
+
+sub(ch, function subscriber(value) {
+  console.log(value);
+});
+go(function * A() {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar'); // <-- never happens
+});
+```
+
+The second `put` of the `A` routine doesn't happen because the first one is pausing the routine. In the console we only see `"foo"`.
+
+We can subscribe to more then channel but then `sub` waits to all of the channels to have values. Then it calls the subscriber.
+
+```js
+const ch1 = chan();
+const ch2 = chan();
+
+sub([ch1, ch2], function subscriber(value) {
+  console.log(value);
+});
+sput(ch1, 'foo');
+sput(ch2, 'bar');
+sput(ch2, 'moo');
+sput(ch1, 'zoo');
+```
+
+The first `sput` doesn't trigger the `subscriber`. After the second one we get `["foo", "bar"]` as a value. Then we get `["foo", "moo"]` and at the end `["zoo", "moo"]`. The third and the fourth `sput` trigger the subscriber because then both channels have received values. Also notice that if we have more then one channel the value in the subscriber comes as an array.
+
+Let's see a slightly more complicated example where we have a routine as a transform function.
+
+```js
+const source = chan();
+const subscriber = chan();
+
+sub(
+  source,
+  subscriber,
+  function * transform(value) {
+    const { file } = yield fetch('https://aws.random.cat/meow').then(res => res.json());
+    return `<img src="${ file }" />`;
+  }
+);
+
+go(function * () {
+  console.log(yield take(subscriber)); // <img src="https://purr.objects-us-east-1.dream.io/i/015_-_ZnUfGjo.gif" />
+});
+
+sput(source);
+```
+
+We have two channels `source` and `subscriber`. We want each `put` to the `source` to result into a `<img>` tag with a kitty into the `subscriber`. To fully understand this example you have to check the [go](https://github.com/krasimir/riew#go) section but shortly the `transform` routine asynchronously gets a URL of the image and returns a formatted `<img>` string.
