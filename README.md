@@ -9,7 +9,7 @@
 ---
 
 * Inspiration - [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes), [core.async](https://github.com/clojure/core.async), [Go](https://golang.org/), [Redux](https://redux.js.org/), [redux-saga](https://redux-saga.js.org/), [JS-CSP](https://github.com/js-csp/js-csp) 
-* Core concepts - [Routines & channels](https://github.com/krasimir/riew#routines--channels), [Riews](https://github.com/krasimir/riew#riews), [State](https://github.com/krasimir/riew#state), [Pubsub](https://github.com/krasimir/riew#pubsub)
+* Core concepts - [Routines & channels](https://github.com/krasimir/riew#routines--channels), [Riews](https://github.com/krasimir/riew#riews), [Application state](https://github.com/krasimir/riew#application-state), [Pubsub](https://github.com/krasimir/riew#pubsub)
 * API
   * [chan](https://github.com/krasimir/riew#chan)
   * [buffer](https://github.com/krasimir/riew#buffer)
@@ -981,11 +981,79 @@ We see only `"foo"` because after the first `take` we remove all the subscriptio
 
 > `state(initialValue)`
 
-Creates a state object.
+As we mentioned in the [Application state](https://github.com/krasimir/riew#application-state) section, the CSP pattern doesn't really offer state capabilities. The channels can keep value over time, but once someone takes it the channel is empty and the next taker will receive another value. Riew builds on top of the CSP idea by saying that the state lives outside of the pattern and we use channels to get and set the value.
 
 * `initialValue` (`Any`, optional) - if not specified the initial value is `undefined`.
 
+Returns a state object with the following fields:
 
+* `READ` - an id of the default _read_ (selector) channel of the state.
+* `WRITE` - an id of the default _write_ (mutator) channel of the state.
+* `select(channel, selector, onError)` - creates or uses `channel` for reading. `selector` is a function or a routine that receives the current value and must return value too. `onError` is here to handle errors coming from the `selector` function.
+* `mutate(channel, reducer, onError)` - creates or uses `channel` for writing. `reducer` is a function or a routine that receives the current state value and an item that is put to the channel. It must return the new version of the state. `onError` is here to handle errors produced by the `reducer`.
+* `destroy` - closes all the _read_ and _write_ channels
+* `set(value)` - a synchronous way to set the value of the state without involving channels.
+* `get()` - a synchronous way to get the value of the state without involving channels.
+
+Example:
+
+```js
+const counter = state(0);
+
+go(function * () {
+  console.log(yield take(counter.READ)) // 0
+  yield put(counter.WRITE, 42);
+  console.log(yield take(counter.READ)) // 42
+});
+```
+
+`0` in this example is the initial value of the state. Then we have two built-in channels - `counter.READ` and `counter.WRITE`. The putting and taking from this channel usually happens synchronously. If we are about to use those channels we may skip writing `.READ` and `.WRITE` and simply use the state object directly. Like so:
+
+```js
+const counter = state(0);
+
+go(function * () {
+  console.log(yield take(counter)) // 0
+  yield put(counter, 42);
+  console.log(yield take(counter)) // 42
+});
+```
+
+#### selectors
+
+The read channels are called selectors and are defined by using the `select` method of the state.
+
+```js
+const name = state('Samantha');
+const ch = chan();
+
+name.select('UP', str => str.toUpperCase())
+name.select('LOWER', str => str.toLowerCase());
+name.select(ch, str => `My name is ${ str }`);
+
+go(function * () {
+  console.log(yield take('UP')); // SAMANTHA
+  console.log(yield take('LOWER')); // samantha
+  console.log(yield take(ch)); // My name is Samantha
+});
+```
+
+#### mutators
+
+The write channels are called mutators and are defined by using the `mutate` method of the state.
+
+```js
+const counter = state(0);
+
+counter.mutate('ADD', (current, n) => current + n);
+counter.mutate('DOUBLE', (current) => current * 2)
+
+go(function * () {
+  yield put('ADD', 10);
+  yield put('DOUBLE');
+  console.log(yield take(counter)); // 20
+});
+```
 
 ### riew
 
