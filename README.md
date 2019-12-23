@@ -22,6 +22,9 @@
   * [close](https://github.com/krasimir/riew#close), [sclose](https://github.com/krasimir/riew#sclose)
   * [call](https://github.com/krasimir/riew#call)
   * [fork](https://github.com/krasimir/riew#fork)
+  * [sleep](https://github.com/krasimir/riew#sleep)
+  * [stop](https://github.com/krasimir/riew#stop)
+  * [timeout](https://github.com/krasimir/riew#timeout)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -703,3 +706,50 @@ go(function * () {
   console.log('A');
 });
 ```
+
+### stop
+
+> `stop()`
+
+It's meant to be used only inside a routine. It terminates the routine.
+
+Example:
+
+```js
+const answer = 42;
+go(function * () {
+  console.log('A');
+  if (answer === 42) {
+    yield stop();
+  }
+  console.log('Never called!');
+});
+```
+
+### timeout
+
+> `timeout(interval)`
+
+It creates a channel that will close after a given interval of time.
+
+* `interval` (`Number`, required) - milliseconds
+
+Example:
+
+```js
+const ch = timeout(1000);
+
+go(function * () {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar');
+  yield put(ch, 'moo');
+})
+go(function * () {
+  console.log(yield take(ch));
+  yield sleep(2000);
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+});
+```
+
+We'll see `"foo"` and then two seconds later two `Symbol(ENDED)`. That's because the channel is closed after a second and the two takes after the `sleep` are operating with an `ENDED` channel.
