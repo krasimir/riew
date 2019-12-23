@@ -18,6 +18,7 @@
     * [Restarting a routine](https://github.com/krasimir/riew#restarting-the-routine)
     * [What you can yield](https://github.com/krasimir/riew#what-you-can-yield)
   * [put](https://github.com/krasimir/riew#put)
+  * [sput](https://github.com/krasimir/riew#sput)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -490,7 +491,7 @@ const routine = go(function * () {
 
 Meant to be used only inside a routine. It puts items into a channel. Could be blocking. It depends on the channel's [buffer](https://github.com/krasimir/riew#buffer).
 
-* `channel` (`String` or a [`Channel` object](https://github.com/krasimir/riew#chan), required) - the channel which we want to put items in.
+* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to put items in.
 * `anything` (`Any`, required) - the item that we want to put into the channel.
 
 The generator is resumed with `true` if the `put` is successful. `false` in the case of a channel with a dropping [buffer](https://github.com/krasimir/riew#buffer). Or it may return channel [statuses](https://github.com/krasimir/riew#chan) `CLOSED` or `ENDED`.
@@ -501,10 +502,32 @@ Example:
 const ch = chan();
 
 go(function * () {
+  console.log(yield take(ch))
+})
+go(function * () {
 	yield put(ch, 'foo');
 });
 ```
 
+### sput
 
+> `sput(channel, anything, callback)`
 
+Same as [put](https://github.com/krasimir/riew#put) but it can be called outside of a routine. This function is super handy to make the bridge between Riew and non-Riew code. The `s` comes from `standalone`.
+
+* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to put items in.
+* `anything` (`Any`, required) - the item that we want to put into the channel.
+* `callback` (`Function`, optional) - it will be fired when the `put` operation ends.
+
+The callback may be fired with `true` if the `put` is successful. `false` in the case of a channel with a dropping [buffer](https://github.com/krasimir/riew#buffer). Or with channel [statuses](https://github.com/krasimir/riew#chan) `CLOSED` or `ENDED`.
+
+```js
+const ch = chan();
+
+go(function * () {
+  console.log(yield take(ch));
+});
+
+sput(ch, 'foo', res => console.log(`Put successful ${ res }`));
+```
 
