@@ -34,8 +34,8 @@ export function sub(
   channels,
   to,
   transform = defaultTransform,
-  initialCallIfBufValue = true,
-  onError = null
+  onError = null,
+  initialCallIfBufValue = true
 ) {
   // in a routine
   if (typeof to === "undefined") {

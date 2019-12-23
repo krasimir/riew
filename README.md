@@ -204,7 +204,7 @@ go(function * A() {
 });
 ```
 
-The result of this snippet is only `Value: Foo`. The `sub` reads the put value but doesn't consume it from the channel. The routine `A` is still blocked because there is no `take` from the channel.
+The result of this snippet is only `"Value: Foo"`. The [sub](https://github.com/krasimir/riew#sub) reads the put value but doesn't consume it from the channel. The routine `A` is still blocked because there is no [take](https://github.com/krasimir/riew#take) from the channel.
 
 ## API
 
@@ -591,29 +591,6 @@ stake(ch, item => console.log(item));
 
 Notice that this is one-time call. It's not like a [subscription](https://github.com/krasimir/riew#sub) to the channel. In the example here we'll see only `"foo"` but not `"bar"`.
 
-### read
-
-> `read(channel)`
-
-It's meant to be used only inside a routine and it _reads_ from a channel. The _reading_ that happens is like subscribing but only once. Or in other words `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value.
-
-Example:
-
-```js
-const ch = chan();
-
-go(function * A() {
-  console.log(yield read(ch)); // foo
-  console.log('done'); // done
-});
-go(function * B() {
-  yield put(ch, 'foo');
-  yield put(ch, 'bar'); // <-- never called
-});
-```
-
-If we run this code we'll see `"foo"` followed by `"done"`. The second put in routine `B` never happens because the first put is blocked. We need a [take](https://github.com/krasimir/riew#take) to release it. The `read` in routine `A` doesn't consume the value of the channel, just reads it so can't unblock `B`.
-
 ### close
 
 > `close(channel)`
@@ -664,6 +641,29 @@ close(ch);
 ```
 
 In the console we'll see `"foo"` followed by two `Symbol(ENDED)`. The routine is paused at the first [take](https://github.com/krasimir/riew#take). `sput` resumes it with the value of `"foo"` and the routine gets paused at the second take. The `close` call closes the channel and releases all the pending takes. Each of the next takes will result with either `CLOSE` ro `ENDED` depending of the value of the channel's [buffer](https://github.com/krasimir/riew#buffer). Every [put](https://github.com/krasimir/riew#put) to a `CLOSED` or `ENDED` channel is resolved with a channel status immediately.
+
+### read
+
+> `read(channel)`
+
+It's meant to be used only inside a routine and it _reads_ from a channel. The _reading_ that happens is like subscribing but only once. Or in other words `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value.
+
+Example:
+
+```js
+const ch = chan();
+
+go(function * A() {
+  console.log(yield read(ch)); // foo
+  console.log('done'); // done
+});
+go(function * B() {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar'); // <-- never called
+});
+```
+
+If we run this code we'll see `"foo"` followed by `"done"`. The second put in routine `B` never happens because the first put is blocked. We need a [take](https://github.com/krasimir/riew#take) to release it. The `read` in routine `A` doesn't consume the value of the channel, just reads it so can't unblock `B`.
 
 ### call
 
@@ -807,3 +807,18 @@ go(function * () {
   yield put(chA, 'zoo');
 });
 ```
+
+### sub
+
+> `sub(sourceChannels, subscriber, transform, onError, initialCall)`
+
+The `sub` function is mainly about notifying a _subscriber_ when there is data in the _source_. We already talked about the [Pubsub](https://github.com/krasimir/riew#pubsub) pattern and how it's a bit against the CSP concepts. However, because this pattern is useful the `sub` function delivers it. Here are two very important things to remember:
+
+* `sub` does not consume values from the channels. Does not unblocks pending puts.
+* The subscriber is notified no matter if the `put` to the source is resolved.
+
+* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to.
+* `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel/s.
+* `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
+* `onError` (`Function`, optional) - in case of an error of the `transform` function.
+* `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.

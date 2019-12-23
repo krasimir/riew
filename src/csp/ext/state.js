@@ -74,8 +74,8 @@ export function createState(...args) {
             handleError(onError)(e);
           }
         },
-        true,
-        handleError(onError)
+        handleError(onError),
+        true
       );
       return this;
     },

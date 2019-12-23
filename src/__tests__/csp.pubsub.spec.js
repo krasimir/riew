@@ -225,7 +225,7 @@ describe("Given a CSP pubsub extension", () => {
         yield put(ch, "bar"); // <-- here we stop
         spy("never");
       });
-      sub(ch, spy, undefined, false);
+      sub(ch, spy, undefined, null, false);
 
       expect(spy).not.toBeCalled();
     });
