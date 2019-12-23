@@ -987,7 +987,7 @@ Returns an object with the following methods:
 * `mount(props)` - `props` is an object that will reach our view.
 * `unmount()` - unmounts the riew. Performs clean up operations.
 * `update(props)` - `props` is an object that will reach our view.
-* `with(...externals)` - a list of externals to be injected into the view and the routines. Check below for more details.
+* `with(...externals)` - a list of externals to be injected into the view and the routines. Check the [Externals](https://github.com/krasimir/riew#externals) section for more details.
 
 Example
 
@@ -1018,11 +1018,11 @@ The Riew routines that are passed to the `riew` function receive an object with 
 * `props` - an ID of the props channel of the riew
 * the Riew routines also receive the externals injected into the riew (if any)
 
-We have to clarify what we mean by "object that reaches the `view`". It's a JavaScript object literal that contains keys and values. This must be raw data but may be also a Riew [channel](https://github.com/krasimir/riew#chan) or a [state](https://github.com/krasimir/riew#state). In this cases the view gets whatever is the data in the channel or whatever is the value of the state. Keep reading, there're more examples in the "Channels and state" section.
+We have to clarify what we mean by "object that reaches the `view`". It's a JavaScript object literal that contains keys and values. This must be raw data but may be also a Riew [channel](https://github.com/krasimir/riew#chan) or a [state](https://github.com/krasimir/riew#state). In this cases the view gets whatever is the data in the channel or whatever is the value of the state. Keep reading, there're more examples in the [Channels and state](https://github.com/krasimir/riew#channels-and-state) section.
 
 #### Externals
 
-Very often we'll need _services_ and configuration to reach our Riew routines. The library provides a mechanism for dealing with such dependencies injection. We'll better understand it by checking the following example:
+Very often we'll need _services_ and configuration to reach our Riew routines. The library provides a mechanism for dealing with such dependencies. We'll better understand it by checking the following example:
 
 ```js
 const answerService = {
@@ -1045,6 +1045,16 @@ const r = riew(view, routine).with({
 
 r.mount();
 ```
+
+`answerService` is a silly example of a service with a single method that does some async job. We then have a channel and our `view` followed by our `routine`. Notice the usage of the `with` method when defining the riew. We are saying that we want to initiate our riew with two props - `answer` and `service`. The `view` function gets called twice with the following props:
+
+```
+{ service: {...} }
+{ service: {...}, answer: 42 }
+```
+
+The `answerService` reaches the `view` and the routine as it is because Riew have no idea what it is. However the `answer` is treated differently. The library sees that this is a channel and subscribes the `view` to items coming from that channel. The routine receives the channel as it is and we can `put` to it. At the end of the snippet the riew is mounted, the routine starts, we get the async call happening and we push the number to the channel.
+
 
 #### Channels and state
 
