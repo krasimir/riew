@@ -1018,7 +1018,7 @@ The Riew routines that are passed to the `riew` function receive an object with 
 * `props` - an ID of the props channel of the riew
 * the Riew routines also receive the externals injected into the riew (if any)
 
-We have to clarify what we mean by "object that reaches the `view`". It's a JavaScript object literal that contains keys and values. This must be raw data but may be also a Riew [channel](https://github.com/krasimir/riew#chan) or a [state](https://github.com/krasimir/riew#state). In this cases the view gets whatever is the data in the channel or whatever is the value of the state. Keep reading, there're more examples in the [Channels and state](https://github.com/krasimir/riew#channels-and-state) section.
+We have to clarify what we mean by "object that reaches the `view`". It's a JavaScript object literal that contains keys and values. This may be raw data but may be also a Riew [channel](https://github.com/krasimir/riew#chan) or a [state](https://github.com/krasimir/riew#state). In this cases the view gets whatever is the data in the channel or whatever is the value of the state. Keep reading, there're more examples in the [Channels and state](https://github.com/krasimir/riew#channels-and-state) section.
 
 #### Externals
 
@@ -1058,8 +1058,19 @@ The `answerService` reaches the `view` and the routine as it is because Riew hav
 The `with` method is the primary mechanism for subscribing our views to channels. As we said in some sections above we don't need to have direct access to a channel instance in order to use it. We need to know only its ID. So, imagine how powerful this pattern is. We may have our channels and our riews in completely different places:
 
 ```js
+// At the top level of your application.
+sput('MY_NAME_CHANNEL', 'Simon')
 
+// Somewhere in the UI layer.
+const view = function (data) {
+  console.log(data);
+}
+const r = riew(view).with({ name: 'MY_NAME_CHANNEL' });
+
+r.mount();
 ```
+
+See how we are not using [chan](https://github.com/krasimir/riew#chan) channel factory at all. The library automatically creates our channel behind the scenes when we do [sput](https://github.com/krasimir/riew#sput). Then later when the riew is mounted we get a subscription to the same channel because the ID `MY_NAME_CHANNEL` matches. The result is `{ name: "Simon" }` in the console.
 
 #### Channels and state
 
