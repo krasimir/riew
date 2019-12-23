@@ -31,6 +31,10 @@
   * [subOnce](https://github.com/krasimir/riew#subonce)
   * [unsub](https://github.com/krasimir/riew#unsub)
   * [unsubAll](https://github.com/krasimir/riew#unsubAll)
+  * [riew](https://github.com/krasimir/riew#riew)
+    * [riew routines](https://github.com/krasimir/riew#riew-routines)
+    * [externals](https://github.com/krasimir/riew#externals)
+    * [channels and state](https://github.com/krasimir/riew#channels-and-state)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
