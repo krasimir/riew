@@ -21,6 +21,7 @@
   * [sput](https://github.com/krasimir/riew#sput)
   * [take](https://github.com/krasimir/riew#take)
   * [stake](https://github.com/krasimir/riew#stake)
+  * [close](https://github.com/krasimir/riew#close)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -484,6 +485,7 @@ const routine = go(function * () {
 * [read](https://github.com/krasimir/riew#read)
 * [sleep](https://github.com/krasimir/riew#sleep)
 * [stop](https://github.com/krasimir/riew#stop)
+* [close](https://github.com/krasimir/riew#close)
 * [call](https://github.com/krasimir/riew#call)
 * [fork](https://github.com/krasimir/riew#fork)
 
@@ -560,7 +562,7 @@ go(function * () {
 
 ### stake
 
-> `sput(channel, callback)`
+> `stake(channel, callback)`
 
 Same as [take](https://github.com/krasimir/riew#take) but it can be called outside of a routine. This function is super handy to make the bridge between Riew and non-Riew code. The `s` comes from `standalone`.
 
@@ -583,4 +585,29 @@ stake(ch, item => console.log(item));
 ```
 
 Notice that this is one-time call. It's not like a [subscription](https://github.com/krasimir/riew#sub) to the channel. In the example here we'll see only `"foo"` but not `"bar"`.
+
+### close
+
+> `close(channel)`
+
+This function closes a channel. Which means that the channel's state is set to `CLOSE` or maybe `ENDED`. It depends on the [buffer](https://github.com/krasimir/riew#buffer) strategy. It can be called outside a routine or yielded.
+
+* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel that we want to close.
+
+Example:
+
+```js
+const ch = chan();
+
+go(function * () {
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+});
+
+sput(ch, 'foo');
+close(ch);
+```
+
+In the console we'll see `"foo"` followed by two `Symbol(ENDED)`. The routine is paused at the first [take](https://github.com/krasimir/riew#take). `sput` resumes it with the value of `"foo"` and the routine gets paused at the second take. The `close` call closes the channel and releases all the pending takes. Each of the next takes will result with either `CLOSE` ro `ENDED` depending of the value of the channel's [buffer](https://github.com/krasimir/riew#buffer).
 
