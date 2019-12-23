@@ -14,6 +14,9 @@
   * [chan](https://github.com/krasimir/riew#chan)
   * [buffer](https://github.com/krasimir/riew#buffer)
   * [go](https://github.com/krasimir/riew#go)
+    * [Stop a routine](https://github.com/krasimir/riew#stopping-a-routine)
+    * [Restarting a routine](https://github.com/krasimir/riew#restarting-the-routine)
+    * [What you can yield](https://github.com/krasimir/riew#what-you-can-yield)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -474,9 +477,9 @@ const routine = go(function * () {
 ```
 * [put](https://github.com/krasimir/riew#put)
 * [take](https://github.com/krasimir/riew#take)
+* [read](https://github.com/krasimir/riew#read)
 * [sleep](https://github.com/krasimir/riew#sleep)
 * [stop](https://github.com/krasimir/riew#stop)
-* [read](https://github.com/krasimir/riew#read)
 * [call](https://github.com/krasimir/riew#call)
 * [fork](https://github.com/krasimir/riew#fork)
 
