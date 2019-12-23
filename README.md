@@ -401,6 +401,20 @@ const routine = go(function * () {
 routine.stop(); // <-- this terminates the routine
 ```
 
+Another way to stop the routine is to yield `stop()`. This is not the same as writing `return` because `return` will fire the callback of the routine so it's ended. `stop()` is about terminating it. In the following example we'll see only `"done B"`.
+
+```js
+go(function * A() {
+  yield stop();
+  console.log('Never called!');
+}, () => console.log('done A'));
+
+go(function * B() {
+  return;
+  console.log('Never called!');
+}, () => console.log('done B'));
+```
+
 The routine is automatically terminated if it's part of a [riew](https://github.com/krasimir/riew#riew) and the riew is unmounted.
 
 ```js
@@ -458,9 +472,13 @@ const routine = go(function * () {
   console.log(file);
 });
 ```
-* `[put]()`
-* `[take]()`
-* `[sleep]()`
+* `[put](https://github.com/krasimir/riew#put)`
+* `[take](https://github.com/krasimir/riew#take)`
+* `[sleep](https://github.com/krasimir/riew#sleep)`
+* `[stop](https://github.com/krasimir/riew#stop)`
+* `[read](https://github.com/krasimir/riew#read)`
+* `[call](https://github.com/krasimir/riew#call)`
+* `[fork](https://github.com/krasimir/riew#fork)`
 
 
 
