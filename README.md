@@ -122,7 +122,7 @@ The result here is `{ name: 'Martin' }`.
 
 _(There is a React extension bundled within the library so if you use React you'll probably never call `mount`, `update` or `unmount` manually. This is done by using React hooks internally.)_
 
-### State
+### Application state
 
 In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) there is no concept of a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed and changed but is always available. The channels can keep values but they are consumed at some point. Or in other words taken and don't exists as such on the channels anymore.
 
@@ -976,6 +976,16 @@ sput(source, 'bar');
 ```
 
 We see only `"foo"` because after the first `take` we remove all the subscription.
+
+### state
+
+> `state(initialValue)`
+
+Creates a state object.
+
+* `initialValue` (`Any`, optional) - if not specified the initial value is `undefined`.
+
+
 
 ### riew
 
