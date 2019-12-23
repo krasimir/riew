@@ -25,6 +25,7 @@
   * [sleep](https://github.com/krasimir/riew#sleep)
   * [stop](https://github.com/krasimir/riew#stop)
   * [timeout](https://github.com/krasimir/riew#timeout)
+  * [merge](https://github.com/krasimir/riew#merge)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -753,3 +754,32 @@ go(function * () {
 ```
 
 We'll see `"foo"` and then two seconds later two `Symbol(ENDED)`. That's because the channel is closed after a second and the two takes after the `sleep` are operating with an `ENDED` channel.
+
+### merge
+
+> `merge(...sourceChannels)`
+
+Returns a channel that contains the values from all the source channels. Have in mind that internally this function registers a taker.
+
+* `sourceChannels` (`Channels`, required) - one or many channels
+
+Example:
+
+```js
+const chA = chan();
+const chB = chan();
+const ch = merge(chA, chB);
+
+go(function * () {
+  console.log(yield take(ch)); // foo
+  console.log(yield take(ch)); // bar
+  console.log(yield take(ch)); // moo
+  console.log(yield take(ch)); // zoo
+});
+go(function * () {
+  yield put(chA, 'foo');
+  yield put(chB, 'bar');
+  yield put(chB, 'moo');
+  yield put(chA, 'zoo');
+});
+```
