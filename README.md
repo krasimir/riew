@@ -1074,3 +1074,28 @@ See how we are not using [chan](https://github.com/krasimir/riew#chan) channel f
 
 #### Channels and state
 
+The channels and state are integral part of the riew concept. We use them to push data to the view, synchronize processes and communicate events. Our riews internally check what is behind the data before passing it to the view.
+
+* If we have a channel the riew creates a subscription using [sub](https://github.com/krasimir/riew#sub) and re-renders the view with the value send to the channel.
+* If we have a state the riew again create a subscription but to the default read channel of the state.
+
+```js
+const view = function (data) {
+  console.log(data);
+}
+const routine = function * ({ render }) {
+  const counter = state(0);
+  const value = chan();
+  
+  counter.mutate('INCREMENT', n => n + 1);
+  counter.select(value, n => `value is ${ n }`)
+  setInterval(() => sput('INCREMENT', 1), 1000);
+  render({ counter, value });
+}
+const r = riew(view, routine);
+
+r.mount();
+```
+
+In this example we are creating
+
