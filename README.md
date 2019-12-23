@@ -973,3 +973,78 @@ sput(source, 'bar');
 
 We see only `"foo"` because after the first `take` we remove all the subscription.
 
+### riew
+
+> `riew(view, ...routines)`
+
+Creates a _riew_ based on the given `view` function and `routines` generator functions.
+
+* `view` (`Function`, required) - a view function that will receive the data.
+* `routines` (one or many routines, optional) - routines that will start when the riew is mounted and terminate when the riew is unmounted.
+
+Returns an object with the following methods:
+
+* `mount(props)` - `props` is an object that will reach our view.
+* `unmount()` - unmounts the riew. Performs clean up operations.
+* `update(props)` - `props` is an object that will reach our view.
+* `with(...externals)` - a list of externals to be injected into the view and the routines. Check below for more details.
+
+Example
+
+```js
+function view(props) {
+  console.log(props);
+}
+function * A({ render }) {
+ 	render({ foo: 'bar' });
+}
+function * B({ render }) {
+ 	render({ moo: 'zoo' });
+}
+
+const r = riew(view, A, B);
+
+r.mount();
+```
+
+The `view` functions gets called once with `{ foo: "bar", moo: "zoo" }`.
+
+#### Riew routines
+
+The Riew routines that are passed to the `riew` function receive an object with the following properties:
+
+* `render` - must be called with an object. That object reaches the `view`. Have in mind that multiple `render` calls are batched into a single `view` call via micro task. This `render` function is the main tool for updating the view.
+* `state` - alias to [state](https://github.com/krasimir/riew#state). All the states created with this alias will be destroyed when the riew is unmounted. It's recommended if you have local for the riew state to created it via this function so it gets cleaned up when the riew is unmounted.
+* `props` - an ID of the props channel of the riew
+* the Riew routines also receive the externals injected into the riew (if any)
+
+We have to clarify what we mean by "object that reaches the `view`". It's a JavaScript object literal that contains keys and values. This must be raw data but may be also a Riew [channel](https://github.com/krasimir/riew#chan) or a [state](https://github.com/krasimir/riew#state). In this cases the view gets whatever is the data in the channel or whatever is the value of the state. Keep reading, there're more examples in the "Channels and state" section.
+
+#### Externals
+
+Very often we'll need _services_ and configuration to reach our Riew routines. The library provides a mechanism for dealing with such dependencies injection. We'll better understand it by checking the following example:
+
+```js
+const answerService = {
+  getAnswer() {
+    return new Promise(done => setTimeout(() => done(42), 1000));
+  }
+}
+const ch = chan();
+const view = function (data) {
+  console.log(data);
+}
+const routine = function * ({ answer, service }) {
+  const number = yield service.getAnswer();
+  yield put(answer, number);
+}
+const r = riew(view, routine).with({
+  answer: ch,
+  service: answerService
+});
+
+r.mount();
+```
+
+#### Channels and state
+
