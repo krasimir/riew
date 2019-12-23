@@ -1099,3 +1099,5 @@ r.mount();
 
 In this example we are creating a state that keeps a number. We also have two channels one of which is created by the state's `mutate` method - `INCREMENT`. What we `render` is the state `counter` and the channel `value` (check the [state](https://github.com/krasimir/riew#state) section to see what `select` and `mutate` mean). The result of this code is that our `view` is called every second with `{counter: <number>, value: "value is <number>"}`.
 
+The takeaway from this section is that our riews are bound to channels and we control what the view renders by putting data to those channels.
+
