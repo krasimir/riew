@@ -417,7 +417,7 @@ r.mount();
 r.unmount(); // <-- this terminates the routine
 ```
 
-#### Re-running a routine
+#### Restarting the routine
 
 Rerunning a routine means terminating the current processes and running the generator again.
 
@@ -432,7 +432,9 @@ const routine = go(function * () {
 routine.rerun();
 ```
 
-Another way to restart the routine is to return from within the generator the `go` function. Like for example:
+We'll see "Hello" twice before seeing "Bye", because the routing will be restarted before it gets resumed from the `sleep`.
+
+Another way to restart the routine is to `return` the `go` function. For example:
 
 ```js
 go(function * () {
@@ -443,7 +445,24 @@ go(function * () {
 });
 ```
 
-This routine will print `"Hello!"`, will wait a second and will print `"Bye!"`. And will do that in a endless loop because the generator is restarted.
+This routine will print `"Hello!"`, will wait a second and will print `"Bye!"`. And will do that in a endless loop because the generator is restarted every time.
+
+#### What you can yield
+
+* You can yield a promise. Riew will wait till the promise is resolved and will resume the generator.
+
+```js
+const routine = go(function * () {
+  const res = yield fetch('https://aws.random.cat/meow');
+  const { file } = yield res.json();
+  console.log(file);
+});
+```
+* `[put]()`
+* `[take]()`
+* `[sleep]()`
+
+
 
 
 
