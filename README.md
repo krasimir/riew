@@ -20,6 +20,7 @@
   * [put](https://github.com/krasimir/riew#put), [sput](https://github.com/krasimir/riew#sput)
   * [take](https://github.com/krasimir/riew#take), [stake](https://github.com/krasimir/riew#stake)
   * [close](https://github.com/krasimir/riew#close), [sclose](https://github.com/krasimir/riew#sclose)
+  * [call](https://github.com/krasimir/riew#call)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -635,3 +636,25 @@ close(ch);
 
 In the console we'll see `"foo"` followed by two `Symbol(ENDED)`. The routine is paused at the first [take](https://github.com/krasimir/riew#take). `sput` resumes it with the value of `"foo"` and the routine gets paused at the second take. The `close` call closes the channel and releases all the pending takes. Each of the next takes will result with either `CLOSE` ro `ENDED` depending of the value of the channel's [buffer](https://github.com/krasimir/riew#buffer). Every [put](https://github.com/krasimir/riew#put) to a `CLOSED` or `ENDED` channel is resolved with a channel status immediately.
 
+### call
+
+> `call(routine, ...routineArgs)`
+
+It runs another routine and it's meant to be used only inside a routine.
+
+* `routine` (`Generator`, required) - a generator function
+* `routineArgs` (`Any`, optional) - any optional arguments that come as arguments to our generator.
+
+Example:
+
+```js
+function * A(name) {
+  return `Hey, ${ name }!`;
+}
+
+go(function * B() {
+  console.log(yield call(A, 'Ana')); // Hey, Ana!
+});
+```
+
+Notice that the routine `B` is paused until routine `A` finishes.
