@@ -21,6 +21,7 @@
   * [take](https://github.com/krasimir/riew#take), [stake](https://github.com/krasimir/riew#stake)
   * [close](https://github.com/krasimir/riew#close), [sclose](https://github.com/krasimir/riew#sclose)
   * [call](https://github.com/krasimir/riew#call)
+  * [fork](https://github.com/krasimir/riew#fork)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -658,3 +659,29 @@ go(function * B() {
 ```
 
 Notice that the routine `B` is paused until routine `A` finishes.
+
+### fork
+
+> `fork(routine, ...routineArgs)`
+
+Like [call](https://github.com/krasimir/riew#call) but it's not blocking. Meant to be used only inside a routine.
+
+* `routine` (`Generator`, required) - a generator function
+* `routineArgs` (`Any`, optional) - any optional arguments that come as arguments to our generator.
+
+Example:
+
+```js
+const ch = chan();
+
+function * fillName(name) {
+  yield put(ch, name);
+}
+
+go(function * printName() {
+  yield fork(fillName, 'Ana');
+  console.log(`Hey, ${ yield take(ch) }!`); // Hey, Ana!
+});
+```
+
+Notice that the routine `printName` is not paused when we `yield fork`.
