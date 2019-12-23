@@ -19,6 +19,8 @@
     * [What you can yield](https://github.com/krasimir/riew#what-you-can-yield)
   * [put](https://github.com/krasimir/riew#put)
   * [sput](https://github.com/krasimir/riew#sput)
+  * [take](https://github.com/krasimir/riew#take)
+  * [stake](https://github.com/krasimir/riew#stake)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -502,7 +504,7 @@ Example:
 const ch = chan();
 
 go(function * () {
-  console.log(yield take(ch))
+  console.log(yield take(ch));
 })
 go(function * () {
 	yield put(ch, 'foo');
@@ -521,6 +523,8 @@ Same as [put](https://github.com/krasimir/riew#put) but it can be called outside
 
 The callback may be fired with `true` if the `put` is successful. `false` in the case of a channel with a dropping [buffer](https://github.com/krasimir/riew#buffer). Or with channel [statuses](https://github.com/krasimir/riew#chan) `CLOSED` or `ENDED`.
 
+Example:
+
 ```js
 const ch = chan();
 
@@ -530,4 +534,53 @@ go(function * () {
 
 sput(ch, 'foo', res => console.log(`Put successful ${ res }`));
 ```
+
+### take
+
+> `take(channel)`
+
+Meant to be used only inside a routine. It takes an item from a channel. Could be blocking. It depends on the channel's [buffer](https://github.com/krasimir/riew#buffer).
+
+* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to take items from.
+
+The generator is resumed with the item taken from the channel.
+
+Example:
+
+```js
+const ch = chan();
+
+go(function * () {
+  console.log(yield take(ch));
+})
+go(function * () {
+	yield put(ch, 'foo');
+});
+```
+
+### stake
+
+> `sput(channel, callback)`
+
+Same as [take](https://github.com/krasimir/riew#take) but it can be called outside of a routine. This function is super handy to make the bridge between Riew and non-Riew code. The `s` comes from `standalone`.
+
+* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to take items from.
+* `callback` (`Function`, optional) - it will be fired with the item taken from the channel.
+
+The generator is resumed with the item taken from the channel.
+
+Example:
+
+```js
+const ch = chan();
+
+go(function * () {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar');
+});
+
+stake(ch, item => console.log(item));
+```
+
+Notice that this is one-time call. It's not like a [subscription](https://github.com/krasimir/riew#sub) to the channel. In the example here we'll see only `"foo"` but not `"bar"`.
 
