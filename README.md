@@ -472,13 +472,13 @@ const routine = go(function * () {
   console.log(file);
 });
 ```
-* `[put](https://github.com/krasimir/riew#put)`
-* `[take](https://github.com/krasimir/riew#take)`
-* `[sleep](https://github.com/krasimir/riew#sleep)`
-* `[stop](https://github.com/krasimir/riew#stop)`
-* `[read](https://github.com/krasimir/riew#read)`
-* `[call](https://github.com/krasimir/riew#call)`
-* `[fork](https://github.com/krasimir/riew#fork)`
+* [put](https://github.com/krasimir/riew#put)
+* [take](https://github.com/krasimir/riew#take)
+* [sleep](https://github.com/krasimir/riew#sleep)
+* [stop](https://github.com/krasimir/riew#stop)
+* [read](https://github.com/krasimir/riew#read)
+* [call](https://github.com/krasimir/riew#call)
+* [fork](https://github.com/krasimir/riew#fork)
 
 
 
