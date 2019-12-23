@@ -90,15 +90,17 @@ export function sub(
   return to;
 }
 
-export function subOnce(id, callback) {
-  let ch = isChannel(id) ? id : chan(id);
+export function subOnce(
+  channel,
+  callback,
+  transform = defaultTransform,
+  onError = null
+) {
   let c = v => {
-    unsub(id, callback);
+    unsub(channel, c);
     callback(v);
   };
-  if (!ch.subscribers.find(s => s === c)) {
-    ch.subscribers.push({ notify: c, to: callback });
-  }
+  sub(channel, c, transform, onError, false);
 }
 export function unsub(id, callback) {
   let ch = isChannel(id) ? id : chan(id);

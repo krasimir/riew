@@ -457,8 +457,8 @@ function defaultTransform() {
 
 function sub(channels, to) {
   var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : defaultTransform;
-  var initialCallIfBufValue = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
-  var onError = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
+  var onError = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+  var initialCallIfBufValue = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
 
   // in a routine
   if (typeof to === "undefined") {
@@ -516,17 +516,15 @@ function sub(channels, to) {
   return to;
 }
 
-function subOnce(id, callback) {
-  var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
+function subOnce(channel, callback) {
+  var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : defaultTransform;
+  var onError = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+
   var c = function c(v) {
-    unsub(id, callback);
+    unsub(channel, c);
     callback(v);
   };
-  if (!ch.subscribers.find(function (s) {
-    return s === c;
-  })) {
-    ch.subscribers.push({ notify: c, to: callback });
-  }
+  sub(channel, c, transform, onError, false);
 }
 function unsub(id, callback) {
   var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
@@ -668,7 +666,7 @@ function createState() {
             }
           }
         }, _callee, this, [[0, 8]]);
-      }), true, handleError(onError));
+      }), handleError(onError), true);
       return this;
     },
     destroy: function destroy() {

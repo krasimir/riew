@@ -874,11 +874,28 @@ sub(
   }
 );
 
-go(function * () {
+go(function * A() {
   console.log(yield take(subscriber)); // <img src="https://purr.objects-us-east-1.dream.io/i/015_-_ZnUfGjo.gif" />
 });
 
 sput(source);
 ```
 
-We have two channels `source` and `subscriber`. We want each `put` to the `source` to result into a `<img>` tag with a kitty into the `subscriber`. To fully understand this example you have to check the [go](https://github.com/krasimir/riew#go) section but shortly the `transform` routine asynchronously gets a URL of the image and returns a formatted `<img>` string.
+We have two channels `source` and `subscriber`. We want each `put` to the `source` to result into a `<img>` tag with a kitty into the `subscriber`. To fully understand this example you have to check the [go](https://github.com/krasimir/riew#go) section but shortly the `transform` routine asynchronously gets a URL of the image and returns a formatted `<img>` string. That string is pushed to the `subscriber` channel which we take into the routine `A`.
+
+### subOnce
+
+> `subOnce(sourceChannel, subscriber, transform, onError)`
+
+Close to how [sub](https://github.com/krasimir/riew#sub) works except that the subscriber is called only once. There are also two other differences - the function accepts always one channel and there is no initial call if the source channel has a value.
+
+* `sourceChannel` (`Channel`, required) - the source channel which we will be subscribed to.
+* `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel.
+* `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the source and has a chance to transform it for the subscriber.
+* `onError` (`Function`, optional) - in case of an error of the `transform` function.
+
+Example:
+
+```js
+
+```
