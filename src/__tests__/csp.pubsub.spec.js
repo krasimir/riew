@@ -157,11 +157,31 @@ describe("Given a CSP pubsub extension", () => {
         expect(spy).toBeCalledWithArgs(["foo"], ["bar"], ["zar"]);
       });
     });
+    describe("and when the subscriber is a channel", () => {
+      it("should subOnce again", () => {
+        const spy = jest.fn();
+        const source = chan();
+        const subscriber = chan();
+
+        subOnce(source, subscriber);
+
+        go(function*() {
+          spy(yield take(subscriber));
+          spy(yield take(subscriber));
+        });
+
+        sput(source, "foo");
+        sput(source, "bar");
+
+        expect(spy).toBeCalledWithArgs(["foo"]);
+      });
+    });
   });
   describe("when we sub inside a routine", () => {
     it("should do a sub once", () => {
       const spy = jest.fn();
       const ch = chan();
+      subOnce;
 
       go(function*() {
         spy("start");

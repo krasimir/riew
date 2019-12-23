@@ -98,7 +98,7 @@ export function subOnce(
 ) {
   let c = v => {
     unsub(channel, c);
-    callback(v);
+    !isChannel(callback) ? callback(v) : sput(callback, v);
   };
   sub(channel, c, transform, onError, false);
 }

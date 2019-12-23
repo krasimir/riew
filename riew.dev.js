@@ -522,7 +522,7 @@ function subOnce(channel, callback) {
 
   var c = function c(v) {
     unsub(channel, c);
-    callback(v);
+    !(0, _index.isChannel)(callback) ? callback(v) : (0, _ops.sput)(callback, v);
   };
   sub(channel, c, transform, onError, false);
 }

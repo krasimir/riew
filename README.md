@@ -28,6 +28,9 @@
   * [timeout](https://github.com/krasimir/riew#timeout)
   * [merge](https://github.com/krasimir/riew#merge)
   * [sub](https://github.com/krasimir/riew#sub)
+  * [subOnce](https://github.com/krasimir/riew#subonce)
+  * [unsub](https://github.com/krasimir/riew#unsub)
+  * [unsubAll](https://github.com/krasimir/riew#unsubAll)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -897,5 +900,76 @@ Close to how [sub](https://github.com/krasimir/riew#sub) works except that the s
 Example:
 
 ```js
+const source = chan();
+const subscriber = chan();
 
+subOnce(source, subscriber);
+
+go(function * () {
+  console.log(yield take(subscriber));
+  console.log(yield take(subscriber));
+});
+
+sput(source, 'foo');
+sput(source, 'bar');
 ```
+
+We only see `"foo"` because after the first subscriber call Riew automatically unsubscribe the `subscriber` channel.
+
+### unsub
+
+> `unsub(sourceChannel, subscriber)`
+
+Unsubscribes the `subscriber` from the `sourceChannel`.
+
+* `sourceChannel` (`Channel`, required) - the source channel that we subscribed to.
+* `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel.
+
+Example:
+
+```js
+const source = chan();
+const subscriber = chan();
+
+subOnce(source, subscriber);
+
+go(function * () {
+  console.log(yield take(subscriber));
+  unsub(source, subscriber);
+  console.log(yield take(subscriber));
+});
+
+sput(source, 'foo');
+sput(source, 'bar');
+```
+
+We see only `"foo"` because after the first `take` we remove the subscription.
+
+### unsubAll
+
+> `unsubAll(sourceChannel)`
+
+Removes all the subscriptions made to the `sourceChannel`.
+
+* `sourceChannel` (`Channel`, required) - the source channel that we subscribed to.
+
+Example:
+
+```js
+const source = chan();
+const subscriber = chan();
+
+subOnce(source, subscriber);
+
+go(function * () {
+  console.log(yield take(subscriber));
+  unsubAll(source);
+  console.log(yield take(subscriber));
+});
+
+sput(source, 'foo');
+sput(source, 'bar');
+```
+
+We see only `"foo"` because after the first `take` we remove all the subscription.
+
