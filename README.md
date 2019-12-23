@@ -685,3 +685,21 @@ go(function * printName() {
 ```
 
 Notice that the routine `printName` is not paused when we `yield fork`.
+
+### sleep
+
+> `sleep(interval)`
+
+It's meant to be used only inside a routine. It pauses the routine for a given time.
+
+* `interval` (`Number`, required) - milliseconds
+
+Example:
+
+```js
+go(function * () {
+  console.log('A');
+  yield sleep(2000); // <-- two seconds delay
+  console.log('A');
+});
+```
