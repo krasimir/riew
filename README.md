@@ -20,6 +20,7 @@
   * [put](https://github.com/krasimir/riew#put), [sput](https://github.com/krasimir/riew#sput)
   * [take](https://github.com/krasimir/riew#take), [stake](https://github.com/krasimir/riew#stake)
   * [close](https://github.com/krasimir/riew#close), [sclose](https://github.com/krasimir/riew#sclose)
+  * [read](https://github.com/krasimir/riew#read)
   * [call](https://github.com/krasimir/riew#call)
   * [fork](https://github.com/krasimir/riew#fork)
   * [sleep](https://github.com/krasimir/riew#sleep)
