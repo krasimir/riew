@@ -432,4 +432,19 @@ const routine = go(function * () {
 routine.rerun();
 ```
 
+Another way to restart the routine is to return from within the generator the `go` function. Like for example:
+
+```js
+go(function * () {
+  console.log('Hello!');
+  yield sleep(1000);
+  console.log('Bye!');
+  return go;
+});
+```
+
+This routine will print `"Hello!"`, will wait a second and will print `"Bye!"`. And will do that in a endless loop because the generator is restarted.
+
+
+
 
