@@ -590,6 +590,29 @@ stake(ch, item => console.log(item));
 
 Notice that this is one-time call. It's not like a [subscription](https://github.com/krasimir/riew#sub) to the channel. In the example here we'll see only `"foo"` but not `"bar"`.
 
+### read
+
+> `read(channel)`
+
+It's meant to be used only inside a routine and it _reads_ from a channel. The _reading_ that happens is like subscribing but only once. Or in other words `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value.
+
+Example:
+
+```js
+const ch = chan();
+
+go(function * A() {
+  console.log(yield read(ch)); // foo
+  console.log('done'); // done
+});
+go(function * B() {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar'); // <-- never called
+});
+```
+
+If we run this code we'll see `"foo"` followed by `"done"`. The second put in routine `B` never happens because the first put is blocked. We need a [take](https://github.com/krasimir/riew#take) to release it. The `read` in routine `A` doesn't consume the value of the channel, just reads it so can't unblock `B`.
+
 ### close
 
 > `close(channel)`
