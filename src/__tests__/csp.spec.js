@@ -4,9 +4,7 @@ import {
   timeout,
   go,
   merge,
-  mult,
-  unmult,
-  unmultAll,
+  unsubAll,
   reset,
   put,
   sput,
@@ -14,12 +12,12 @@ import {
   stake,
   sleep,
   close,
-  compose,
   state,
   stop,
   channelReset,
   CHANNELS,
   sub,
+  unsub,
   call,
   fork
 } from "../index";
@@ -953,17 +951,14 @@ describe("Given a CSP", () => {
       });
     });
   });
-
-  // mult
-
   describe("when we pipe to other channels", () => {
     it("should distribute a single value to multiple channels", () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
-      mult(ch1, [ch2]);
-      mult(ch2, [ch3]);
+      sub(ch1, ch2);
+      sub(ch2, ch3);
 
       exercise(
         Test(
@@ -975,10 +970,9 @@ describe("Given a CSP", () => {
           function* B() {
             sput(ch1, "foo");
             sput(ch1, "bar");
-            sput(ch1, "zar");
           }
         ),
-        [">A", "<A", ">B", "take_ch3=foo", "take_ch2=bar", "take_ch3=zar", "<B"]
+        [">A", "<A", ">B", "take_ch3=foo", "take_ch2=foo", "take_ch3=bar", "<B"]
       );
     });
     it("should support nested piping", () => {
@@ -987,15 +981,14 @@ describe("Given a CSP", () => {
       const ch3 = chan("ch3");
       const ch4 = chan("ch4");
 
-      mult(ch1, [ch2, ch3]);
-      mult(ch2, [ch4]);
+      sub(ch1, ch2);
+      sub(ch1, ch3);
+      sub(ch2, ch4);
 
       exercise(
         Test(
           function* A() {
             yield put(ch1, "foo");
-            yield put(ch1, "bar");
-            yield put(ch1, "zar");
           },
           function* B(log) {
             stake(ch1, v => log(`take_ch1=${v}`));
@@ -1007,9 +1000,9 @@ describe("Given a CSP", () => {
         [
           ">A",
           ">B",
-          "take_ch1=bar",
           "<A",
-          "take_ch2=zar",
+          "take_ch1=foo",
+          "take_ch2=foo",
           "take_ch3=foo",
           "take_ch4=foo",
           "<B"
@@ -1022,42 +1015,32 @@ describe("Given a CSP", () => {
         const ch2 = chan("ch2");
         const ch3 = chan("ch3");
 
-        mult(ch1, [ch2]);
-        mult(ch1, [ch2]);
-        mult(ch1, [ch2]);
-        mult(ch1, [ch3]);
+        sub(ch1, ch2);
+        sub(ch1, ch2);
+        sub(ch1, ch2);
+        sub(ch1, ch3);
 
         exercise(
           Test(
             function* A(log) {
-              log("p1=" + (yield put(ch1, "foo")));
-              log("p2=" + (yield put(ch1, "bar")));
-              log("p3=" + (yield put(ch1, "zar")));
+              sput(ch1, "foo");
+              sput(ch1, "bar");
             },
             function* B(log) {
               stake(ch2, v => log(`ch2_1=${v}`));
-              stake(ch3, v => log(`ch3_1=${v}`));
               stake(ch2, v => log(`ch2_2=${v}`));
               stake(ch3, v => log(`ch3_2=${v}`));
-              stake(ch2, v => log(`ch2_3=${v}`));
-              stake(ch3, v => log(`ch3_3=${v}`));
-              stake(ch2, v => log(`ch2_4=${v}`));
-              stake(ch3, v => log(`ch3_4=${v}`));
+              stake(ch3, v => log(`ch3_1=${v}`));
             }
           ),
           [
             ">A",
-            "p1=true",
+            "<A",
             ">B",
             "ch2_1=foo",
-            "p2=true",
-            "ch3_1=foo",
             "ch2_2=bar",
-            "p3=true",
-            "<A",
-            "ch3_2=bar",
-            "ch2_3=zar",
-            "ch3_3=zar",
+            "ch3_2=foo",
+            "ch3_1=bar",
             "<B"
           ]
         );
@@ -1068,7 +1051,8 @@ describe("Given a CSP", () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      mult(ch1, [ch2, ch3]);
+      sub(ch1, ch2);
+      sub(ch1, ch3);
 
       exercise(
         Test(
@@ -1103,12 +1087,13 @@ describe("Given a CSP", () => {
         ]
       );
     });
-    it("should allow us to unmult", () => {
+    it("should allow us to unsubscribe", () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
-      mult(ch1, [ch2, ch3]);
+      sub(ch1, ch2);
+      sub(ch1, ch3);
 
       exercise(
         Test(
@@ -1118,7 +1103,7 @@ describe("Given a CSP", () => {
             stake(ch2, v => log(`take_ch2=${v}`));
             stake(ch3, v => {
               log(`take_ch3=${v}`);
-              unmult(ch1, ch3);
+              unsub(ch1, ch3);
             });
             stake(ch3, v => log(`take_ch3=${v.toString()}`));
           },
@@ -1145,7 +1130,8 @@ describe("Given a CSP", () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      mult(ch1, [ch2, ch3]);
+      sub(ch1, ch2);
+      sub(ch1, ch3);
 
       exercise(
         Test(
@@ -1155,7 +1141,7 @@ describe("Given a CSP", () => {
             stake(ch2, v => log(`take_ch2=${v}`));
             stake(ch3, v => {
               log(`take_ch3=${v}`);
-              unmultAll(ch1);
+              unsubAll(ch1);
             });
             stake(ch3, v => log(`take_ch3=${v.toString()}`));
           },

@@ -1,6 +1,6 @@
 import { chan, isChannel, go, buffer, isState } from "../../index";
 import { SUB } from "../constants";
-import { sput, stake } from "../ops";
+import { sput, stake, call } from "../ops";
 import { isGeneratorFunction } from "../../utils";
 
 const NOTHING = Symbol("Nothing");
@@ -102,12 +102,20 @@ export function subOnce(id, callback) {
 }
 export function unsub(id, callback) {
   let ch = isChannel(id) ? id : chan(id);
+  if (isChannel(callback)) {
+    callback = callback.__subFunc;
+  }
   ch.subscribers = ch.subscribers.filter(({ to }) => {
     if (to !== callback) {
       return true;
     }
     return false;
   });
+}
+
+export function unsubAll(id) {
+  let ch = isChannel(id) ? id : chan(id);
+  ch.subscribers = [];
 }
 
 export function read(...args) {

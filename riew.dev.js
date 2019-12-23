@@ -14,10 +14,6 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-var noop = function noop(v, c) {
-  return c(v);
-};
-
 function DivorcedBuffer() {
   var api = (0, _Interface2.default)();
 
@@ -326,7 +322,7 @@ function normalizeChannelArguments(args) {
   return [id, buff];
 }
 
-},{"../index":17,"../utils":20,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
+},{"../index":16,"../utils":19,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -396,68 +392,7 @@ function merge() {
   return newCh;
 }
 
-},{"../../index":17}],9:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.mult = mult;
-exports.unmult = unmult;
-exports.unmultAll = unmultAll;
-
-var _index = require('../index');
-
-function mult(ch, to) {
-  if (!ch._taps) ch._taps = [];
-  if (!ch._isMultTakerFired) {
-    ch._isMultTakerFired = true;
-    ch._taps = ch._taps.concat(to);
-    (function taker() {
-      (0, _index.stake)(ch, function (v) {
-        if (v !== _index.CLOSED && v !== _index.ENDED) {
-          var numOfSuccessfulPuts = 0;
-          var putFinished = function putFinished(chWithSuccessfulPut) {
-            numOfSuccessfulPuts += 1;
-            if (numOfSuccessfulPuts >= ch._taps.length) {
-              taker();
-            }
-          };
-          ch._taps.forEach(function (tapCh, idx) {
-            if (ch.state() === _index.OPEN) {
-              (0, _index.sput)(tapCh, v, function () {
-                return putFinished(tapCh);
-              });
-            } else {
-              numOfSuccessfulPuts += 1;
-              ch._taps.splice(idx, 1);
-              putFinished();
-            }
-          });
-        }
-      });
-    })();
-  } else {
-    to.forEach(function (toCh) {
-      if (!ch._taps.find(function (c) {
-        return toCh.id === c.id;
-      })) {
-        ch._taps.push(toCh);
-      }
-    });
-  }
-}
-
-function unmult(source, ch) {
-  source._taps = (source._taps || []).filter(function (c) {
-    return c.id !== ch.id;
-  });
-}
-function unmultAll(ch) {
-  ch._taps = [];
-}
-
-},{"../index":13}],10:[function(require,module,exports){
+},{"../../index":16}],9:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -466,6 +401,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.sub = sub;
 exports.subOnce = subOnce;
 exports.unsub = unsub;
+exports.unsubAll = unsubAll;
 exports.read = read;
 
 var _index = require("../../index");
@@ -594,6 +530,9 @@ function subOnce(id, callback) {
 }
 function unsub(id, callback) {
   var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
+  if ((0, _index.isChannel)(callback)) {
+    callback = callback.__subFunc;
+  }
   ch.subscribers = ch.subscribers.filter(function (_ref2) {
     var to = _ref2.to;
 
@@ -604,11 +543,16 @@ function unsub(id, callback) {
   });
 }
 
+function unsubAll(id) {
+  var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
+  ch.subscribers = [];
+}
+
 function read() {
   return sub.apply(undefined, arguments);
 }
 
-},{"../../index":17,"../../utils":20,"../constants":7,"../ops":14}],11:[function(require,module,exports){
+},{"../../index":16,"../../utils":19,"../constants":7,"../ops":13}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -768,7 +712,7 @@ function isStateWriteChannel(s) {
   return s && s["@statewritechannel"] === true;
 }
 
-},{"../../index":17,"../../utils":20}],12:[function(require,module,exports){
+},{"../../index":16,"../../utils":19}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -786,23 +730,23 @@ function timeout(interval) {
   return ch;
 }
 
-},{"../../index":17}],13:[function(require,module,exports){
-'use strict';
+},{"../../index":16}],12:[function(require,module,exports){
+"use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _buffer = require('./buffer');
+var _buffer = require("./buffer");
 
-Object.defineProperty(exports, 'buffer', {
+Object.defineProperty(exports, "buffer", {
   enumerable: true,
   get: function get() {
     return _interopRequireDefault(_buffer).default;
   }
 });
 
-var _channel = require('./channel');
+var _channel = require("./channel");
 
 Object.keys(_channel).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -814,7 +758,7 @@ Object.keys(_channel).forEach(function (key) {
   });
 });
 
-var _ops = require('./ops');
+var _ops = require("./ops");
 
 Object.keys(_ops).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -826,7 +770,7 @@ Object.keys(_ops).forEach(function (key) {
   });
 });
 
-var _merge = require('./ext/merge');
+var _merge = require("./ext/merge");
 
 Object.keys(_merge).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -838,19 +782,7 @@ Object.keys(_merge).forEach(function (key) {
   });
 });
 
-var _mult = require('./ext/mult');
-
-Object.keys(_mult).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _mult[key];
-    }
-  });
-});
-
-var _timeout = require('./ext/timeout');
+var _timeout = require("./ext/timeout");
 
 Object.keys(_timeout).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -862,7 +794,7 @@ Object.keys(_timeout).forEach(function (key) {
   });
 });
 
-var _state = require('./ext/state');
+var _state = require("./ext/state");
 
 Object.keys(_state).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -874,7 +806,7 @@ Object.keys(_state).forEach(function (key) {
   });
 });
 
-var _pubsub = require('./ext/pubsub');
+var _pubsub = require("./ext/pubsub");
 
 Object.keys(_pubsub).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -886,7 +818,7 @@ Object.keys(_pubsub).forEach(function (key) {
   });
 });
 
-var _constants = require('./constants');
+var _constants = require("./constants");
 
 Object.keys(_constants).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -902,7 +834,7 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-},{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/mult":9,"./ext/pubsub":10,"./ext/state":11,"./ext/timeout":12,"./ops":14}],14:[function(require,module,exports){
+},{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/pubsub":9,"./ext/state":10,"./ext/timeout":11,"./ops":13}],13:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1167,7 +1099,7 @@ function stop() {
   return { op: _constants.STOP };
 }
 
-},{"../index":17,"../utils":20,"./constants":7}],15:[function(require,module,exports){
+},{"../index":16,"../utils":19,"./constants":7}],14:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1214,7 +1146,7 @@ var grid = Grid();
 
 exports.default = grid;
 
-},{}],16:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1318,7 +1250,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./csp":13,"./grid":15,"./react":18,"./riew":19}],17:[function(require,module,exports){
+},{"./csp":12,"./grid":14,"./react":17,"./riew":18}],16:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1410,7 +1342,7 @@ var reset = exports.reset = function reset() {
 var harvester = exports.harvester = _harvester2.default;
 var grid = exports.grid = _grid2.default;
 
-},{"./csp":13,"./grid":15,"./harvester":16}],18:[function(require,module,exports){
+},{"./csp":12,"./grid":14,"./harvester":15}],17:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1542,7 +1474,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":17,"../utils":20}],19:[function(require,module,exports){
+},{"../index":16,"../utils":19}],18:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1734,7 +1666,7 @@ function createRiew(viewFunc) {
   return riew;
 }
 
-},{"./index":17,"./utils":20}],20:[function(require,module,exports){
+},{"./index":16,"./utils":19}],19:[function(require,module,exports){
 "use strict";
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1808,5 +1740,5 @@ var isGeneratorFunction = exports.isGeneratorFunction = function isGeneratorFunc
   return isGenerator(constructor.prototype);
 };
 
-},{}]},{},[17])(17)
+},{}]},{},[16])(16)
 });
