@@ -1,13 +1,14 @@
+/* eslint-disable no-param-reassign */
 import { chan, isChannel, go, buffer, isState } from '../../index';
 import { SUB } from '../constants';
-import { sput, stake, call } from '../ops';
+import { sput } from '../ops';
 import { isGeneratorFunction } from '../../utils';
 
 const NOTHING = Symbol('Nothing');
 
 function normalizeChannels(channels) {
   if (!Array.isArray(channels)) channels = [channels];
-  return channels.map((ch, idx) => {
+  return channels.map(ch => {
     if (isState(ch)) ch = ch.READ;
     return isChannel(ch) ? ch : chan(ch);
   });
