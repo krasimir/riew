@@ -97,7 +97,7 @@ describe('Given the React riew function', () => {
         }));
     });
     describe('and we use "props"', () => {
-      fit(`should
+      it(`should
         * have access to the props
         * have to be able to subscribe to props change`, () =>
         act(async () => {

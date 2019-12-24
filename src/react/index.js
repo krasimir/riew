@@ -15,7 +15,7 @@ export default function riew(View, ...routines) {
         if (instance) {
           instance.update(outerProps);
         }
-      }, [instance, outerProps]);
+      }, [outerProps]);
 
       // mounting
       useEffect(() => {
