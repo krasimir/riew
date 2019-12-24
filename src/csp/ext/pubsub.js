@@ -92,19 +92,6 @@ export function sub(
   });
   return to;
 }
-
-export function subOnce(
-  channel,
-  callback,
-  transform = defaultTransform,
-  onError = null
-) {
-  const c = v => {
-    unsub(channel, c);
-    !isChannel(callback) ? callback(v) : sput(callback, v);
-  };
-  sub(channel, c, transform, onError, false);
-}
 export function unsub(id, callback) {
   const ch = isChannel(id) ? id : chan(id);
   if (isChannel(callback)) {
@@ -117,12 +104,26 @@ export function unsub(id, callback) {
     return false;
   });
 }
-
+export function subOnce(
+  channel,
+  callback,
+  transform = defaultTransform,
+  onError = null
+) {
+  const c = v => {
+    unsub(channel, c);
+    if (!isChannel(callback)) {
+      callback(v);
+    } else {
+      sput(callback, v);
+    }
+  };
+  sub(channel, c, transform, onError, false);
+}
 export function unsubAll(id) {
   const ch = isChannel(id) ? id : chan(id);
   ch.subscribers = [];
 }
-
 export function read(...args) {
   return sub(...args);
 }

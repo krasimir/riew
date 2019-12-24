@@ -61,15 +61,15 @@ function callSubscribers(ch, item, callback) {
 // **************************************************** TAKE
 
 export function take(id, callback) {
-  const doTake = (ch, callback) => {
-    const state = ch.state();
+  const doTake = (channel, takeDone) => {
+    const state = channel.state();
     if (state === ENDED) {
-      callback(ENDED);
-    } else if (state === CLOSED && ch.buff.isEmpty()) {
-      ch.state(ENDED);
-      callback(ENDED);
+      takeDone(ENDED);
+    } else if (state === CLOSED && channel.buff.isEmpty()) {
+      channel.state(ENDED);
+      takeDone(ENDED);
     } else {
-      ch.buff.take(r => callback(r));
+      channel.buff.take(r => takeDone(r));
     }
   };
 
@@ -95,8 +95,8 @@ export function close(id) {
   const ch = normalizeChannel(id);
   const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
   ch.state(newState);
-  ch.buff.puts.forEach(put => put(newState));
-  ch.buff.takes.forEach(take => take(newState));
+  ch.buff.puts.forEach(p => p(newState));
+  ch.buff.takes.forEach(t => t(newState));
   grid.remove(ch);
   ch.subscribers = [];
   CHANNELS.del(ch.id);

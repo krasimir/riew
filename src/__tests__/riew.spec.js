@@ -15,12 +15,12 @@ import {
   chan,
 } from '../index';
 
-function expectRiew(callback, delay = 0) {
+function expectRiew(callback, delayInterval = 0) {
   return new Promise(resolve => {
     setTimeout(() => {
       callback();
       resolve();
-    }, delay);
+    }, delayInterval);
   });
 }
 

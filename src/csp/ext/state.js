@@ -29,7 +29,7 @@ export function createState(...args) {
   function runSelector({ ch, selector, onError }, v) {
     try {
       if (isGeneratorFunction(selector)) {
-        go(selector, v => sput(ch, v), value);
+        go(selector, routineRes => sput(ch, routineRes), value);
         return;
       }
       sput(ch, selector(v));
@@ -43,8 +43,8 @@ export function createState(...args) {
     '@state': true,
     READ: `${id}_read`,
     WRITE: `${id}_write`,
-    select(id, selector = v => v, onError = null) {
-      const ch = isChannel(id) ? id : chan(id, buffer.divorced());
+    select(c, selector = v => v, onError = null) {
+      const ch = isChannel(c) ? c : chan(c, buffer.divorced());
       ch['@statereadchannel'] = true;
       const reader = { ch, selector, onError };
       readChannels.push(reader);
@@ -53,8 +53,8 @@ export function createState(...args) {
       }
       return this;
     },
-    mutate(id, reducer = (_, v) => v, onError = null) {
-      const ch = isChannel(id) ? id : chan(id, buffer.divorced());
+    mutate(c, reducer = (_, v) => v, onError = null) {
+      const ch = isChannel(c) ? c : chan(c, buffer.divorced());
       ch['@statewritechannel'] = true;
       const writer = { ch };
       writeChannels.push(writer);
