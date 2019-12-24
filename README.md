@@ -1141,7 +1141,7 @@ r.mount();
 
 The `answerService` reaches the `view` and the routine as it is because Riew have no idea what it is. However the `answer` is treated differently. The library sees that this is a channel and subscribes the `view` to items coming from that channel. The routine receives the channel as it is and we can `put` to it. At the end of the snippet the riew is mounted, the routine starts, we get the async call happening and we push the number to the channel.
 
-The `with` method is the primary mechanism for subscribing our views to channels. As we said in some sections above we don't need to have direct access to a channel instance in order to use it. We need to know only its ID. So, imagine how powerful this pattern is. We may have our channels and our riews in completely different places:
+The `with` method is one of the ways to subscribe our views to channels. As we said in some sections above we don't need to have direct access to a channel instance in order to use it. We need to know only its ID. So, imagine how powerful this pattern is. We may have our channels and our riews in completely different places:
 
 ```js
 // At the top level of your application.
@@ -1157,6 +1157,20 @@ r.mount();
 ```
 
 See how we are not using [chan](https://github.com/krasimir/riew#chan) channel factory at all. The library automatically creates our channel behind the scenes when we do [sput](https://github.com/krasimir/riew#sput). Then later when the riew is mounted we get a subscription to the same channel because the ID `MY_NAME_CHANNEL` matches. The result is `{ name: "Simon" }` in the console.
+
+The `with` helper could be also used to inject stuff that are pushed to the [global registry](https://github.com/krasimir/riew#register).
+
+```js
+register('config', { theme: 'dark' });
+
+const r = riew(function (props) {
+  console.log(`Selected theme: ${ props.config.theme }`);
+}).with('config');
+
+r.mount();
+```
+
+Instead of an object we just have to pass the key of the dependency.
 
 #### Channels and state
 
@@ -1214,3 +1228,24 @@ ReactDOM.render(<Component />, document.querySelector('#output'));
 ```
 
 The `Component` constant here is indeed a React component but it is also a [riew](https://github.com/krasimir/riew#riew). So it has a [with](https://github.com/krasimir/riew#externals) method. The `Greeting` component is the same as the `view` function in all the other examples above.
+
+### register
+
+> `register(key, dependency)`
+
+Together with [use](https://github.com/krasimir/riew#use) this function implements a mechanism for dealing with dependencies. Register defines an entry in the a _globally_ available registry and [use](https://github.com/krasimir/riew#use) is accessing that entry. Once we define something with `register` we may inject it into our riews with the [with](https://github.com/krasimir/riew#externals) method.
+
+* `key` (`String`, required) - a string the uniquely identifies the dependency
+* `dependency` (`Any`, required) - this could be a primitive like string or a number but could be also instance of a service or a state object.
+
+Example:
+
+```js
+register('config', { theme: 'dark' });
+
+const r = riew(function (props) {
+  console.log(`Selected theme: ${ props.config.theme }`);
+}).with('config');
+
+r.mount();
+```
