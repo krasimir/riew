@@ -1,8 +1,14 @@
-/*
-
-app-template.css overrides
-
-remove this comment if used
-remove this file if not
-
-*/
+body {
+  padding: 1em;
+}
+input, button {
+  display: block;
+  margin: 0.4em 0;
+  font-size: 1em;
+  padding: 0.4em;
+}
+.error {
+  color: red;
+  font-size: 0.8em;
+  margin-bottom: 1em;
+}
