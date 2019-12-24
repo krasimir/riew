@@ -39,6 +39,10 @@
     * [externals](https://github.com/krasimir/riew#externals)
     * [channels and state](https://github.com/krasimir/riew#channels-and-state)
   * [react](https://github.com/krasimir/riew#react)
+  * [register](https://github.com/krasimir/riew#register)
+  * [use](https://github.com/krasimir/riew#use)
+  * [reset](https://github.com/krasimir/riew#reset)
+  * [constants](https://github.com/krasimir/riew#constants)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -1244,8 +1248,45 @@ Example:
 register('config', { theme: 'dark' });
 
 const r = riew(function (props) {
-  console.log(`Selected theme: ${ props.config.theme }`);
+  console.log(`Selected theme: ${ props.config.theme }`); // Selected theme: dark
 }).with('config');
 
 r.mount();
 ```
+
+### use
+
+> `use(key)`
+
+It gives you access to the dependency registered using the [register](https://github.com/krasimir/riew#register) function. This function is useful if we want to use something in our routines.
+
+* `key` (`String`, required) - the key identifier of the dependency.
+
+```js
+register('config', { theme: 'dark' });
+
+const view = function (props) {
+  console.log(`Selected theme: ${ props.theme }`); // Selected theme: dark
+};
+const routine = function * ({ render }) {
+  const config = use('config');
+  render({ theme: config.theme });
+}
+const r = riew(view, routine).with('config');
+
+r.mount();
+```
+
+### reset
+
+> `reset()`
+
+It resets all the internal structures of the library. This function is useful while writing tests for our riews or routines. Riew for example keeps track of all the channels that we are creating. And in the unit tests we don't want to have clash of channel IDs. So we call the `reset` function before each test.
+
+### constants
+
+We have three constants which we can use together with the [state](https://github.com/krasimir/riew#chan) method of the channel to identify what's the current state of it.
+
+* `OPEN` - channel is open
+* `CLOSED` - channel is closed but we it still has items in it.
+* `ENDED` - channel is closed and empty
