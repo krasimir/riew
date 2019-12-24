@@ -101,7 +101,7 @@ describe('Given csp features', () => {
       const s = state('foo');
       const error = new Error('ops');
 
-      s.mutate('W', function(current, newOne) {
+      s.mutate('W', function() {
         throw error;
       });
 
@@ -113,7 +113,7 @@ describe('Given csp features', () => {
 
       s.mutate(
         'W',
-        function(current, newOne) {
+        function() {
           throw error;
         },
         e => {
@@ -129,7 +129,7 @@ describe('Given csp features', () => {
         const s = state('foo');
         const error = new Error('ops');
 
-        s.mutate('W', function*(current, newOne) {
+        s.mutate('W', function*() {
           throw error;
         });
 
@@ -141,7 +141,7 @@ describe('Given csp features', () => {
 
         s.mutate(
           'W',
-          function*(current, newOne) {
+          function*() {
             throw error;
           },
           e => {

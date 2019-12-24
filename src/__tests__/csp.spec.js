@@ -877,7 +877,7 @@ describe('Given a CSP', () => {
         sub(
           [users, currentUser],
           chan('app'),
-          (users, currentUserIndex) => users[currentUserIndex].name
+          (us, currentUserIndex) => us[currentUserIndex].name
         );
 
         sput(currentUser, 2);
@@ -898,7 +898,7 @@ describe('Given a CSP', () => {
         sub(
           [users, currentUser],
           chan('app'),
-          (users, currentUserIndex) => users[currentUserIndex].name
+          (us, currentUserIndex) => us[currentUserIndex].name
         );
 
         go(function*() {
@@ -932,7 +932,7 @@ describe('Given a CSP', () => {
         sub(
           [users, currentUser],
           'app',
-          (users, currentUserIndex) => users[currentUserIndex].name
+          (us, currentUserIndex) => us[currentUserIndex].name
         );
 
         go(function*() {
@@ -1026,7 +1026,7 @@ describe('Given a CSP', () => {
 
         exercise(
           Test(
-            function* A(log) {
+            function* A() {
               sput(ch1, 'foo');
               sput(ch1, 'bar');
             },

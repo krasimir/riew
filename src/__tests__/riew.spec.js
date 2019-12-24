@@ -1,4 +1,4 @@
-/* eslint-disable quotes, max-len */
+/* eslint-disable quotes, max-len, no-shadow, no-empty-function */
 import { delay } from '../__helpers__';
 import {
   register,

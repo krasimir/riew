@@ -181,7 +181,6 @@ describe('Given a CSP pubsub extension', () => {
     it('should do a sub once', () => {
       const spy = jest.fn();
       const ch = chan();
-      subOnce;
 
       go(function*() {
         spy('start');

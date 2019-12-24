@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types, camelcase */
+/* eslint-disable react/prop-types, camelcase, no-shadow */
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';

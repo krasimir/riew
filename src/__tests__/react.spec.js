@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types, react/jsx-key */
+/* eslint-disable react/prop-types, react/jsx-key, no-shadow */
 import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
@@ -164,7 +164,9 @@ describe('Given the React riew function', () => {
                 .map(({ value }) => value)
                 .join(', ')}
             </div>
-            <button onClick={() => change(67)}>click me</button>
+            <button onClick={() => change(67)} type="button">
+              click me
+            </button>
           </div>
         );
         const R = riew(View, routine);
@@ -173,7 +175,7 @@ describe('Given the React riew function', () => {
         await delay(5);
         exerciseHTML(
           container,
-          '<div><div>value: 2, 67</div><button>click me</button></div>'
+          '<div><div>value: 2, 67</div><button type="button">click me</button></div>'
         );
 
         fireEvent.click(getByText(/click me/));
@@ -181,7 +183,7 @@ describe('Given the React riew function', () => {
         await delay(10);
         exerciseHTML(
           container,
-          '<div><div>value: 2</div><button>click me</button></div>'
+          '<div><div>value: 2</div><button type="button">click me</button></div>'
         );
       }));
   });
