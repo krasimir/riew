@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define */
 import {
   OPEN,
   CLOSED,
@@ -10,13 +11,13 @@ import {
   STOP,
   SUB,
   CALL_ROUTINE,
-  FORK_ROUTINE
-} from "./constants";
-import { grid, chan, isState, isStateWriteChannel, subOnce } from "../index";
-import { isPromise } from "../utils";
+  FORK_ROUTINE,
+} from './constants';
+import { grid, chan, isState, isStateWriteChannel, subOnce } from '../index';
+import { isPromise } from '../utils';
 
-let noop = () => {};
-let normalizeChannel = (id, stateOp = "READ") => {
+const noop = () => {};
+const normalizeChannel = (id, stateOp = 'READ') => {
   if (isChannel(id)) return id;
   if (isState(id)) return chan(id[stateOp]);
   return chan(id);
@@ -25,17 +26,19 @@ let normalizeChannel = (id, stateOp = "READ") => {
 // **************************************************** PUT
 
 export function put(id, item, callback) {
-  const doPut = (ch, item, callback) => {
-    let state = ch.state();
+  const doPut = (channel, itemToPut, putDone) => {
+    const state = channel.state();
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
-      callSubscribers(ch, item, () => ch.buff.put(item, callback));
+      callSubscribers(channel, item, () =>
+        channel.buff.put(itemToPut, putDone)
+      );
     }
   };
 
-  let ch = normalizeChannel(id, "WRITE");
-  if (typeof callback === "function") {
+  const ch = normalizeChannel(id, 'WRITE');
+  if (typeof callback === 'function') {
     doPut(ch, item, callback);
   } else {
     return { ch, op: PUT, item };
@@ -59,24 +62,22 @@ function callSubscribers(ch, item, callback) {
 
 export function take(id, callback) {
   const doTake = (ch, callback) => {
-    let state = ch.state();
+    const state = ch.state();
     if (state === ENDED) {
       callback(ENDED);
+    } else if (state === CLOSED && ch.buff.isEmpty()) {
+      ch.state(ENDED);
+      callback(ENDED);
     } else {
-      if (state === CLOSED && ch.buff.isEmpty()) {
-        ch.state(ENDED);
-        callback(ENDED);
-      } else {
-        ch.buff.take(r => callback(r));
-      }
+      ch.buff.take(r => callback(r));
     }
   };
 
-  let ch = normalizeChannel(id);
-  if (typeof callback === "function") {
+  const ch = normalizeChannel(id);
+  if (typeof callback === 'function') {
     if (isStateWriteChannel(ch)) {
       console.warn(
-        "You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`."
+        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.'
       );
     }
     doTake(ch, callback);
@@ -91,7 +92,7 @@ export function stake(id, callback) {
 // **************************************************** close, reset, call, fork
 
 export function close(id) {
-  let ch = normalizeChannel(id);
+  const ch = normalizeChannel(id);
   const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
   ch.state(newState);
   ch.buff.puts.forEach(put => put(newState));
@@ -105,7 +106,7 @@ export function sclose(id) {
   return close(id);
 }
 export function channelReset(id) {
-  let ch = normalizeChannel(id);
+  const ch = normalizeChannel(id);
   ch.state(OPEN);
   ch.buff.reset();
   return { ch, op: NOOP };
@@ -122,13 +123,13 @@ export function fork(routine, ...args) {
 
 // **************************************************** other
 
-export const isChannel = ch => ch && ch["@channel"] === true;
+export const isChannel = ch => ch && ch['@channel'] === true;
 
 // **************************************************** routine
 
 export function go(func, done = () => {}, ...args) {
-  const RUNNING = "RUNNING";
-  const STOPPED = "STOPPED";
+  const RUNNING = 'RUNNING';
+  const STOPPED = 'STOPPED';
   let state = RUNNING;
 
   const api = {
@@ -140,7 +141,7 @@ export function go(func, done = () => {}, ...args) {
     rerun() {
       gen = func(...args);
       next();
-    }
+    },
   };
   const addSubRoutine = r => api.children.push(r);
 
@@ -152,7 +153,7 @@ export function go(func, done = () => {}, ...args) {
     const i = gen.next(value);
     if (i.done === true) {
       if (done) done(i.value);
-      if (i.value && i.value["@go"] === true) {
+      if (i.value && i.value['@go'] === true) {
         gen = func(...args);
         next();
       }
@@ -197,10 +198,10 @@ export function go(func, done = () => {}, ...args) {
 
   return api;
 }
-go["@go"] = true;
+go['@go'] = true;
 
 export function sleep(ms, callback) {
-  if (typeof callback === "function") {
+  if (typeof callback === 'function') {
     setTimeout(callback, ms);
   } else {
     return { op: SLEEP, ms };

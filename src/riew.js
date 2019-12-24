@@ -1,12 +1,7 @@
-import { use } from "./index";
+/* eslint-disable no-param-reassign */
+
 import {
-  isObjectEmpty,
-  getFuncName,
-  getId,
-  requireObject,
-  accumulate
-} from "./utils";
-import {
+  use,
   chan as Channel,
   state as State,
   isState,
@@ -16,8 +11,15 @@ import {
   sput,
   stake,
   CHANNELS,
-  isChannel
-} from "./index";
+  isChannel,
+} from './index';
+import {
+  isObjectEmpty,
+  getFuncName,
+  getId,
+  requireObject,
+  accumulate,
+} from './utils';
 
 const Renderer = function(viewFunc) {
   let data = {};
@@ -42,19 +44,19 @@ const Renderer = function(viewFunc) {
     },
     destroy() {
       active = false;
-    }
+    },
   };
 };
 
 export default function createRiew(viewFunc, ...routines) {
   const name = getFuncName(viewFunc);
   const riew = { id: getId(name), name };
-  let renderer = Renderer(viewFunc);
+  const renderer = Renderer(viewFunc);
   let states = [];
   let cleanups = [];
   let runningRoutines = [];
   let externals = {};
-  let subscriptions = {};
+  const subscriptions = {};
   const state = function(...args) {
     const s = State(...args);
     states.push(s);
@@ -93,7 +95,7 @@ export default function createRiew(viewFunc, ...routines) {
       go(
         r,
         result => {
-          if (typeof result === "function") {
+          if (typeof result === 'function') {
             cleanups.push(result);
           }
         },
@@ -104,7 +106,7 @@ export default function createRiew(viewFunc, ...routines) {
           },
           state,
           props: PROPS_CHANNEL,
-          ...externals
+          ...externals,
         }
       )
     );
@@ -144,15 +146,15 @@ export default function createRiew(viewFunc, ...routines) {
   };
 
   riew.__setExternals = maps => {
-    maps = maps.reduce((map, item) => {
-      if (typeof item === "string") {
-        map = { ...map, [item]: use(item) };
+    const reducedMaps = maps.reduce((res, item) => {
+      if (typeof item === 'string') {
+        res = { ...res, [item]: use(item) };
       } else {
-        map = { ...map, ...item };
+        res = { ...res, ...item };
       }
-      return map;
+      return res;
     }, {});
-    externals = { ...externals, ...maps };
+    externals = { ...externals, ...reducedMaps };
   };
 
   return riew;

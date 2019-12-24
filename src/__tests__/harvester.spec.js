@@ -10,7 +10,9 @@ describe('Given the harvester', () => {
       const fff = register('foo', myFunc);
 
       expect(use('foo')()).toBe(42);
-      expect(() => register('foo', 'bar')).toThrowError('A product with type "foo" already exists.');
+      expect(() => register('foo', 'bar')).toThrowError(
+        'A product with type "foo" already exists.'
+      );
       expect(fff()).toBe(42);
     });
   });

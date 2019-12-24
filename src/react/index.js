@@ -1,4 +1,4 @@
-/* eslint-disable no-new-func */
+/* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
 import { getFuncName } from '../utils';
 import { riew as createRiew } from '../index';
@@ -7,15 +7,15 @@ export default function riew(View, ...routines) {
   const createBridge = function(externals = []) {
     const comp = function(outerProps) {
       let [instance, setInstance] = useState(null);
-      let [content, setContent] = useState(null);
-      let mounted = useRef(true);
+      const [content, setContent] = useState(null);
+      const mounted = useRef(true);
 
       // updating props
       useEffect(() => {
         if (instance) {
           instance.update(outerProps);
         }
-      }, [outerProps]);
+      }, [instance, outerProps]);
 
       // mounting
       useEffect(() => {
@@ -46,9 +46,7 @@ export default function riew(View, ...routines) {
     };
 
     comp.displayName = `Riew_${getFuncName(View)}`;
-    comp.with = (...maps) => {
-      return createBridge(maps);
-    };
+    comp.with = (...maps) => createBridge(maps);
 
     return comp;
   };

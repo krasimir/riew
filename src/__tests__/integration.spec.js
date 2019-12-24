@@ -12,8 +12,8 @@ describe('Given the Riew library', () => {
     reset();
   });
   describe('when we use an async effect', () => {
-    it('should allow us to render multiple times', () => {
-      return act(async () => {
+    it('should allow us to render multiple times', () =>
+      act(async () => {
         const A = riew(DummyComponent, function*({ render }) {
           render({ text: 'Hello' });
           yield sleep(20);
@@ -27,10 +27,9 @@ describe('Given the Riew library', () => {
         await delay(21);
         expect(queryByText('Hello')).toBe(null);
         expect(getByText('world')).toBeDefined();
-      });
-    });
-    it('should not try to re-render if the bridge is unmounted', () => {
-      return act(async () => {
+      }));
+    it('should not try to re-render if the bridge is unmounted', () =>
+      act(async () => {
         const spy = jest.spyOn(console, 'error');
         const A = riew(DummyComponent, function*({ render }) {
           yield sleep(10);
@@ -43,12 +42,11 @@ describe('Given the Riew library', () => {
         await delay(21);
         expect(spy).not.toBeCalled();
         spy.mockRestore();
-      });
-    });
+      }));
   });
   describe('when reusing the same riew', () => {
-    it('should create a separate instance', () => {
-      return act(async () => {
+    it('should create a separate instance', () =>
+      act(async () => {
         const R = riew(props => <p>{props.answer}</p>);
 
         const { container } = render(<R answer="foo" />);
@@ -64,12 +62,11 @@ describe('Given the Riew library', () => {
         await delay(3);
         exerciseHTML(container, `<p>foo</p>`);
         exerciseHTML(container2, `<p>zoo</p>`);
-      });
-    });
+      }));
   });
   describe('when using riew with a hook', () => {
-    it('should keep the hook working', () => {
-      return act(async () => {
+    it('should keep the hook working', () =>
+      act(async () => {
         const Input = function() {
           const [text, setText] = useState('');
 
@@ -94,12 +91,11 @@ describe('Given the Riew library', () => {
         fireEvent.change(getByTestId('input'), { target: { value: 'foobar' } });
         await delay(2);
         expect(getByText('foobar')).toBeDefined();
-      });
-    });
+      }));
   });
   describe('when we use useState hook together with props', () => {
-    it('should get props callback fired every time when we update the state', () => {
-      return act(async () => {
+    it('should get props callback fired every time when we update the state', () =>
+      act(async () => {
         const FetchTime = riew(
           function({ location }) {
             return location ? <p>{location}</p> : null;
@@ -140,43 +136,40 @@ describe('Given the Riew library', () => {
         fireEvent.change(getByTestId('select'), { target: { value: 'Sofia' } });
         await delay(2);
         exerciseHTML(getByTestId('text'), '<p>Sofia</p>');
-      });
-    });
+      }));
   });
   describe('when we mutate the state and have a selector subscribed to it', () => {
-    it('should re-render the view with the new data', () => {
-      return act(async () => {
+    it('should re-render the view with the new data', () =>
+      act(async () => {
         const repos = state([
           { id: 'a', selected: false },
-          { id: 'b', selected: true }
+          { id: 'b', selected: true },
         ]);
-        repos.mutate('update', (list, id) => {
-          return list.map(repo => {
+        repos.mutate('update', (list, id) =>
+          list.map(repo => {
             if (repo.id === id) {
               return {
                 ...repo,
-                prs: ['foo', 'bar']
+                prs: ['foo', 'bar'],
               };
             }
             return repo;
-          });
-        });
+          })
+        );
         repos.select('selector', list =>
           list.filter(({ selected }) => selected)
         );
 
         const change = id => sput('update', id);
-        const View = ({ selector }) => {
-          return (
-            <div>
-              {selector.map(({ id, prs }) => (
-                <p key={id}>
-                  {id}: {prs ? prs.join(',') : 'nope'}
-                </p>
-              ))}
-            </div>
-          );
-        };
+        const View = ({ selector }) => (
+          <div>
+            {selector.map(({ id, prs }) => (
+              <p key={id}>
+                {id}: {prs ? prs.join(',') : 'nope'}
+              </p>
+            ))}
+          </div>
+        );
         const routine = function*({ change }) {
           yield sleep(2);
           change('b');
@@ -202,13 +195,12 @@ describe('Given the Riew library', () => {
         </div>
       `
         );
-      });
-    });
+      }));
   });
   describe('when we have a channel passed to a React component', () => {
     describe('and we update the state', () => {
-      it('should re-render the react component with the correct data', () => {
-        return act(async () => {
+      it('should re-render the react component with the correct data', () =>
+        act(async () => {
           const s = state([15, 4, 12]);
           s.select('moreThen10', nums => nums.filter(n => n > 10));
           const Component = jest.fn().mockImplementation(() => null);
@@ -222,8 +214,7 @@ describe('Given the Riew library', () => {
             [{ data: [15, 12] }, {}],
             [{ data: [120] }, {}]
           );
-        });
-      });
+        }));
     });
   });
 });

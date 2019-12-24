@@ -16,6 +16,6 @@ export default function BufferInterface() {
     },
     getValue() {
       return this.value;
-    }
+    },
   };
 }

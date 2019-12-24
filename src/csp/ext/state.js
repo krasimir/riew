@@ -6,14 +6,14 @@ import {
   sclose,
   buffer,
   isChannel,
-  call
-} from "../../index";
-import { getId, isGeneratorFunction } from "../../utils";
-import { grid } from "../../index";
+  call,
+  grid,
+} from '../../index';
+import { getId, isGeneratorFunction } from '../../utils';
 
 export function createState(...args) {
   let value = args[0];
-  const id = getId("state");
+  const id = getId('state');
   const readChannels = [];
   const writeChannels = [];
   const isThereInitialValue = args.length > 0;
@@ -40,13 +40,13 @@ export function createState(...args) {
 
   const api = {
     id,
-    "@state": true,
-    READ: id + "_read",
-    WRITE: id + "_write",
+    '@state': true,
+    READ: `${id}_read`,
+    WRITE: `${id}_write`,
     select(id, selector = v => v, onError = null) {
-      let ch = isChannel(id) ? id : chan(id, buffer.divorced());
-      ch["@statereadchannel"] = true;
-      let reader = { ch, selector, onError };
+      const ch = isChannel(id) ? id : chan(id, buffer.divorced());
+      ch['@statereadchannel'] = true;
+      const reader = { ch, selector, onError };
       readChannels.push(reader);
       if (isThereInitialValue) {
         runSelector(reader, value);
@@ -54,9 +54,9 @@ export function createState(...args) {
       return this;
     },
     mutate(id, reducer = (_, v) => v, onError = null) {
-      let ch = isChannel(id) ? id : chan(id, buffer.divorced());
-      ch["@statewritechannel"] = true;
-      let writer = { ch };
+      const ch = isChannel(id) ? id : chan(id, buffer.divorced());
+      ch['@statewritechannel'] = true;
+      const writer = { ch };
       writeChannels.push(writer);
       sub(
         ch,
@@ -95,7 +95,7 @@ export function createState(...args) {
         runSelector(r, value);
       });
       return newValue;
-    }
+    },
   };
 
   api.select(api.READ);
@@ -105,11 +105,11 @@ export function createState(...args) {
 }
 
 export function isState(s) {
-  return s && s["@state"] === true;
+  return s && s['@state'] === true;
 }
 export function isStateReadChannel(s) {
-  return s && s["@statereadchannel"] === true;
+  return s && s['@statereadchannel'] === true;
 }
 export function isStateWriteChannel(s) {
-  return s && s["@statewritechannel"] === true;
+  return s && s['@statewritechannel'] === true;
 }

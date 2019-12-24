@@ -10,20 +10,19 @@ describe('Given the React riew function', () => {
     reset();
   });
   describe('when we use the riew Component', () => {
-    it('should always render the view at least once', () => {
-      return act(async () => {
+    it('should always render the view at least once', () =>
+      act(async () => {
         const R = riew(() => <p>Hello</p>);
         const { container } = render(<R />);
 
         await delay(10);
         exerciseHTML(container, '<p>Hello</p>');
-      });
-    });
+      }));
     it(`should
       * run the routine function
       * render once by default
-      * render every time when we call the "data" method`, () => {
-      return act(async () => {
+      * render every time when we call the "data" method`, () =>
+      act(async () => {
         const routine = jest.fn().mockImplementation(function*({ render }) {
           yield sleep(5);
           render({ foo: 'bar' });
@@ -35,14 +34,13 @@ describe('Given the React riew function', () => {
         await delay(10);
 
         expect(view).toBeCalledWithArgs([{}, {}], [{ foo: 'bar' }, {}]);
-      });
-    });
+      }));
     describe('and we use a state', () => {
       it(`should
         * render with the given state data
         * re-render with a new value when we update the state
-        * teardown the state when the component is unmounted`, () => {
-        return act(async () => {
+        * teardown the state when the component is unmounted`, () =>
+        act(async () => {
           const s = state('foo');
           const R = riew(
             ({ state }) => <p>{state}</p>,
@@ -58,19 +56,18 @@ describe('Given the React riew function', () => {
           await delay(10);
           exerciseHTML(container, '<p>bar</p>');
           unmount();
-        });
-      });
+        }));
       describe('and we use a state that is exported into the grid', () => {
-        it('should receive the state value and subscribe for changes', () => {
-          return act(async () => {
+        it('should receive the state value and subscribe for changes', () =>
+          act(async () => {
             const s = state(42);
             const s2 = state('foo');
 
             register('hello', s);
 
-            const View = ({ state, hello }) => {
-              return <p>{(state + hello).toString()}</p>;
-            };
+            const View = ({ state, hello }) => (
+              <p>{(state + hello).toString()}</p>
+            );
             const R = riew(View).with({ state: s2 }, 'hello');
             const { container } = render(<R />);
 
@@ -79,11 +76,10 @@ describe('Given the React riew function', () => {
             sput(s, '200');
             await delay(3);
             exerciseHTML(container, '<p>foo200</p>');
-          });
-        });
+          }));
       });
-      it('should allow us to use different statesMap', () => {
-        return act(async () => {
+      it('should allow us to use different statesMap', () =>
+        act(async () => {
           const spy = jest.fn().mockImplementation(() => null);
           const R = riew(spy);
           const RA = R.with({ state: { foo: 'a' } });
@@ -98,14 +94,13 @@ describe('Given the React riew function', () => {
             [{ state: { foo: 'b' } }, {}]
           );
           expect('with' in RA).toBe(true);
-        });
-      });
+        }));
     });
     describe('and we use "props"', () => {
-      it(`should
+      fit(`should
         * have access to the props
-        * have be able to subscribe to props change`, () => {
-        return act(async () => {
+        * have to be able to subscribe to props change`, () =>
+        act(async () => {
           const propsSpy = jest.fn();
           const view = jest.fn().mockImplementation(() => null);
           const I = riew(view, function*({ props }) {
@@ -127,57 +122,51 @@ describe('Given the React riew function', () => {
             [{ foo: 'bar' }],
             [{ zoo: 'mar' }]
           );
-        });
-      });
+        }));
     });
   });
   describe('when we want to use the React children prop', () => {
-    it('should work', () => {
-      return act(async () => {
+    it('should work', () =>
+      act(async () => {
         const R = riew(({ children }) => children('John'));
         const { container } = render(<R>{name => `Hello ${name}!`}</R>);
 
         await delay(5);
         exerciseHTML(container, 'Hello John!');
-      });
-    });
+      }));
   });
   describe('when we render a channel and pass a function to update the value of the channel', () => {
-    it('when firing the mutation func should re-render with a new value', () => {
-      return act(async () => {
+    it('when firing the mutation func should re-render with a new value', () =>
+      act(async () => {
         const routine = function*({ render }) {
           const s = state([
             { value: 2, selected: true },
-            { value: 67, selected: true }
+            { value: 67, selected: true },
           ]);
-          s.mutate('select', (current = [], payload) => {
-            return current.map(item => {
-              return {
-                ...item,
-                selected: item.value === payload ? false : item.selected
-              };
-            });
-          });
+          s.mutate('select', (current = [], payload) =>
+            current.map(item => ({
+              ...item,
+              selected: item.value === payload ? false : item.selected,
+            }))
+          );
           const change = payload => {
             sput('select', payload);
           };
 
           render({ value: s, change });
         };
-        const View = ({ value, change }) => {
-          return (
+        const View = ({ value, change }) => (
+          <div>
             <div>
-              <div>
-                value:{' '}
-                {value
-                  .filter(({ selected }) => selected)
-                  .map(({ value }) => value)
-                  .join(', ')}
-              </div>
-              <button onClick={() => change(67)}>click me</button>
+              value:{' '}
+              {value
+                .filter(({ selected }) => selected)
+                .map(({ value }) => value)
+                .join(', ')}
             </div>
-          );
-        };
+            <button onClick={() => change(67)}>click me</button>
+          </div>
+        );
         const R = riew(View, routine);
         const { container, getByText } = render(<R />);
 
@@ -194,12 +183,11 @@ describe('Given the React riew function', () => {
           container,
           '<div><div>value: 2</div><button>click me</button></div>'
         );
-      });
-    });
+      }));
   });
   describe('when we register a state', () => {
-    it('should provide the value to the react component', async () => {
-      return act(async () => {
+    it('should provide the value to the react component', async () =>
+      act(async () => {
         const s = state(true);
         const changeToFalse = () => sput(s, false);
         const spy = jest.fn();
@@ -219,7 +207,6 @@ describe('Given the React riew function', () => {
         await delay();
         exerciseHTML(container, 'bar');
         expect(spy).toBeCalledWithArgs([true], [false]);
-      });
-    });
+      }));
   });
 });

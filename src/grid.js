@@ -11,7 +11,7 @@ function Grid() {
     nodes.push(product);
   };
   gridAPI.remove = product => {
-    let idx = nodes.findIndex(({ id }) => id === product.id);
+    const idx = nodes.findIndex(({ id }) => id === product.id);
 
     if (idx >= 0) {
       // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach

@@ -1,25 +1,16 @@
 import h from './harvester';
 import g from './grid';
 import { CHANNELS } from './csp';
+
 export * from './csp';
 
-export const riew = (...args) => {
-  return h.produce('riew', ...args);
-};
+export const riew = (...args) => h.produce('riew', ...args);
 export const react = {
-  riew: (...args) => {
-    return h.produce('reactRiew', ...args);
-  }
+  riew: (...args) => h.produce('reactRiew', ...args),
 };
-export const chan = (...args) => {
-  return h.produce('channel', ...args);
-};
-export const state = (...args) => {
-  return h.produce('state', ...args);
-};
-export const use = (name, ...args) => {
-  return h.produce(name, ...args);
-};
+export const chan = (...args) => h.produce('channel', ...args);
+export const state = (...args) => h.produce('state', ...args);
+export const use = (name, ...args) => h.produce(name, ...args);
 export const register = (name, whatever) => {
   if (typeof whatever === 'object' || typeof whatever === 'function') {
     whatever.__registered = name;

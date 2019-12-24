@@ -24,14 +24,14 @@ export function Test(...routines) {
   });
   return log;
 }
-export function exercise(log, expectation, delay, cleanup = () => {}) {
-  if (delay) {
+export function exercise(log, expectation, delayInterval, cleanup = () => {}) {
+  if (delayInterval) {
     return new Promise(resolve => {
       setTimeout(() => {
         expect(log).toStrictEqual(expectation);
         resolve();
         cleanup();
-      }, delay);
+      }, delayInterval);
     });
   }
   expect(log).toStrictEqual(expectation);

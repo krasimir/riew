@@ -1,9 +1,9 @@
-import { chan, isChannel, go, buffer, isState } from "../../index";
-import { SUB } from "../constants";
-import { sput, stake, call } from "../ops";
-import { isGeneratorFunction } from "../../utils";
+import { chan, isChannel, go, buffer, isState } from '../../index';
+import { SUB } from '../constants';
+import { sput, stake, call } from '../ops';
+import { isGeneratorFunction } from '../../utils';
 
-const NOTHING = Symbol("Nothing");
+const NOTHING = Symbol('Nothing');
 
 function normalizeChannels(channels) {
   if (!Array.isArray(channels)) channels = [channels];
@@ -13,11 +13,13 @@ function normalizeChannels(channels) {
   });
 }
 function normalizeTo(to) {
-  if (typeof to === "function") {
+  if (typeof to === 'function') {
     return to;
-  } else if (isChannel(to)) {
+  }
+  if (isChannel(to)) {
     return to.__subFunc || (to.__subFunc = v => sput(to, v));
-  } else if (typeof to === "string") {
+  }
+  if (typeof to === 'string') {
     const ch = chan(to, buffer.divorced());
     return (ch.__subFunc = v => sput(to, v));
   }
@@ -38,7 +40,7 @@ export function sub(
   initialCallIfBufValue = true
 ) {
   // in a routine
-  if (typeof to === "undefined") {
+  if (typeof to === 'undefined') {
     return { ch: channels, op: SUB };
   }
 
@@ -96,14 +98,14 @@ export function subOnce(
   transform = defaultTransform,
   onError = null
 ) {
-  let c = v => {
+  const c = v => {
     unsub(channel, c);
     !isChannel(callback) ? callback(v) : sput(callback, v);
   };
   sub(channel, c, transform, onError, false);
 }
 export function unsub(id, callback) {
-  let ch = isChannel(id) ? id : chan(id);
+  const ch = isChannel(id) ? id : chan(id);
   if (isChannel(callback)) {
     callback = callback.__subFunc;
   }
@@ -116,7 +118,7 @@ export function unsub(id, callback) {
 }
 
 export function unsubAll(id) {
-  let ch = isChannel(id) ? id : chan(id);
+  const ch = isChannel(id) ? id : chan(id);
   ch.subscribers = [];
 }
 
