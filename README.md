@@ -38,6 +38,7 @@
     * [riew routines](https://github.com/krasimir/riew#riew-routines)
     * [externals](https://github.com/krasimir/riew#externals)
     * [channels and state](https://github.com/krasimir/riew#channels-and-state)
+  * [react](https://github.com/krasimir/riew#react)
 * [Playground](https://poet.codes/e/QMPvK8DM2s7#App.js)
 
 ## Concepts
@@ -47,7 +48,7 @@
 Imagine that you need to transfer messages between two entities in your system. They don't know about each other. With Riew you can use a _channel_ to connect and synchronize them. We can put and take messages from the channel. Consider the following example:
 
 ```js
-const ch = chan("MY_CHANNEL");
+const ch = chan();
 
 go(function * A() {
   const name = yield take(ch);
@@ -1186,3 +1187,30 @@ In this example we are creating a state that keeps a number. We also have two ch
 
 The takeaway from this section is that our riews are bound to channels and we control what the view renders by putting data to those channels.
 
+### react
+
+> `react.riew(reactComponent, ...routines)`
+
+Same as [riew](https://github.com/krasimir/riew#riew) but for the view instead of a regular function takes a React component.
+
+* `reactComponent` (`React component`, required) - React component (class or a function)
+* `routines` (one or many routines, optional) - routines that will start when the riew is mounted and terminates when the riew is unmounted.
+
+`react.riew` returns another React component.
+
+Example:
+
+```js
+function Greeting(props) {
+  return <p>Hey, { props.name }.</p>
+}
+function * routine({ render }) {
+  render({ name: 'Ana' });
+}
+
+const Component = react.riew(Greeting, routine);
+
+ReactDOM.render(<Component />, document.querySelector('#output'));
+```
+
+The `Component` constant here is indeed a React component but it is also a [riew](https://github.com/krasimir/riew#riew). So it has a [with](https://github.com/krasimir/riew#externals) method. The `Greeting` component is the same as the `view` function in all the other examples above.
