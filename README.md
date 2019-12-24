@@ -12,6 +12,8 @@
 * Examples
   * [ToDoMVC](https://github.com/krasimir/riew/tree/master/examples/todomvc)
   * [Questionnaire app](https://github.com/krasimir/riew/tree/master/examples/questionnaire)
+  * [Counter](https://poet.codes/e/gnv7EDgydsQ#App.js)
+  * [Random cat](https://poet.codes/e/exoE5zyxQhl)
 * Inspiration - [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes), [core.async](https://github.com/clojure/core.async), [Go](https://golang.org/), [Redux](https://redux.js.org/), [redux-saga](https://redux-saga.js.org/), [JS-CSP](https://github.com/js-csp/js-csp) 
 * Core concepts - [Routines & channels](https://github.com/krasimir/riew#routines--channels), [Riews](https://github.com/krasimir/riew#riews), [Application state](https://github.com/krasimir/riew#application-state), [Pubsub](https://github.com/krasimir/riew#pubsub)
 
