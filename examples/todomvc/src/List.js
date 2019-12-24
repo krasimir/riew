@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import React, { useRef, useEffect } from "react";
+import PropTypes from "prop-types";
+import riew from "riew/react";
 
-import { ESC, ENTER, ALL, COMPLETED, ACTIVE } from './constants';
+import { ESC, ENTER, ALL, COMPLETED, ACTIVE } from "./constants";
 
 const EditTodo = ({ index, todo, onUpdateCancel, onUpdate }) => {
   const inputEl = useRef(null);
@@ -10,23 +11,24 @@ const EditTodo = ({ index, todo, onUpdateCancel, onUpdate }) => {
     if (todo.editing) {
       inputEl.current.focus();
     }
-  }, [ todo.editing ]);
+  }, [todo.editing]);
 
   return (
     <input
-      ref={ inputEl }
-      className='edit'
-      defaultValue={ todo.label }
-      data-label={ todo.label }
-      onBlur={ (e) => onUpdate(index, e.target.value) }
-      onKeyUp={ e => {
+      ref={inputEl}
+      className="edit"
+      defaultValue={todo.label}
+      data-label={todo.label}
+      onBlur={e => onUpdate(index, e.target.value)}
+      onKeyUp={e => {
         if (e.keyCode === ESC) {
           e.target.value = todo.label;
           onUpdateCancel(index);
         } else if (e.keyCode === ENTER) {
           onUpdate(index, e.target.value);
         }
-      }} />
+      }}
+    />
   );
 };
 
@@ -47,41 +49,51 @@ function List({
   onUpdateCancel
 }) {
   return (
-    <ul className='todo-list'>
-      {
-        todos.filter(todo => {
+    <ul className="todo-list">
+      {todos
+        .filter(todo => {
           if (filter === ALL) return true;
           if (filter === COMPLETED) return todo.completed;
           if (filter === ACTIVE) return !todo.completed;
           return true;
-        }).map((todo, i) => {
-          const liClass = todo.editing ? 'editing' : (todo.completed ? 'completed' : '');
+        })
+        .map((todo, i) => {
+          const liClass = todo.editing
+            ? "editing"
+            : todo.completed
+            ? "completed"
+            : "";
 
           return (
-            <li className={ liClass } key={ i }>
-              <div className='view'>
+            <li className={liClass} key={i}>
+              <div className="view">
                 <input
-                  className='toggle'
-                  type='checkbox'
-                  checked={ todo.completed }
-                  onChange={ () => onToggle(i) }/>
-                <label data-index='${ i }' onDoubleClick={ () => onEdit(i) }>{ todo.label }</label>
-                <button className='destroy' onClick={ () => onDelete(i) }></button>
+                  className="toggle"
+                  type="checkbox"
+                  checked={todo.completed}
+                  onChange={() => onToggle(i)}
+                />
+                <label data-index="${ i }" onDoubleClick={() => onEdit(i)}>
+                  {todo.label}
+                </label>
+                <button
+                  className="destroy"
+                  onClick={() => onDelete(i)}
+                ></button>
               </div>
               <EditTodo
-                key={ todo.label }
-                index={ i }
-                todo={ todo }
-                onUpdate={ onUpdate }
-                onUpdateCancel={ onUpdateCancel }
-                />
+                key={todo.label}
+                index={i}
+                todo={todo}
+                onUpdate={onUpdate}
+                onUpdateCancel={onUpdateCancel}
+              />
             </li>
           );
-        })
-      }
+        })}
     </ul>
   );
-};
+}
 
 List.propTypes = {
   todos: PropTypes.array.isRequired,
@@ -93,4 +105,4 @@ List.propTypes = {
   filter: PropTypes.string.isRequired
 };
 
-export default List;
+export default riew(List).with("todos");
