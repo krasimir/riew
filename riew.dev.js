@@ -1,12 +1,12 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Riew = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = DivorcedBuffer;
 
-var _Interface = require("./Interface");
+var _Interface = require('./Interface');
 
 var _Interface2 = _interopRequireDefault(_Interface);
 
@@ -32,14 +32,14 @@ function DivorcedBuffer() {
 }
 
 },{"./Interface":4}],2:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = DroppingBuffer;
 
-var _Interface = require("./Interface");
+var _Interface = require('./Interface');
 
 var _Interface2 = _interopRequireDefault(_Interface);
 
@@ -83,14 +83,14 @@ function DroppingBuffer() {
 }
 
 },{"./Interface":4}],3:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = FixedBuffer;
 
-var _Interface = require("./Interface");
+var _Interface = require('./Interface');
 
 var _Interface2 = _interopRequireDefault(_Interface);
 
@@ -176,21 +176,21 @@ function BufferInterface() {
 }
 
 },{}],5:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _FixedBuffer = require("./FixedBuffer");
+var _FixedBuffer = require('./FixedBuffer');
 
 var _FixedBuffer2 = _interopRequireDefault(_FixedBuffer);
 
-var _DroppingBuffer = require("./DroppingBuffer");
+var _DroppingBuffer = require('./DroppingBuffer');
 
 var _DroppingBuffer2 = _interopRequireDefault(_DroppingBuffer);
 
-var _DivorcedBuffer = require("./DivorcedBuffer");
+var _DivorcedBuffer = require('./DivorcedBuffer');
 
 var _DivorcedBuffer2 = _interopRequireDefault(_DivorcedBuffer);
 
@@ -210,19 +210,13 @@ var buffer = {
 exports.default = buffer;
 
 },{"./DivorcedBuffer":1,"./DroppingBuffer":2,"./FixedBuffer":3}],6:[function(require,module,exports){
-"use strict";
+'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
 
 var _slicedToArray = function () {
   function sliceIterator(arr, i) {
@@ -250,20 +244,45 @@ var _slicedToArray = function () {
   };
 }();
 
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
+
 exports.createChannel = createChannel;
 
-var _utils = require("../utils");
+var _utils = require('../utils');
 
-var _constants = require("./constants");
+var _constants = require('./constants');
 
-var _index = require("../index");
+var _index = require('../index');
 
-var _buffer = require("./buffer");
+var _buffer = require('./buffer');
 
 var _buffer2 = _interopRequireDefault(_buffer);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function normalizeChannelArguments(args) {
+  var id = void 0;
+  var buff = void 0;
+  if (args.length === 2) {
+    id = args[0];
+    buff = args[1];
+  } else if (args.length === 1 && typeof args[0] === 'string') {
+    id = args[0];
+    buff = _buffer2.default.fixed();
+  } else if (args.length === 1 && _typeof(args[0]) === 'object') {
+    id = (0, _utils.getId)('ch');
+    buff = args[0];
+  } else {
+    id = (0, _utils.getId)('ch');
+    buff = _buffer2.default.fixed();
+  }
+  return [id, buff];
 }
 
 function createChannel() {
@@ -284,7 +303,7 @@ function createChannel() {
 
   var api = _index.CHANNELS.set(id, {
     id: id,
-    "@channel": true,
+    '@channel': true,
     subscribers: []
   });
 
@@ -293,7 +312,7 @@ function createChannel() {
   };
   api.buff = buff;
   api.state = function (s) {
-    if (typeof s !== "undefined") state = s;
+    if (typeof s !== 'undefined') state = s;
     return state;
   };
   api.value = function () {
@@ -303,42 +322,23 @@ function createChannel() {
   return api;
 }
 
-function normalizeChannelArguments(args) {
-  var id = void 0,
-      buff = void 0;
-  if (args.length === 2) {
-    id = args[0];
-    buff = args[1];
-  } else if (args.length === 1 && typeof args[0] === "string") {
-    id = args[0];
-    buff = _buffer2.default.fixed();
-  } else if (args.length === 1 && _typeof(args[0]) === "object") {
-    id = (0, _utils.getId)("ch");
-    buff = args[0];
-  } else {
-    id = (0, _utils.getId)("ch");
-    buff = _buffer2.default.fixed();
-  }
-  return [id, buff];
-}
-
 },{"../index":16,"../utils":19,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var OPEN = exports.OPEN = Symbol("OPEN");
-var CLOSED = exports.CLOSED = Symbol("CLOSED");
-var ENDED = exports.ENDED = Symbol("ENDED");
-var PUT = exports.PUT = "PUT";
-var TAKE = exports.TAKE = "TAKE";
-var NOOP = exports.NOOP = "NOOP";
-var SLEEP = exports.SLEEP = "SLEEP";
-var STOP = exports.STOP = "STOP";
-var SUB = exports.SUB = "SUB";
-var CALL_ROUTINE = exports.CALL_ROUTINE = "CALL_ROUTINE";
-var FORK_ROUTINE = exports.FORK_ROUTINE = "FORK_ROUTINE";
+var OPEN = exports.OPEN = Symbol('OPEN');
+var CLOSED = exports.CLOSED = Symbol('CLOSED');
+var ENDED = exports.ENDED = Symbol('ENDED');
+var PUT = exports.PUT = 'PUT';
+var TAKE = exports.TAKE = 'TAKE';
+var NOOP = exports.NOOP = 'NOOP';
+var SLEEP = exports.SLEEP = 'SLEEP';
+var STOP = exports.STOP = 'STOP';
+var SUB = exports.SUB = 'SUB';
+var CALL_ROUTINE = exports.CALL_ROUTINE = 'CALL_ROUTINE';
+var FORK_ROUTINE = exports.FORK_ROUTINE = 'FORK_ROUTINE';
 
 var CHANNELS = exports.CHANNELS = {
   channels: {},
@@ -393,24 +393,24 @@ function merge() {
 }
 
 },{"../../index":16}],9:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.sub = sub;
-exports.subOnce = subOnce;
 exports.unsub = unsub;
+exports.subOnce = subOnce;
 exports.unsubAll = unsubAll;
 exports.read = read;
 
-var _index = require("../../index");
+var _index = require('../../index');
 
-var _constants = require("../constants");
+var _constants = require('../constants');
 
-var _ops = require("../ops");
+var _ops = require('../ops');
 
-var _utils = require("../../utils");
+var _utils = require('../../utils');
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -420,31 +420,33 @@ function _toConsumableArray(arr) {
   } else {
     return Array.from(arr);
   }
-}
+} /* eslint-disable no-param-reassign */
 
-var NOTHING = Symbol("Nothing");
+var NOTHING = Symbol('Nothing');
 
 function normalizeChannels(channels) {
   if (!Array.isArray(channels)) channels = [channels];
-  return channels.map(function (ch, idx) {
+  return channels.map(function (ch) {
     if ((0, _index.isState)(ch)) ch = ch.READ;
     return (0, _index.isChannel)(ch) ? ch : (0, _index.chan)(ch);
   });
 }
 function normalizeTo(to) {
-  if (typeof to === "function") {
+  if (typeof to === 'function') {
     return to;
-  } else if ((0, _index.isChannel)(to)) {
+  }
+  if ((0, _index.isChannel)(to)) {
     return to.__subFunc || (to.__subFunc = function (v) {
       return (0, _ops.sput)(to, v);
     });
-  } else if (typeof to === "string") {
+  }
+  if (typeof to === 'string') {
     var ch = (0, _index.chan)(to, _index.buffer.divorced());
     return ch.__subFunc = function (v) {
       return (0, _ops.sput)(to, v);
     };
   }
-  throw new Error("'sub' accepts string, channel or a function as a second argument. " + to + " given.");
+  throw new Error('\'sub\' accepts string, channel or a function as a second argument. ' + to + ' given.');
 }
 function defaultTransform() {
   for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -455,13 +457,20 @@ function defaultTransform() {
   return args;
 }
 
-function sub(channels, to) {
-  var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : defaultTransform;
-  var onError = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-  var initialCallIfBufValue = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
+var DEFAULT_OPTIONS = {
+  transform: defaultTransform,
+  onError: null,
+  initialCall: true
+};
+
+function sub(channels, to, options) {
+  options = options || DEFAULT_OPTIONS;
+  var transform = options.transform || DEFAULT_OPTIONS.transform;
+  var onError = options.onError || DEFAULT_OPTIONS.onError;
+  var initialCall = 'initialCall' in options ? options.initialCall : DEFAULT_OPTIONS.initialCall;
 
   // in a routine
-  if (typeof to === "undefined") {
+  if (typeof to === 'undefined') {
     return { ch: channels, op: _constants.SUB };
   }
 
@@ -509,22 +518,11 @@ function sub(channels, to) {
     // If there is already a value in the channel
     // notify the subscribers.
     var currentChannelBufValue = ch.value();
-    if (initialCallIfBufValue && currentChannelBufValue.length > 0) {
+    if (initialCall && currentChannelBufValue.length > 0) {
       notify(currentChannelBufValue[0]);
     }
   });
   return to;
-}
-
-function subOnce(channel, callback) {
-  var transform = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : defaultTransform;
-  var onError = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-
-  var c = function c(v) {
-    unsub(channel, c);
-    !(0, _index.isChannel)(callback) ? callback(v) : (0, _ops.sput)(callback, v);
-  };
-  sub(channel, c, transform, onError, false);
 }
 function unsub(id, callback) {
   var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
@@ -540,18 +538,29 @@ function unsub(id, callback) {
     return false;
   });
 }
+function subOnce(channel, callback) {
+  var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_OPTIONS;
 
+  var c = function c(v) {
+    unsub(channel, c);
+    if (!(0, _index.isChannel)(callback)) {
+      callback(v);
+    } else {
+      (0, _ops.sput)(callback, v);
+    }
+  };
+  sub(channel, c, options);
+}
 function unsubAll(id) {
   var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id);
   ch.subscribers = [];
 }
-
 function read() {
   return sub.apply(undefined, arguments);
 }
 
 },{"../../index":16,"../../utils":19,"../constants":7,"../ops":13}],10:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -561,13 +570,13 @@ exports.isState = isState;
 exports.isStateReadChannel = isStateReadChannel;
 exports.isStateWriteChannel = isStateWriteChannel;
 
-var _index = require("../../index");
+var _index = require('../../index');
 
-var _utils = require("../../utils");
+var _utils = require('../../utils');
 
 function createState() {
   var value = arguments.length <= 0 ? undefined : arguments[0];
-  var id = (0, _utils.getId)("state");
+  var id = (0, _utils.getId)('state');
   var readChannels = [];
   var writeChannels = [];
   var isThereInitialValue = arguments.length > 0;
@@ -587,8 +596,8 @@ function createState() {
 
     try {
       if ((0, _utils.isGeneratorFunction)(selector)) {
-        (0, _index.go)(selector, function (v) {
-          return (0, _index.sput)(ch, v);
+        (0, _index.go)(selector, function (routineRes) {
+          return (0, _index.sput)(ch, routineRes);
         }, value);
         return;
       }
@@ -600,17 +609,17 @@ function createState() {
 
   var api = {
     id: id,
-    "@state": true,
-    READ: id + "_read",
-    WRITE: id + "_write",
-    select: function select(id) {
+    '@state': true,
+    READ: id + '_read',
+    WRITE: id + '_write',
+    select: function select(c) {
       var selector = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (v) {
         return v;
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id, _index.buffer.divorced());
-      ch["@statereadchannel"] = true;
+      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.divorced());
+      ch['@statereadchannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
       if (isThereInitialValue) {
@@ -618,14 +627,14 @@ function createState() {
       }
       return this;
     },
-    mutate: function mutate(id) {
+    mutate: function mutate(c) {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (_, v) {
         return v;
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(id) ? id : (0, _index.chan)(id, _index.buffer.divorced());
-      ch["@statewritechannel"] = true;
+      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.divorced());
+      ch['@statewritechannel'] = true;
       var writer = { ch: ch };
       writeChannels.push(writer);
       (0, _index.sub)(ch, function (v) {
@@ -633,40 +642,45 @@ function createState() {
         readChannels.forEach(function (r) {
           return runSelector(r, value);
         });
-      }, /*#__PURE__*/regeneratorRuntime.mark(function _callee(payload) {
-        return regeneratorRuntime.wrap(function _callee$(_context) {
-          while (1) {
-            switch (_context.prev = _context.next) {
-              case 0:
-                _context.prev = 0;
+      }, {
+        transform: /*#__PURE__*/regeneratorRuntime.mark(function transform(payload) {
+          return regeneratorRuntime.wrap(function transform$(_context) {
+            while (1) {
+              switch (_context.prev = _context.next) {
+                case 0:
+                  _context.prev = 0;
 
-                if (!(0, _utils.isGeneratorFunction)(reducer)) {
-                  _context.next = 5;
-                  break;
-                }
+                  if (!(0, _utils.isGeneratorFunction)(reducer)) {
+                    _context.next = 5;
+                    break;
+                  }
 
-                _context.next = 4;
-                return (0, _index.call)(reducer, value, payload);
+                  _context.next = 4;
+                  return (0, _index.call)(reducer, value, payload);
 
-              case 4:
-                return _context.abrupt("return", _context.sent);
+                case 4:
+                  return _context.abrupt('return', _context.sent);
 
-              case 5:
-                return _context.abrupt("return", reducer(value, payload));
+                case 5:
+                  return _context.abrupt('return', reducer(value, payload));
 
-              case 8:
-                _context.prev = 8;
-                _context.t0 = _context["catch"](0);
+                case 8:
+                  _context.prev = 8;
+                  _context.t0 = _context['catch'](0);
 
-                handleError(onError)(_context.t0);
+                  handleError(onError)(_context.t0);
 
-              case 11:
-              case "end":
-                return _context.stop();
+                case 11:
+                case 'end':
+                  return _context.stop();
+              }
             }
-          }
-        }, _callee, this, [[0, 8]]);
-      }), handleError(onError), true);
+          }, transform, this, [[0, 8]]);
+        }),
+
+        onError: handleError(onError),
+        initialCall: true
+      });
       return this;
     },
     destroy: function destroy() {
@@ -701,13 +715,13 @@ function createState() {
 }
 
 function isState(s) {
-  return s && s["@state"] === true;
+  return s && s['@state'] === true;
 }
 function isStateReadChannel(s) {
-  return s && s["@statereadchannel"] === true;
+  return s && s['@statereadchannel'] === true;
 }
 function isStateWriteChannel(s) {
-  return s && s["@statewritechannel"] === true;
+  return s && s['@statewritechannel'] === true;
 }
 
 },{"../../index":16,"../../utils":19}],11:[function(require,module,exports){
@@ -729,22 +743,22 @@ function timeout(interval) {
 }
 
 },{"../../index":16}],12:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _buffer = require("./buffer");
+var _buffer = require('./buffer');
 
-Object.defineProperty(exports, "buffer", {
+Object.defineProperty(exports, 'buffer', {
   enumerable: true,
   get: function get() {
     return _interopRequireDefault(_buffer).default;
   }
 });
 
-var _channel = require("./channel");
+var _channel = require('./channel');
 
 Object.keys(_channel).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -756,7 +770,7 @@ Object.keys(_channel).forEach(function (key) {
   });
 });
 
-var _ops = require("./ops");
+var _ops = require('./ops');
 
 Object.keys(_ops).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -768,7 +782,7 @@ Object.keys(_ops).forEach(function (key) {
   });
 });
 
-var _merge = require("./ext/merge");
+var _merge = require('./ext/merge');
 
 Object.keys(_merge).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -780,7 +794,7 @@ Object.keys(_merge).forEach(function (key) {
   });
 });
 
-var _timeout = require("./ext/timeout");
+var _timeout = require('./ext/timeout');
 
 Object.keys(_timeout).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -792,7 +806,7 @@ Object.keys(_timeout).forEach(function (key) {
   });
 });
 
-var _state = require("./ext/state");
+var _state = require('./ext/state');
 
 Object.keys(_state).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -804,7 +818,7 @@ Object.keys(_state).forEach(function (key) {
   });
 });
 
-var _pubsub = require("./ext/pubsub");
+var _pubsub = require('./ext/pubsub');
 
 Object.keys(_pubsub).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -816,7 +830,7 @@ Object.keys(_pubsub).forEach(function (key) {
   });
 });
 
-var _constants = require("./constants");
+var _constants = require('./constants');
 
 Object.keys(_constants).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
@@ -833,7 +847,7 @@ function _interopRequireDefault(obj) {
 }
 
 },{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/pubsub":9,"./ext/state":10,"./ext/timeout":11,"./ops":13}],13:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -853,11 +867,11 @@ exports.go = go;
 exports.sleep = sleep;
 exports.stop = stop;
 
-var _constants = require("./constants");
+var _constants = require('./constants');
 
-var _index = require("../index");
+var _index = require('../index');
 
-var _utils = require("../utils");
+var _utils = require('../utils');
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -867,11 +881,11 @@ function _toConsumableArray(arr) {
   } else {
     return Array.from(arr);
   }
-}
+} /* eslint-disable no-use-before-define */
 
 var noop = function noop() {};
 var normalizeChannel = function normalizeChannel(id) {
-  var stateOp = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "READ";
+  var stateOp = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'READ';
 
   if (isChannel(id)) return id;
   if ((0, _index.isState)(id)) return (0, _index.chan)(id[stateOp]);
@@ -881,19 +895,19 @@ var normalizeChannel = function normalizeChannel(id) {
 // **************************************************** PUT
 
 function put(id, item, callback) {
-  var doPut = function doPut(ch, item, callback) {
-    var state = ch.state();
+  var doPut = function doPut(channel, itemToPut, putDone) {
+    var state = channel.state();
     if (state === _constants.CLOSED || state === _constants.ENDED) {
       callback(state);
     } else {
-      callSubscribers(ch, item, function () {
-        return ch.buff.put(item, callback);
+      callSubscribers(channel, item, function () {
+        return channel.buff.put(itemToPut, putDone);
       });
     }
   };
 
-  var ch = normalizeChannel(id, "WRITE");
-  if (typeof callback === "function") {
+  var ch = normalizeChannel(id, 'WRITE');
+  if (typeof callback === 'function') {
     doPut(ch, item, callback);
   } else {
     return { ch: ch, op: _constants.PUT, item: item };
@@ -918,26 +932,24 @@ function callSubscribers(ch, item, callback) {
 // **************************************************** TAKE
 
 function take(id, callback) {
-  var doTake = function doTake(ch, callback) {
-    var state = ch.state();
+  var doTake = function doTake(channel, takeDone) {
+    var state = channel.state();
     if (state === _constants.ENDED) {
-      callback(_constants.ENDED);
+      takeDone(_constants.ENDED);
+    } else if (state === _constants.CLOSED && channel.buff.isEmpty()) {
+      channel.state(_constants.ENDED);
+      takeDone(_constants.ENDED);
     } else {
-      if (state === _constants.CLOSED && ch.buff.isEmpty()) {
-        ch.state(_constants.ENDED);
-        callback(_constants.ENDED);
-      } else {
-        ch.buff.take(function (r) {
-          return callback(r);
-        });
-      }
+      channel.buff.take(function (r) {
+        return takeDone(r);
+      });
     }
   };
 
   var ch = normalizeChannel(id);
-  if (typeof callback === "function") {
+  if (typeof callback === 'function') {
     if ((0, _index.isStateWriteChannel)(ch)) {
-      console.warn("You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.");
+      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.');
     }
     doTake(ch, callback);
   } else {
@@ -954,11 +966,11 @@ function close(id) {
   var ch = normalizeChannel(id);
   var newState = ch.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
   ch.state(newState);
-  ch.buff.puts.forEach(function (put) {
-    return put(newState);
+  ch.buff.puts.forEach(function (p) {
+    return p(newState);
   });
-  ch.buff.takes.forEach(function (take) {
-    return take(newState);
+  ch.buff.takes.forEach(function (t) {
+    return t(newState);
   });
   _index.grid.remove(ch);
   ch.subscribers = [];
@@ -995,7 +1007,7 @@ function fork(routine) {
 // **************************************************** other
 
 var isChannel = exports.isChannel = function isChannel(ch) {
-  return ch && ch["@channel"] === true;
+  return ch && ch['@channel'] === true;
 };
 
 // **************************************************** routine
@@ -1007,8 +1019,8 @@ function go(func) {
 
   var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
-  var RUNNING = "RUNNING";
-  var STOPPED = "STOPPED";
+  var RUNNING = 'RUNNING';
+  var STOPPED = 'STOPPED';
   var state = RUNNING;
 
   var api = {
@@ -1036,7 +1048,7 @@ function go(func) {
     var i = gen.next(value);
     if (i.done === true) {
       if (done) done(i.value);
-      if (i.value && i.value["@go"] === true) {
+      if (i.value && i.value['@go'] === true) {
         gen = func.apply(undefined, args);
         next();
       }
@@ -1075,7 +1087,7 @@ function go(func) {
         next();
         break;
       default:
-        throw new Error("Unrecognized operation " + i.value.op + " for a routine.");
+        throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
     }
   }
 
@@ -1083,10 +1095,10 @@ function go(func) {
 
   return api;
 }
-go["@go"] = true;
+go['@go'] = true;
 
 function sleep(ms, callback) {
-  if (typeof callback === "function") {
+  if (typeof callback === 'function') {
     setTimeout(callback, ms);
   } else {
     return { op: _constants.SLEEP, ms: ms };
@@ -1169,6 +1181,7 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
+/* eslint-disable no-use-before-define */
 function Harvester() {
   var api = {};
   var products = {};
@@ -1210,8 +1223,8 @@ function Harvester() {
   return api;
 }
 
-var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabilities(h) {
-  h.defineProduct('riew', function (viewFunc) {
+var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabilities(hInstance) {
+  hInstance.defineProduct('riew', function (viewFunc) {
     for (var _len2 = arguments.length, controllers = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
       controllers[_key2 - 1] = arguments[_key2];
     }
@@ -1221,20 +1234,20 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
     _grid2.default.add(riew);
     return riew;
   });
-  h.defineProduct('reactRiew', function (viewFunc) {
+  hInstance.defineProduct('reactRiew', function (viewFunc) {
     for (var _len3 = arguments.length, controllers = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
       controllers[_key3 - 1] = arguments[_key3];
     }
 
     return _react2.default.apply(undefined, [viewFunc].concat(controllers));
   });
-  h.defineProduct('channel', function () {
+  hInstance.defineProduct('channel', function () {
     var channel = _csp.createChannel.apply(undefined, arguments);
 
     _grid2.default.add(channel);
     return channel;
   });
-  h.defineProduct('state', function () {
+  hInstance.defineProduct('state', function () {
     var state = _csp.createState.apply(undefined, arguments);
 
     _grid2.default.add(state);
@@ -1372,7 +1385,7 @@ var _slicedToArray = function () {
       throw new TypeError("Invalid attempt to destructure non-iterable instance");
     }
   };
-}(); /* eslint-disable no-new-func */
+}(); /* eslint-disable */
 
 exports.default = riew;
 
@@ -1473,7 +1486,7 @@ function riew(View) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../index":16,"../utils":19}],18:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -1491,9 +1504,9 @@ var _extends = Object.assign || function (target) {
 
 exports.default = createRiew;
 
-var _index = require("./index");
+var _index = require('./index');
 
-var _utils = require("./utils");
+var _utils = require('./utils');
 
 function _defineProperty(obj, key, value) {
   if (key in obj) {
@@ -1501,7 +1514,7 @@ function _defineProperty(obj, key, value) {
   } else {
     obj[key] = value;
   }return obj;
-}
+} /* eslint-disable no-param-reassign */
 
 var Renderer = function Renderer(viewFunc) {
   var data = {};
@@ -1554,8 +1567,8 @@ function createRiew(viewFunc) {
       (0, _index.sub)(to, func);
     }
   };
-  var VIEW_CHANNEL = riew.id + "_view";
-  var PROPS_CHANNEL = riew.id + "_props";
+  var VIEW_CHANNEL = riew.id + '_view';
+  var PROPS_CHANNEL = riew.id + '_props';
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
@@ -1590,7 +1603,7 @@ function createRiew(viewFunc) {
     sub(VIEW_CHANNEL, renderer.push);
     runningRoutines = routines.map(function (r) {
       return (0, _index.go)(r, function (result) {
-        if (typeof result === "function") {
+        if (typeof result === 'function') {
           cleanups.push(result);
         }
       }, _extends({
@@ -1650,22 +1663,22 @@ function createRiew(viewFunc) {
   };
 
   riew.__setExternals = function (maps) {
-    maps = maps.reduce(function (map, item) {
-      if (typeof item === "string") {
-        map = _extends({}, map, _defineProperty({}, item, (0, _index.use)(item)));
+    var reducedMaps = maps.reduce(function (res, item) {
+      if (typeof item === 'string') {
+        res = _extends({}, res, _defineProperty({}, item, (0, _index.use)(item)));
       } else {
-        map = _extends({}, map, item);
+        res = _extends({}, res, item);
       }
-      return map;
+      return res;
     }, {});
-    externals = _extends({}, externals, maps);
+    externals = _extends({}, externals, reducedMaps);
   };
 
   return riew;
 }
 
 },{"./index":16,"./utils":19}],19:[function(require,module,exports){
-"use strict";
+'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -1695,13 +1708,13 @@ var getFuncName = exports.getFuncName = function getFuncName(func) {
   if (func.name) return func.name;
   var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
 
-  return result ? result[1] : "unknown";
+  return result ? result[1] : 'unknown';
 };
 
 var ids = 0;
 
 var getId = exports.getId = function getId(prefix) {
-  return prefix + "_" + ++ids;
+  return prefix + '_' + ++ids;
 };
 
 function isObjectEmpty(obj) {
@@ -1713,26 +1726,27 @@ function isObjectEmpty(obj) {
   return true;
 }
 function requireObject(obj) {
-  if (typeof obj === "undefined" || obj === null || typeof obj !== "undefined" && (typeof obj === "undefined" ? "undefined" : _typeof(obj)) !== "object") {
-    throw new Error("A key-value object expected. Instead \"" + obj + "\" passed.");
+  if (typeof obj === 'undefined' || obj === null || typeof obj !== 'undefined' && (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) !== 'object') {
+    throw new Error('A key-value object expected. Instead "' + obj + '" passed.');
   }
 }
 var accumulate = exports.accumulate = function accumulate(current, newData) {
   return _extends({}, current, newData);
 };
 var isPromise = exports.isPromise = function isPromise(obj) {
-  return obj && typeof obj["then"] === "function";
+  return obj && typeof obj.then === 'function';
 };
 var isObjectLiteral = exports.isObjectLiteral = function isObjectLiteral(obj) {
   return obj ? obj.constructor === {}.constructor : false;
 };
 var isGenerator = exports.isGenerator = function isGenerator(obj) {
-  return obj && typeof obj["next"] === "function" && typeof obj["throw"] === "function";
+  return obj && typeof obj.next === 'function' && typeof obj.throw === 'function';
 };
 var isGeneratorFunction = exports.isGeneratorFunction = function isGeneratorFunction(fn) {
   var constructor = fn.constructor;
+
   if (!constructor) return false;
-  if (constructor.name === "GeneratorFunction" || constructor.displayName === "GeneratorFunction") {
+  if (constructor.name === 'GeneratorFunction' || constructor.displayName === 'GeneratorFunction') {
     return true;
   }
   return isGenerator(constructor.prototype);

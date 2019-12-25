@@ -855,7 +855,9 @@ describe('Given a CSP', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      sub([c1, c2], c3, (a, b) => a.toUpperCase() + b.toUpperCase());
+      sub([c1, c2], c3, {
+        transform: (a, b) => a.toUpperCase() + b.toUpperCase(),
+      });
       sub(c3, spy);
       sput(c1, 'foo');
       sput(c2, 'bar');
@@ -874,11 +876,9 @@ describe('Given a CSP', () => {
         const spy = jest.fn();
 
         sub('app', spy);
-        sub(
-          [users, currentUser],
-          chan('app'),
-          (us, currentUserIndex) => us[currentUserIndex].name
-        );
+        sub([users, currentUser], chan('app'), {
+          transform: (us, currentUserIndex) => us[currentUserIndex].name,
+        });
 
         sput(currentUser, 2);
 
@@ -895,11 +895,9 @@ describe('Given a CSP', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        sub(
-          [users, currentUser],
-          chan('app'),
-          (us, currentUserIndex) => us[currentUserIndex].name
-        );
+        sub([users, currentUser], chan('app'), {
+          transform: (us, currentUserIndex) => us[currentUserIndex].name,
+        });
 
         go(function*() {
           spy(yield take('app'));
@@ -929,11 +927,9 @@ describe('Given a CSP', () => {
           })
         );
 
-        sub(
-          [users, currentUser],
-          'app',
-          (us, currentUserIndex) => us[currentUserIndex].name
-        );
+        sub([users, currentUser], 'app', {
+          transform: (us, currentUserIndex) => us[currentUserIndex].name,
+        });
 
         go(function*() {
           spy(yield take('app'));

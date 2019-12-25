@@ -584,7 +584,7 @@ describe('Given the `riew` factory function', () => {
         });
       });
 
-      sub([s1, s2], 'current', (arr, idx) => arr[idx]);
+      sub([s1, s2], 'current', { transform: (arr, idx) => arr[idx] });
 
       const r = riew(view).with({ data: 'current' });
 

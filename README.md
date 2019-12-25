@@ -834,13 +834,14 @@ go(function * () {
 
 ### sub
 
-> `sub(sourceChannels, subscriber, transform, onError, initialCall)`
+> `sub(sourceChannels, subscriber, options)`
 
 * `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the subscriber is notified only when all the source channels have values.
 * `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel/s.
-* `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
-* `onError` (`Function`, optional) - in case of an error of the `transform` function.
-* `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
+* `options` (`Object`, optional) - additional options for the subscription
+  * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
+  * `onError` (`Function`, optional) - in case of an error of the `transform` function.
+  * `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
 
 The `sub` function is mainly about notifying a _subscriber_ when there is data in the _source_ channels. We already talked about the [Pubsub](https://github.com/krasimir/riew#pubsub) pattern and how it's a bit against the CSP concept. However, because this pattern is handy Riew delivers it. Here are two very important things to remember:
 
@@ -891,9 +892,11 @@ const subscriber = chan();
 sub(
   source,
   subscriber,
-  function * transform(value) {
-    const { file } = yield fetch('https://aws.random.cat/meow').then(res => res.json());
-    return `<img src="${ file }" />`;
+  {
+    transform: function * (value) {
+      const { file } = yield fetch('https://aws.random.cat/meow').then(res => res.json());
+      return `<img src="${ file }" />`;
+    }
   }
 );
 
@@ -908,14 +911,16 @@ We have two channels `source` and `subscriber`. We want each `put` to the `sourc
 
 ### subOnce
 
-> `subOnce(sourceChannel, subscriber, transform, onError)`
+> `subOnce(sourceChannel, subscriber, options)`
 
 Close to how [sub](https://github.com/krasimir/riew#sub) works except that the subscriber is called only once. There are also two other differences - the function accepts always one channel and there is no initial call if the source channel has a value.
 
 * `sourceChannel` (`Channel`, required) - the source channel which we will be subscribed to.
 * `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel.
-* `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the source and has a chance to transform it for the subscriber.
-* `onError` (`Function`, optional) - in case of an error of the `transform` function.
+* `options` (`Object`, optional) - additional options for the subscription
+  * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
+  * `onError` (`Function`, optional) - in case of an error of the `transform` function.
+  * `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
 
 Example:
 

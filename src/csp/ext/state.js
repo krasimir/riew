@@ -64,18 +64,20 @@ export function createState(...args) {
           value = v;
           readChannels.forEach(r => runSelector(r, value));
         },
-        function*(payload) {
-          try {
-            if (isGeneratorFunction(reducer)) {
-              return yield call(reducer, value, payload);
+        {
+          *transform(payload) {
+            try {
+              if (isGeneratorFunction(reducer)) {
+                return yield call(reducer, value, payload);
+              }
+              return reducer(value, payload);
+            } catch (e) {
+              handleError(onError)(e);
             }
-            return reducer(value, payload);
-          } catch (e) {
-            handleError(onError)(e);
-          }
-        },
-        handleError(onError),
-        true
+          },
+          onError: handleError(onError),
+          initialCall: true,
+        }
       );
       return this;
     },

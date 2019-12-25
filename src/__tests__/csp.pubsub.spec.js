@@ -244,7 +244,7 @@ describe('Given a CSP pubsub extension', () => {
         yield put(ch, 'bar'); // <-- here we stop
         spy('never');
       });
-      sub(ch, spy, undefined, null, false);
+      sub(ch, spy, { initialCall: false });
 
       expect(spy).not.toBeCalled();
     });
@@ -254,7 +254,7 @@ describe('Given a CSP pubsub extension', () => {
       const spy = jest.fn();
       const ch = chan();
 
-      sub(ch, spy, value => value.toUpperCase());
+      sub(ch, spy, { transform: value => value.toUpperCase() });
       sput(ch, 'foo');
       sput(ch, 'bar');
 
@@ -265,9 +265,11 @@ describe('Given a CSP pubsub extension', () => {
         const spy = jest.fn();
         const ch = chan();
 
-        sub(ch, spy, function*(v) {
-          yield sleep(2);
-          return v.toUpperCase();
+        sub(ch, spy, {
+          *transform(v) {
+            yield sleep(2);
+            return v.toUpperCase();
+          },
         });
         sput(ch, 'foo');
         sput(ch, 'bar');

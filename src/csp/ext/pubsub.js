@@ -33,13 +33,21 @@ function defaultTransform(...args) {
   return args;
 }
 
-export function sub(
-  channels,
-  to,
-  transform = defaultTransform,
-  onError = null,
-  initialCallIfBufValue = true
-) {
+const DEFAULT_OPTIONS = {
+  transform: defaultTransform,
+  onError: null,
+  initialCall: true,
+};
+
+export function sub(channels, to, options) {
+  options = options || DEFAULT_OPTIONS;
+  const transform = options.transform || DEFAULT_OPTIONS.transform;
+  const onError = options.onError || DEFAULT_OPTIONS.onError;
+  const initialCall =
+    'initialCall' in options
+      ? options.initialCall
+      : DEFAULT_OPTIONS.initialCall;
+
   // in a routine
   if (typeof to === 'undefined') {
     return { ch: channels, op: SUB };
@@ -86,7 +94,7 @@ export function sub(
     // If there is already a value in the channel
     // notify the subscribers.
     const currentChannelBufValue = ch.value();
-    if (initialCallIfBufValue && currentChannelBufValue.length > 0) {
+    if (initialCall && currentChannelBufValue.length > 0) {
       notify(currentChannelBufValue[0]);
     }
   });
@@ -104,12 +112,7 @@ export function unsub(id, callback) {
     return false;
   });
 }
-export function subOnce(
-  channel,
-  callback,
-  transform = defaultTransform,
-  onError = null
-) {
+export function subOnce(channel, callback, options = DEFAULT_OPTIONS) {
   const c = v => {
     unsub(channel, c);
     if (!isChannel(callback)) {
@@ -118,7 +121,7 @@ export function subOnce(
       sput(callback, v);
     }
   };
-  sub(channel, c, transform, onError, false);
+  sub(channel, c, options);
 }
 export function unsubAll(id) {
   const ch = isChannel(id) ? id : chan(id);
