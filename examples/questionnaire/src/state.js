@@ -53,14 +53,10 @@ error.mutate(RESET_ERROR, () => null);
 error.mutate(SET_ERROR);
 error.select(GET_ERROR);
 
-sub(
-  [questions, currentStep],
-  IS_COMPLETED,
-  (questions, currentStep) => questions.length - 1 === currentStep
-);
-sub(
-  [questions, currentStep],
-  CURRENT_QUESTION,
-  (questions, currentStep) => questions[currentStep]
-);
+sub([questions, currentStep], IS_COMPLETED, {
+  transform: (questions, currentStep) => questions.length - 1 === currentStep,
+});
+sub([questions, currentStep], CURRENT_QUESTION, {
+  transform: (questions, currentStep) => questions[currentStep],
+});
 sub(ANSWER, RESET_ERROR);

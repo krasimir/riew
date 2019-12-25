@@ -2059,7 +2059,7 @@ extglob@^2.0.4:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
-fast-deep-equal@2.0.1, fast-deep-equal@^2.0.1:
+fast-deep-equal@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/fast-deep-equal/-/fast-deep-equal-2.0.1.tgz#7b05218ddf9667bf7f370bf7fdb2cb15fdd0aa49"
   integrity sha1-ewUhjd+WZ79/Nwv3/bLLFf3Qqkk=
@@ -3979,12 +3979,10 @@ ret@~0.1.10:
   resolved "https://registry.yarnpkg.com/ret/-/ret-0.1.15.tgz#b8a4825d5bdb1fc3f6f53c2bc33f81388681c7bc"
   integrity sha512-TTlYpa+OL+vMMNG24xSlQGEJ3B/RzEfUlLct7b5G/ytav+wPrplCpVMFuwzXbkecJrb6IYo1iFb0S9v37754mg==
 
-riew@1.17.4:
-  version "1.17.4"
-  resolved "https://registry.yarnpkg.com/riew/-/riew-1.17.4.tgz#db68b7a0e519b6142963c167d34500cefdbe2574"
-  integrity sha512-EZdsk45ENRnFfORqf/KwoRXgJQtL5yoW2hDYjPBdvBHexGR5SxnZOs0773WEEjMsprYRz32vVbWQYqsYoNpg6w==
-  dependencies:
-    fast-deep-equal "2.0.1"
+riew@1.18.0:
+  version "1.18.0"
+  resolved "https://registry.yarnpkg.com/riew/-/riew-1.18.0.tgz#cb14f091c4b4115e299e2855460d733c64163314"
+  integrity sha512-zg8LoxcqDkhx0fBm6V8xzNj03Tq+7bnOTgKRPiZYAFI5u7SPHsXd5bIWu7rrw9vel+F8V1nkM/wK4bySqYKmmQ==
 
 rimraf@^2.2.8, rimraf@^2.5.4, rimraf@^2.6.1, rimraf@^2.6.2, rimraf@^2.6.3:
   version "2.6.3"
