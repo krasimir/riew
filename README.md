@@ -918,6 +918,37 @@ sput(source);
 
 We have two channels `source` and `subscriber`. We want each `put` to the `source` to result into a `<img>` tag with a kitty into the `subscriber`. To fully understand this example you have to check the [go](https://github.com/krasimir/riew#go) section but shortly the `transform` routine asynchronously gets a URL of the image and returns a formatted `<img>` string. That string is pushed to the `subscriber` channel which we take into the routine `A`.
 
+If we want to notify the subscriber only once we may use the `once` option:
+
+```js
+const ch = chan();
+
+sub(ch, v => {
+  console.log(v);
+}, { once: true });
+
+sput(ch, 'foo');
+sput(ch, 'bar'); // <- nothing
+sput(ch, 'moo'); // <- nothing
+```
+
+Or if we want to use the `ONE_OF` strategy and receive the input from each of the source channels:
+
+```js
+const chA = chan();
+const chB = chan();
+
+sub([chA, chB], v => {
+  console.log(v);
+}, { strategy: sub.ONE_OF });
+
+sput(chA, 'foo');
+sput(chB, 'bar');
+sput(chA, 'moo');
+```
+
+The result of this script will be `"foo"` followed by `"bar"` followed by `"moo"`. It's because the library is not waiting for all the channels to have values but trigger the callback immediately when it receives a value.
+
 ### unsub
 
 > `unsub(sourceChannel, subscriber)`
