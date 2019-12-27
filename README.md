@@ -668,9 +668,16 @@ In the console we'll see `"foo"` followed by two `Symbol(ENDED)`. The routine is
 
 ### read
 
-> `read(channel)`
+> `read(sourceChannels, options)`
 
-It's meant to be used only inside a routine and it _reads_ from a channel. The _reading_ that happens is like subscribing but only once. Or in other words `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value.
+It's meant to be used only inside a routine and it _reads_ from a channel/s. The _reading_ that happens is like subscribing with `ONE_OF` strategy. Or in other words `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value.
+
+* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option to change this.
+* `options` (`Object`, optional) - additional options for the subscription
+  * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
+  * `onError` (`Function`, optional) - in case of an error of the `transform` function.
+  * `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
+  * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not.
 
 Example:
 
@@ -836,14 +843,16 @@ go(function * () {
 
 > `sub(sourceChannels, subscriber, options)`
 
-* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the subscriber is notified only when all the source channels have values.
+* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option to change this.
 * `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel/s.
 * `options` (`Object`, optional) - additional options for the subscription
   * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
   * `onError` (`Function`, optional) - in case of an error of the `transform` function.
   * `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
+  * `once` (`Boolean`, optional, default to `false`) - the subscriber will be notified only once
+  * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not.
 
-The `sub` function is mainly about notifying a _subscriber_ when there is data in the _source_ channels. We already talked about the [Pubsub](https://github.com/krasimir/riew#pubsub) pattern and how it's a bit against the CSP concept. However, because this pattern is handy Riew delivers it. Here are two very important things to remember:
+The `sub` function is mainly about notifying a _subscriber_ when there is data in the _source_ channels. We already talked about the [Pubsub](https://github.com/krasimir/riew#pubsub) pattern and how it's a bit against the CSP concept. Here are two very important things to remember:
 
 * `sub` does not consume values from the channels. Does not unblocks pending puts.
 * The subscriber is notified no matter if the `put` to the source is resolved.
@@ -908,38 +917,6 @@ sput(source);
 ```
 
 We have two channels `source` and `subscriber`. We want each `put` to the `source` to result into a `<img>` tag with a kitty into the `subscriber`. To fully understand this example you have to check the [go](https://github.com/krasimir/riew#go) section but shortly the `transform` routine asynchronously gets a URL of the image and returns a formatted `<img>` string. That string is pushed to the `subscriber` channel which we take into the routine `A`.
-
-### subOnce
-
-> `subOnce(sourceChannel, subscriber, options)`
-
-Close to how [sub](https://github.com/krasimir/riew#sub) works except that the subscriber is called only once. There are also two other differences - the function accepts always one channel and there is no initial call if the source channel has a value.
-
-* `sourceChannel` (`Channel`, required) - the source channel which we will be subscribed to.
-* `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel.
-* `options` (`Object`, optional) - additional options for the subscription
-  * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
-  * `onError` (`Function`, optional) - in case of an error of the `transform` function.
-  * `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
-
-Example:
-
-```js
-const source = chan();
-const subscriber = chan();
-
-subOnce(source, subscriber);
-
-go(function * () {
-  console.log(yield take(subscriber));
-  console.log(yield take(subscriber));
-});
-
-sput(source, 'foo');
-sput(source, 'bar');
-```
-
-We only see `"foo"` because after the first subscriber call Riew automatically unsubscribe the `subscriber` channel.
 
 ### unsub
 

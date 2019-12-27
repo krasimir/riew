@@ -1,10 +1,22 @@
-/* eslint-disable no-param-reassign */
+/* eslint-disable no-param-reassign, no-multi-assign */
 import { chan, isChannel, go, buffer, isState } from '../../index';
-import { SUB } from '../constants';
+import { READ } from '../constants';
 import { sput } from '../ops';
 import { isGeneratorFunction } from '../../utils';
 
-const NOTHING = Symbol('Nothing');
+function defaultTransform(...args) {
+  if (args.length === 1) return args[0];
+  return args;
+}
+
+const NOTHING = Symbol('NOTHING');
+const ALL_REQUIRED = Symbol('ALL_REQUIRED');
+const ONE_OF = Symbol('ONE_OF');
+const DEFAULT_OPTIONS = {
+  transform: defaultTransform,
+  onError: null,
+  initialCall: true,
+};
 
 function normalizeChannels(channels) {
   if (!Array.isArray(channels)) channels = [channels];
@@ -28,35 +40,22 @@ function normalizeTo(to) {
     `'sub' accepts string, channel or a function as a second argument. ${to} given.`
   );
 }
-function defaultTransform(...args) {
-  if (args.length === 1) return args[0];
-  return args;
-}
-
-const DEFAULT_OPTIONS = {
-  transform: defaultTransform,
-  onError: null,
-  initialCall: true,
-};
-
-export function sub(channels, to, options) {
+function normalizeOptions(options) {
   options = options || DEFAULT_OPTIONS;
   const transform = options.transform || DEFAULT_OPTIONS.transform;
   const onError = options.onError || DEFAULT_OPTIONS.onError;
+  const strategy = options.strategy || ALL_REQUIRED;
+  const once = 'once' in options ? options.once : false;
   const initialCall =
     'initialCall' in options
       ? options.initialCall
       : DEFAULT_OPTIONS.initialCall;
 
-  // in a routine
-  if (typeof to === 'undefined') {
-    return { ch: channels, op: SUB };
-  }
+  return { transform, onError, strategy, initialCall, once };
+}
 
-  // outside routine
-  channels = normalizeChannels(channels); // array of channels
-  to = normalizeTo(to); // function
-
+function waitAllStrategy(channels, to, options) {
+  const { transform, onError, initialCall, once } = options;
   const data = channels.map(() => NOTHING);
   let composedAtLeastOnce = false;
   channels.forEach((ch, idx) => {
@@ -89,7 +88,7 @@ export function sub(channels, to, options) {
       }
     };
     if (!ch.subscribers.find(({ to: t }) => t === to)) {
-      ch.subscribers.push({ to, notify });
+      ch.subscribers.push({ to, notify, once });
     }
     // If there is already a value in the channel
     // notify the subscribers.
@@ -98,35 +97,86 @@ export function sub(channels, to, options) {
       notify(currentChannelBufValue[0]);
     }
   });
-  return to;
 }
-export function unsub(id, callback) {
-  const ch = isChannel(id) ? id : chan(id);
-  if (isChannel(callback)) {
-    callback = callback.__subFunc;
-  }
-  ch.subscribers = ch.subscribers.filter(({ to }) => {
-    if (to !== callback) {
-      return true;
+
+function waitOneStrategy(channels, to, options) {
+  const { transform, onError, initialCall, once } = options;
+  channels.forEach(ch => {
+    const notify = (value, done = () => {}) => {
+      try {
+        if (isGeneratorFunction(transform)) {
+          go(
+            transform,
+            v => {
+              to(v);
+              done();
+            },
+            value
+          );
+        } else {
+          to(transform(value));
+          done();
+        }
+      } catch (e) {
+        if (onError === null) {
+          throw e;
+        }
+        onError(e);
+      }
+    };
+    if (!ch.subscribers.find(({ to: t }) => t === to)) {
+      ch.subscribers.push({ to, notify, once });
     }
-    return false;
+    // If there is already a value in the channel
+    // notify the subscribers.
+    const currentChannelBufValue = ch.value();
+    if (initialCall && currentChannelBufValue.length > 0) {
+      notify(currentChannelBufValue[0]);
+    }
   });
 }
-export function subOnce(channel, callback, options = DEFAULT_OPTIONS) {
-  const c = v => {
-    unsub(channel, c);
-    if (!isChannel(callback)) {
-      callback(v);
-    } else {
-      sput(callback, v);
+
+export function sub(channels, to, options) {
+  options = normalizeOptions(options);
+  let f;
+  switch (options.strategy) {
+    case ALL_REQUIRED:
+      f = waitAllStrategy;
+      break;
+    case ONE_OF:
+      f = waitOneStrategy;
+      break;
+    default:
+      throw new Error('Subscription strategy not recognized.');
+  }
+  f(normalizeChannels(channels), normalizeTo(to), options);
+}
+export function unsub(channels, callback) {
+  channels = normalizeChannels(channels);
+  channels.forEach(ch => {
+    if (isChannel(callback)) {
+      callback = callback.__subFunc;
     }
+    ch.subscribers = ch.subscribers.filter(({ to }) => {
+      if (to !== callback) {
+        return true;
+      }
+      return false;
+    });
+  });
+}
+export function unsubAll(channels) {
+  normalizeChannels(channels).forEach(ch => {
+    ch.subscribers = [];
+  });
+}
+export function read(channels, options) {
+  return {
+    ch: normalizeChannels(channels),
+    op: READ,
+    options: normalizeOptions(options),
   };
-  sub(channel, c, options);
 }
-export function unsubAll(id) {
-  const ch = isChannel(id) ? id : chan(id);
-  ch.subscribers = [];
-}
-export function read(...args) {
-  return sub(...args);
-}
+
+sub.ALL_REQUIRED = read.ALL_REQUIRED = ALL_REQUIRED;
+sub.ONE_OF = read.ONE_OF = ONE_OF;

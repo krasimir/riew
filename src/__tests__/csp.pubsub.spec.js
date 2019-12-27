@@ -2,7 +2,6 @@ import {
   chan,
   buffer,
   sub,
-  subOnce,
   unsub,
   CHANNELS,
   go,
@@ -13,6 +12,7 @@ import {
   sput,
   close,
   sleep,
+  read,
 } from '../index';
 import { delay } from '../__helpers__';
 
@@ -131,7 +131,7 @@ describe('Given a CSP pubsub extension', () => {
       const spy = jest.fn();
       const ch = chan();
 
-      subOnce(ch, spy);
+      sub(ch, spy, { once: true });
 
       sput(ch, 'foo');
       sput(ch, 'bar');
@@ -144,11 +144,11 @@ describe('Given a CSP pubsub extension', () => {
         const spy = jest.fn();
         const ch = chan();
         const callback = v => {
-          subOnce(ch, callback);
+          sub(ch, callback, { once: true });
           spy(v);
         };
 
-        subOnce(ch, callback);
+        sub(ch, callback, { once: true });
 
         sput(ch, 'foo');
         sput(ch, 'bar');
@@ -163,7 +163,7 @@ describe('Given a CSP pubsub extension', () => {
         const source = chan();
         const subscriber = chan();
 
-        subOnce(source, subscriber);
+        sub(source, subscriber, { once: true });
 
         go(function*() {
           spy(yield take(subscriber));
@@ -184,7 +184,7 @@ describe('Given a CSP pubsub extension', () => {
 
       go(function*() {
         spy('start');
-        spy(yield sub(ch));
+        spy(yield read(ch));
         spy('end');
       });
 
@@ -200,7 +200,7 @@ describe('Given a CSP pubsub extension', () => {
         let counter = 0;
 
         go(function*() {
-          spy(yield sub('XXX'));
+          spy(yield read('XXX'));
           counter += 1;
           spy(`foo${counter}`);
           return go;
@@ -276,6 +276,41 @@ describe('Given a CSP pubsub extension', () => {
 
         await delay(10);
         expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
+      });
+    });
+  });
+  describe('when we use ON_OFF strategy', () => {
+    describe('and we use `sub` function', () => {
+      it('should fire the callback without waiting for all the channels', () => {
+        const ch1 = chan();
+        const ch2 = chan();
+        const spy = jest.fn();
+
+        sub([ch1, ch2], spy, { strategy: sub.ONE_OF });
+
+        sput(ch1, 'foo');
+        sput(ch2, 'bar');
+        sput(ch1, 'zoo');
+
+        expect(spy).toBeCalledWithArgs(['foo'], ['bar'], ['zoo']);
+      });
+    });
+    describe('and we use `read` in a routine', () => {
+      it('should unblock when one of the channels receives value', () => {
+        const ch1 = chan();
+        const ch2 = chan();
+        const spy = jest.fn();
+
+        go(function*() {
+          const v = yield read([ch1, ch2], { strategy: read.ONE_OF });
+          spy(v);
+          return go;
+        });
+
+        sput(ch1, 'foo');
+        sput(ch2, 'bar');
+
+        expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
       });
     });
   });

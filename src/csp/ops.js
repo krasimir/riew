@@ -9,11 +9,11 @@ import {
   NOOP,
   CHANNELS,
   STOP,
-  SUB,
+  READ,
   CALL_ROUTINE,
   FORK_ROUTINE,
 } from './constants';
-import { grid, chan, isState, isStateWriteChannel, subOnce } from '../index';
+import { grid, chan, isState, isStateWriteChannel, sub } from '../index';
 import { isPromise } from '../utils';
 
 const noop = () => {};
@@ -50,12 +50,18 @@ export function sput(id, item, callback) {
 function callSubscribers(ch, item, callback) {
   const subscribers = ch.subscribers.map(() => 1);
   if (subscribers.length === 0) return callback();
-  ch.subscribers.forEach(({ notify }) =>
+  const subscriptions = [...ch.subscribers];
+  ch.subscribers = [];
+  subscriptions.forEach(s => {
+    const { notify, once } = s;
+    if (!once) {
+      ch.subscribers.push(s);
+    }
     notify(
       item,
       () => (subscribers.shift(), subscribers.length === 0 ? callback() : null)
-    )
-  );
+    );
+  });
 }
 
 // **************************************************** TAKE
@@ -154,8 +160,7 @@ export function go(func, done = () => {}, ...args) {
     if (i.done === true) {
       if (done) done(i.value);
       if (i.value && i.value['@go'] === true) {
-        gen = func(...args);
-        next();
+        api.rerun();
       }
       return;
     }
@@ -179,8 +184,8 @@ export function go(func, done = () => {}, ...args) {
       case STOP:
         state = STOPPED;
         break;
-      case SUB:
-        subOnce(i.value.ch, next);
+      case READ:
+        sub(i.value.ch, next, { ...i.value.options, once: true });
         break;
       case CALL_ROUTINE:
         addSubRoutine(go(i.value.routine, next, ...i.value.args, ...args));

@@ -2,6 +2,7 @@ import {
   state,
   take,
   put,
+  read,
   sub,
   reset,
   CHANNELS,
@@ -262,15 +263,15 @@ describe('Given a CSP state extension', () => {
       current.mutate('reset', () => 'foobar');
 
       go(function*() {
-        yield sub('reset');
+        yield read('reset');
         spy(`r1=${yield take(current)}`);
       });
       go(function*() {
-        yield sub('reset');
+        yield read('reset');
         spy(`r2=${yield take(current)}`);
       });
       go(function*() {
-        yield sub('reset');
+        yield read('reset');
         spy(`r3=${yield take(current)}`);
       });
 

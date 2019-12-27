@@ -2,6 +2,7 @@ import {
   chan,
   buffer,
   timeout,
+  read,
   go,
   merge,
   unsubAll,
@@ -87,7 +88,7 @@ describe('Given a CSP', () => {
       await delay(4);
       expect(spy).not.toBeCalled();
     });
-    it('should provide an API for rerunning the routine', async () => {
+    it('should provide an API for re-running the routine', async () => {
       const spy = jest.fn();
       const routine = go(function* A() {
         yield sleep(2);
@@ -147,7 +148,7 @@ describe('Given a CSP', () => {
         expect(spy).toBeCalledWithArgs(['foo']);
       });
     });
-    describe('and when we yield `rerun`', () => {
+    describe('and when we return the `go` function', () => {
       it('should re-run the routine', async () => {
         const spy = jest.fn();
         let counter = 0;
@@ -170,6 +171,20 @@ describe('Given a CSP', () => {
         });
         expect(spy).toBeCalledWithArgs([0], [1], [2], [2], [2], [3]);
         expect(counter).toBe(3);
+      });
+      it('should stop the current routine before running it again', () => {
+        const ch = chan();
+        const spy = jest.fn();
+
+        go(function*() {
+          spy(yield read(ch));
+          return go;
+        });
+
+        sput(ch, 'foo');
+        sput(ch, 'bar');
+
+        expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
       });
     });
     describe('and we yield another routine via `call` method', () => {
