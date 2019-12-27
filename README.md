@@ -37,7 +37,6 @@
   * [timeout](https://github.com/krasimir/riew#timeout)
   * [merge](https://github.com/krasimir/riew#merge)
   * [sub](https://github.com/krasimir/riew#sub)
-  * [subOnce](https://github.com/krasimir/riew#subonce)
   * [unsub](https://github.com/krasimir/riew#unsub)
   * [unsubAll](https://github.com/krasimir/riew#unsubAll)
   * [state](https://github.com/krasimir/riew#state)
