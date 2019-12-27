@@ -1,4 +1,4 @@
-import { take, put, sub, go } from 'riew';
+import { take, put, read, go } from 'riew';
 import { RESET_ERROR, SET_ERROR, NEXT_STEP, START_OVER } from './constants';
 
 export const nextStepRoutine = function*({ render }) {
@@ -15,7 +15,7 @@ export const nextStepRoutine = function*({ render }) {
   return go;
 };
 export const startOverRoutine = function*({ render }) {
-  yield sub(START_OVER);
+  yield read(START_OVER);
   render({ completed: false });
   return go;
 };

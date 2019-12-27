@@ -398,6 +398,7 @@ function merge() {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.ONE_OF = exports.ALL_REQUIRED = undefined;
 exports.sub = sub;
 exports.unsub = unsub;
 exports.unsubAll = unsubAll;
@@ -431,8 +432,8 @@ function defaultTransform() {
 }
 
 var NOTHING = Symbol('NOTHING');
-var ALL_REQUIRED = Symbol('ALL_REQUIRED');
-var ONE_OF = Symbol('ONE_OF');
+var ALL_REQUIRED = exports.ALL_REQUIRED = Symbol('ALL_REQUIRED');
+var ONE_OF = exports.ONE_OF = Symbol('ONE_OF');
 var DEFAULT_OPTIONS = {
   transform: defaultTransform,
   onError: null,

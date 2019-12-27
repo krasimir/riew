@@ -10,8 +10,8 @@ function defaultTransform(...args) {
 }
 
 const NOTHING = Symbol('NOTHING');
-const ALL_REQUIRED = Symbol('ALL_REQUIRED');
-const ONE_OF = Symbol('ONE_OF');
+export const ALL_REQUIRED = Symbol('ALL_REQUIRED');
+export const ONE_OF = Symbol('ONE_OF');
 const DEFAULT_OPTIONS = {
   transform: defaultTransform,
   onError: null,

@@ -3,7 +3,7 @@
   "dependencies": {
     "react": "16.8.6",
     "react-dom": "16.8.6",
-    "riew": "1.18.0"
+    "riew": "1.19.0"
   },
   "devDependencies": {
     "@babel/core": "7.5.0",
