@@ -98,7 +98,6 @@ function waitAllStrategy(channels, to, options) {
     }
   });
 }
-
 function waitOneStrategy(channels, to, options) {
   const { transform, onError, initialCall, once } = options;
   channels.forEach(ch => {

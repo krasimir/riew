@@ -1311,7 +1311,7 @@ We have three constants which we can use together with the [state](https://githu
 * `CLOSED` - channel is closed but we it still has items in it.
 * `ENDED` - channel is closed and empty
 
-The two options for [subscription]() strategies:
+The two options for [subscription](https://github.com/krasimir/riew#sub) strategies:
 
 * `ALL_REQUIRED` - notify the subscriber only if all the source channels have value.
 * `ONE_OF` - notify the subscriber if at least one of the source channels have value.
