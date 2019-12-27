@@ -1129,7 +1129,7 @@ The Riew routines that are passed to the `riew` function receive an object with 
 * `render` - must be called with an object. That object reaches the `view`. Have in mind that multiple `render` calls are batched into a single `view` call via micro task. This `render` function is the main tool for updating the view.
 * `state` - alias to [state](https://github.com/krasimir/riew#state). All the states created with this alias will be destroyed when the riew is unmounted. It's recommended if you have local for the riew state to created it via this function so it gets cleaned up when the riew is unmounted.
 * `props` - an ID of the props channel of the riew
-* the Riew routines also receive the externals injected into the riew (if any)
+* the Riew routines also receive the [externals](https://github.com/krasimir/riew#externals) injected into the riew (if any)
 
 We have to clarify what we mean by "object that reaches the `view`". It's a JavaScript object literal that contains keys and values. This may be raw data but may be also a Riew [channel](https://github.com/krasimir/riew#chan) or a [state](https://github.com/krasimir/riew#state). In this cases the view gets whatever is the data in the channel or whatever is the value of the state. Keep reading, there're more examples in the [Channels and state](https://github.com/krasimir/riew#channels-and-state) section.
 
@@ -1183,9 +1183,9 @@ const r = riew(view).with({ name: 'MY_NAME_CHANNEL' });
 r.mount();
 ```
 
-See how we are not using [chan](https://github.com/krasimir/riew#chan) channel factory at all. The library automatically creates our channel behind the scenes when we do [sput](https://github.com/krasimir/riew#sput). Then later when the riew is mounted we get a subscription to the same channel because the ID `MY_NAME_CHANNEL` matches. The result is `{ name: "Simon" }` in the console.
+See how we are not using [chan](https://github.com/krasimir/riew#chan) function at all. The library automatically creates our channel behind the scenes when we do [sput](https://github.com/krasimir/riew#sput). Then later when the riew is mounted we get a subscription to the same channel because the ID `MY_NAME_CHANNEL` matches. The result is `{ name: "Simon" }` in the console.
 
-The `with` helper could be also used to inject stuff that are pushed to the [global registry](https://github.com/krasimir/riew#register).
+The `with` helper could be also used to inject stuff that are pushed to a [global registry](https://github.com/krasimir/riew#register).
 
 ```js
 register('config', { theme: 'dark' });
@@ -1203,7 +1203,7 @@ Instead of an object we just have to pass the key of the dependency.
 
 The channels and state are integral part of the riew concept. We use them to push data to the view, synchronize processes and communicate events. Our riews internally check what is behind the data before passing it to the view.
 
-* If we have a channel the riew creates a subscription using [sub](https://github.com/krasimir/riew#sub) and re-renders the view with the value send to the channel.
+* If we have a channel the riew creates a subscription using [sread](https://github.com/krasimir/riew#sread) (with `listen` option set to `true`) and re-renders the view with the value send to the channel.
 * If we have a state the riew again create a subscription but to the default read channel of the state.
 
 ```js
@@ -1260,7 +1260,7 @@ The `Component` constant here is indeed a React component but it is also a [riew
 
 > `register(key, dependency)`
 
-Together with [use](https://github.com/krasimir/riew#use) this function implements a mechanism for dealing with dependencies. Register defines an entry in the a _globally_ available registry and [use](https://github.com/krasimir/riew#use) is accessing that entry. Once we define something with `register` we may inject it into our riews with the [with](https://github.com/krasimir/riew#externals) method.
+Together with [use](https://github.com/krasimir/riew#use) this function implements a mechanism for dealing with dependencies. `register` defines an entry in  a _globally_ available registry and [use](https://github.com/krasimir/riew#use) is accessing that entry. Once we define something with `register` we may inject it into our riews with the [with](https://github.com/krasimir/riew#externals) method.
 
 * `key` (`String`, required) - a string the uniquely identifies the dependency
 * `dependency` (`Any`, required) - this could be a primitive like string or a number but could be also instance of a service or a state object.
@@ -1304,7 +1304,7 @@ r.mount();
 
 > `reset()`
 
-It resets all the internal structures of the library. This function is useful while writing tests for our riews or routines. Riew for example keeps track of all the channels that we are creating. And in the unit tests we don't want to have clash of channel IDs. So we call the `reset` function before each test.
+It resets all the internal structures of the library. This function is useful while writing tests for our riews or routines. Riew for example keeps track of all the channels that we are creating. And in the unit tests we don't want to have conflicts of channel IDs. So we call the `reset` function before each test.
 
 ### constants
 
