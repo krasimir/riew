@@ -17,6 +17,7 @@ import {
   channelReset,
   CHANNELS,
   read,
+  sread,
   unread,
   call,
   fork,
@@ -132,9 +133,13 @@ describe('Given a CSP', () => {
     describe('and when we yield `stop`', () => {
       it('should stop the routine', async () => {
         const spy = jest.fn();
-        read('XXX', value => {
-          spy(value);
-        });
+        sread(
+          'XXX',
+          value => {
+            spy(value);
+          },
+          { listen: true }
+        );
         go(function*() {
           yield put('XXX', 'foo');
           yield stop();
@@ -831,7 +836,7 @@ describe('Given a CSP', () => {
       const c2 = chan();
       const spy = jest.fn();
 
-      read(c1, c2);
+      sread(c1, c2, { listen: true });
 
       go(function*() {
         spy(`put1=${yield put(c1, 'foo')}`);
@@ -855,8 +860,8 @@ describe('Given a CSP', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      read([c1, c2], c3);
-      read(c3, spy);
+      sread([c1, c2], c3, { listen: true });
+      sread(c3, spy, { listen: true });
       sput(c1, 'foo');
       sput(c2, 'bar');
       sput(c1, 'baz');
@@ -869,10 +874,11 @@ describe('Given a CSP', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      read([c1, c2], c3, {
+      sread([c1, c2], c3, {
         transform: (a, b) => a.toUpperCase() + b.toUpperCase(),
+        listen: true,
       });
-      read(c3, spy);
+      sread(c3, spy, { listen: true });
       sput(c1, 'foo');
       sput(c2, 'bar');
       sput(c1, 'baz');
@@ -889,8 +895,8 @@ describe('Given a CSP', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        read('app', spy);
-        read([users, currentUser], chan('app'), {
+        sread('app', spy, { listen: true });
+        sread([users, currentUser], chan('app'), {
           transform: (us, currentUserIndex) => us[currentUserIndex].name,
         });
 
@@ -899,7 +905,7 @@ describe('Given a CSP', () => {
         expect(spy).toBeCalledWithArgs(['Steve'], ['Rebeka']);
       });
     });
-    describe('when we use compose together with a routine', () => {
+    describe('when we use state together with a routine', () => {
       it('should work just fine', () => {
         const users = state([
           { name: 'Joe' },
@@ -909,7 +915,7 @@ describe('Given a CSP', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        read([users, currentUser], chan('app'), {
+        sread([users, currentUser], chan('app'), {
           transform: (us, currentUserIndex) => us[currentUserIndex].name,
         });
 
@@ -941,8 +947,9 @@ describe('Given a CSP', () => {
           })
         );
 
-        read([users, currentUser], 'app', {
+        sread([users, currentUser], 'app', {
           transform: (us, currentUserIndex) => us[currentUserIndex].name,
+          listen: true,
         });
 
         go(function*() {
@@ -971,8 +978,8 @@ describe('Given a CSP', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      read(ch1, ch2);
-      read(ch2, ch3);
+      sread(ch1, ch2, { listen: true });
+      sread(ch2, ch3, { listen: true });
 
       exercise(
         Test(
@@ -995,9 +1002,9 @@ describe('Given a CSP', () => {
       const ch3 = chan('ch3');
       const ch4 = chan('ch4');
 
-      read(ch1, ch2);
-      read(ch1, ch3);
-      read(ch2, ch4);
+      sread(ch1, ch2, { listen: true });
+      sread(ch1, ch3, { listen: true });
+      sread(ch2, ch4, { listen: true });
 
       exercise(
         Test(
@@ -1029,10 +1036,10 @@ describe('Given a CSP', () => {
         const ch2 = chan('ch2');
         const ch3 = chan('ch3');
 
-        read(ch1, ch2);
-        read(ch1, ch2);
-        read(ch1, ch2);
-        read(ch1, ch3);
+        sread(ch1, ch2, { listen: true });
+        sread(ch1, ch2, { listen: true });
+        sread(ch1, ch2, { listen: true });
+        sread(ch1, ch3, { listen: true });
 
         exercise(
           Test(
@@ -1065,8 +1072,8 @@ describe('Given a CSP', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      read(ch1, ch2);
-      read(ch1, ch3);
+      sread(ch1, ch2, { listen: true });
+      sread(ch1, ch3, { listen: true });
 
       exercise(
         Test(
@@ -1106,8 +1113,8 @@ describe('Given a CSP', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      read(ch1, ch2);
-      read(ch1, ch3);
+      sread(ch1, ch2, { listen: true });
+      sread(ch1, ch3, { listen: true });
 
       exercise(
         Test(
@@ -1144,8 +1151,8 @@ describe('Given a CSP', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      read(ch1, ch2);
-      read(ch1, ch3);
+      sread(ch1, ch2, { listen: true });
+      sread(ch1, ch3, { listen: true });
 
       exercise(
         Test(

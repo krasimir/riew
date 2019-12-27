@@ -3,6 +3,7 @@ import {
   take,
   put,
   read,
+  sread,
   reset,
   CHANNELS,
   go,
@@ -31,7 +32,7 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
 
       s.select('R', value => value.toUpperCase());
-      read('R', spy);
+      sread('R', spy);
       s.set('bar');
       expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
     });
@@ -42,7 +43,7 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
       const spy2 = jest.fn();
 
-      read(s, spy);
+      sread(s, spy, { listen: true });
       stake(s, spy2);
       sput(s, 'bar');
       stake(s, spy2);
@@ -61,8 +62,8 @@ describe('Given a CSP state extension', () => {
       s.mutate('W1', (current, newValue) => current + newValue);
       s.mutate('W2', (current, newValue) => current * newValue);
 
-      read('R', spy1);
-      read('R', spy2);
+      sread('R', spy1, { listen: true });
+      sread('R', spy2, { listen: true });
       sput('W1', 4);
       sput('W1', 12);
       sput('W2', 3);
@@ -110,10 +111,10 @@ describe('Given a CSP state extension', () => {
       s.select('R', value => value.toUpperCase());
       s.mutate('W', (a, b) => a + b);
 
-      read(s, v => listen(`READ=${v}`));
-      read('R', v => listen(`R=${v}`));
-      read(s.WRITE, v => listen(`WRITE=${v}`));
-      read('W', v => listen(`W=${v}`));
+      sread(s, v => listen(`READ=${v}`), { listen: true });
+      sread('R', v => listen(`R=${v}`), { listen: true });
+      sread(s.WRITE, v => listen(`WRITE=${v}`), { listen: true });
+      sread('W', v => listen(`W=${v}`), { listen: true });
 
       go(function*() {
         spy(yield take(s));
@@ -159,7 +160,7 @@ describe('Given a CSP state extension', () => {
         return current + newOne + (yield take(s2));
       });
 
-      read(s, spy);
+      sread(s, spy, { listen: true });
       sput('W', 'zoo');
 
       await delay(10);
@@ -192,7 +193,7 @@ describe('Given a CSP state extension', () => {
         return word;
       });
 
-      read('IS', spy);
+      sread('IS', spy, { listen: true });
       sput(s, 'bar');
       sput(s, 'zar');
 
@@ -207,7 +208,7 @@ describe('Given a CSP state extension', () => {
       const s2 = state([{ name: 'A' }, { name: 'B' }]);
       const spy = jest.fn();
 
-      read(ch, spy);
+      sread(ch, spy, { listen: true });
       s1.select(ch);
       s2.select(ch, items => items.map(({ name }) => name).join('-'));
       s2.mutate('add', (items, newItem) => [...items, newItem]);
@@ -224,7 +225,7 @@ describe('Given a CSP state extension', () => {
       const s = state('a');
       const spy = jest.fn();
 
-      read(s, spy);
+      sread(s, spy, { listen: true });
       s.mutate(ch, (a, b) => a + b);
 
       sput(s, 'hello-');

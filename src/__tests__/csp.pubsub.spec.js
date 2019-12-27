@@ -2,6 +2,7 @@ import {
   chan,
   buffer,
   read,
+  sread,
   unread,
   CHANNELS,
   go,
@@ -30,8 +31,8 @@ describe('Given a CSP pubsub extension', () => {
         const spyB = jest.fn();
         const spyC = jest.fn();
 
-        read('xxx', spyA);
-        read('xxx', spyB);
+        sread('xxx', spyA, { listen: true });
+        sread('xxx', spyB, { listen: true });
 
         go(function*() {
           spyC(yield put('xxx', 'foo'));
@@ -52,8 +53,8 @@ describe('Given a CSP pubsub extension', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      read('a', spyA);
-      read('a', spyB);
+      sread('a', spyA, { listen: true });
+      sread('a', spyB, { listen: true });
 
       go(function*() {
         yield put('a', 'foo');
@@ -73,8 +74,8 @@ describe('Given a CSP pubsub extension', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      read('topicA', spyA);
-      read('topicB', spyB);
+      sread('topicA', spyA, { listen: true });
+      sread('topicB', spyB, { listen: true });
 
       go(function*() {
         yield put('topicA', 'foo');
@@ -117,7 +118,7 @@ describe('Given a CSP pubsub extension', () => {
       const spy = jest.fn();
       const ch = chan();
 
-      read(ch, spy);
+      sread(ch, spy);
       sput(ch, 'foo');
       close(ch);
       sput(ch, 'bar');
@@ -125,12 +126,12 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['foo']);
     });
   });
-  describe('when we use subOnce', () => {
+  describe('when we use read once (by default)', () => {
     it('should unsubscribe after the first call', () => {
       const spy = jest.fn();
       const ch = chan();
 
-      read(ch, spy, { once: true });
+      sread(ch, spy);
 
       sput(ch, 'foo');
       sput(ch, 'bar');
@@ -138,16 +139,16 @@ describe('Given a CSP pubsub extension', () => {
 
       expect(spy).toBeCalledWithArgs(['foo']);
     });
-    describe('and when we subOnce as part of another subOnce', () => {
-      it('should subOnce again', () => {
+    describe('and when we read once as part of another read once', () => {
+      it('should read once again', () => {
         const spy = jest.fn();
         const ch = chan();
         const callback = v => {
-          read(ch, callback, { once: true });
+          sread(ch, callback);
           spy(v);
         };
 
-        read(ch, callback, { once: true });
+        sread(ch, callback);
 
         sput(ch, 'foo');
         sput(ch, 'bar');
@@ -157,12 +158,12 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('and when the subscriber is a channel', () => {
-      it('should subOnce again', () => {
+      it('should read once again', () => {
         const spy = jest.fn();
         const source = chan();
         const subscriber = chan();
 
-        read(source, subscriber, { once: true });
+        sread(source, subscriber);
 
         go(function*() {
           spy(yield take(subscriber));
@@ -176,8 +177,8 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
   });
-  describe('when we sub inside a routine', () => {
-    it('should do a sub once', () => {
+  describe('when we read inside a routine', () => {
+    it('should do read once', () => {
       const spy = jest.fn();
       const ch = chan();
 
@@ -230,7 +231,7 @@ describe('Given a CSP pubsub extension', () => {
         yield put(ch, 'bar'); // <-- here we stop
         spy('never');
       });
-      read(ch, spy);
+      sread(ch, spy);
 
       expect(spy).toBeCalledWithArgs(['foo']);
     });
@@ -253,7 +254,10 @@ describe('Given a CSP pubsub extension', () => {
       const spy = jest.fn();
       const ch = chan();
 
-      read(ch, spy, { transform: value => value.toUpperCase() });
+      sread(ch, spy, {
+        transform: value => value.toUpperCase(),
+        listen: true,
+      });
       sput(ch, 'foo');
       sput(ch, 'bar');
 
@@ -264,11 +268,12 @@ describe('Given a CSP pubsub extension', () => {
         const spy = jest.fn();
         const ch = chan();
 
-        read(ch, spy, {
+        sread(ch, spy, {
           *transform(v) {
             yield sleep(2);
             return v.toUpperCase();
           },
+          listen: true,
         });
         sput(ch, 'foo');
         sput(ch, 'bar');
@@ -285,7 +290,7 @@ describe('Given a CSP pubsub extension', () => {
         const ch2 = chan();
         const spy = jest.fn();
 
-        read([ch1, ch2], spy, { strategy: read.ONE_OF });
+        sread([ch1, ch2], spy, { strategy: read.ONE_OF, listen: true });
 
         sput(ch1, 'foo');
         sput(ch2, 'bar');

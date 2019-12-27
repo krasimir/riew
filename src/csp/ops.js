@@ -13,7 +13,7 @@ import {
   CALL_ROUTINE,
   FORK_ROUTINE,
 } from './constants';
-import { grid, chan, isState, isStateWriteChannel, read } from '../index';
+import { grid, chan, isState, isStateWriteChannel, sread } from '../index';
 import { isPromise } from '../utils';
 
 const noop = () => {};
@@ -53,8 +53,8 @@ function callSubscribers(ch, item, callback) {
   const subscriptions = [...ch.subscribers];
   ch.subscribers = [];
   subscriptions.forEach(s => {
-    const { notify, once } = s;
-    if (!once) {
+    const { notify, listen } = s;
+    if (listen) {
       ch.subscribers.push(s);
     }
     notify(
@@ -185,7 +185,7 @@ export function go(func, done = () => {}, ...args) {
         state = STOPPED;
         break;
       case READ:
-        read(i.value.ch, next, { ...i.value.options, once: true });
+        sread(i.value.ch, next, i.value.options);
         break;
       case CALL_ROUTINE:
         addSubRoutine(go(i.value.routine, next, ...i.value.args, ...args));

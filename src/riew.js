@@ -6,7 +6,7 @@ import {
   state as State,
   isState,
   go,
-  read as Read,
+  sread as Sread,
   close,
   sput,
   stake,
@@ -65,7 +65,7 @@ export default function createRiew(viewFunc, ...routines) {
   const read = function(to, func) {
     if (!(to in subscriptions)) {
       subscriptions[to] = true;
-      Read(to, func);
+      Sread(to, func, { listen: true });
     }
   };
   const VIEW_CHANNEL = `${riew.id}_view`;

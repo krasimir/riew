@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 import riew from '../react/index';
-import { state, reset, register, read, sput, put, sleep } from '../index';
+import { state, reset, register, sread, sput, put, sleep } from '../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
@@ -104,7 +104,7 @@ describe('Given the React riew function', () => {
           const propsSpy = jest.fn();
           const view = jest.fn().mockImplementation(() => null);
           const I = riew(view, function*({ props }) {
-            read(props, propsSpy);
+            sread(props, propsSpy, { listen: true });
           });
 
           const { rerender } = render(<I foo="bar" />);

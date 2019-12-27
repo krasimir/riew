@@ -45,26 +45,26 @@ function normalizeOptions(options) {
   const transform = options.transform || DEFAULT_OPTIONS.transform;
   const onError = options.onError || DEFAULT_OPTIONS.onError;
   const strategy = options.strategy || ALL_REQUIRED;
-  const once = 'once' in options ? options.once : false;
+  const listen = 'listen' in options ? options.listen : false;
   const initialCall =
     'initialCall' in options
       ? options.initialCall
       : DEFAULT_OPTIONS.initialCall;
 
-  return { transform, onError, strategy, initialCall, once };
+  return { transform, onError, strategy, initialCall, listen };
 }
 
 function waitAllStrategy(channels, to, options) {
-  const { transform, onError, initialCall, once } = options;
+  const { transform, onError, initialCall, listen } = options;
   const data = channels.map(() => NOTHING);
-  let composedAtLeastOnce = false;
+  let composedAlready = false;
   channels.forEach((ch, idx) => {
     const notify = (value, done = () => {}) => {
       data[idx] = value;
       // Notify the subscriber only if all the sources are fulfilled.
       // In case of one source we don't have to wait.
-      if (composedAtLeastOnce || data.length === 1 || !data.includes(NOTHING)) {
-        composedAtLeastOnce = true;
+      if (composedAlready || data.length === 1 || !data.includes(NOTHING)) {
+        composedAlready = true;
         try {
           if (isGeneratorFunction(transform)) {
             go(
@@ -88,7 +88,7 @@ function waitAllStrategy(channels, to, options) {
       }
     };
     if (!ch.subscribers.find(({ to: t }) => t === to)) {
-      ch.subscribers.push({ to, notify, once });
+      ch.subscribers.push({ to, notify, listen });
     }
     // If there is already a value in the channel
     // notify the subscribers.
@@ -99,7 +99,7 @@ function waitAllStrategy(channels, to, options) {
   });
 }
 function waitOneStrategy(channels, to, options) {
-  const { transform, onError, initialCall, once } = options;
+  const { transform, onError, initialCall, listen } = options;
   channels.forEach(ch => {
     const notify = (value, done = () => {}) => {
       try {
@@ -124,7 +124,7 @@ function waitOneStrategy(channels, to, options) {
       }
     };
     if (!ch.subscribers.find(({ to: t }) => t === to)) {
-      ch.subscribers.push({ to, notify, once });
+      ch.subscribers.push({ to, notify, listen });
     }
     // If there is already a value in the channel
     // notify the subscribers.
@@ -135,24 +135,16 @@ function waitOneStrategy(channels, to, options) {
   });
 }
 
-export function read(...args) {
-  if (args.length === 1) {
-    return {
-      ch: normalizeChannels(args[0]),
-      op: READ,
-      options: DEFAULT_OPTIONS,
-    };
-  }
-  if (args.length <= 2 && typeof args[1] === 'object' && !isChannel(args[1])) {
-    return {
-      ch: normalizeChannels(args[0]),
-      op: READ,
-      options: normalizeOptions(args[1]),
-    };
-  }
-  const options = normalizeOptions(args[2]);
-
+export function read(channels, options) {
+  return {
+    ch: normalizeChannels(channels),
+    op: READ,
+    options: normalizeOptions(options),
+  };
+}
+export function sread(channels, to, options) {
   let f;
+  options = normalizeOptions(options);
   switch (options.strategy) {
     case ALL_REQUIRED:
       f = waitAllStrategy;
@@ -161,9 +153,11 @@ export function read(...args) {
       f = waitOneStrategy;
       break;
     default:
-      throw new Error('Subscription strategy not recognized.');
+      throw new Error(
+        `Subscription strategy not recognized. Expecting ALL_REQUIRED or ONE_OF but "${options.strategy}" given.`
+      );
   }
-  f(normalizeChannels(args[0]), normalizeTo(args[1]), options);
+  f(normalizeChannels(channels), normalizeTo(to), options);
 }
 export function unread(channels, callback) {
   channels = normalizeChannels(channels);
