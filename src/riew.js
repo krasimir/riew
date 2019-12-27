@@ -6,7 +6,7 @@ import {
   state as State,
   isState,
   go,
-  sub as Sub,
+  read as Read,
   close,
   sput,
   stake,
@@ -62,10 +62,10 @@ export default function createRiew(viewFunc, ...routines) {
     states.push(s);
     return s;
   };
-  const sub = function(to, func) {
+  const read = function(to, func) {
     if (!(to in subscriptions)) {
       subscriptions[to] = true;
-      Sub(to, func);
+      Read(to, func);
     }
   };
   const VIEW_CHANNEL = `${riew.id}_view`;
@@ -74,12 +74,12 @@ export default function createRiew(viewFunc, ...routines) {
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
       if (CHANNELS.exists(value[key]) || isChannel(value[key])) {
-        sub(value[key], v => {
+        read(value[key], v => {
           sput(VIEW_CHANNEL, { [key]: v });
         });
         stake(value[key], v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if (isState(value[key])) {
-        sub(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
+        read(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
         stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else {
         obj[key] = value[key];
@@ -89,8 +89,8 @@ export default function createRiew(viewFunc, ...routines) {
 
   riew.mount = function(props = {}) {
     requireObject(props);
-    sub(PROPS_CHANNEL, newProps => sput(VIEW_CHANNEL, newProps));
-    sub(VIEW_CHANNEL, renderer.push);
+    read(PROPS_CHANNEL, newProps => sput(VIEW_CHANNEL, newProps));
+    read(VIEW_CHANNEL, renderer.push);
     runningRoutines = routines.map(r =>
       go(
         r,

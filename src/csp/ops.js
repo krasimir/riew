@@ -13,7 +13,7 @@ import {
   CALL_ROUTINE,
   FORK_ROUTINE,
 } from './constants';
-import { grid, chan, isState, isStateWriteChannel, sub } from '../index';
+import { grid, chan, isState, isStateWriteChannel, read } from '../index';
 import { isPromise } from '../utils';
 
 const noop = () => {};
@@ -83,7 +83,7 @@ export function take(id, callback) {
   if (typeof callback === 'function') {
     if (isStateWriteChannel(ch)) {
       console.warn(
-        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.'
+        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `read(<channel>)`.'
       );
     }
     doTake(ch, callback);
@@ -185,7 +185,7 @@ export function go(func, done = () => {}, ...args) {
         state = STOPPED;
         break;
       case READ:
-        sub(i.value.ch, next, { ...i.value.options, once: true });
+        read(i.value.ch, next, { ...i.value.options, once: true });
         break;
       case CALL_ROUTINE:
         addSubRoutine(go(i.value.routine, next, ...i.value.args, ...args));

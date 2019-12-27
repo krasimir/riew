@@ -3,7 +3,6 @@ import {
   take,
   put,
   read,
-  sub,
   reset,
   CHANNELS,
   go,
@@ -32,7 +31,7 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
 
       s.select('R', value => value.toUpperCase());
-      sub('R', spy);
+      read('R', spy);
       s.set('bar');
       expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
     });
@@ -43,7 +42,7 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
       const spy2 = jest.fn();
 
-      sub(s, spy);
+      read(s, spy);
       stake(s, spy2);
       sput(s, 'bar');
       stake(s, spy2);
@@ -62,8 +61,8 @@ describe('Given a CSP state extension', () => {
       s.mutate('W1', (current, newValue) => current + newValue);
       s.mutate('W2', (current, newValue) => current * newValue);
 
-      sub('R', spy1);
-      sub('R', spy2);
+      read('R', spy1);
+      read('R', spy2);
       sput('W1', 4);
       sput('W1', 12);
       sput('W2', 3);
@@ -111,10 +110,10 @@ describe('Given a CSP state extension', () => {
       s.select('R', value => value.toUpperCase());
       s.mutate('W', (a, b) => a + b);
 
-      sub(s, v => listen(`READ=${v}`));
-      sub('R', v => listen(`R=${v}`));
-      sub(s.WRITE, v => listen(`WRITE=${v}`));
-      sub('W', v => listen(`W=${v}`));
+      read(s, v => listen(`READ=${v}`));
+      read('R', v => listen(`R=${v}`));
+      read(s.WRITE, v => listen(`WRITE=${v}`));
+      read('W', v => listen(`W=${v}`));
 
       go(function*() {
         spy(yield take(s));
@@ -160,7 +159,7 @@ describe('Given a CSP state extension', () => {
         return current + newOne + (yield take(s2));
       });
 
-      sub(s, spy);
+      read(s, spy);
       sput('W', 'zoo');
 
       await delay(10);
@@ -193,7 +192,7 @@ describe('Given a CSP state extension', () => {
         return word;
       });
 
-      sub('IS', spy);
+      read('IS', spy);
       sput(s, 'bar');
       sput(s, 'zar');
 
@@ -208,7 +207,7 @@ describe('Given a CSP state extension', () => {
       const s2 = state([{ name: 'A' }, { name: 'B' }]);
       const spy = jest.fn();
 
-      sub(ch, spy);
+      read(ch, spy);
       s1.select(ch);
       s2.select(ch, items => items.map(({ name }) => name).join('-'));
       s2.mutate('add', (items, newItem) => [...items, newItem]);
@@ -225,7 +224,7 @@ describe('Given a CSP state extension', () => {
       const s = state('a');
       const spy = jest.fn();
 
-      sub(s, spy);
+      read(s, spy);
       s.mutate(ch, (a, b) => a + b);
 
       sput(s, 'hello-');
@@ -252,7 +251,7 @@ describe('Given a CSP state extension', () => {
       });
 
       expect(spy).toBeCalledWithArgs([
-        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `sub(<channel>)`.',
+        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `read(<channel>)`.',
       ]);
       spy.mockRestore();
     });

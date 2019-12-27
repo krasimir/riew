@@ -37,7 +37,7 @@ function normalizeTo(to) {
     return (ch.__subFunc = v => sput(to, v));
   }
   throw new Error(
-    `'sub' accepts string, channel or a function as a second argument. ${to} given.`
+    `'read' accepts string, channel or a function as a second argument. ${to} given.`
   );
 }
 function normalizeOptions(options) {
@@ -135,8 +135,23 @@ function waitOneStrategy(channels, to, options) {
   });
 }
 
-export function sub(channels, to, options) {
-  options = normalizeOptions(options);
+export function read(...args) {
+  if (args.length === 1) {
+    return {
+      ch: normalizeChannels(args[0]),
+      op: READ,
+      options: DEFAULT_OPTIONS,
+    };
+  }
+  if (args.length <= 2 && typeof args[1] === 'object' && !isChannel(args[1])) {
+    return {
+      ch: normalizeChannels(args[0]),
+      op: READ,
+      options: normalizeOptions(args[1]),
+    };
+  }
+  const options = normalizeOptions(args[2]);
+
   let f;
   switch (options.strategy) {
     case ALL_REQUIRED:
@@ -148,9 +163,9 @@ export function sub(channels, to, options) {
     default:
       throw new Error('Subscription strategy not recognized.');
   }
-  f(normalizeChannels(channels), normalizeTo(to), options);
+  f(normalizeChannels(args[0]), normalizeTo(args[1]), options);
 }
-export function unsub(channels, callback) {
+export function unread(channels, callback) {
   channels = normalizeChannels(channels);
   channels.forEach(ch => {
     if (isChannel(callback)) {
@@ -164,18 +179,11 @@ export function unsub(channels, callback) {
     });
   });
 }
-export function unsubAll(channels) {
+export function unreadAll(channels) {
   normalizeChannels(channels).forEach(ch => {
     ch.subscribers = [];
   });
 }
-export function read(channels, options) {
-  return {
-    ch: normalizeChannels(channels),
-    op: READ,
-    options: normalizeOptions(options),
-  };
-}
 
-sub.ALL_REQUIRED = read.ALL_REQUIRED = ALL_REQUIRED;
-sub.ONE_OF = read.ONE_OF = ONE_OF;
+read.ALL_REQUIRED = ALL_REQUIRED;
+read.ONE_OF = ONE_OF;

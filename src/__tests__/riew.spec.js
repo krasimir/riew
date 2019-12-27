@@ -6,7 +6,7 @@ import {
   reset,
   grid,
   state,
-  sub,
+  read,
   CHANNELS,
   sleep,
   take,
@@ -215,7 +215,7 @@ describe('Given the `riew` factory function', () => {
       };
       const r = riew(view, routine);
 
-      sub(s, spy);
+      read(s, spy);
 
       r.mount();
       sput(s, 'baz');
@@ -275,7 +275,7 @@ describe('Given the `riew` factory function', () => {
     it('should deliver the riew input to the routine', async () => {
       const spy = jest.fn();
       const routine = function*({ props }) {
-        sub(props, spy);
+        read(props, spy);
       };
       const r = riew(() => {}, routine);
 
@@ -290,7 +290,7 @@ describe('Given the `riew` factory function', () => {
         const spy = jest.fn();
         const propsSpy = jest.fn();
         const routine = function*({ props, render }) {
-          sub(props, ({ n }) => {
+          read(props, ({ n }) => {
             render({ n: n + 5 });
             propsSpy(n);
           });
@@ -356,7 +356,7 @@ describe('Given the `riew` factory function', () => {
         const view = jest.fn();
         const spy = jest.fn();
         const r = riew(view, function*() {
-          sub('firstName', spy);
+          read('firstName', spy);
         }).with({ firstName: 'firstName' });
 
         r.mount();
@@ -584,7 +584,7 @@ describe('Given the `riew` factory function', () => {
         });
       });
 
-      sub([s1, s2], 'current', { transform: (arr, idx) => arr[idx] });
+      read([s1, s2], 'current', { transform: (arr, idx) => arr[idx] });
 
       const r = riew(view).with({ data: 'current' });
 

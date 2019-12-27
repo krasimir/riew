@@ -1,6 +1,6 @@
 import {
   go,
-  sub,
+  read,
   chan,
   sput,
   sclose,
@@ -58,7 +58,7 @@ export function createState(...args) {
       ch['@statewritechannel'] = true;
       const writer = { ch };
       writeChannels.push(writer);
-      sub(
+      read(
         ch,
         v => {
           value = v;

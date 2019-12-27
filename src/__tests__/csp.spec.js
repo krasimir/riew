@@ -2,10 +2,9 @@ import {
   chan,
   buffer,
   timeout,
-  read,
   go,
   merge,
-  unsubAll,
+  unreadAll,
   reset,
   put,
   sput,
@@ -17,8 +16,8 @@ import {
   stop,
   channelReset,
   CHANNELS,
-  sub,
-  unsub,
+  read,
+  unread,
   call,
   fork,
 } from '../index';
@@ -133,7 +132,7 @@ describe('Given a CSP', () => {
     describe('and when we yield `stop`', () => {
       it('should stop the routine', async () => {
         const spy = jest.fn();
-        sub('XXX', value => {
+        read('XXX', value => {
           spy(value);
         });
         go(function*() {
@@ -832,7 +831,7 @@ describe('Given a CSP', () => {
       const c2 = chan();
       const spy = jest.fn();
 
-      sub(c1, c2);
+      read(c1, c2);
 
       go(function*() {
         spy(`put1=${yield put(c1, 'foo')}`);
@@ -856,8 +855,8 @@ describe('Given a CSP', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      sub([c1, c2], c3);
-      sub(c3, spy);
+      read([c1, c2], c3);
+      read(c3, spy);
       sput(c1, 'foo');
       sput(c2, 'bar');
       sput(c1, 'baz');
@@ -870,10 +869,10 @@ describe('Given a CSP', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      sub([c1, c2], c3, {
+      read([c1, c2], c3, {
         transform: (a, b) => a.toUpperCase() + b.toUpperCase(),
       });
-      sub(c3, spy);
+      read(c3, spy);
       sput(c1, 'foo');
       sput(c2, 'bar');
       sput(c1, 'baz');
@@ -890,8 +889,8 @@ describe('Given a CSP', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        sub('app', spy);
-        sub([users, currentUser], chan('app'), {
+        read('app', spy);
+        read([users, currentUser], chan('app'), {
           transform: (us, currentUserIndex) => us[currentUserIndex].name,
         });
 
@@ -910,7 +909,7 @@ describe('Given a CSP', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        sub([users, currentUser], chan('app'), {
+        read([users, currentUser], chan('app'), {
           transform: (us, currentUserIndex) => us[currentUserIndex].name,
         });
 
@@ -942,7 +941,7 @@ describe('Given a CSP', () => {
           })
         );
 
-        sub([users, currentUser], 'app', {
+        read([users, currentUser], 'app', {
           transform: (us, currentUserIndex) => us[currentUserIndex].name,
         });
 
@@ -972,8 +971,8 @@ describe('Given a CSP', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      sub(ch1, ch2);
-      sub(ch2, ch3);
+      read(ch1, ch2);
+      read(ch2, ch3);
 
       exercise(
         Test(
@@ -996,9 +995,9 @@ describe('Given a CSP', () => {
       const ch3 = chan('ch3');
       const ch4 = chan('ch4');
 
-      sub(ch1, ch2);
-      sub(ch1, ch3);
-      sub(ch2, ch4);
+      read(ch1, ch2);
+      read(ch1, ch3);
+      read(ch2, ch4);
 
       exercise(
         Test(
@@ -1030,10 +1029,10 @@ describe('Given a CSP', () => {
         const ch2 = chan('ch2');
         const ch3 = chan('ch3');
 
-        sub(ch1, ch2);
-        sub(ch1, ch2);
-        sub(ch1, ch2);
-        sub(ch1, ch3);
+        read(ch1, ch2);
+        read(ch1, ch2);
+        read(ch1, ch2);
+        read(ch1, ch3);
 
         exercise(
           Test(
@@ -1066,8 +1065,8 @@ describe('Given a CSP', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      sub(ch1, ch2);
-      sub(ch1, ch3);
+      read(ch1, ch2);
+      read(ch1, ch3);
 
       exercise(
         Test(
@@ -1107,8 +1106,8 @@ describe('Given a CSP', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      sub(ch1, ch2);
-      sub(ch1, ch3);
+      read(ch1, ch2);
+      read(ch1, ch3);
 
       exercise(
         Test(
@@ -1118,7 +1117,7 @@ describe('Given a CSP', () => {
             stake(ch2, v => log(`take_ch2=${v}`));
             stake(ch3, v => {
               log(`take_ch3=${v}`);
-              unsub(ch1, ch3);
+              unread(ch1, ch3);
             });
             stake(ch3, v => log(`take_ch3=${v.toString()}`));
           },
@@ -1140,13 +1139,13 @@ describe('Given a CSP', () => {
         ]
       );
     });
-    it('should allow us to unmult all', () => {
+    it('should allow us to unsubscribe all', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
-      sub(ch1, ch2);
-      sub(ch1, ch3);
+      read(ch1, ch2);
+      read(ch1, ch3);
 
       exercise(
         Test(
@@ -1156,7 +1155,7 @@ describe('Given a CSP', () => {
             stake(ch2, v => log(`take_ch2=${v}`));
             stake(ch3, v => {
               log(`take_ch3=${v}`);
-              unsubAll(ch1);
+              unreadAll(ch1);
             });
             stake(ch3, v => log(`take_ch3=${v.toString()}`));
           },

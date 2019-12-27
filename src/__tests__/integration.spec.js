@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset, sub, react, state, sleep, sput } from '../index';
+import { reset, read, react, state, sleep, sput } from '../index';
 
 const { riew } = react;
 const DummyComponent = ({ text }) => <p>{text}</p>;
@@ -101,7 +101,7 @@ describe('Given the Riew library', () => {
             return location ? <p>{location}</p> : null;
           },
           function*({ render, props }) {
-            sub(props, ({ city }) => render({ location: city }));
+            read(props, ({ city }) => render({ location: city }));
           }
         );
         const App = function() {
