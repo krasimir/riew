@@ -30,15 +30,15 @@
   * [take](https://github.com/krasimir/riew#take), [stake](https://github.com/krasimir/riew#stake)
   * [close](https://github.com/krasimir/riew#close), [sclose](https://github.com/krasimir/riew#sclose)
   * [read](https://github.com/krasimir/riew#read)
+  * [sread](https://github.com/krasimir/riew#sread)
+  * [unread](https://github.com/krasimir/riew#unread)
+  * [unreadAll](https://github.com/krasimir/riew#unreadAll)
   * [call](https://github.com/krasimir/riew#call)
   * [fork](https://github.com/krasimir/riew#fork)
   * [sleep](https://github.com/krasimir/riew#sleep)
   * [stop](https://github.com/krasimir/riew#stop)
   * [timeout](https://github.com/krasimir/riew#timeout)
   * [merge](https://github.com/krasimir/riew#merge)
-  * [sub](https://github.com/krasimir/riew#sub)
-  * [unsub](https://github.com/krasimir/riew#unsub)
-  * [unsubAll](https://github.com/krasimir/riew#unsubAll)
   * [state](https://github.com/krasimir/riew#state)
     * [selectors](https://github.com/krasimir/riew#selectors)
     * [mutators](https://github.com/krasimir/riew#mutators)
@@ -73,7 +73,7 @@ go(function * B() {
 
 We have two generator functions (routines) `A` and `B`. They start synchronously one after each other. However, `A` is paused (blocked) at the `yield take` statement because it wants to read from the channel `ch` but there is nothing inside. Then routine `B` puts `Steve` and routine `A` resumes back. Now `B` is blocked because it tries to read from the same channel. `Steve` is already consumed by the other routine so we are again at the same blocking situation. `B` waits till `A` puts `Hello Steve, how are you?`. At the end the log happens and we see the message into the console.
 
-This is the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes). We have channels that are used for communication and synchronization. By default the channel operations are blocking. Putting can't happen until there is someone to take and the opposite - taking can't happen until there is someone to put. This is the behavior of the standard non-buffered channel. We have couple of other buffer types here in Riew to accommodate the needs that we have.
+This is the basic idea behind [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes). We have channels that are used for communication and synchronization. By default the channel operations are blocking. Putting can't happen until there is someone to take and the opposite - taking can't happen until there is someone to put. This is the behavior of the standard non-buffered channel. We have couple of other buffer types here in Riew.
 
 The _channel_ in Riew has an unique ID. In one application there may be only one channel with a given ID. Every time when we want to create/use a channel we may pass the channel instance itself or just its ID. We may even skip the creation of the channel and simply use an ID. Riew will create the channel for us the first time it is used. The snippet above may be translated to the following:
 
@@ -88,7 +88,7 @@ go(function * () {
 });
 ```
 
-This is intentional and it's by design. It becomes much easier to use a channel from any point of the application because we just need to know the ID.
+This is intentional and it's here by design. It becomes much easier to use a channel from any point of the application because we just need to know its ID.
 
 As for the routines, we may `yield` all sort of things. We may `put`, `take`, `sleep` but we may also `yield` a promise. Then Riew will wait till the promise is resolved and will resume the generator. We may even use the `call` helper to run another routine. 😮
 
@@ -114,7 +114,7 @@ const r = riew(view, A, B);
 r.mount();
 ```
 
-This example prints out an object `{ message: "Hey Steve, how are you?" }`. As we know from the previous section, `B` routine waits till it receives the message formatted by routine `A`. It sends it to the `view` function by using the `render` helper. This code sample illustrates the core concept behind this library - keep the view pure and distribute the business logic across routines.
+This example prints out an object `{ message: "Hey Steve, how are you?" }`. As we know from the previous section, `B` routine waits till it receives the message formatted by routine `A`. It sends it to the `view` function by using the `render` function. This code sample illustrates one of the core concept behind this library - keep the view pure and distribute the business logic across routines.
 
 We may directly send a channel to the `render` function and whatever we `put` inside will reach the view. For example:
 
@@ -135,13 +135,13 @@ r.mount();
 
 The result here is `{ name: 'Martin' }`.
 
-_(There is a React extension bundled within the library so if you use React you'll probably never call `mount`, `update` or `unmount` manually. This is done by using React hooks internally.)_
+_(There is a [React extension](https://github.com/krasimir/riew#react) bundled within the library so if you use React you'll probably never call `mount`, `update` or `unmount` manually. This is done by the library.)_
 
 ### Application state
 
-In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) there is no concept of a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed and changed but is always available. The channels can keep values but they are consumed at some point. Or in other words taken and don't exists as such on the channels anymore.
+In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) paper there is no concept of a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed, changed and it is always available. The channels can keep values but they are consumed at some point. Or in other words taken and don't exists as such in the channels anymore.
 
-Riew brings the idea of a state by defining a value that is outside the channels. It can be however accessed and modified by using channels. Imagine the state as a black box with two channels - one for reading and one for writing. Riew extends this idea and allows the definition of many read channels called _selectors_ and many write channels called _mutators_. Let's see the following example:
+Riew brings the idea of a state by defining a value that is outside the channels. It can be however accessed and modified by using channels. Imagine the state as a black box with _value_ and two channels - one for reading and one for writing. Riew extends this idea by allowing the definition of many read channels called _selectors_ and many write channels called _mutators_. Let's see an example:
 
 ```js
 // A state which value is an empty array.
@@ -164,9 +164,9 @@ go(function * A() {
 });
 ```
 
-The _mutator_ `ADD` accepts a channel (instance or ID) and a `reducer` function. That function is called against the current state value together with the item which is put into the channel. The _selector_ `GET_USERS` defines a channel which we can always read from and the value is whatever the `mapping` function returns. At the end the routine `A` adds `put`s three users and `take`s their names.
+The _mutator_ `ADD` accepts a channel (instance or ID) and a `reducer` function. That function is called against the current state value together with the item which is put into the channel. The _selector_ `GET_USERS` defines a channel which we can always read from and the value is whatever the `mapping` function returns. At the end the routine `A` runs a couple of `put`s that add users.
 
-This mechanics open space for a lot of patterns. Imagine how your user adds elements to a table and you have a dedicated channel for this operation. Suddenly you have a requirement to count the number of the newly added elements. Sure you know the total number of elements in the table but not how many are just recently added. With Riew you can just hook to the same channel that adds elements to the table and count.
+This mechanics opens space for a lot of patterns. Imagine how your user is adding elements to a table and you have a dedicated channel for this operation. Suddenly you have a requirement to count the number of the newly added elements. Sure you know the total number of elements in the table but not how many are just recently added. With Riew you can just hook to the same channel that adds elements to the table and count.
 
 ```js
 const table = state([]);
@@ -185,6 +185,8 @@ go(function * A() {
   console.log(yield take(counter)); // 3
 });
 ```
+
+Both states use the same channel for their mutations.
 
 Another helpful pattern is to use a routine as a mutator. And because the routine may be asynchronous you may block until the it's done. Consider the trivial case where we have to get data from remote endpoint and show it to the user.
 
@@ -209,13 +211,13 @@ The routine `A` is blocked on the put to `KITTY_PLEASE`. Our mutator is picked u
 > Here we go https://purr.objects-us-east-1.dream.io/i/W6jh8.jpg
 ```
 
-Further more we can handle the request error inside the mutator and put something else in the `cat` state. Or we can hook to the same `KITTY_PLEASE` channel and do something else.
+Further more we can handle the request error inside the mutator and put something else in the `cat` state.
 
-### Pubsub
+### PubSub
 
-The [pubsub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) pattern is widely used in JavaScript. There are tons of libraries that are using it and it's de-facto a standard these days. I (the author of this library) however think that this pattern doesn't play well with the [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) architecture. I've made couple of tests and tried implementing it with pure CSP patterns but it simply doesn't work as expected. That's because in the pubsub pattern we have a broadcasting system. A system in which the dispatcher of the message doesn't care what happens with the dispatched message. The act of message sending is not a blocking operation. In CSP is quite opposite. When we put something into the channel we are blocked until someone takes it. Also in pubsub we have one-to-many relation and all the subscribers receive the same message. While in CSP if we hook multiple takers to a channel they'll all receive different messages because once the message is consumed it disappears from the channel and the next taker will read the next message. CSP and pubsub are kind of similar concepts. They both follow the push model and could be used to write code in a reactive way. However, they act differently.
+The [PubSub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) pattern is widely used in JavaScript. There are tons of libraries that are using it and it's de-facto a standard these days. I (the author of this library) however think that this pattern doesn't play well with the [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) concepts. I've made couple of tests and tried implementing it with pure CSP patterns but it simply doesn't work as expected. That's because in the PubSub pattern we have a broadcasting system. A system in which the dispatcher of the message doesn't care what happens with the dispatched message. The act of message sending is not a blocking operation. In CSP is quite opposite. When we put something into the channel we are blocked until someone takes it. Also in PubSub we have one-to-many relationship and all the subscribers receive the same message. While in CSP if we hook multiple takers to a channel they'll all receive different messages because once the message is consumed it disappears from the channel and the next taker will read the next message. CSP and PubSub are kind of similar concepts. They both follow the push model and could be used to write code in a reactive way. However, they act differently.
 
-Riew offers pubsub pattern capabilities. They are however added next to the core CSP processes and the developer needs to make a clear separation between the two. Consider the following example:
+Riew offers PubSub pattern capabilities. They are however added next to the core CSP processes and the developer needs to make a clear separation between the two. Consider the following example:
 
 ```js
 sub(ch, value => {
