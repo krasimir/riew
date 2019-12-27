@@ -220,7 +220,9 @@ The [PubSub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) pa
 Riew offers PubSub pattern capabilities. They are however added next to the core CSP processes and the developer needs to make a clear separation between the two. Consider the following example:
 
 ```js
-sub(ch, value => {
+const ch = chan();
+
+sread(ch, value => {
   console.log(`Value: ${ value }`);
 });
 go(function * A() {
@@ -229,7 +231,19 @@ go(function * A() {
 });
 ```
 
-The result of this snippet is only `"Value: Foo"`. The [sub](https://github.com/krasimir/riew#sub) reads the put value but doesn't consume it from the channel. The routine `A` is still blocked because there is no [take](https://github.com/krasimir/riew#take) from the channel.
+The result of this snippet is only `"Value: Foo"`. The [sread](https://github.com/krasimir/riew#sread) (standalone _read_) reads the value but doesn't consume it from the channel. The routine `A` is still blocked because there is no [taker](https://github.com/krasimir/riew#take) for the channel.
+
+By default `sread` are one-shot operation. This means that the passed callback will be fired only once when a new value arrives into the channel. However, we may use the `listen` option and effectively subscribe for values passed to the channel.
+
+```js
+sread(ch, value => {
+  console.log(`Value: ${ value }`);
+}, { listen: true });
+
+sput(ch, 'foo'); // Value: foo
+sput(ch, 'bar'); // Value: bar
+sput(ch, 'moo'); // Value: moo
+```
 
 ## API
 
@@ -246,7 +260,7 @@ The function returns a channel object with the following methods/fields:
 
 * `channel.id` - the ID of the channel.
 * `channel.isActive()` - returns `true` if the channel is in an `OPEN` state.
-* `channel.state()` - returns one of the following: `OPEN`, `CLOSED` or `ENDED`. When the `channel` is `OPEN` we can put and take from it. When it is `CLOSED` every put gets resolved with `CLOSED`. The `take` on a `CLOSED` channel consumes the values left in the channel. If no values gets resolved with `CLOSED`. When a channel is `ENDED` both `put` and `take` are resolved with `ENDED`.
+* `channel.state()` - returns one of the following: `OPEN`, `CLOSED` or `ENDED`. When the `channel` is `OPEN` we can put and take from it. When it is `CLOSED` every put gets resolved with `CLOSED`. The `take` on a `CLOSED` channel consumes the values left in the channel. If no values the `take` will be resolved with `CLOSED`. When a channel is `ENDED` both `put` and `take` are resolved with `ENDED`.
 
 Example:
 
@@ -280,7 +294,7 @@ go(function * B() {
 
 1. Routine A starts and stops at the `yield put`.
 2. Routine B starts and stops at `yield sleep` for one second.
-3. Routine B is resumed because and `take`s 'foo' from the channel.
+3. Routine B is resumed and `take`s 'foo' from the channel.
 4. Routine A is resumed and it ends.
 5. Routine B ends with `value` equal to `foo`.
 
@@ -341,7 +355,7 @@ go(function * B() {
 
 > `buffer.dropping(n)`
 
-Similar to the fixed buffer except that every `put` outside of the buffer range is not blocking the routing. It resolves with `true` if there is space in the buffer and `false` if not. It's simply ignored.
+Similar to the fixed buffer except that every `put` outside of the buffer range is not blocking the routing. It resolves with `true` if there is space in the buffer and `false` if not. If there is no space for new values it's simply ignored.
 
 Example:
 
@@ -367,7 +381,7 @@ go(function * B() {
 
 > `buffer.divorced()`
 
-This type of buffer is a bit against the idea of the original CSP. The `put`s and `take`s to the channel with such buffer are always non-blocking. They resolve immediately. The `put`s always resolve with `true` while the `take`s with the latest value that was in the channel.
+This type of buffer is not following the CSP concepts. It's here because it serves a specific use case. The `put`s and `take`s to the channel with such buffer are always non-blocking. They resolve immediately. The `put`s always resolve with `true` while the `take`s resolve with the latest value that was in the channel.
 
 Example:
 
@@ -420,7 +434,7 @@ go(function * B() {
 ```
 
 1. `go` runs a routine `A` with one argument `"Hey"`. The routine stops at `yield take(ch)`.
-2. Routine `B` starts and inside we put to the channel `"Pablo"` string.
+2. Routine `B` starts and we put `"Pablo"` to the channel `ch`.
 3. Routine `A` is resumed and forms its result which is `Hey, Pablo`.
 4. The routine done callback is called and we see the result in the console.
 
@@ -439,7 +453,7 @@ const routine = go(function * () {
 routine.stop(); // <-- this terminates the routine
 ```
 
-Another way to stop the routine is to yield `stop()`. This is not the same as writing `return` because `return` will fire the callback of the routine so it's ended. `stop()` is about terminating it. In the following example we'll see only `"done B"`.
+Another way to stop the routine is to yield `stop()`. This is not the same as writing `return` because `return` will fire the `done` callback of the routine. `stop()` is about terminating it. In the following example we'll see only `"done B"`.
 
 ```js
 go(function * A() {
@@ -471,7 +485,7 @@ r.unmount(); // <-- this terminates the routine
 
 #### Restarting the routine
 
-Rerunning a routine means terminating the current processes and running the generator again.
+Re-running a routine means terminating the current processes and running the generator again.
 
 The `go` function returns an object that has a `rerun` method. Once you call it the routine will be restarted.
 
@@ -501,7 +515,7 @@ This routine will print `"Hello!"`, will wait a second and will print `"Bye!"`. 
 
 #### What you can yield
 
-* You can yield a promise. Riew will wait till the promise is resolved and will resume the generator.
+* Promise - riew will wait till the promise is resolved and will resume the generator.
 
 ```js
 const routine = go(function * () {
@@ -547,7 +561,7 @@ go(function * () {
 
 > `sput(channel, anything, callback)`
 
-Same as [put](https://github.com/krasimir/riew#put) but it can be called outside of a routine. This function is super handy to make the bridge between Riew and non-Riew code. The `s` comes from `standalone`.
+Same as [put](https://github.com/krasimir/riew#put) but it can be used outside of a routine. This function is super handy to make the bridge between Riew and non-Riew code. The `s` comes from `standalone`.
 
 * `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to put items in.
 * `anything` (`Any`, required) - the item that we want to put into the channel.
@@ -614,7 +628,7 @@ go(function * () {
 stake(ch, item => console.log(item));
 ```
 
-Notice that this is one-time call. It's not like a [subscription](https://github.com/krasimir/riew#sub) to the channel. In the example here we'll see only `"foo"` but not `"bar"`.
+Notice that this is one-time call. It's not like a [subscription](https://github.com/krasimir/riew#read) to the channel. In the example here we'll see only `"foo"` but not `"bar"`.
 
 ### close
 
@@ -671,14 +685,14 @@ In the console we'll see `"foo"` followed by two `Symbol(ENDED)`. The routine is
 
 > `read(sourceChannels, options)`
 
-It's meant to be used only inside a routine and it _reads_ from a channel/s. The _reading_ that happens is like subscribing with `ONE_OF` strategy. Or in other words `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value.
+It's meant to be used only inside a routine and it _reads_ from a channel/s. `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value.
 
-* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option to change this.
-* `options` (`Object`, optional) - additional options for the subscription
-  * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
-  * `onError` (`Function`, optional) - in case of an error of the `transform` function.
-  * `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
-  * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not.
+* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option below.
+* `options` (`Object`, optional) - additional options for the reading
+  * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it.
+  * `onError` (`Function`, optional) - in case the `transform` throws an error.
+  * `initialCall` (`Boolean`, optional, default to `true`) - resolves the `read` if there is already a value in the source/s.
+  * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not. If set to `ONE_OF` it will resolve the read as soon as some of the sources receives a value.
 
 Example:
 
@@ -696,6 +710,158 @@ go(function * B() {
 ```
 
 If we run this code we'll see `"foo"` followed by `"done"`. The second put in routine `B` never happens because the first put is blocked. We need a [take](https://github.com/krasimir/riew#take) to release it. The `read` in routine `A` doesn't consume the value of the channel, just reads it so can't unblock `B`.
+
+### sread
+
+> `sread(sourceChannels, to, options)`
+
+Same as [read](https://github.com/krasimir/riew#read) but it's meant to be used outside of a routine. 
+
+* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option below.
+* `to` (`Channel`, `ID` of a channel, or a function, required) - the values from the `sourceChannels` are piped to the passed channel. If a function, that function is called with the values.
+* `options` (`Object`, optional) - additional options for the reading
+  * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it.
+  * `onError` (`Function`, optional) - in case the `transform` throws an error.
+  * `initialCall` (`Boolean`, optional, default to `true`) - resolves the `read` if there is already a value in the source/s.
+  * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not. If set to `ONE_OF` it will resolve the read as soon as some of the sources receives a value.
+  * `listen` (`Boolean`, optional, default to `false`) - set it to `true` if you want to receive values from the sources in a continues fashion. Or in other words to have a listener of values delivered by the `sourceChannels`.
+
+Example:
+
+The most basic example is when we want to get values pushed to a channel into a regular JavaScript function.
+
+```js
+const ch = chan();
+
+sread(ch, value => {
+  console.log(value);
+}, { listen: true });
+
+go(function * A() {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar'); // <-- never happens
+});
+```
+
+The second `put` of the `A` routine doesn't happen because the first one is pausing the routine. In the console we only see `"foo"`.
+
+We can read from more then one channel. `sread` waits by default to all of the channels to be filled with values. Then it calls the callback.
+
+```js
+const ch1 = chan();
+const ch2 = chan();
+
+sread([ch1, ch2], function subscriber(value) {
+  console.log(value);
+}, { listen: true });
+
+sput(ch1, 'foo');
+sput(ch2, 'bar');
+sput(ch2, 'moo');
+sput(ch1, 'zoo');
+```
+
+The first `sput` doesn't trigger the `subscriber`. After the second one we get `["foo", "bar"]` as a value. Then we get `["foo", "moo"]` and at the end `["zoo", "moo"]`. The third and the fourth `sput` trigger the subscriber because then both channels have received values. Also notice that if we have more then one channel the value in the subscriber comes as an array.
+
+Let's see a slightly more complicated example where we have a routine as a transform function.
+
+```js
+const source = chan();
+const subscriber = chan();
+
+sread(
+  source,
+  subscriber,
+  {
+    transform: function * (value) {
+      const { file } = yield fetch('https://aws.random.cat/meow').then(res => res.json());
+      return `<img src="${ file }" />`;
+    }
+  }
+);
+
+go(function * A() {
+  console.log(yield take(subscriber)); // <img src="https://purr.objects-us-east-1.dream.io/i/015_-_ZnUfGjo.gif" />
+});
+
+sput(source);
+```
+
+We have two channels `source` and `subscriber`. We want each `put` to the `source` to result into a `<img>` tag with a kitty into the `subscriber`. To fully understand this example you have to check the [go](https://github.com/krasimir/riew#go) section but shortly the `transform` routine asynchronously gets a URL of the image and returns a formatted `<img>` string. That string is pushed to the `subscriber` channel which we `take` from in the routine `A`.
+
+Another interesting use case for `sread` is when we use a `ONE_OF` strategy and receive the input from each of the source channels:
+
+```js
+const chA = chan();
+const chB = chan();
+
+sread([chA, chB], v => {
+  console.log(v);
+}, { strategy: ONE_OF, listen: true });
+
+sput(chA, 'foo');
+sput(chB, 'bar');
+sput(chA, 'moo');
+```
+
+The result of this script will be `"foo"` followed by `"bar"` followed by `"moo"`. It's because the library is not waiting for all the channels to have values but triggers the callback immediately when it receives a value.
+
+### unread
+
+> `unread(sourceChannel, subscriber)`
+
+Unsubscribes the `subscriber` from the `sourceChannel`. If we use [sread](https://github.com/krasimir/riew#sread) with a `listen` option set to `true` we effectively create a subscription. We may want to stop it.
+
+* `sourceChannel` (`Channel`, required) - the source channel that we've subscribed to.
+* `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items.
+
+Example:
+
+```js
+const source = chan();
+const subscriber = chan();
+
+sread(source, subscriber, { listen: true });
+
+go(function * () {
+  console.log(yield take(subscriber));
+  unread(source, subscriber);
+  console.log(yield take(subscriber));
+});
+
+sput(source, 'foo');
+sput(source, 'bar');
+```
+
+We see only `"foo"` because after the first `take` we remove the subscription.
+
+### unsubAll
+
+> `unsubAll(sourceChannel)`
+
+Removes all the subscriptions made to the `sourceChannel`. If we use [sread](https://github.com/krasimir/riew#sread) with a `listen` option set to `true` we effectively create a subscription. We may want to stop it.
+
+* `sourceChannel` (`Channel`, required) - the source channel that we subscribed to.
+
+Example:
+
+```js
+const source = chan();
+const subscriber = chan();
+
+sread(source, subscriber, { listen: true });
+
+go(function * () {
+  console.log(yield take(subscriber));
+  unreadAll(source);
+  console.log(yield take(subscriber));
+});
+
+sput(source, 'foo');
+sput(source, 'bar');
+```
+
+We see only `"foo"` because after the first `take` we remove all the subscription.
 
 ### call
 
@@ -724,7 +890,7 @@ Notice that the routine `B` is paused until routine `A` finishes.
 
 > `fork(routine, ...routineArgs)`
 
-Like [call](https://github.com/krasimir/riew#call) but it's not blocking. Meant to be used only inside a routine.
+Like [call](https://github.com/krasimir/riew#call) but it's not pausing the main routine. Meant to be used only inside a routine.
 
 * `routine` (`Generator`, required) - a generator function
 * `routineArgs` (`Any`, optional) - any optional arguments that come as arguments to our generator.
@@ -840,172 +1006,7 @@ go(function * () {
 });
 ```
 
-### sub
-
-> `sub(sourceChannels, subscriber, options)`
-
-* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option to change this.
-* `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel/s.
-* `options` (`Object`, optional) - additional options for the subscription
-  * `transform` (`Function` or routine, optional) - a function or a routine that receives the data from the sources and has a chance to transform it for the subscriber.
-  * `onError` (`Function`, optional) - in case of an error of the `transform` function.
-  * `initialCall` (`Boolean`, optional, default to `true`) - notify the subscriber if there is already a value in the sources.
-  * `once` (`Boolean`, optional, default to `false`) - the subscriber will be notified only once
-  * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not.
-
-The `sub` function is mainly about notifying a _subscriber_ when there is data in the _source_ channels. We already talked about the [Pubsub](https://github.com/krasimir/riew#pubsub) pattern and how it's a bit against the CSP concept. Here are two very important things to remember:
-
-* `sub` does not consume values from the channels. Does not unblocks pending puts.
-* The subscriber is notified no matter if the `put` to the source is resolved.
-
-Examples:
-
-The most basic example is when we want to get values pushed to a channel into a regular JavaScript function.
-
-```js
-const ch = chan();
-
-sub(ch, function subscriber(value) {
-  console.log(value);
-});
-go(function * A() {
-  yield put(ch, 'foo');
-  yield put(ch, 'bar'); // <-- never happens
-});
-```
-
-The second `put` of the `A` routine doesn't happen because the first one is pausing the routine. In the console we only see `"foo"`.
-
-We can subscribe to more then channel but then `sub` waits to all of the channels to have values. Then it calls the subscriber.
-
-```js
-const ch1 = chan();
-const ch2 = chan();
-
-sub([ch1, ch2], function subscriber(value) {
-  console.log(value);
-});
-sput(ch1, 'foo');
-sput(ch2, 'bar');
-sput(ch2, 'moo');
-sput(ch1, 'zoo');
-```
-
-The first `sput` doesn't trigger the `subscriber`. After the second one we get `["foo", "bar"]` as a value. Then we get `["foo", "moo"]` and at the end `["zoo", "moo"]`. The third and the fourth `sput` trigger the subscriber because then both channels have received values. Also notice that if we have more then one channel the value in the subscriber comes as an array.
-
-Let's see a slightly more complicated example where we have a routine as a transform function.
-
-```js
-const source = chan();
-const subscriber = chan();
-
-sub(
-  source,
-  subscriber,
-  {
-    transform: function * (value) {
-      const { file } = yield fetch('https://aws.random.cat/meow').then(res => res.json());
-      return `<img src="${ file }" />`;
-    }
-  }
-);
-
-go(function * A() {
-  console.log(yield take(subscriber)); // <img src="https://purr.objects-us-east-1.dream.io/i/015_-_ZnUfGjo.gif" />
-});
-
-sput(source);
-```
-
-We have two channels `source` and `subscriber`. We want each `put` to the `source` to result into a `<img>` tag with a kitty into the `subscriber`. To fully understand this example you have to check the [go](https://github.com/krasimir/riew#go) section but shortly the `transform` routine asynchronously gets a URL of the image and returns a formatted `<img>` string. That string is pushed to the `subscriber` channel which we take into the routine `A`.
-
-If we want to notify the subscriber only once we may use the `once` option:
-
-```js
-const ch = chan();
-
-sub(ch, v => {
-  console.log(v);
-}, { once: true });
-
-sput(ch, 'foo');
-sput(ch, 'bar'); // <- nothing
-sput(ch, 'moo'); // <- nothing
-```
-
-Or if we want to use the `ONE_OF` strategy and receive the input from each of the source channels:
-
-```js
-const chA = chan();
-const chB = chan();
-
-sub([chA, chB], v => {
-  console.log(v);
-}, { strategy: sub.ONE_OF });
-
-sput(chA, 'foo');
-sput(chB, 'bar');
-sput(chA, 'moo');
-```
-
-The result of this script will be `"foo"` followed by `"bar"` followed by `"moo"`. It's because the library is not waiting for all the channels to have values but trigger the callback immediately when it receives a value.
-
-### unsub
-
-> `unsub(sourceChannel, subscriber)`
-
-Unsubscribes the `subscriber` from the `sourceChannel`.
-
-* `sourceChannel` (`Channel`, required) - the source channel that we subscribed to.
-* `subscriber` (`Function` or a channel, required) - the subscriber that will be notified when new items come into the source channel.
-
-Example:
-
-```js
-const source = chan();
-const subscriber = chan();
-
-subOnce(source, subscriber);
-
-go(function * () {
-  console.log(yield take(subscriber));
-  unsub(source, subscriber);
-  console.log(yield take(subscriber));
-});
-
-sput(source, 'foo');
-sput(source, 'bar');
-```
-
-We see only `"foo"` because after the first `take` we remove the subscription.
-
-### unsubAll
-
-> `unsubAll(sourceChannel)`
-
-Removes all the subscriptions made to the `sourceChannel`.
-
-* `sourceChannel` (`Channel`, required) - the source channel that we subscribed to.
-
-Example:
-
-```js
-const source = chan();
-const subscriber = chan();
-
-subOnce(source, subscriber);
-
-go(function * () {
-  console.log(yield take(subscriber));
-  unsubAll(source);
-  console.log(yield take(subscriber));
-});
-
-sput(source, 'foo');
-sput(source, 'bar');
-```
-
-We see only `"foo"` because after the first `take` we remove all the subscription.
+The behavior of this function could be replicated by using [sread](https://github.com/krasimir/riew#sread) with a `listen` option set to `true`. The difference between these two variants is that `merge` consumes values from both channels while `sread` is just reading from them.
 
 ### state
 
