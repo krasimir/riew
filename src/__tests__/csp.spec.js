@@ -1313,4 +1313,28 @@ describe('Given a CSP', () => {
       expect(CHANNELS.exists('BBB')).toBe(false);
     });
   });
+  describe('when we put to multiple channels', () => {
+    it('should resolve the put only if all the channels values are consumed', async () => {
+      const spy = jest.fn();
+
+      go(function*() {
+        yield put(['save', 'saving-done'], ['foo', 'bar']);
+        spy('Save successful!');
+      });
+      go(function*() {
+        spy(`xxx=${yield take('save')}`);
+        spy('OOO');
+        yield sleep(10);
+        spy(`yyy=${yield take('saving-done')}`);
+      });
+
+      await delay(20);
+      expect(spy).toBeCalledWithArgs(
+        ['xxx=foo'],
+        ['OOO'],
+        ['Save successful!'],
+        ['yyy=bar']
+      );
+    });
+  });
 });

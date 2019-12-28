@@ -291,7 +291,7 @@ describe('Given a CSP pubsub extension', () => {
         const ch2 = chan();
         const spy = jest.fn();
 
-        sread([ch1, ch2], spy, { strategy: read.ONE_OF, listen: true });
+        sread([ch1, ch2], spy, { strategy: ONE_OF, listen: true });
 
         sput(ch1, 'foo');
         sput(ch2, 'bar');
@@ -307,7 +307,7 @@ describe('Given a CSP pubsub extension', () => {
         const spy = jest.fn();
 
         go(function*() {
-          const v = yield read([ch1, ch2], { strategy: read.ONE_OF });
+          const v = yield read([ch1, ch2], { strategy: ONE_OF });
           spy(v);
           return go;
         });

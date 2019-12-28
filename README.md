@@ -539,8 +539,8 @@ const routine = go(function * () {
 
 Meant to be used only inside a routine. It puts items into a channel. Could be blocking. It depends on the channel's [buffer](https://github.com/krasimir/riew#buffer).
 
-* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to put items in.
-* `anything` (`Any`, required) - the item that we want to put into the channel.
+* `channel` (One or array of `String`s or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to put items in.
+* `anything` (`Any`, required) - the item that we want to put into the channel. If we pass an array of channels as first argument then this should be also an array.
 
 The generator is resumed with `true` if the `put` is successful. `false` in the case of a channel with a dropping [buffer](https://github.com/krasimir/riew#buffer). Or it may return channel [statuses](https://github.com/krasimir/riew#chan) `CLOSED` or `ENDED`.
 
@@ -556,6 +556,20 @@ go(function * () {
 	yield put(ch, 'foo');
 });
 ```
+
+Putting to multiple channels:
+
+```js
+go(function*() {
+  yield put(['ChannelA', 'ChannelB'], ['foo', 'bar']);
+});
+go(function*() {
+  console.log(yield take('ChannelA')); // "foo"
+  console.log(yield take('ChannelB')); // "bar"
+});
+```
+
+Have in mind that the `put` in this case is released only when we take from both channels.
 
 ### sput
 

@@ -13,7 +13,6 @@ import {
   CALL_ROUTINE,
   FORK_ROUTINE,
   NOTHING,
-  ALL_REQUIRED,
   ONE_OF,
 } from './constants';
 import { grid, chan } from '../index';
@@ -30,13 +29,14 @@ export function put(channels, item) {
 export function sput(channels, item, callback = noop) {
   channels = normalizeChannels(channels, 'WRITE');
   const result = channels.map(() => NOTHING);
+  const items = channels.length > 1 ? item : [item];
   channels.forEach((channel, idx) => {
     const state = channel.state();
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
-      callSubscribers(channel, item, () => {
-        channel.buff.put(item, value => {
+      callSubscribers(channel, items[idx], () => {
+        channel.buff.put(items[idx], value => {
           result[idx] = value;
           if (!result.includes(NOTHING)) {
             callback(result.length === 1 ? result[0] : result);
@@ -119,6 +119,7 @@ export function stake(channels, callback, options) {
       channel.state(ENDED);
       takeDone(ENDED, idx);
     } else if (options.read) {
+      // reading
       if (!channel.subscribers.find(({ callback: c }) => c === callback)) {
         channel.subscribers.push(
           (subscription = {
@@ -128,13 +129,12 @@ export function stake(channels, callback, options) {
           })
         );
       }
-      // If there is already a value in the channel
-      // notify the subscribers.
       const currentChannelBufValue = channel.value();
       if (initialCall && currentChannelBufValue.length > 0) {
         takeDone(currentChannelBufValue[0], idx);
       }
     } else {
+      // taking
       channel.buff.take(r => takeDone(r, idx));
     }
     return subscription;
@@ -153,8 +153,6 @@ export function read(channels, options) {
   return { channels, op: READ, options: { ...options, read: true } };
 }
 export function sread(channels, to, options) {
-  channels = normalizeChannels(channels);
-  options = normalizeOptions(options);
   return stake(channels, normalizeTo(to), { ...options, read: true });
 }
 export function unread(channels, callback) {
@@ -176,9 +174,6 @@ export function unreadAll(channels) {
     ch.subscribers = [];
   });
 }
-
-read.ALL_REQUIRED = ALL_REQUIRED;
-read.ONE_OF = ONE_OF;
 
 // **************************************************** close, reset, call, fork, merge, timeout, isChannel
 
