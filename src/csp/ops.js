@@ -13,15 +13,11 @@ import {
   CALL_ROUTINE,
   FORK_ROUTINE,
 } from './constants';
-import { grid, chan, isState, isStateWriteChannel, sread } from '../index';
+import { grid, isStateWriteChannel, sread } from '../index';
 import { isPromise } from '../utils';
+import { normalizeChannels } from './utils';
 
 const noop = () => {};
-const normalizeChannel = (id, stateOp = 'READ') => {
-  if (isChannel(id)) return id;
-  if (isState(id)) return chan(id[stateOp]);
-  return chan(id);
-};
 
 // **************************************************** PUT
 
@@ -37,7 +33,7 @@ export function put(id, item, callback) {
     }
   };
 
-  const ch = normalizeChannel(id, 'WRITE');
+  const ch = normalizeChannels(id, 'WRITE');
   if (typeof callback === 'function') {
     doPut(ch, item, callback);
   } else {
@@ -79,7 +75,7 @@ export function take(id, callback) {
     }
   };
 
-  const ch = normalizeChannel(id);
+  const ch = normalizeChannels(id);
   if (typeof callback === 'function') {
     if (isStateWriteChannel(ch)) {
       console.warn(
@@ -98,7 +94,7 @@ export function stake(id, callback) {
 // **************************************************** close, reset, call, fork
 
 export function close(id) {
-  const ch = normalizeChannel(id);
+  const ch = normalizeChannels(id);
   const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
   ch.state(newState);
   ch.buff.puts.forEach(p => p(newState));
@@ -112,7 +108,7 @@ export function sclose(id) {
   return close(id);
 }
 export function channelReset(id) {
-  const ch = normalizeChannel(id);
+  const ch = normalizeChannels(id);
   ch.state(OPEN);
   ch.buff.reset();
   return { ch, op: NOOP };

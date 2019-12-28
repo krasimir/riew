@@ -41,6 +41,19 @@ describe('Given a CSP', () => {
 
       expect(spy).toBeCalledWithArgs(['foo'], [true], [true], ['bar']);
     });
+    fit('should allow us to wait a take from multiple channels', () => {
+      const spy = jest.fn();
+      const ch1 = chan();
+      const ch2 = chan();
+
+      stake([ch1, ch2], spy);
+
+      sput(ch1, 'foo');
+      sput(ch2, 'bar');
+      sput(ch1, 'moo');
+
+      expect(spy).toBeCalledWithArgs();
+    });
   });
 
   // Routines basics

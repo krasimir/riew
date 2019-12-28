@@ -1,8 +1,9 @@
 /* eslint-disable no-param-reassign, no-multi-assign */
-import { chan, isChannel, go, buffer, isState } from '../../index';
+import { chan, isChannel, go, buffer } from '../../index';
 import { READ } from '../constants';
 import { sput } from '../ops';
 import { isGeneratorFunction } from '../../utils';
+import { normalizeChannels } from '../utils';
 
 function defaultTransform(...args) {
   if (args.length === 1) return args[0];
@@ -18,13 +19,6 @@ const DEFAULT_OPTIONS = {
   initialCall: true,
 };
 
-function normalizeChannels(channels) {
-  if (!Array.isArray(channels)) channels = [channels];
-  return channels.map(ch => {
-    if (isState(ch)) ch = ch.READ;
-    return isChannel(ch) ? ch : chan(ch);
-  });
-}
 function normalizeTo(to) {
   if (typeof to === 'function') {
     return to;
