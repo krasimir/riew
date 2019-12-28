@@ -13,6 +13,7 @@ import {
   sput,
   close,
   sleep,
+  ONE_OF,
 } from '../index';
 import { delay } from '../__helpers__';
 
@@ -316,6 +317,37 @@ describe('Given a CSP pubsub extension', () => {
 
         expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
       });
+    });
+  });
+  describe('when we use `sread().listen()`', () => {
+    it('should set the `listen` option to `true`', () => {
+      const ch = chan();
+      const ch2 = chan();
+      const spy1 = jest.fn();
+      const spy2 = jest.fn();
+      const spy3 = jest.fn();
+
+      sread(ch, spy1);
+      sread(ch, spy2).listen();
+      sread([ch, ch2], spy3, { strategy: ONE_OF }).listen();
+
+      sput(ch, 'foo');
+      sput(ch2, 'a');
+      sput(ch, 'bar');
+      sput(ch2, 'b');
+      sput(ch, 'moo');
+      sput(ch2, 'c');
+
+      expect(spy1).toBeCalledWithArgs(['foo']);
+      expect(spy2).toBeCalledWithArgs(['foo'], ['bar'], ['moo']);
+      expect(spy3).toBeCalledWithArgs(
+        ['foo'],
+        ['a'],
+        ['bar'],
+        ['b'],
+        ['moo'],
+        ['c']
+      );
     });
   });
 });

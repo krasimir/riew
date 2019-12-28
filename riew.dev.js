@@ -485,7 +485,8 @@ function waitAllStrategy(channels, to, options) {
     return NOTHING;
   });
   var composedAlready = false;
-  channels.forEach(function (ch, idx) {
+  var subscriptions = channels.map(function (ch, idx) {
+    var subscription = {};
     var notify = function notify(value) {
       var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
@@ -516,7 +517,7 @@ function waitAllStrategy(channels, to, options) {
       var t = _ref.to;
       return t === to;
     })) {
-      ch.subscribers.push({ to: to, notify: notify, listen: listen });
+      ch.subscribers.push(subscription = { to: to, notify: notify, listen: listen });
     }
     // If there is already a value in the channel
     // notify the subscribers.
@@ -524,7 +525,15 @@ function waitAllStrategy(channels, to, options) {
     if (initialCall && currentChannelBufValue.length > 0) {
       notify(currentChannelBufValue[0]);
     }
+    return subscription;
   });
+  return {
+    listen: function listen() {
+      subscriptions.forEach(function (s) {
+        return s.listen = true;
+      });
+    }
+  };
 }
 function waitOneStrategy(channels, to, options) {
   var transform = options.transform,
@@ -532,7 +541,8 @@ function waitOneStrategy(channels, to, options) {
       initialCall = options.initialCall,
       listen = options.listen;
 
-  channels.forEach(function (ch) {
+  var subscriptions = channels.map(function (ch) {
+    var subscription = {};
     var notify = function notify(value) {
       var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
@@ -557,7 +567,7 @@ function waitOneStrategy(channels, to, options) {
       var t = _ref2.to;
       return t === to;
     })) {
-      ch.subscribers.push({ to: to, notify: notify, listen: listen });
+      ch.subscribers.push(subscription = { to: to, notify: notify, listen: listen });
     }
     // If there is already a value in the channel
     // notify the subscribers.
@@ -565,7 +575,15 @@ function waitOneStrategy(channels, to, options) {
     if (initialCall && currentChannelBufValue.length > 0) {
       notify(currentChannelBufValue[0]);
     }
+    return subscription;
   });
+  return {
+    listen: function listen() {
+      subscriptions.forEach(function (s) {
+        return s.listen = true;
+      });
+    }
+  };
 }
 
 function read(channels, options) {
@@ -588,7 +606,7 @@ function sread(channels, to, options) {
     default:
       throw new Error('Subscription strategy not recognized. Expecting ALL_REQUIRED or ONE_OF but "' + options.strategy + '" given.');
   }
-  f(normalizeChannels(channels), normalizeTo(to), options);
+  return f(normalizeChannels(channels), normalizeTo(to), options);
 }
 function unread(channels, callback) {
   channels = normalizeChannels(channels);

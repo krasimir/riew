@@ -726,6 +726,18 @@ Same as [read](https://github.com/krasimir/riew#read) but it's meant to be used 
   * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not. If set to `ONE_OF` it will resolve the read as soon as some of the sources receives a value.
   * `listen` (`Boolean`, optional, default to `false`) - set it to `true` if you want to receive values from the sources in a continues fashion. Or in other words to have a listener of values delivered by the `sourceChannels`.
 
+For convenience the function returns an object with a `listen` method. So we can trigger the listening mode easier. Instead of 
+
+```js
+sread(channel, func, { listen: true });
+```
+
+we can write
+
+```js
+sread(channel, func).listen();
+```
+
 Example:
 
 The most basic example is when we want to get values pushed to a channel into a regular JavaScript function.
