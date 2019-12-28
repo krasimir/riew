@@ -553,7 +553,7 @@ go(function * () {
   console.log(yield take(ch));
 })
 go(function * () {
-	yield put(ch, 'foo');
+  yield put(ch, 'foo');
 });
 ```
 
