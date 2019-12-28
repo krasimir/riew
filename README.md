@@ -606,6 +606,37 @@ go(function * () {
 });
 ```
 
+In case of taking from multiple channels we get an array as a result. If the strategy is `ALL_REQUIRED` (by default) we'll get an array of ordered channel values. For example:
+
+```js
+const ch1 = chan();
+const ch2 = chan();
+
+go(function*() {
+  console.log(yield take([ch2, ch1])); // ['bar', 'foo']
+});
+
+sput(ch1, 'foo');
+sput(ch2, 'bar');
+```
+
+Notice that we are getting `["bar", "foo"]` and not `["foo", "bar"]`.
+
+If we use `ONE_OF` strategy the second element of the array is the index of the matched channel:
+
+```js
+const ch1 = chan();
+const ch2 = chan();
+
+go(function*() {
+  console.log(yield take([ch2, ch1], { strategy: ONE_OF })); // ['foo', 1]
+});
+
+sput(ch1, 'foo');
+```
+
+The second element of the array is `1`, not 0, because `ch1` is at the second position in the array.
+
 ### stake
 
 > `stake(channels, callback, options)`
@@ -617,7 +648,7 @@ Same as [take](https://github.com/krasimir/riew#take) but it can be called outsi
 * `options` (`Object`, optional) - additional options for the _take_ operation
   * `strategy` (`ALL_REQUIRED` or `ONE_OFF`, `ALL_REQUIRED` by default) - if we take from multiple channels this option describes our strategy. Either we wait for all the channels to have values (`ALL_REQUIRED`) or we expect at least one of them to be fulfilled (`ONE_OF`).
 
-The generator is resumed with the item taken from the channel.
+The callback is fired with the item put to the channel. If we take from more then one channel we'll receive an array of values. If we use `ONE_OF` strategy the second argument of the callback is the index of the channel received a value.
 
 Example:
 
@@ -632,7 +663,7 @@ go(function * () {
 stake(ch, item => console.log(item));
 ```
 
-Notice that this is one-time call. It's not like a [subscription](https://github.com/krasimir/riew#read) to the channel. In the example here we'll see only `"foo"` but not `"bar"`.
+Notice that this is one-time call. It's not like a [subscription](https://github.com/krasimir/riew#read) to a channel. In the example here we'll see only `"foo"` but not `"bar"`.
 
 ### close
 

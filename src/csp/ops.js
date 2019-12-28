@@ -77,7 +77,7 @@ export function stake(channels, callback, options) {
   const takeDone = (value, idx) => {
     data[idx] = value;
     if (options.strategy === ONE_OF) {
-      callback(value);
+      callback(value, idx);
     } else if (!data.includes(NOTHING)) {
       callback(data.length === 1 ? data[0] : data);
     }
@@ -243,7 +243,13 @@ export function go(func, done = () => {}, ...args) {
         sput(i.value.channels, i.value.item, next);
         break;
       case TAKE:
-        stake(i.value.channels, next, i.value.options);
+        stake(
+          i.value.channels,
+          (...nextArgs) => {
+            next(nextArgs.length === 1 ? nextArgs[0] : nextArgs);
+          },
+          i.value.options
+        );
         break;
       case NOOP:
         next();

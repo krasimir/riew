@@ -560,7 +560,7 @@ function stake(channels, callback, options) {
   var takeDone = function takeDone(value, idx) {
     data[idx] = value;
     if (options.strategy === _constants.ONE_OF) {
-      callback(value);
+      callback(value, idx);
     } else if (!data.includes(_constants.NOTHING)) {
       callback(data.length === 1 ? data[0] : data);
     }
@@ -760,7 +760,13 @@ function go(func) {
         sput(i.value.channels, i.value.item, next);
         break;
       case _constants.TAKE:
-        stake(i.value.channels, next, i.value.options);
+        stake(i.value.channels, function () {
+          for (var _len5 = arguments.length, nextArgs = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+            nextArgs[_key5] = arguments[_key5];
+          }
+
+          next(nextArgs.length === 1 ? nextArgs[0] : nextArgs);
+        }, i.value.options);
         break;
       case _constants.NOOP:
         next();

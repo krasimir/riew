@@ -59,9 +59,9 @@ describe('Given a CSP', () => {
       const ch2 = chan();
 
       stake([ch1, ch2], spy, { strategy: ONE_OF });
-      sput(ch1, 'foo');
+      sput(ch2, 'foo');
 
-      expect(spy).toBeCalledWithArgs(['foo']);
+      expect(spy).toBeCalledWithArgs(['foo', 1]);
     });
   });
 
@@ -96,6 +96,20 @@ describe('Given a CSP', () => {
       expect(cleanup1).toBeCalledWithArgs(['a']);
       expect(cleanup2).toBeCalledWithArgs(['b']);
     });
+    it('should allow us to take from multiple channels (ALL_REQUIRED)', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const spy = jest.fn();
+
+      go(function*() {
+        spy(yield take([ch2, ch1]));
+      });
+
+      sput(ch1, 'foo');
+      sput(ch2, 'bar');
+
+      expect(spy).toBeCalledWithArgs([['bar', 'foo']]);
+    });
     it('should allow us to take using the ONE_OF strategy', () => {
       const ch1 = chan();
       const ch2 = chan();
@@ -107,7 +121,7 @@ describe('Given a CSP', () => {
 
       sput(ch1, 'foo');
 
-      expect(spy).toBeCalledWithArgs(['foo']);
+      expect(spy).toBeCalledWithArgs([['foo', 1]]);
     });
     it('should provide an API to stop the routine', async () => {
       const spy = jest.fn();
