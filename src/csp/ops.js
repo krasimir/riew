@@ -1,4 +1,4 @@
-/* eslint-disable no-use-before-define */
+/* eslint-disable no-use-before-define, no-param-reassign */
 import {
   OPEN,
   CLOSED,
@@ -12,36 +12,41 @@ import {
   READ,
   CALL_ROUTINE,
   FORK_ROUTINE,
+  NOTHING,
+  ALL_REQUIRED,
+  ONE_OF,
 } from './constants';
-import { grid, isStateWriteChannel, sread } from '../index';
+import { grid, chan } from '../index';
 import { isPromise } from '../utils';
-import { normalizeChannels } from './utils';
+import { normalizeChannels, normalizeOptions, normalizeTo } from './utils';
+import { waitAllStrategy, waitOneStrategy } from './pubsub';
 
 const noop = () => {};
 
-// **************************************************** PUT
+// **************************************************** put
 
-export function put(id, item, callback) {
-  const doPut = (channel, itemToPut, putDone) => {
+export function put(channels, item) {
+  return { channels, op: PUT, item };
+}
+export function sput(channels, item, callback = noop) {
+  channels = normalizeChannels(channels, 'WRITE');
+  const data = channels.map(() => NOTHING);
+  const putDone = (value, idx) => {
+    data[idx] = value;
+    if (!data.includes(NOTHING)) {
+      callback(data.length === 1 ? data[0] : data);
+    }
+  };
+  channels.forEach((channel, idx) => {
     const state = channel.state();
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
       callSubscribers(channel, item, () =>
-        channel.buff.put(itemToPut, putDone)
+        channel.buff.put(item, res => putDone(res, idx))
       );
     }
-  };
-
-  const ch = normalizeChannels(id, 'WRITE');
-  if (typeof callback === 'function') {
-    doPut(ch, item, callback);
-  } else {
-    return { ch, op: PUT, item };
-  }
-}
-export function sput(id, item, callback) {
-  return put(id, item, callback || noop);
+  });
 }
 function callSubscribers(ch, item, callback) {
   const subscribers = ch.subscribers.map(() => 1);
@@ -60,58 +65,108 @@ function callSubscribers(ch, item, callback) {
   });
 }
 
-// **************************************************** TAKE
+// **************************************************** take
 
-export function take(id, callback) {
-  const doTake = (channel, takeDone) => {
-    const state = channel.state();
-    if (state === ENDED) {
-      takeDone(ENDED);
-    } else if (state === CLOSED && channel.buff.isEmpty()) {
-      channel.state(ENDED);
-      takeDone(ENDED);
-    } else {
-      channel.buff.take(r => takeDone(r));
+export function take(channels, options) {
+  return { channels, op: TAKE, options };
+}
+export function stake(channels, callback, options) {
+  channels = normalizeChannels(channels);
+  options = normalizeOptions(options);
+  const data = channels.map(() => NOTHING);
+  const takeDone = (value, idx) => {
+    data[idx] = value;
+    if (options.strategy === ONE_OF) {
+      callback(value);
+    } else if (!data.includes(NOTHING)) {
+      callback(data.length === 1 ? data[0] : data);
     }
   };
-
-  const ch = normalizeChannels(id);
-  if (typeof callback === 'function') {
-    if (isStateWriteChannel(ch)) {
-      console.warn(
-        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `read(<channel>)`.'
-      );
+  channels.forEach((channel, idx) => {
+    const state = channel.state();
+    if (state === ENDED) {
+      takeDone(ENDED, idx);
+    } else if (state === CLOSED && channel.buff.isEmpty()) {
+      channel.state(ENDED);
+      takeDone(ENDED, idx);
+    } else {
+      channel.buff.take(r => takeDone(r, idx));
     }
-    doTake(ch, callback);
-  } else {
-    return { ch, op: TAKE };
+  });
+}
+
+// **************************************************** read
+
+export function read(channels, options) {
+  return { channels, op: READ, options };
+}
+export function sread(channels, to, options) {
+  channels = normalizeChannels(channels);
+  options = normalizeOptions(options);
+  let f;
+  options = normalizeOptions(options);
+  switch (options.strategy) {
+    case ALL_REQUIRED:
+      f = waitAllStrategy;
+      break;
+    case ONE_OF:
+      f = waitOneStrategy;
+      break;
+    default:
+      throw new Error(
+        `Subscription strategy not recognized. Expecting ALL_REQUIRED or ONE_OF but "${options.strategy}" given.`
+      );
   }
+  return f(channels, normalizeTo(to), options);
 }
-export function stake(id, callback) {
-  return take(id, callback || noop);
+export function unread(channels, callback) {
+  channels = normalizeChannels(channels);
+  channels.forEach(ch => {
+    if (isChannel(callback)) {
+      callback = callback.__subFunc;
+    }
+    ch.subscribers = ch.subscribers.filter(({ to }) => {
+      if (to !== callback) {
+        return true;
+      }
+      return false;
+    });
+  });
+}
+export function unreadAll(channels) {
+  normalizeChannels(channels).forEach(ch => {
+    ch.subscribers = [];
+  });
 }
 
-// **************************************************** close, reset, call, fork
+read.ALL_REQUIRED = ALL_REQUIRED;
+read.ONE_OF = ONE_OF;
 
-export function close(id) {
-  const ch = normalizeChannels(id);
-  const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
-  ch.state(newState);
-  ch.buff.puts.forEach(p => p(newState));
-  ch.buff.takes.forEach(t => t(newState));
-  grid.remove(ch);
-  ch.subscribers = [];
-  CHANNELS.del(ch.id);
+// **************************************************** close, reset, call, fork, merge, timeout
+
+export function close(channels) {
+  channels = normalizeChannels(channels);
+  channels.forEach(ch => {
+    const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
+    ch.state(newState);
+    ch.buff.puts.forEach(p => p(newState));
+    ch.buff.takes.forEach(t => t(newState));
+    grid.remove(ch);
+    ch.subscribers = [];
+    CHANNELS.del(ch.id);
+  });
   return { op: NOOP };
 }
 export function sclose(id) {
   return close(id);
 }
-export function channelReset(id) {
-  const ch = normalizeChannels(id);
-  ch.state(OPEN);
-  ch.buff.reset();
-  return { ch, op: NOOP };
+export function channelReset(channels) {
+  channels = normalizeChannels(channels);
+  channels.forEach(ch => {
+    ch.state(OPEN);
+    ch.buff.reset();
+  });
+  return { op: NOOP };
 }
 export function schannelReset(id) {
   channelReset(id);
@@ -121,6 +176,25 @@ export function call(routine, ...args) {
 }
 export function fork(routine, ...args) {
   return { op: FORK_ROUTINE, routine, args };
+}
+export function merge(...channels) {
+  const newCh = chan();
+
+  channels.forEach(ch => {
+    (function taker() {
+      stake(ch, v => {
+        if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
+          sput(newCh, v, taker);
+        }
+      });
+    })();
+  });
+  return newCh;
+}
+export function timeout(interval) {
+  const ch = chan();
+  setTimeout(() => close(ch), interval);
+  return ch;
 }
 
 // **************************************************** other
@@ -166,10 +240,10 @@ export function go(func, done = () => {}, ...args) {
     }
     switch (i.value.op) {
       case PUT:
-        put(i.value.ch, i.value.item, next);
+        sput(i.value.channels, i.value.item, next);
         break;
       case TAKE:
-        take(i.value.ch, next);
+        stake(i.value.channels, next, i.value.options);
         break;
       case NOOP:
         next();
@@ -181,7 +255,7 @@ export function go(func, done = () => {}, ...args) {
         state = STOPPED;
         break;
       case READ:
-        sread(i.value.ch, next, i.value.options);
+        sread(i.value.channels, next, i.value.options);
         break;
       case CALL_ROUTINE:
         addSubRoutine(go(i.value.routine, next, ...i.value.args, ...args));

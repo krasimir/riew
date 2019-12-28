@@ -322,7 +322,7 @@ function createChannel() {
   return api;
 }
 
-},{"../index":16,"../utils":19,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
+},{"../index":15,"../utils":18,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -339,6 +339,9 @@ var STOP = exports.STOP = 'STOP';
 var READ = exports.READ = 'READ';
 var CALL_ROUTINE = exports.CALL_ROUTINE = 'CALL_ROUTINE';
 var FORK_ROUTINE = exports.FORK_ROUTINE = 'FORK_ROUTINE';
+var NOTHING = exports.NOTHING = Symbol('NOTHING');
+var ALL_REQUIRED = exports.ALL_REQUIRED = Symbol('ALL_REQUIRED');
+var ONE_OF = exports.ONE_OF = Symbol('ONE_OF');
 
 var CHANNELS = exports.CHANNELS = {
   channels: {},
@@ -369,48 +372,452 @@ var CHANNELS = exports.CHANNELS = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _buffer = require('./buffer');
+
+Object.defineProperty(exports, 'buffer', {
+  enumerable: true,
+  get: function get() {
+    return _interopRequireDefault(_buffer).default;
+  }
+});
+
+var _channel = require('./channel');
+
+Object.keys(_channel).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _channel[key];
+    }
+  });
+});
+
+var _ops = require('./ops');
+
+Object.keys(_ops).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _ops[key];
+    }
+  });
+});
+
+var _state = require('./state');
+
+Object.keys(_state).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _state[key];
+    }
+  });
+});
+
+var _pubsub = require('./pubsub');
+
+Object.keys(_pubsub).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _pubsub[key];
+    }
+  });
+});
+
+var _constants = require('./constants');
+
+Object.keys(_constants).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _constants[key];
+    }
+  });
+});
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+},{"./buffer":5,"./channel":6,"./constants":7,"./ops":9,"./pubsub":10,"./state":11}],9:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.isChannel = undefined;
+exports.put = put;
+exports.sput = sput;
+exports.take = take;
+exports.stake = stake;
+exports.read = read;
+exports.sread = sread;
+exports.unread = unread;
+exports.unreadAll = unreadAll;
+exports.close = close;
+exports.sclose = sclose;
+exports.channelReset = channelReset;
+exports.schannelReset = schannelReset;
+exports.call = call;
+exports.fork = fork;
 exports.merge = merge;
+exports.timeout = timeout;
+exports.go = go;
+exports.sleep = sleep;
+exports.stop = stop;
 
-var _index = require('../../index');
+var _constants = require('./constants');
 
+var _index = require('../index');
+
+var _utils = require('../utils');
+
+var _utils2 = require('./utils');
+
+var _pubsub = require('./pubsub');
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+} /* eslint-disable no-use-before-define, no-param-reassign */
+
+var noop = function noop() {};
+
+// **************************************************** put
+
+function put(channels, item) {
+  return { channels: channels, op: _constants.PUT, item: item };
+}
+function sput(channels, item) {
+  var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : noop;
+
+  channels = (0, _utils2.normalizeChannels)(channels, 'WRITE');
+  var data = channels.map(function () {
+    return _constants.NOTHING;
+  });
+  var putDone = function putDone(value, idx) {
+    data[idx] = value;
+    if (!data.includes(_constants.NOTHING)) {
+      callback(data.length === 1 ? data[0] : data);
+    }
+  };
+  channels.forEach(function (channel, idx) {
+    var state = channel.state();
+    if (state === _constants.CLOSED || state === _constants.ENDED) {
+      callback(state);
+    } else {
+      callSubscribers(channel, item, function () {
+        return channel.buff.put(item, function (res) {
+          return putDone(res, idx);
+        });
+      });
+    }
+  });
+}
+function callSubscribers(ch, item, callback) {
+  var subscribers = ch.subscribers.map(function () {
+    return 1;
+  });
+  if (subscribers.length === 0) return callback();
+  var subscriptions = [].concat(_toConsumableArray(ch.subscribers));
+  ch.subscribers = [];
+  subscriptions.forEach(function (s) {
+    var notify = s.notify,
+        listen = s.listen;
+
+    if (listen) {
+      ch.subscribers.push(s);
+    }
+    notify(item, function () {
+      return subscribers.shift(), subscribers.length === 0 ? callback() : null;
+    });
+  });
+}
+
+// **************************************************** take
+
+function take(channels, options) {
+  return { channels: channels, op: _constants.TAKE, options: options };
+}
+function stake(channels, callback, options) {
+  channels = (0, _utils2.normalizeChannels)(channels);
+  options = (0, _utils2.normalizeOptions)(options);
+  var data = channels.map(function () {
+    return _constants.NOTHING;
+  });
+  var takeDone = function takeDone(value, idx) {
+    data[idx] = value;
+    if (options.strategy === _constants.ONE_OF) {
+      callback(value);
+    } else if (!data.includes(_constants.NOTHING)) {
+      callback(data.length === 1 ? data[0] : data);
+    }
+  };
+  channels.forEach(function (channel, idx) {
+    var state = channel.state();
+    if (state === _constants.ENDED) {
+      takeDone(_constants.ENDED, idx);
+    } else if (state === _constants.CLOSED && channel.buff.isEmpty()) {
+      channel.state(_constants.ENDED);
+      takeDone(_constants.ENDED, idx);
+    } else {
+      channel.buff.take(function (r) {
+        return takeDone(r, idx);
+      });
+    }
+  });
+}
+
+// **************************************************** read
+
+function read(channels, options) {
+  return { channels: channels, op: _constants.READ, options: options };
+}
+function sread(channels, to, options) {
+  channels = (0, _utils2.normalizeChannels)(channels);
+  options = (0, _utils2.normalizeOptions)(options);
+  var f = void 0;
+  options = (0, _utils2.normalizeOptions)(options);
+  switch (options.strategy) {
+    case _constants.ALL_REQUIRED:
+      f = _pubsub.waitAllStrategy;
+      break;
+    case _constants.ONE_OF:
+      f = _pubsub.waitOneStrategy;
+      break;
+    default:
+      throw new Error('Subscription strategy not recognized. Expecting ALL_REQUIRED or ONE_OF but "' + options.strategy + '" given.');
+  }
+  return f(channels, (0, _utils2.normalizeTo)(to), options);
+}
+function unread(channels, callback) {
+  channels = (0, _utils2.normalizeChannels)(channels);
+  channels.forEach(function (ch) {
+    if (isChannel(callback)) {
+      callback = callback.__subFunc;
+    }
+    ch.subscribers = ch.subscribers.filter(function (_ref) {
+      var to = _ref.to;
+
+      if (to !== callback) {
+        return true;
+      }
+      return false;
+    });
+  });
+}
+function unreadAll(channels) {
+  (0, _utils2.normalizeChannels)(channels).forEach(function (ch) {
+    ch.subscribers = [];
+  });
+}
+
+read.ALL_REQUIRED = _constants.ALL_REQUIRED;
+read.ONE_OF = _constants.ONE_OF;
+
+// **************************************************** close, reset, call, fork, merge, timeout
+
+function close(channels) {
+  channels = (0, _utils2.normalizeChannels)(channels);
+  channels.forEach(function (ch) {
+    var newState = ch.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
+    ch.state(newState);
+    ch.buff.puts.forEach(function (p) {
+      return p(newState);
+    });
+    ch.buff.takes.forEach(function (t) {
+      return t(newState);
+    });
+    _index.grid.remove(ch);
+    ch.subscribers = [];
+    _constants.CHANNELS.del(ch.id);
+  });
+  return { op: _constants.NOOP };
+}
+function sclose(id) {
+  return close(id);
+}
+function channelReset(channels) {
+  channels = (0, _utils2.normalizeChannels)(channels);
+  channels.forEach(function (ch) {
+    ch.state(_constants.OPEN);
+    ch.buff.reset();
+  });
+  return { op: _constants.NOOP };
+}
+function schannelReset(id) {
+  channelReset(id);
+}
+function call(routine) {
+  for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    args[_key - 1] = arguments[_key];
+  }
+
+  return { op: _constants.CALL_ROUTINE, routine: routine, args: args };
+}
+function fork(routine) {
+  for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+    args[_key2 - 1] = arguments[_key2];
+  }
+
+  return { op: _constants.FORK_ROUTINE, routine: routine, args: args };
+}
 function merge() {
   var newCh = (0, _index.chan)();
 
-  for (var _len = arguments.length, channels = Array(_len), _key = 0; _key < _len; _key++) {
-    channels[_key] = arguments[_key];
+  for (var _len3 = arguments.length, channels = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+    channels[_key3] = arguments[_key3];
   }
 
   channels.forEach(function (ch) {
     (function taker() {
-      (0, _index.stake)(ch, function (v) {
-        if (v !== _index.CLOSED && v !== _index.ENDED && newCh.state() === _index.OPEN) {
-          (0, _index.sput)(newCh, v, taker);
+      stake(ch, function (v) {
+        if (v !== _constants.CLOSED && v !== _constants.ENDED && newCh.state() === _constants.OPEN) {
+          sput(newCh, v, taker);
         }
       });
     })();
   });
   return newCh;
 }
+function timeout(interval) {
+  var ch = (0, _index.chan)();
+  setTimeout(function () {
+    return close(ch);
+  }, interval);
+  return ch;
+}
 
-},{"../../index":16}],9:[function(require,module,exports){
+// **************************************************** other
+
+var isChannel = exports.isChannel = function isChannel(ch) {
+  return ch && ch['@channel'] === true;
+};
+
+// **************************************************** routine
+
+function go(func) {
+  for (var _len4 = arguments.length, args = Array(_len4 > 2 ? _len4 - 2 : 0), _key4 = 2; _key4 < _len4; _key4++) {
+    args[_key4 - 2] = arguments[_key4];
+  }
+
+  var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
+
+  var RUNNING = 'RUNNING';
+  var STOPPED = 'STOPPED';
+  var state = RUNNING;
+
+  var api = {
+    children: [],
+    stop: function stop() {
+      state = STOPPED;
+      this.children.forEach(function (r) {
+        return r.stop();
+      });
+    },
+    rerun: function rerun() {
+      gen = func.apply(undefined, args);
+      next();
+    }
+  };
+  var addSubRoutine = function addSubRoutine(r) {
+    return api.children.push(r);
+  };
+
+  var gen = func.apply(undefined, args);
+  function next(value) {
+    if (state === STOPPED) {
+      return;
+    }
+    var i = gen.next(value);
+    if (i.done === true) {
+      if (done) done(i.value);
+      if (i.value && i.value['@go'] === true) {
+        api.rerun();
+      }
+      return;
+    }
+    if ((0, _utils.isPromise)(i.value)) {
+      i.value.then(next).catch(function (err) {
+        return gen.throw(err);
+      });
+      return;
+    }
+    switch (i.value.op) {
+      case _constants.PUT:
+        sput(i.value.channels, i.value.item, next);
+        break;
+      case _constants.TAKE:
+        stake(i.value.channels, next, i.value.options);
+        break;
+      case _constants.NOOP:
+        next();
+        break;
+      case _constants.SLEEP:
+        setTimeout(next, i.value.ms);
+        break;
+      case _constants.STOP:
+        state = STOPPED;
+        break;
+      case _constants.READ:
+        sread(i.value.channels, next, i.value.options);
+        break;
+      case _constants.CALL_ROUTINE:
+        addSubRoutine(go.apply(undefined, [i.value.routine, next].concat(_toConsumableArray(i.value.args), args)));
+        break;
+      case _constants.FORK_ROUTINE:
+        addSubRoutine(go.apply(undefined, [i.value.routine, function () {}].concat(args, _toConsumableArray(i.value.args))));
+        next();
+        break;
+      default:
+        throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
+    }
+  }
+
+  next();
+
+  return api;
+}
+go['@go'] = true;
+
+function sleep(ms, callback) {
+  if (typeof callback === 'function') {
+    setTimeout(callback, ms);
+  } else {
+    return { op: _constants.SLEEP, ms: ms };
+  }
+}
+
+function stop() {
+  return { op: _constants.STOP };
+}
+
+},{"../index":15,"../utils":18,"./constants":7,"./pubsub":10,"./utils":12}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.ONE_OF = exports.ALL_REQUIRED = undefined;
-exports.read = read;
-exports.sread = sread;
-exports.unread = unread;
-exports.unreadAll = unreadAll;
+exports.waitAllStrategy = waitAllStrategy;
+exports.waitOneStrategy = waitOneStrategy;
 
-var _index = require('../../index');
+var _index = require('../index');
 
-var _constants = require('../constants');
+var _constants = require('./constants');
 
-var _ops = require('../ops');
-
-var _utils = require('../../utils');
+var _utils = require('../utils');
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -422,59 +829,6 @@ function _toConsumableArray(arr) {
   }
 } /* eslint-disable no-param-reassign, no-multi-assign */
 
-function defaultTransform() {
-  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-    args[_key] = arguments[_key];
-  }
-
-  if (args.length === 1) return args[0];
-  return args;
-}
-
-var NOTHING = Symbol('NOTHING');
-var ALL_REQUIRED = exports.ALL_REQUIRED = Symbol('ALL_REQUIRED');
-var ONE_OF = exports.ONE_OF = Symbol('ONE_OF');
-var DEFAULT_OPTIONS = {
-  transform: defaultTransform,
-  onError: null,
-  initialCall: true
-};
-
-function normalizeChannels(channels) {
-  if (!Array.isArray(channels)) channels = [channels];
-  return channels.map(function (ch) {
-    if ((0, _index.isState)(ch)) ch = ch.READ;
-    return (0, _index.isChannel)(ch) ? ch : (0, _index.chan)(ch);
-  });
-}
-function normalizeTo(to) {
-  if (typeof to === 'function') {
-    return to;
-  }
-  if ((0, _index.isChannel)(to)) {
-    return to.__subFunc || (to.__subFunc = function (v) {
-      return (0, _ops.sput)(to, v);
-    });
-  }
-  if (typeof to === 'string') {
-    var ch = (0, _index.chan)(to, _index.buffer.divorced());
-    return ch.__subFunc = function (v) {
-      return (0, _ops.sput)(to, v);
-    };
-  }
-  throw new Error('\'read\' accepts string, channel or a function as a second argument. ' + to + ' given.');
-}
-function normalizeOptions(options) {
-  options = options || DEFAULT_OPTIONS;
-  var transform = options.transform || DEFAULT_OPTIONS.transform;
-  var onError = options.onError || DEFAULT_OPTIONS.onError;
-  var strategy = options.strategy || ALL_REQUIRED;
-  var listen = 'listen' in options ? options.listen : false;
-  var initialCall = 'initialCall' in options ? options.initialCall : DEFAULT_OPTIONS.initialCall;
-
-  return { transform: transform, onError: onError, strategy: strategy, initialCall: initialCall, listen: listen };
-}
-
 function waitAllStrategy(channels, to, options) {
   var transform = options.transform,
       onError = options.onError,
@@ -482,7 +836,7 @@ function waitAllStrategy(channels, to, options) {
       listen = options.listen;
 
   var data = channels.map(function () {
-    return NOTHING;
+    return _constants.NOTHING;
   });
   var composedAlready = false;
   var subscriptions = channels.map(function (ch, idx) {
@@ -493,7 +847,7 @@ function waitAllStrategy(channels, to, options) {
       data[idx] = value;
       // Notify the subscriber only if all the sources are fulfilled.
       // In case of one source we don't have to wait.
-      if (composedAlready || data.length === 1 || !data.includes(NOTHING)) {
+      if (composedAlready || data.length === 1 || !data.includes(_constants.NOTHING)) {
         composedAlready = true;
         try {
           if ((0, _utils.isGeneratorFunction)(transform)) {
@@ -535,6 +889,7 @@ function waitAllStrategy(channels, to, options) {
     }
   };
 }
+
 function waitOneStrategy(channels, to, options) {
   var transform = options.transform,
       onError = options.onError,
@@ -586,54 +941,7 @@ function waitOneStrategy(channels, to, options) {
   };
 }
 
-function read(channels, options) {
-  return {
-    ch: normalizeChannels(channels),
-    op: _constants.READ,
-    options: normalizeOptions(options)
-  };
-}
-function sread(channels, to, options) {
-  var f = void 0;
-  options = normalizeOptions(options);
-  switch (options.strategy) {
-    case ALL_REQUIRED:
-      f = waitAllStrategy;
-      break;
-    case ONE_OF:
-      f = waitOneStrategy;
-      break;
-    default:
-      throw new Error('Subscription strategy not recognized. Expecting ALL_REQUIRED or ONE_OF but "' + options.strategy + '" given.');
-  }
-  return f(normalizeChannels(channels), normalizeTo(to), options);
-}
-function unread(channels, callback) {
-  channels = normalizeChannels(channels);
-  channels.forEach(function (ch) {
-    if ((0, _index.isChannel)(callback)) {
-      callback = callback.__subFunc;
-    }
-    ch.subscribers = ch.subscribers.filter(function (_ref3) {
-      var to = _ref3.to;
-
-      if (to !== callback) {
-        return true;
-      }
-      return false;
-    });
-  });
-}
-function unreadAll(channels) {
-  normalizeChannels(channels).forEach(function (ch) {
-    ch.subscribers = [];
-  });
-}
-
-read.ALL_REQUIRED = ALL_REQUIRED;
-read.ONE_OF = ONE_OF;
-
-},{"../../index":16,"../../utils":19,"../constants":7,"../ops":13}],10:[function(require,module,exports){
+},{"../index":15,"../utils":18,"./constants":7}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -644,9 +952,9 @@ exports.isState = isState;
 exports.isStateReadChannel = isStateReadChannel;
 exports.isStateWriteChannel = isStateWriteChannel;
 
-var _index = require('../../index');
+var _index = require('../index');
 
-var _utils = require('../../utils');
+var _utils = require('../utils');
 
 function createState() {
   var value = arguments.length <= 0 ? undefined : arguments[0];
@@ -799,398 +1107,75 @@ function isStateWriteChannel(s) {
   return s && s['@statewritechannel'] === true;
 }
 
-},{"../../index":16,"../../utils":19}],11:[function(require,module,exports){
+},{"../index":15,"../utils":18}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.timeout = timeout;
-
-var _index = require('../../index');
-
-function timeout(interval) {
-  var ch = (0, _index.chan)();
-  setTimeout(function () {
-    return (0, _index.close)(ch);
-  }, interval);
-  return ch;
-}
-
-},{"../../index":16}],12:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _buffer = require('./buffer');
-
-Object.defineProperty(exports, 'buffer', {
-  enumerable: true,
-  get: function get() {
-    return _interopRequireDefault(_buffer).default;
-  }
-});
-
-var _channel = require('./channel');
-
-Object.keys(_channel).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _channel[key];
-    }
-  });
-});
-
-var _ops = require('./ops');
-
-Object.keys(_ops).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _ops[key];
-    }
-  });
-});
-
-var _merge = require('./ext/merge');
-
-Object.keys(_merge).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _merge[key];
-    }
-  });
-});
-
-var _timeout = require('./ext/timeout');
-
-Object.keys(_timeout).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _timeout[key];
-    }
-  });
-});
-
-var _state = require('./ext/state');
-
-Object.keys(_state).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _state[key];
-    }
-  });
-});
-
-var _pubsub = require('./ext/pubsub');
-
-Object.keys(_pubsub).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _pubsub[key];
-    }
-  });
-});
-
-var _constants = require('./constants');
-
-Object.keys(_constants).forEach(function (key) {
-  if (key === "default" || key === "__esModule") return;
-  Object.defineProperty(exports, key, {
-    enumerable: true,
-    get: function get() {
-      return _constants[key];
-    }
-  });
-});
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-},{"./buffer":5,"./channel":6,"./constants":7,"./ext/merge":8,"./ext/pubsub":9,"./ext/state":10,"./ext/timeout":11,"./ops":13}],13:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.isChannel = undefined;
-exports.put = put;
-exports.sput = sput;
-exports.take = take;
-exports.stake = stake;
-exports.close = close;
-exports.sclose = sclose;
-exports.channelReset = channelReset;
-exports.schannelReset = schannelReset;
-exports.call = call;
-exports.fork = fork;
-exports.go = go;
-exports.sleep = sleep;
-exports.stop = stop;
-
-var _constants = require('./constants');
+exports.normalizeChannels = normalizeChannels;
+exports.normalizeTo = normalizeTo;
+exports.normalizeOptions = normalizeOptions;
 
 var _index = require('../index');
 
-var _utils = require('../utils');
+var _constants = require('./constants');
 
-function _toConsumableArray(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }return arr2;
-  } else {
-    return Array.from(arr);
-  }
-} /* eslint-disable no-use-before-define */
-
-var noop = function noop() {};
-var normalizeChannel = function normalizeChannel(id) {
+/* eslint-disable no-param-reassign, no-multi-assign */
+function normalizeChannels(channels) {
   var stateOp = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'READ';
 
-  if (isChannel(id)) return id;
-  if ((0, _index.isState)(id)) return (0, _index.chan)(id[stateOp]);
-  return (0, _index.chan)(id);
+  if (!Array.isArray(channels)) channels = [channels];
+  return channels.map(function (ch) {
+    if ((0, _index.isState)(ch)) ch = ch[stateOp];
+    return (0, _index.isChannel)(ch) ? ch : (0, _index.chan)(ch);
+  });
+}
+
+function defaultTransform() {
+  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+    args[_key] = arguments[_key];
+  }
+
+  if (args.length === 1) return args[0];
+  return args;
+}
+
+var DEFAULT_OPTIONS = {
+  transform: defaultTransform,
+  onError: null,
+  initialCall: true
 };
 
-// **************************************************** PUT
-
-function put(id, item, callback) {
-  var doPut = function doPut(channel, itemToPut, putDone) {
-    var state = channel.state();
-    if (state === _constants.CLOSED || state === _constants.ENDED) {
-      callback(state);
-    } else {
-      callSubscribers(channel, item, function () {
-        return channel.buff.put(itemToPut, putDone);
-      });
-    }
-  };
-
-  var ch = normalizeChannel(id, 'WRITE');
-  if (typeof callback === 'function') {
-    doPut(ch, item, callback);
-  } else {
-    return { ch: ch, op: _constants.PUT, item: item };
+function normalizeTo(to) {
+  if (typeof to === 'function') {
+    return to;
   }
-}
-function sput(id, item, callback) {
-  return put(id, item, callback || noop);
-}
-function callSubscribers(ch, item, callback) {
-  var subscribers = ch.subscribers.map(function () {
-    return 1;
-  });
-  if (subscribers.length === 0) return callback();
-  var subscriptions = [].concat(_toConsumableArray(ch.subscribers));
-  ch.subscribers = [];
-  subscriptions.forEach(function (s) {
-    var notify = s.notify,
-        listen = s.listen;
-
-    if (listen) {
-      ch.subscribers.push(s);
-    }
-    notify(item, function () {
-      return subscribers.shift(), subscribers.length === 0 ? callback() : null;
+  if ((0, _index.isChannel)(to)) {
+    return to.__subFunc || (to.__subFunc = function (v) {
+      return (0, _index.sput)(to, v);
     });
-  });
-}
-
-// **************************************************** TAKE
-
-function take(id, callback) {
-  var doTake = function doTake(channel, takeDone) {
-    var state = channel.state();
-    if (state === _constants.ENDED) {
-      takeDone(_constants.ENDED);
-    } else if (state === _constants.CLOSED && channel.buff.isEmpty()) {
-      channel.state(_constants.ENDED);
-      takeDone(_constants.ENDED);
-    } else {
-      channel.buff.take(function (r) {
-        return takeDone(r);
-      });
-    }
-  };
-
-  var ch = normalizeChannel(id);
-  if (typeof callback === 'function') {
-    if ((0, _index.isStateWriteChannel)(ch)) {
-      console.warn('You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `read(<channel>)`.');
-    }
-    doTake(ch, callback);
-  } else {
-    return { ch: ch, op: _constants.TAKE };
   }
-}
-function stake(id, callback) {
-  return take(id, callback || noop);
-}
-
-// **************************************************** close, reset, call, fork
-
-function close(id) {
-  var ch = normalizeChannel(id);
-  var newState = ch.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
-  ch.state(newState);
-  ch.buff.puts.forEach(function (p) {
-    return p(newState);
-  });
-  ch.buff.takes.forEach(function (t) {
-    return t(newState);
-  });
-  _index.grid.remove(ch);
-  ch.subscribers = [];
-  _constants.CHANNELS.del(ch.id);
-  return { op: _constants.NOOP };
-}
-function sclose(id) {
-  return close(id);
-}
-function channelReset(id) {
-  var ch = normalizeChannel(id);
-  ch.state(_constants.OPEN);
-  ch.buff.reset();
-  return { ch: ch, op: _constants.NOOP };
-}
-function schannelReset(id) {
-  channelReset(id);
-}
-function call(routine) {
-  for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    args[_key - 1] = arguments[_key];
+  if (typeof to === 'string') {
+    var ch = (0, _index.chan)(to, _index.buffer.divorced());
+    return ch.__subFunc = function (v) {
+      return (0, _index.sput)(to, v);
+    };
   }
-
-  return { op: _constants.CALL_ROUTINE, routine: routine, args: args };
+  throw new Error('\'read\' accepts string, channel or a function as a second argument. ' + to + ' given.');
 }
-function fork(routine) {
-  for (var _len2 = arguments.length, args = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-    args[_key2 - 1] = arguments[_key2];
-  }
+function normalizeOptions(options) {
+  options = options || DEFAULT_OPTIONS;
+  var transform = options.transform || DEFAULT_OPTIONS.transform;
+  var onError = options.onError || DEFAULT_OPTIONS.onError;
+  var strategy = options.strategy || _constants.ALL_REQUIRED;
+  var listen = 'listen' in options ? options.listen : false;
+  var initialCall = 'initialCall' in options ? options.initialCall : DEFAULT_OPTIONS.initialCall;
 
-  return { op: _constants.FORK_ROUTINE, routine: routine, args: args };
-}
-
-// **************************************************** other
-
-var isChannel = exports.isChannel = function isChannel(ch) {
-  return ch && ch['@channel'] === true;
-};
-
-// **************************************************** routine
-
-function go(func) {
-  for (var _len3 = arguments.length, args = Array(_len3 > 2 ? _len3 - 2 : 0), _key3 = 2; _key3 < _len3; _key3++) {
-    args[_key3 - 2] = arguments[_key3];
-  }
-
-  var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
-
-  var RUNNING = 'RUNNING';
-  var STOPPED = 'STOPPED';
-  var state = RUNNING;
-
-  var api = {
-    children: [],
-    stop: function stop() {
-      state = STOPPED;
-      this.children.forEach(function (r) {
-        return r.stop();
-      });
-    },
-    rerun: function rerun() {
-      gen = func.apply(undefined, args);
-      next();
-    }
-  };
-  var addSubRoutine = function addSubRoutine(r) {
-    return api.children.push(r);
-  };
-
-  var gen = func.apply(undefined, args);
-  function next(value) {
-    if (state === STOPPED) {
-      return;
-    }
-    var i = gen.next(value);
-    if (i.done === true) {
-      if (done) done(i.value);
-      if (i.value && i.value['@go'] === true) {
-        api.rerun();
-      }
-      return;
-    }
-    if ((0, _utils.isPromise)(i.value)) {
-      i.value.then(next).catch(function (err) {
-        return gen.throw(err);
-      });
-      return;
-    }
-    switch (i.value.op) {
-      case _constants.PUT:
-        put(i.value.ch, i.value.item, next);
-        break;
-      case _constants.TAKE:
-        take(i.value.ch, next);
-        break;
-      case _constants.NOOP:
-        next();
-        break;
-      case _constants.SLEEP:
-        setTimeout(next, i.value.ms);
-        break;
-      case _constants.STOP:
-        state = STOPPED;
-        break;
-      case _constants.READ:
-        (0, _index.sread)(i.value.ch, next, i.value.options);
-        break;
-      case _constants.CALL_ROUTINE:
-        addSubRoutine(go.apply(undefined, [i.value.routine, next].concat(_toConsumableArray(i.value.args), args)));
-        break;
-      case _constants.FORK_ROUTINE:
-        addSubRoutine(go.apply(undefined, [i.value.routine, function () {}].concat(args, _toConsumableArray(i.value.args))));
-        next();
-        break;
-      default:
-        throw new Error('Unrecognized operation ' + i.value.op + ' for a routine.');
-    }
-  }
-
-  next();
-
-  return api;
-}
-go['@go'] = true;
-
-function sleep(ms, callback) {
-  if (typeof callback === 'function') {
-    setTimeout(callback, ms);
-  } else {
-    return { op: _constants.SLEEP, ms: ms };
-  }
+  return { transform: transform, onError: onError, strategy: strategy, initialCall: initialCall, listen: listen };
 }
 
-function stop() {
-  return { op: _constants.STOP };
-}
-
-},{"../index":16,"../utils":19,"./constants":7}],14:[function(require,module,exports){
+},{"../index":15,"./constants":7}],13:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1237,7 +1222,7 @@ var grid = Grid();
 
 exports.default = grid;
 
-},{}],15:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1342,7 +1327,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./csp":12,"./grid":14,"./react":17,"./riew":18}],16:[function(require,module,exports){
+},{"./csp":8,"./grid":13,"./react":16,"./riew":17}],15:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1434,7 +1419,7 @@ var reset = exports.reset = function reset() {
 var harvester = exports.harvester = _harvester2.default;
 var grid = exports.grid = _grid2.default;
 
-},{"./csp":12,"./grid":14,"./harvester":15}],17:[function(require,module,exports){
+},{"./csp":8,"./grid":13,"./harvester":14}],16:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1566,7 +1551,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":16,"../utils":19}],18:[function(require,module,exports){
+},{"../index":15,"../utils":18}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1758,7 +1743,7 @@ function createRiew(viewFunc) {
   return riew;
 }
 
-},{"./index":16,"./utils":19}],19:[function(require,module,exports){
+},{"./index":15,"./utils":18}],18:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1833,5 +1818,5 @@ var isGeneratorFunction = exports.isGeneratorFunction = function isGeneratorFunc
   return isGenerator(constructor.prototype);
 };
 
-},{}]},{},[16])(16)
+},{}]},{},[15])(15)
 });

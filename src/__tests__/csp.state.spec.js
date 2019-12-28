@@ -241,21 +241,6 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we define a mutation', () => {
-    it('should warn us if we try a take on a WRITE channel', () => {
-      const current = state(0);
-      const spy = jest.spyOn(console, 'warn').mockImplementation();
-
-      current.mutate('reset', () => 0);
-
-      go(function*() {
-        yield take('reset');
-      });
-
-      expect(spy).toBeCalledWithArgs([
-        'You are about to `take` from a state WRITE channel. This type of channel is using `ever` buffer which means that will resolve its takes and puts immediately. You probably want to use `read(<channel>)`.',
-      ]);
-      spy.mockRestore();
-    });
     it('should be possible to react on a mutation from within multiple routines', () => {
       const current = state('xxx');
       const spy = jest.fn();

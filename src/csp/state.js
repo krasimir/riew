@@ -8,8 +8,8 @@ import {
   isChannel,
   call,
   grid,
-} from '../../index';
-import { getId, isGeneratorFunction } from '../../utils';
+} from '../index';
+import { getId, isGeneratorFunction } from '../utils';
 
 export function createState(...args) {
   let value = args[0];

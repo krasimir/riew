@@ -21,6 +21,7 @@ import {
   unread,
   call,
   fork,
+  ONE_OF,
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -41,53 +42,72 @@ describe('Given a CSP', () => {
 
       expect(spy).toBeCalledWithArgs(['foo'], [true], [true], ['bar']);
     });
-    fit('should allow us to wait a take from multiple channels', () => {
+    it('should allow us to wait a take from multiple channels (ALL_REQUIRED strategy)', () => {
       const spy = jest.fn();
       const ch1 = chan();
       const ch2 = chan();
 
-      stake([ch1, ch2], spy);
-
       sput(ch1, 'foo');
+      stake([ch1, ch2], spy);
       sput(ch2, 'bar');
-      sput(ch1, 'moo');
 
-      expect(spy).toBeCalledWithArgs();
+      expect(spy).toBeCalledWithArgs([['foo', 'bar']]);
+    });
+    it('should allow us to wait a take from multiple channels (ONE_OF strategy)', () => {
+      const spy = jest.fn();
+      const ch1 = chan();
+      const ch2 = chan();
+
+      stake([ch1, ch2], spy, { strategy: ONE_OF });
+      sput(ch1, 'foo');
+
+      expect(spy).toBeCalledWithArgs(['foo']);
     });
   });
 
   // Routines basics
 
   describe('and we run a routine', () => {
-    describe('which is a generator', () => {
-      it('should put and take from channels', () => {
-        const ch = chan();
-        const spy = jest.fn();
-        const cleanup1 = jest.fn();
-        const cleanup2 = jest.fn();
+    it('should put and take from channels', () => {
+      const ch = chan();
+      const spy = jest.fn();
+      const cleanup1 = jest.fn();
+      const cleanup2 = jest.fn();
 
-        go(
-          function*(what) {
-            spy(yield take(ch));
-            yield put(ch, what);
-            return 'a';
-          },
-          cleanup1,
-          'pong'
-        );
-        go(
-          function*(what) {
-            yield put(ch, what);
-            spy(yield take(ch));
-            return 'b';
-          },
-          cleanup2,
-          'ping'
-        );
-        expect(spy).toBeCalledWithArgs(['ping'], ['pong']);
-        expect(cleanup1).toBeCalledWithArgs(['a']);
-        expect(cleanup2).toBeCalledWithArgs(['b']);
+      go(
+        function*(what) {
+          spy(yield take(ch));
+          yield put(ch, what);
+          return 'a';
+        },
+        cleanup1,
+        'pong'
+      );
+      go(
+        function*(what) {
+          yield put(ch, what);
+          spy(yield take(ch));
+          return 'b';
+        },
+        cleanup2,
+        'ping'
+      );
+      expect(spy).toBeCalledWithArgs(['ping'], ['pong']);
+      expect(cleanup1).toBeCalledWithArgs(['a']);
+      expect(cleanup2).toBeCalledWithArgs(['b']);
+    });
+    it('should allow us to take using the ONE_OF strategy', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const spy = jest.fn();
+
+      go(function*() {
+        spy(yield take([ch2, ch1], { strategy: ONE_OF }));
       });
+
+      sput(ch1, 'foo');
+
+      expect(spy).toBeCalledWithArgs(['foo']);
     });
     it('should provide an API to stop the routine', async () => {
       const spy = jest.fn();

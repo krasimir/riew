@@ -9,6 +9,9 @@ export const STOP = 'STOP';
 export const READ = 'READ';
 export const CALL_ROUTINE = 'CALL_ROUTINE';
 export const FORK_ROUTINE = 'FORK_ROUTINE';
+export const NOTHING = Symbol('NOTHING');
+export const ALL_REQUIRED = Symbol('ALL_REQUIRED');
+export const ONE_OF = Symbol('ONE_OF');
 
 export const CHANNELS = {
   channels: {},

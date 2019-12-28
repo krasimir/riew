@@ -583,11 +583,13 @@ sput(ch, 'foo', res => console.log(`Put successful ${ res }`));
 
 ### take
 
-> `take(channel)`
+> `take(channels, options)`
 
 Meant to be used only inside a routine. It takes an item from a channel. Could be blocking. It depends on the channel's [buffer](https://github.com/krasimir/riew#buffer).
 
-* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to take items from.
+* `channels` (One or array of `String`s or [channel objects](https://github.com/krasimir/riew#chan), required) - the channel which we want to take items from.
+* `options` (`Object`, optional) - additional options for the _take_ operation
+  * `strategy` (`ALL_REQUIRED` or `ONE_OFF`, `ALL_REQUIRED` by default) - if we take from multiple channels this option describes our strategy. Either we wait for all the channels to have values (`ALL_REQUIRED`) or we expect at least one of them to be fulfilled (`ONE_OF`).
 
 The generator is resumed with the item taken from the channel.
 
@@ -606,12 +608,14 @@ go(function * () {
 
 ### stake
 
-> `stake(channel, callback)`
+> `stake(channels, callback, options)`
 
 Same as [take](https://github.com/krasimir/riew#take) but it can be called outside of a routine. This function is super handy to make the bridge between Riew and non-Riew code. The `s` comes from `standalone`.
 
-* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel which we want to take items from.
+* `channels` (One or array of `String`s or [channel objects](https://github.com/krasimir/riew#chan), required) - the channel which we want to take items from.
 * `callback` (`Function`, optional) - it will be fired with the item taken from the channel.
+* `options` (`Object`, optional) - additional options for the _take_ operation
+  * `strategy` (`ALL_REQUIRED` or `ONE_OFF`, `ALL_REQUIRED` by default) - if we take from multiple channels this option describes our strategy. Either we wait for all the channels to have values (`ALL_REQUIRED`) or we expect at least one of them to be fulfilled (`ONE_OF`).
 
 The generator is resumed with the item taken from the channel.
 
