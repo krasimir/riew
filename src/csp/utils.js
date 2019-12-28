@@ -10,13 +10,8 @@ export function normalizeChannels(channels, stateOp = 'READ') {
   });
 }
 
-function defaultTransform(...args) {
-  if (args.length === 1) return args[0];
-  return args;
-}
-
 const DEFAULT_OPTIONS = {
-  transform: defaultTransform,
+  transform: null,
   onError: null,
   initialCall: true,
 };
@@ -42,10 +37,11 @@ export function normalizeOptions(options) {
   const onError = options.onError || DEFAULT_OPTIONS.onError;
   const strategy = options.strategy || ALL_REQUIRED;
   const listen = 'listen' in options ? options.listen : false;
+  const read = 'read' in options ? options.read : false;
   const initialCall =
     'initialCall' in options
       ? options.initialCall
       : DEFAULT_OPTIONS.initialCall;
 
-  return { transform, onError, strategy, initialCall, listen };
+  return { transform, onError, strategy, initialCall, listen, read };
 }

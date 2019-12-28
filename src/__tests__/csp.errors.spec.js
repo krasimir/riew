@@ -1,4 +1,4 @@
-import { go, state, sput, reset } from '../index';
+import { go, state, sput, reset, chan, put, stake } from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given csp features', () => {
@@ -15,17 +15,24 @@ describe('Given csp features', () => {
     });
   });
   describe('when we yield a promise and it gets rejected', () => {
-    it('should pass back the error to the routine', async () => {
+    it('should pass back the error to the routine and should allow us to continue yielding', async () => {
       const error = new Error('ops');
+      const ch = chan();
+      const spy = jest.fn();
 
       go(function*() {
         try {
           yield new Promise((_, reject) => setTimeout(() => reject(error), 10));
         } catch (e) {
           expect(e).toBe(error);
+          spy(error.toString());
+          yield put(ch, 'sorry, error');
         }
       });
+      stake(ch, spy);
+
       await delay(20);
+      expect(spy).toBeCalledWithArgs(['Error: ops'], ['sorry, error']);
     });
   });
   describe('when we have an error inside the state selectors', () => {

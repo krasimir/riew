@@ -1,7 +1,15 @@
-import { go, sleep, put, take, sread, stake, sput, chan, ONE_OF } from 'riew';
+import { go, sleep, put, take, stake, sput, ONE_OF } from 'riew';
 
 function simulateAsync() {
-  return new Promise(done => setTimeout(() => done('foo'), 2000));
+  return new Promise((done, reject) =>
+    setTimeout(() => {
+      // if (Math.random() >= 0.5) {
+      //   done('foo');
+      // } else {
+      reject(new Error("Sorry, it didn't work"));
+      // }
+    }, 2000)
+  );
 }
 
 const transitions = {
@@ -48,15 +56,18 @@ go(function*() {
   yield put('retry');
 });
 
-const machine = channel => {
+const machine = (channel, value) => {
+  console.log(`Machine in "${channel}" state`);
+  const channels = Object.keys(transitions[channel]);
   stake(
-    Object.keys(transitions[channel]),
-    value => {
-      console.log(value);
+    channels,
+    (v, idx) => {
+      console.log(`> ${channels[idx]}`);
+      machine(transitions[channel][channels[idx]], v);
     },
     { strategy: ONE_OF }
   );
-  sput(channel);
+  sput(channel, value);
 };
 
 machine('idle');

@@ -17,9 +17,8 @@ import {
   ONE_OF,
 } from './constants';
 import { grid, chan } from '../index';
-import { isPromise } from '../utils';
+import { isPromise, isGeneratorFunction } from '../utils';
 import { normalizeChannels, normalizeOptions, normalizeTo } from './utils';
-import { waitAllStrategy, waitOneStrategy } from './pubsub';
 
 const noop = () => {};
 
@@ -30,38 +29,39 @@ export function put(channels, item) {
 }
 export function sput(channels, item, callback = noop) {
   channels = normalizeChannels(channels, 'WRITE');
-  const data = channels.map(() => NOTHING);
-  const putDone = (value, idx) => {
-    data[idx] = value;
-    if (!data.includes(NOTHING)) {
-      callback(data.length === 1 ? data[0] : data);
-    }
-  };
+  const result = channels.map(() => NOTHING);
   channels.forEach((channel, idx) => {
     const state = channel.state();
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
-      callSubscribers(channel, item, () =>
-        channel.buff.put(item, res => putDone(res, idx))
-      );
+      callSubscribers(channel, item, () => {
+        channel.buff.put(item, value => {
+          result[idx] = value;
+          if (!result.includes(NOTHING)) {
+            callback(result.length === 1 ? result[0] : result);
+          }
+        });
+      });
     }
   });
 }
-function callSubscribers(ch, item, callback) {
-  const subscribers = ch.subscribers.map(() => 1);
-  if (subscribers.length === 0) return callback();
-  const subscriptions = [...ch.subscribers];
-  ch.subscribers = [];
+function callSubscribers(channel, item, callback) {
+  const notificationProcess = channel.subscribers.map(() => 1); // just to count the notified channels
+  if (notificationProcess.length === 0) return callback();
+  const subscriptions = [...channel.subscribers];
+  channel.subscribers = [];
   subscriptions.forEach(s => {
     const { notify, listen } = s;
     if (listen) {
-      ch.subscribers.push(s);
+      channel.subscribers.push(s);
     }
-    notify(
-      item,
-      () => (subscribers.shift(), subscribers.length === 0 ? callback() : null)
-    );
+    notify(item, () => {
+      notificationProcess.shift();
+      if (notificationProcess.length === 0) {
+        callback();
+      }
+    });
   });
 }
 
@@ -74,50 +74,88 @@ export function stake(channels, callback, options) {
   channels = normalizeChannels(channels);
   options = normalizeOptions(options);
   const data = channels.map(() => NOTHING);
-  const takeDone = (value, idx) => {
+  const { transform, onError, initialCall, listen } = options;
+
+  const takeDone = (value, idx, done = noop) => {
     data[idx] = value;
+    let result = null;
     if (options.strategy === ONE_OF) {
-      callback(value, idx);
+      result = [value, idx];
     } else if (!data.includes(NOTHING)) {
-      callback(data.length === 1 ? data[0] : data);
+      result = [...data];
+    }
+    if (result !== null) {
+      if (transform) {
+        try {
+          if (isGeneratorFunction(transform)) {
+            go(transform, v => (callback(v), done()), ...result);
+          } else {
+            callback(transform(...result));
+            done();
+          }
+        } catch (e) {
+          if (onError === null) {
+            throw e;
+          }
+          onError(e);
+        }
+      } else {
+        if (options.strategy === ONE_OF) {
+          callback(...result);
+        } else {
+          callback(result.length === 1 ? result[0] : result);
+        }
+        done();
+      }
     }
   };
-  channels.forEach((channel, idx) => {
+
+  const subscriptions = channels.map((channel, idx) => {
     const state = channel.state();
+    let subscription = {};
     if (state === ENDED) {
       takeDone(ENDED, idx);
     } else if (state === CLOSED && channel.buff.isEmpty()) {
       channel.state(ENDED);
       takeDone(ENDED, idx);
+    } else if (options.read) {
+      if (!channel.subscribers.find(({ callback: c }) => c === callback)) {
+        channel.subscribers.push(
+          (subscription = {
+            callback,
+            notify: (value, done) => takeDone(value, idx, done),
+            listen,
+          })
+        );
+      }
+      // If there is already a value in the channel
+      // notify the subscribers.
+      const currentChannelBufValue = channel.value();
+      if (initialCall && currentChannelBufValue.length > 0) {
+        takeDone(currentChannelBufValue[0], idx);
+      }
     } else {
       channel.buff.take(r => takeDone(r, idx));
     }
+    return subscription;
   });
+
+  return {
+    listen() {
+      subscriptions.forEach(s => (s.listen = true));
+    },
+  };
 }
 
 // **************************************************** read
 
 export function read(channels, options) {
-  return { channels, op: READ, options };
+  return { channels, op: READ, options: { ...options, read: true } };
 }
 export function sread(channels, to, options) {
   channels = normalizeChannels(channels);
   options = normalizeOptions(options);
-  let f;
-  options = normalizeOptions(options);
-  switch (options.strategy) {
-    case ALL_REQUIRED:
-      f = waitAllStrategy;
-      break;
-    case ONE_OF:
-      f = waitOneStrategy;
-      break;
-    default:
-      throw new Error(
-        `Subscription strategy not recognized. Expecting ALL_REQUIRED or ONE_OF but "${options.strategy}" given.`
-      );
-  }
-  return f(channels, normalizeTo(to), options);
+  return stake(channels, normalizeTo(to), { ...options, read: true });
 }
 export function unread(channels, callback) {
   channels = normalizeChannels(channels);
@@ -125,8 +163,8 @@ export function unread(channels, callback) {
     if (isChannel(callback)) {
       callback = callback.__subFunc;
     }
-    ch.subscribers = ch.subscribers.filter(({ to }) => {
-      if (to !== callback) {
+    ch.subscribers = ch.subscribers.filter(({ callback: c }) => {
+      if (c !== callback) {
         return true;
       }
       return false;
@@ -142,7 +180,7 @@ export function unreadAll(channels) {
 read.ALL_REQUIRED = ALL_REQUIRED;
 read.ONE_OF = ONE_OF;
 
-// **************************************************** close, reset, call, fork, merge, timeout
+// **************************************************** close, reset, call, fork, merge, timeout, isChannel
 
 export function close(channels) {
   channels = normalizeChannels(channels);
@@ -196,12 +234,9 @@ export function timeout(interval) {
   setTimeout(() => close(ch), interval);
   return ch;
 }
-
-// **************************************************** other
-
 export const isChannel = ch => ch && ch['@channel'] === true;
 
-// **************************************************** routine
+// **************************************************** go/routine
 
 export function go(func, done = () => {}, ...args) {
   const RUNNING = 'RUNNING';
@@ -222,22 +257,8 @@ export function go(func, done = () => {}, ...args) {
   const addSubRoutine = r => api.children.push(r);
 
   let gen = func(...args);
-  function next(value) {
-    if (state === STOPPED) {
-      return;
-    }
-    const i = gen.next(value);
-    if (i.done === true) {
-      if (done) done(i.value);
-      if (i.value && i.value['@go'] === true) {
-        api.rerun();
-      }
-      return;
-    }
-    if (isPromise(i.value)) {
-      i.value.then(next).catch(err => gen.throw(err));
-      return;
-    }
+
+  function processGeneratorStep(i) {
     switch (i.value.op) {
       case PUT:
         sput(i.value.channels, i.value.item, next);
@@ -272,6 +293,21 @@ export function go(func, done = () => {}, ...args) {
         break;
       default:
         throw new Error(`Unrecognized operation ${i.value.op} for a routine.`);
+    }
+  }
+
+  function next(value) {
+    if (state === STOPPED) return;
+    const step = gen.next(value);
+    if (step.done === true) {
+      if (done) done(step.value);
+      if (step.value && step.value['@go'] === true) {
+        api.rerun();
+      }
+    } else if (isPromise(step.value)) {
+      step.value.then(next).catch(err => processGeneratorStep(gen.throw(err)));
+    } else {
+      processGeneratorStep(step);
     }
   }
 

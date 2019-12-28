@@ -297,7 +297,7 @@ describe('Given a CSP pubsub extension', () => {
         sput(ch2, 'bar');
         sput(ch1, 'zoo');
 
-        expect(spy).toBeCalledWithArgs(['foo'], ['bar'], ['zoo']);
+        expect(spy).toBeCalledWithArgs(['foo', 0], ['bar', 1], ['zoo', 0]);
       });
     });
     describe('and we use `read` in a routine', () => {
@@ -341,12 +341,12 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy1).toBeCalledWithArgs(['foo']);
       expect(spy2).toBeCalledWithArgs(['foo'], ['bar'], ['moo']);
       expect(spy3).toBeCalledWithArgs(
-        ['foo'],
-        ['a'],
-        ['bar'],
-        ['b'],
-        ['moo'],
-        ['c']
+        ['foo', 0],
+        ['a', 1],
+        ['bar', 0],
+        ['b', 1],
+        ['moo', 0],
+        ['c', 1]
       );
     });
   });
