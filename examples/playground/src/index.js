@@ -3,12 +3,12 @@ import { go, sleep, put, take, stake, sput, ONE_OF } from 'riew';
 function simulateAsync() {
   return new Promise((done, reject) =>
     setTimeout(() => {
-      // if (Math.random() >= 0.5) {
-      //   done('foo');
-      // } else {
-      reject(new Error("Sorry, it didn't work"));
-      // }
-    }, 2000)
+      if (Math.random() >= 0.5) {
+        done('foo');
+      } else {
+        reject(new Error("Sorry, it didn't work"));
+      }
+    }, 1000)
   );
 }
 
@@ -40,6 +40,7 @@ go(function*() {
   } catch (error) {
     yield put('reject', error);
   }
+  return go;
 });
 go(function*() {
   const value = yield take('success');
@@ -54,11 +55,14 @@ go(function*() {
   console.log(error);
   yield sleep(1000);
   yield put('retry');
+  return go;
 });
 
 const machine = (channel, value) => {
-  console.log(`Machine in "${channel}" state`);
   const channels = Object.keys(transitions[channel]);
+  console.log(
+    `Machine in "${channel}" state. Waiting for ${channels.join(', ')}`
+  );
   stake(
     channels,
     (v, idx) => {
