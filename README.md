@@ -962,12 +962,14 @@ Example:
 const ch = chan();
 
 function * fillName(name) {
+  yield sleep(1000);
   yield put(ch, name);
 }
 
 go(function * printName() {
   yield fork(fillName, 'Ana');
-  console.log(`Hey, ${ yield take(ch) }!`); // Hey, Ana!
+  console.log('Hey,'); // <- we see "Hey," immediately because `fork` is not-blocking operation
+  console.log(`How are you ${ yield take(ch) }!`); // How are you Ana!
 });
 ```
 

@@ -241,9 +241,9 @@ describe('Given a CSP', () => {
     describe('and we yield another routine via `call` method', () => {
       it('should run that other routine and wait till it finishes', async () => {
         const spy = jest.fn();
-        const r1 = function*(a, b, c, d) {
+        const r1 = function*(a, b) {
           yield sleep(5);
-          spy(`r1 ${a} ${b} ${c} ${d}`);
+          spy(`r1 ${a} ${b}`);
         };
         const r2 = function*(a, b) {
           spy(`>r2 ${a} ${b}`);
@@ -256,7 +256,7 @@ describe('Given a CSP', () => {
         await delay(10);
         expect(spy).toBeCalledWithArgs(
           ['>r2 1 2'],
-          ['r1 foo bar 1 2'],
+          ['r1 foo bar'],
           ['<r2 1 2'],
           ['done']
         );
@@ -265,9 +265,9 @@ describe('Given a CSP', () => {
     describe('and we yield another routine via `fork` method', () => {
       it('should run that other routine and NOT block the main one', async () => {
         const spy = jest.fn();
-        const r1 = function*(a, b, c, d) {
+        const r1 = function*(a, b) {
           yield sleep(5);
-          spy(`r1 ${a} ${b} ${c} ${d}`);
+          spy(`r1 ${a} ${b}`);
         };
         const r2 = function*(a, b) {
           spy(`>r2 ${a} ${b}`);
@@ -282,7 +282,7 @@ describe('Given a CSP', () => {
           ['>r2 1 2'],
           ['<r2 1 2'],
           ['done'],
-          ['r1 1 2 foo bar']
+          ['r1 foo bar']
         );
       });
     });

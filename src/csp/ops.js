@@ -280,10 +280,10 @@ export function go(func, done = () => {}, ...args) {
         sread(i.value.channels, next, i.value.options);
         break;
       case CALL_ROUTINE:
-        addSubRoutine(go(i.value.routine, next, ...i.value.args, ...args));
+        addSubRoutine(go(i.value.routine, next, ...i.value.args));
         break;
       case FORK_ROUTINE:
-        addSubRoutine(go(i.value.routine, () => {}, ...args, ...i.value.args));
+        addSubRoutine(go(i.value.routine, () => {}, ...i.value.args));
         next();
         break;
       default:

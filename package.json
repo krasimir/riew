@@ -1,6 +1,6 @@
 {
   "name": "riew",
-  "version": "1.24.1",
+  "version": "1.25.0",
   "description": "Riew is a reactive library that uses CSP concepts for managing data and application flow.",
   "main": "./lib/index.js",
   "scripts": {
@@ -27,7 +27,8 @@
     "communicating sequential processes",
     "channels",
     "put",
-    "take"
+    "take",
+    "routine"
   ],
   "author": "Krasimir Tsonev",
   "license": "MIT",
