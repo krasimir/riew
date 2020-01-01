@@ -195,6 +195,32 @@ describe('Given a CSP pubsub extension', () => {
 
       expect(spy).toBeCalledWithArgs(['start'], ['foo'], ['end']);
     });
+    describe('and when there is already a value in the channel', () => {
+      it('should perform a non-blocking read', () => {
+        const ch = chan(buffer.fixed(1));
+        const spy = jest.fn();
+
+        go(function* A() {
+          spy('A starts');
+          yield put(ch, 42);
+          spy('A ends');
+        });
+        go(function* B() {
+          spy('B starts');
+          spy(yield read(ch));
+          spy('B ends');
+        });
+
+        expect(spy).toBeCalledWithArgs(
+          ['A starts'],
+          ['A ends'],
+          ['B starts'],
+          [42],
+          ['B ends']
+        );
+        expect(ch.value()).toStrictEqual([42]);
+      });
+    });
     describe('and we want to make a loop inside the routine', () => {
       it('should allow us to wait for the same channel many times', () => {
         const spy = jest.fn();

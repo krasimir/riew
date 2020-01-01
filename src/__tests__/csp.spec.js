@@ -22,6 +22,7 @@ import {
   call,
   fork,
   ONE_OF,
+  register,
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -1335,6 +1336,24 @@ describe('Given a CSP', () => {
         ['Save successful!'],
         ['yyy=bar']
       );
+    });
+  });
+  describe('when we inject deps into a routine that we run with the `go` function', () => {
+    it('should pass the dependency when the routine starts', () => {
+      const spy = jest.fn();
+      const A = function*(a, b, { config, foo }) {
+        spy(a, b, config.theme, foo);
+      };
+      const B = function*({ answer }) {
+        spy(answer);
+      };
+
+      register('config', { theme: 'dark' });
+
+      go.with('config', { foo: 'bar' })(A, null, 'a', 'b');
+      go.with({ answer: 42 })(B);
+
+      expect(spy).toBeCalledWithArgs(['a', 'b', 'dark', 'bar'], [42]);
     });
   });
 });

@@ -533,6 +533,22 @@ const routine = go(function * () {
 * [call](https://github.com/krasimir/riew#call)
 * [fork](https://github.com/krasimir/riew#fork)
 
+#### Injecting external dependencies
+
+You may want to pass something to your routines which is defined far a way from the place where the routine starts. In such cases you can use the `go.with` method:
+
+```js
+// somewhere in your code's entry point
+register('config', { theme: 'dark' });
+
+// somewhere deep
+const A = function*({ config, foo }) {
+  console.log(config.theme, foo);
+};
+
+go.with('config', { foo: 'bar' })(A); // "dark", "bar"
+```
+
 ### put
 
 > `put(channel, anything)`

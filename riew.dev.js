@@ -480,6 +480,14 @@ var _utils = require('../utils');
 
 var _utils2 = require('./utils');
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
+
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
@@ -841,6 +849,31 @@ function go(func) {
   return api;
 }
 go['@go'] = true;
+go.with = function () {
+  for (var _len6 = arguments.length, maps = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+    maps[_key6] = arguments[_key6];
+  }
+
+  var reducedMaps = maps.reduce(function (res, item) {
+    if (typeof item === 'string') {
+      res = _extends({}, res, _defineProperty({}, item, (0, _index.use)(item)));
+    } else {
+      res = _extends({}, res, item);
+    }
+    return res;
+  }, {});
+  return function (func) {
+    for (var _len7 = arguments.length, args = Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
+      args[_key7 - 2] = arguments[_key7];
+    }
+
+    var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
+
+    args.push(reducedMaps);
+    console.log(args);
+    return go.apply(undefined, [func, done].concat(args));
+  };
+};
 
 function sleep(ms, callback) {
   if (typeof callback === 'function') {

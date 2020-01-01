@@ -15,7 +15,7 @@ import {
   NOTHING,
   ONE_OF,
 } from './constants';
-import { grid, chan } from '../index';
+import { grid, chan, use } from '../index';
 import { isPromise, isGeneratorFunction } from '../utils';
 import { normalizeChannels, normalizeOptions, normalizeTo } from './utils';
 
@@ -311,6 +311,21 @@ export function go(func, done = () => {}, ...args) {
   return api;
 }
 go['@go'] = true;
+go.with = (...maps) => {
+  const reducedMaps = maps.reduce((res, item) => {
+    if (typeof item === 'string') {
+      res = { ...res, [item]: use(item) };
+    } else {
+      res = { ...res, ...item };
+    }
+    return res;
+  }, {});
+  return (func, done = () => {}, ...args) => {
+    args.push(reducedMaps);
+    console.log(args);
+    return go(func, done, ...args);
+  };
+};
 
 export function sleep(ms, callback) {
   if (typeof callback === 'function') {
