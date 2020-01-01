@@ -26,6 +26,7 @@
     * [stopping a routine](https://github.com/krasimir/riew#stopping-a-routine)
     * [restarting a routine](https://github.com/krasimir/riew#restarting-the-routine)
     * [what you can yield](https://github.com/krasimir/riew#what-you-can-yield)
+    * [injecting external dependencies](https://github.com/krasimir/riew#injecting-external-dependencies)
   * [put](https://github.com/krasimir/riew#put), [sput](https://github.com/krasimir/riew#sput)
   * [take](https://github.com/krasimir/riew#take), [stake](https://github.com/krasimir/riew#stake)
   * [close](https://github.com/krasimir/riew#close), [sclose](https://github.com/krasimir/riew#sclose)
