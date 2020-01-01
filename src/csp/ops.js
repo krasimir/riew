@@ -322,7 +322,6 @@ go.with = (...maps) => {
   }, {});
   return (func, done = () => {}, ...args) => {
     args.push(reducedMaps);
-    console.log(args);
     return go(func, done, ...args);
   };
 };

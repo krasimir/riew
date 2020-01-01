@@ -870,7 +870,6 @@ go.with = function () {
     var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
     args.push(reducedMaps);
-    console.log(args);
     return go.apply(undefined, [func, done].concat(args));
   };
 };
