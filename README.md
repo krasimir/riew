@@ -1170,6 +1170,8 @@ go(function * () {
 });
 ```
 
+Have in mind that the `reducer` can be a routine (generator function) and as such may be asynchronous.
+
 ### riew
 
 > `riew(view, ...routines)`
