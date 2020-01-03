@@ -423,14 +423,14 @@ go(
   function * A(greeting) {
     const name = yield take(ch);
     return `${ greeting }, ${ name }`;
-	},
+  },
   (v) => {
     console.log(v);
   },
   'Hey'
 );
 go(function * B() {
-	yield put(ch, 'Pablo')
+  yield put(ch, 'Pablo')
 });
 ```
 
@@ -1132,6 +1132,8 @@ go(function * () {
 
 #### selectors
 
+> `state.select(channel, selector, onError)`
+
 The read channels are called selectors and are defined by using the `select` method of the state.
 
 ```js
@@ -1150,6 +1152,8 @@ go(function * () {
 ```
 
 #### mutators
+
+> `state.mutate(channel, reducer, onError)`
 
 The write channels are called mutators and are defined by using the `mutate` method of the state.
 
