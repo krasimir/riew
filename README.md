@@ -9,50 +9,70 @@
 
 ---
 
-* Try it online here [http://poet.krasimir.now.sh/e/QMPvK8DM2s7](http://poet.krasimir.now.sh/e/QMPvK8DM2s7).
+**📚 Learning materials**
+
+Articles:
+
+* [Reactive view - the concept](https://krasimirtsonev.com/blog/article/riew-reactive-view-concept)
+* [Part 1: We need channels! A gentle introduction to CSP](https://krasimirtsonev.com/blog/article/we-need-channels)
+* [Part 2: Riew - reactive view basics](https://krasimirtsonev.com/blog/article/riew-reactive-view-intro)
+* [Part 3: Riew - reactive view in patterns](https://krasimirtsonev.com/blog/article/riew-reactive-view-in-patterns)
+
+Playgrounds:
+
+* [Online demo](http://poet.krasimir.now.sh/e/QMPvK8DM2s7).
 * Examples
   * [ToDoMVC](https://github.com/krasimir/riew/tree/master/examples/todomvc)
   * [Questionnaire app](https://github.com/krasimir/riew/tree/master/examples/questionnaire)
   * [Counter](http://poet.krasimir.now.sh/e/gnv7EDgydsQ#App.js)
   * [Random cat](http://poet.krasimir.now.sh/e/exoE5zyxQhl)
-* Inspiration - [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes), [core.async](https://github.com/clojure/core.async), [Go](https://golang.org/), [Redux](https://redux.js.org/), [redux-saga](https://redux-saga.js.org/), [JS-CSP](https://github.com/js-csp/js-csp) 
-* Core concepts - [Routines & channels](https://github.com/krasimir/riew#routines--channels), [Riews](https://github.com/krasimir/riew#riews), [Application state](https://github.com/krasimir/riew#application-state), [Pubsub](https://github.com/krasimir/riew#pubsub)
 
 ---
 
-* API
-  * [chan](https://github.com/krasimir/riew#chan)
-  * [buffer](https://github.com/krasimir/riew#buffer)
-  * [go](https://github.com/krasimir/riew#go)
-    * [stopping a routine](https://github.com/krasimir/riew#stopping-a-routine)
-    * [restarting a routine](https://github.com/krasimir/riew#restarting-the-routine)
-    * [what you can yield](https://github.com/krasimir/riew#what-you-can-yield)
-    * [injecting external dependencies](https://github.com/krasimir/riew#injecting-external-dependencies)
-  * [put](https://github.com/krasimir/riew#put), [sput](https://github.com/krasimir/riew#sput)
-  * [take](https://github.com/krasimir/riew#take), [stake](https://github.com/krasimir/riew#stake)
-  * [close](https://github.com/krasimir/riew#close), [sclose](https://github.com/krasimir/riew#sclose)
-  * [read](https://github.com/krasimir/riew#read)
-  * [sread](https://github.com/krasimir/riew#sread)
-  * [unread](https://github.com/krasimir/riew#unread)
-  * [unreadAll](https://github.com/krasimir/riew#unreadAll)
-  * [call](https://github.com/krasimir/riew#call)
-  * [fork](https://github.com/krasimir/riew#fork)
-  * [sleep](https://github.com/krasimir/riew#sleep)
-  * [stop](https://github.com/krasimir/riew#stop)
-  * [timeout](https://github.com/krasimir/riew#timeout)
-  * [merge](https://github.com/krasimir/riew#merge)
-  * [state](https://github.com/krasimir/riew#state)
-    * [selectors](https://github.com/krasimir/riew#selectors)
-    * [mutators](https://github.com/krasimir/riew#mutators)
-  * [riew](https://github.com/krasimir/riew#riew)
-    * [riew routines](https://github.com/krasimir/riew#riew-routines)
-    * [externals](https://github.com/krasimir/riew#externals)
-    * [channels and state](https://github.com/krasimir/riew#channels-and-state)
-  * [react](https://github.com/krasimir/riew#react)
-  * [register](https://github.com/krasimir/riew#register)
-  * [use](https://github.com/krasimir/riew#use)
-  * [reset](https://github.com/krasimir/riew#reset)
-  * [constants](https://github.com/krasimir/riew#constants)
+**Table of contents**
+
+- [Concepts](#concepts)
+  - [Routines &amp; channels](#routines-amp-channels)
+  - [Riews](#riews)
+  - [Application state](#application-state)
+  - [PubSub](#pubsub)
+- [API](#api)
+  - [chan](#chan)
+  - [buffer](#buffer)
+  - [go](#go)
+    - [Stopping a routine](#stopping-a-routine)
+    - [Restarting the routine](#restarting-the-routine)
+    - [What you can yield](#what-you-can-yield)
+    - [Injecting external dependencies](#injecting-external-dependencies)
+  - [put](#put)
+  - [sput](#sput)
+  - [take](#take)
+  - [stake](#stake)
+  - [close](#close)
+  - [sclose](#sclose)
+  - [read](#read)
+  - [sread](#sread)
+  - [unread](#unread)
+  - [unsubAll](#unsuball)
+  - [call](#call)
+  - [fork](#fork)
+  - [sleep](#sleep)
+  - [stop](#stop)
+  - [timeout](#timeout)
+  - [merge](#merge)
+  - [state](#state)
+    - [selectors](#selectors)
+    - [mutators](#mutators)
+  - [riew](#riew)
+    - [Riew routines](#riew-routines)
+    - [Externals](#externals)
+    - [Channels and state](#channels-and-state)
+  - [react](#react)
+  - [register](#register)
+  - [use](#use)
+  - [reset](#reset)
+  - [constants](#constants)
+- [Inspiration](#inspiration)
 
 ## Concepts
 
@@ -1405,3 +1425,12 @@ The two options for [subscription](https://github.com/krasimir/riew#sread) strat
 
 * `ALL_REQUIRED` - notify the subscriber only if all the source channels have value.
 * `ONE_OF` - notify the subscriber if at least one of the source channels have value.
+
+## Inspiration
+
+* [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes)
+* [core.async](https://github.com/clojure/core.async)
+* [Go](https://golang.org/)
+* [Redux](https://redux.js.org/)
+* [redux-saga](https://redux-saga.js.org/)
+* [JS-CSP](https://github.com/js-csp/js-csp)
