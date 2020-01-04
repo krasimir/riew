@@ -1,4 +1,5 @@
 ![Riew logo](./assets/riew.jpg)
+![Riew what it does](./assets/what-is-riew-animation.gif)
 
 ---
 
