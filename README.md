@@ -11,14 +11,12 @@
 
 **📚 Learning materials**
 
-Articles:
-
 * [Reactive view - the concept](https://krasimirtsonev.com/blog/article/riew-reactive-view-concept)
 * [Part 1: We need channels! A gentle introduction to CSP](https://krasimirtsonev.com/blog/article/we-need-channels)
 * [Part 2: Riew - reactive view basics](https://krasimirtsonev.com/blog/article/riew-reactive-view-intro)
 * [Part 3: Riew - reactive view in patterns](https://krasimirtsonev.com/blog/article/riew-reactive-view-in-patterns)
 
-Playgrounds:
+**🎮 Playgrounds**
 
 * [Online demo](http://poet.krasimir.now.sh/e/QMPvK8DM2s7).
 * Examples
