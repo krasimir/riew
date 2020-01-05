@@ -27,7 +27,7 @@ export function createChannel(...args) {
   const [id, buff] = normalizeChannelArguments(args);
 
   if (CHANNELS.exists(id)) {
-    return CHANNELS.get(id);
+    return [CHANNELS.get(id), true];
   }
 
   const api = CHANNELS.set(id, {
@@ -44,5 +44,5 @@ export function createChannel(...args) {
   };
   api.value = () => buff.getValue();
 
-  return api;
+  return [api, false];
 }

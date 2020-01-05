@@ -17,6 +17,8 @@ export function createState(...args) {
   const readChannels = [];
   const writeChannels = [];
   const isThereInitialValue = args.length > 0;
+  const READ_CHANNEL = `${id}_read`;
+  const WRITE_CHANNEL = `${id}_write`;
 
   function handleError(onError) {
     return e => {
@@ -41,8 +43,13 @@ export function createState(...args) {
   const api = {
     id,
     '@state': true,
-    READ: `${id}_read`,
-    WRITE: `${id}_write`,
+    children() {
+      return readChannels
+        .map(({ ch }) => ch)
+        .concat(writeChannels.map(({ ch }) => ch));
+    },
+    READ: READ_CHANNEL,
+    WRITE: WRITE_CHANNEL,
     select(c, selector = v => v, onError = null) {
       const ch = isChannel(c) ? c : chan(c, buffer.divorced());
       ch['@statereadchannel'] = true;
@@ -105,14 +112,4 @@ export function createState(...args) {
   api.mutate(api.WRITE);
 
   return api;
-}
-
-export function isState(s) {
-  return s && s['@state'] === true;
-}
-export function isStateReadChannel(s) {
-  return s && s['@statereadchannel'] === true;
-}
-export function isStateWriteChannel(s) {
-  return s && s['@statewritechannel'] === true;
 }

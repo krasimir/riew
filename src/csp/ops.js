@@ -230,6 +230,10 @@ export function timeout(interval) {
   return ch;
 }
 export const isChannel = ch => ch && ch['@channel'] === true;
+export const isRiew = r => r && r['@riew'] === true;
+export const isState = s => s && s['@state'] === true;
+export const isStateReadChannel = s => s && s['@statereadchannel'] === true;
+export const isStateWriteChannel = s => s && s['@statewritechannel'] === true;
 
 // **************************************************** go/routine
 

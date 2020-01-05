@@ -50,16 +50,20 @@ const Renderer = function(viewFunc) {
 
 export default function createRiew(viewFunc, ...routines) {
   const name = getFuncName(viewFunc);
-  const riew = { id: getId(name), name };
+  const riew = {
+    id: getId(name),
+    name,
+    '@riew': true,
+    children: [],
+  };
   const renderer = Renderer(viewFunc);
-  let states = [];
   let cleanups = [];
   let runningRoutines = [];
   let externals = {};
   const subscriptions = {};
   const state = function(...args) {
     const s = State(...args);
-    states.push(s);
+    riew.children.push(s);
     return s;
   };
   const read = function(to, func) {
@@ -70,6 +74,9 @@ export default function createRiew(viewFunc, ...routines) {
   };
   const VIEW_CHANNEL = `${riew.id}_view`;
   const PROPS_CHANNEL = `${riew.id}_props`;
+
+  riew.children.push(Channel(VIEW_CHANNEL));
+  riew.children.push(Channel(PROPS_CHANNEL));
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
@@ -119,8 +126,12 @@ export default function createRiew(viewFunc, ...routines) {
   riew.unmount = function() {
     cleanups.forEach(c => c());
     cleanups = [];
-    states.forEach(s => s.destroy());
-    states = [];
+    riew.children.forEach(c => {
+      if (isState(c)) {
+        c.destroy();
+      }
+    });
+    riew.children = [];
     runningRoutines.forEach(r => r.stop());
     runningRoutines = [];
     renderer.destroy();

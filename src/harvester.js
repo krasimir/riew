@@ -48,9 +48,11 @@ const defineHarvesterBuiltInCapabilities = function(hInstance) {
     reactRiew(viewFunc, ...controllers)
   );
   hInstance.defineProduct('channel', (...args) => {
-    const channel = createChannel(...args);
+    const [channel, exists] = createChannel(...args);
 
-    grid.add(channel);
+    if (!exists) {
+      grid.add(channel);
+    }
     return channel;
   });
   hInstance.defineProduct('state', (...args) => {

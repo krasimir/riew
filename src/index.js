@@ -3,6 +3,7 @@ import g from './grid';
 import { CHANNELS } from './csp';
 
 export * from './csp';
+export * from './logger';
 
 export const riew = (...args) => h.produce('riew', ...args);
 export const react = {
