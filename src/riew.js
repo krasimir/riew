@@ -1,4 +1,4 @@
-/* eslint-disable no-param-reassign */
+/* eslint-disable no-param-reassign, no-use-before-define */
 
 import {
   use,
@@ -14,6 +14,7 @@ import {
   isChannel,
   buffer,
   grid,
+  logger,
 } from './index';
 import {
   isObjectEmpty,
@@ -22,8 +23,9 @@ import {
   requireObject,
   accumulate,
 } from './utils';
+import { isRoutine } from './csp';
 
-const Renderer = function(viewFunc) {
+const Renderer = function(pushDataToView) {
   let data = {};
   let inProgress = false;
   let active = true;
@@ -38,7 +40,7 @@ const Renderer = function(viewFunc) {
         inProgress = true;
         Promise.resolve().then(() => {
           if (active) {
-            viewFunc(data);
+            pushDataToView(data);
           }
           inProgress = false;
         });
@@ -55,16 +57,18 @@ const Renderer = function(viewFunc) {
 
 export default function createRiew(viewFunc, ...routines) {
   const name = getFuncName(viewFunc);
-  const renderer = Renderer(viewFunc);
+  const renderer = Renderer(value => {
+    viewFunc(value);
+    if (__DEV__) logger.snapshot(riew, 'RIEW_RENDERED', value);
+  });
   const riew = {
-    id: getId(name),
+    id: getId(`riew_${name}`),
     name,
     '@riew': true,
     children: [],
     renderer,
   };
   let cleanups = [];
-  let runningRoutines = [];
   let externals = {};
   const subscriptions = {};
   const state = function(...args) {
@@ -78,8 +82,8 @@ export default function createRiew(viewFunc, ...routines) {
       sread(to, func, { listen: true });
     }
   };
-  const VIEW_CHANNEL = `${riew.id}_view`;
-  const PROPS_CHANNEL = `${riew.id}_props`;
+  const VIEW_CHANNEL = getId(`channel_view_${name}`);
+  const PROPS_CHANNEL = getId(`channel_props_${name}`);
 
   riew.children.push(Channel(VIEW_CHANNEL, buffer.divorced()));
   riew.children.push(Channel(PROPS_CHANNEL, buffer.divorced()));
@@ -105,28 +109,31 @@ export default function createRiew(viewFunc, ...routines) {
     sput(PROPS_CHANNEL, props);
     subscribe(PROPS_CHANNEL, newProps => sput(VIEW_CHANNEL, newProps));
     subscribe(VIEW_CHANNEL, renderer.push);
-    runningRoutines = routines.map(r =>
-      go(
-        r,
-        result => {
-          if (typeof result === 'function') {
-            cleanups.push(result);
-          }
-        },
-        {
-          render: value => {
-            requireObject(value);
-            sput(VIEW_CHANNEL, normalizeRenderData(value));
+    riew.children = riew.children.concat(
+      routines.map(r =>
+        go(
+          r,
+          result => {
+            if (typeof result === 'function') {
+              cleanups.push(result);
+            }
           },
-          state,
-          props: PROPS_CHANNEL,
-          ...externals,
-        }
+          {
+            render: value => {
+              requireObject(value);
+              sput(VIEW_CHANNEL, normalizeRenderData(value));
+            },
+            state,
+            props: PROPS_CHANNEL,
+            ...externals,
+          }
+        )
       )
     );
     if (!isObjectEmpty(externals)) {
       sput(VIEW_CHANNEL, normalizeRenderData(externals));
     }
+    if (__DEV__) logger.snapshot(riew, 'RIEW_MOUNTED');
   };
 
   riew.unmount = function() {
@@ -135,20 +142,22 @@ export default function createRiew(viewFunc, ...routines) {
     riew.children.forEach(c => {
       if (isState(c)) {
         c.destroy();
+      } else if (isRoutine(c)) {
+        c.stop();
       }
     });
     riew.children = [];
-    runningRoutines.forEach(r => r.stop());
-    runningRoutines = [];
     renderer.destroy();
     close(PROPS_CHANNEL);
     close(VIEW_CHANNEL);
     grid.remove(riew);
+    if (__DEV__) logger.snapshot(riew, 'RIEW_UNMOUNTED');
   };
 
   riew.update = function(props = {}) {
     requireObject(props);
     sput(PROPS_CHANNEL, props);
+    if (__DEV__) logger.snapshot(riew, 'RIEW_UPDATED');
   };
 
   riew.with = (...maps) => {

@@ -1,4 +1,4 @@
-export default function Grid(logger) {
+export default function Grid() {
   const gridAPI = {};
   let nodes = [];
 
@@ -9,7 +9,6 @@ export default function Grid(logger) {
       );
     }
     nodes.push(product);
-    logger.snapshot();
   };
   gridAPI.remove = product => {
     const idx = nodes.findIndex(({ id }) => id === product.id);
@@ -18,7 +17,6 @@ export default function Grid(logger) {
       // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach
       nodes.splice(idx, 1);
     }
-    logger.snapshot();
   };
   gridAPI.reset = () => {
     nodes = [];

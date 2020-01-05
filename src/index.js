@@ -2,6 +2,7 @@ import h from './harvester';
 import Grid from './grid';
 import { CHANNELS } from './csp';
 import Logger from './logger';
+import { resetIds } from './utils';
 
 export * from './csp';
 
@@ -20,8 +21,8 @@ export const register = (name, whatever) => {
   return whatever;
 };
 export const logger = new Logger();
-export const grid = new Grid(logger);
+export const grid = new Grid();
 export const reset = () => (
-  grid.reset(), h.reset(), CHANNELS.reset(), logger.reset()
+  resetIds(), grid.reset(), h.reset(), CHANNELS.reset(), logger.reset()
 );
 export const harvester = h;

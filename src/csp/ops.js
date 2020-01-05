@@ -15,8 +15,8 @@ import {
   NOTHING,
   ONE_OF,
 } from './constants';
-import { grid, chan, use } from '../index';
-import { isPromise, isGeneratorFunction } from '../utils';
+import { grid, chan, use, logger } from '../index';
+import { isPromise, isGeneratorFunction, getId, getFuncName } from '../utils';
 import { normalizeChannels, normalizeOptions, normalizeTo } from './utils';
 
 const noop = () => {};
@@ -232,6 +232,7 @@ export function timeout(interval) {
 export const isChannel = ch => ch && ch['@channel'] === true;
 export const isRiew = r => r && r['@riew'] === true;
 export const isState = s => s && s['@state'] === true;
+export const isRoutine = r => r && r['@routine'] === true;
 export const isStateReadChannel = s => s && s['@statereadchannel'] === true;
 export const isStateWriteChannel = s => s && s['@statewritechannel'] === true;
 
@@ -241,8 +242,12 @@ export function go(func, done = () => {}, ...args) {
   const RUNNING = 'RUNNING';
   const STOPPED = 'STOPPED';
   let state = RUNNING;
+  const name = getFuncName(func);
 
   const api = {
+    id: getId(`routine_${name}`),
+    '@routine': true,
+    name,
     children: [],
     stop() {
       state = STOPPED;
@@ -279,6 +284,7 @@ export function go(func, done = () => {}, ...args) {
         break;
       case STOP:
         state = STOPPED;
+        grid.remove(api);
         break;
       case READ:
         sread(i.value.channels, next, i.value.options);
@@ -296,7 +302,10 @@ export function go(func, done = () => {}, ...args) {
   }
 
   function next(value) {
-    if (state === STOPPED) return;
+    if (state === STOPPED) {
+      grid.remove(api);
+      return;
+    }
     const step = gen.next(value);
     if (step.done === true) {
       if (done) done(step.value);
@@ -311,6 +320,7 @@ export function go(func, done = () => {}, ...args) {
   }
 
   next();
+  grid.add(api);
 
   return api;
 }

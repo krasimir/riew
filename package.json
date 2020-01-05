@@ -50,6 +50,7 @@
     "browserify": "14.5.0",
     "browserify-shim": "3.8.14",
     "circular-json-es6": "2.0.2",
+    "clipboardy": "2.1.0",
     "eslint": "5.16.0",
     "eslint-config-airbnb": "17.1.1",
     "eslint-config-prettier": "4.3.0",
@@ -85,6 +86,11 @@
     "verbose": false,
     "globals": {
       "__DEV__": true
-    }
+    },
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/lib/",
+      "/src/__tests__/data/logger.spec.data.json"
+    ]
   }
 }

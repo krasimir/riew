@@ -13,5 +13,8 @@
     "no-sequences": 0,
     "require-yield": 0,
     "prefer-destructuring": 0
+  },
+  "globals": {
+    "__DEV__": "readonly"
   }
 }

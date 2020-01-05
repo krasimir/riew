@@ -1,8 +1,21 @@
 import Grid from '../grid';
-import { grid, riew, chan, close, state, sleep, go } from '../index';
+import {
+  grid,
+  riew,
+  chan,
+  close,
+  state,
+  sleep,
+  go,
+  stop,
+  reset,
+} from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given the grid', () => {
+  beforeEach(() => {
+    reset();
+  });
   describe('when we use the grid', () => {
     it('should store products and let us free resources', () => {
       const g = new Grid({
@@ -57,7 +70,7 @@ describe('Given the grid', () => {
     });
   });
   describe('when we run a routine and when it finishes', () => {
-    xit('should add an item to the grid and remove it', async () => {
+    it('should add an item to the grid and leave it there', async () => {
       const r = go(function*() {
         yield sleep(10);
       });
@@ -66,7 +79,39 @@ describe('Given the grid', () => {
         id: r.id,
       });
       await delay(20);
+      expect(grid.nodes()[0]).toMatchObject({ id: r.id });
+    });
+  });
+  describe('when we run a routine and stop it', () => {
+    it('should add an item to the grid and remove it', async () => {
+      const spy = jest.fn();
+      const r = go(function*() {
+        yield sleep(10);
+        spy();
+      });
+
+      expect(grid.nodes().find(({ id }) => r.id === id)).toMatchObject({
+        id: r.id,
+      });
+      r.stop();
+      await delay(20);
       expect(grid.nodes()).toHaveLength(0);
+      expect(spy).not.toBeCalled();
+    });
+    it('should add an item to the grid and remove it', async () => {
+      const spy = jest.fn();
+      const r = go(function*() {
+        yield sleep(10);
+        yield stop();
+        spy();
+      });
+
+      expect(grid.nodes().find(({ id }) => r.id === id)).toMatchObject({
+        id: r.id,
+      });
+      await delay(20);
+      expect(grid.nodes()).toHaveLength(0);
+      expect(spy).not.toBeCalled();
     });
   });
 });

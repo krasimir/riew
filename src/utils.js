@@ -43,3 +43,6 @@ export const isGeneratorFunction = fn => {
   }
   return isGenerator(constructor.prototype);
 };
+export function resetIds() {
+  ids = 0;
+}

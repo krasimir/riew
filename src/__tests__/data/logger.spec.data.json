@@ -1,441 +1,1485 @@
 [
   {
+    "who": {
+      "id": "channel_view_myView_2",
+      "type": "CHANNEL",
+      "value": [],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_ADDED",
     "items": [
       {
-        "id": "myView_1_view",
-        "puts": [],
-        "takes": [],
+        "id": "channel_view_myView_2",
         "type": "CHANNEL",
-        "value": []
+        "value": "<circular>",
+        "puts": [],
+        "takes": []
       }
     ]
   },
   {
+    "who": {
+      "id": "channel_props_myView_3",
+      "type": "CHANNEL",
+      "value": [],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_ADDED",
     "items": [
       {
-        "id": "myView_1_view",
-        "puts": [],
-        "takes": [],
+        "id": "channel_view_myView_2",
         "type": "CHANNEL",
-        "value": []
+        "value": [],
+        "puts": [],
+        "takes": []
       },
       {
-        "id": "myView_1_props",
-        "puts": [],
-        "takes": [],
+        "id": "channel_props_myView_3",
         "type": "CHANNEL",
-        "value": []
+        "value": "<circular>",
+        "puts": [],
+        "takes": []
       }
     ]
   },
   {
+    "who": {
+      "id": "riew_myView_1",
+      "name": "myView",
+      "type": "RIEW",
+      "viewData": {},
+      "children": [
+        {
+          "id": "channel_view_myView_2",
+          "type": "CHANNEL",
+          "value": [],
+          "puts": [],
+          "takes": []
+        },
+        {
+          "id": "channel_props_myView_3",
+          "type": "CHANNEL",
+          "value": [],
+          "puts": [],
+          "takes": []
+        }
+      ]
+    },
+    "what": "GRID_ITEM_ADDED",
     "items": [
       {
-        "children": [
-          {
-            "id": "myView_1_view",
-            "puts": [],
-            "takes": [],
-            "type": "CHANNEL",
-            "value": []
-          },
-          {
-            "id": "myView_1_props",
-            "puts": [],
-            "takes": [],
-            "type": "CHANNEL",
-            "value": []
-          }
-        ],
-        "id": "myView_1",
+        "id": "riew_myView_1",
         "name": "myView",
         "type": "RIEW",
-        "viewData": {}
+        "viewData": "<circular>",
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": "<circular>",
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": "<circular>",
+            "puts": [],
+            "takes": []
+          }
+        ]
       }
     ]
   },
   {
+    "who": {
+      "id": "state_5_read",
+      "type": "CHANNEL",
+      "value": [],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_ADDED",
     "items": [
       {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b"
+        },
         "children": [
           {
-            "id": "myView_1_view",
-            "puts": [],
-            "takes": [],
+            "id": "channel_view_myView_2",
             "type": "CHANNEL",
             "value": [
               {
                 "a": "b"
               }
-            ]
+            ],
+            "puts": [],
+            "takes": []
           },
           {
-            "id": "myView_1_props",
-            "puts": [],
-            "takes": [],
+            "id": "channel_props_myView_3",
             "type": "CHANNEL",
             "value": [
               "<circular>"
-            ]
-          }
-        ],
-        "id": "myView_1",
-        "name": "myView",
-        "type": "RIEW",
-        "viewData": {
-          "a": "b"
-        }
-      },
-      {
-        "id": "state_2_read",
-        "puts": [],
-        "takes": [],
-        "type": "CHANNEL",
-        "value": []
-      }
-    ]
-  },
-  {
-    "items": [
-      {
-        "children": [
-          {
-            "id": "myView_1_view",
+            ],
             "puts": [],
-            "takes": [],
-            "type": "CHANNEL",
-            "value": [
-              {
-                "a": "b"
-              }
-            ]
-          },
-          {
-            "id": "myView_1_props",
-            "puts": [],
-            "takes": [],
-            "type": "CHANNEL",
-            "value": [
-              "<circular>"
-            ]
+            "takes": []
           }
-        ],
-        "id": "myView_1",
-        "name": "myView",
-        "type": "RIEW",
-        "viewData": {
-          "a": "b"
-        }
-      },
-      {
-        "id": "state_2_read",
-        "puts": [],
-        "stateRead": true,
-        "takes": [],
-        "type": "CHANNEL",
-        "value": [
-          2
         ]
       },
       {
-        "id": "state_2_write",
-        "puts": [],
-        "takes": [],
+        "id": "state_5_read",
         "type": "CHANNEL",
-        "value": []
+        "value": "<circular>",
+        "puts": [],
+        "takes": []
       }
     ]
   },
   {
+    "who": {
+      "id": "state_5_write",
+      "type": "CHANNEL",
+      "value": [],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_ADDED",
     "items": [
       {
-        "children": [
-          {
-            "id": "myView_1_view",
-            "puts": [],
-            "takes": [],
-            "type": "CHANNEL",
-            "value": [
-              {
-                "a": "b"
-              }
-            ]
-          },
-          {
-            "id": "myView_1_props",
-            "puts": [],
-            "takes": [],
-            "type": "CHANNEL",
-            "value": [
-              "<circular>"
-            ]
-          }
-        ],
-        "id": "myView_1",
+        "id": "riew_myView_1",
         "name": "myView",
         "type": "RIEW",
         "viewData": {
           "a": "b"
-        }
-      },
-      {
+        },
         "children": [
           {
-            "id": "state_2_read",
-            "puts": [],
-            "stateRead": true,
-            "takes": [],
-            "type": "CHANNEL",
-            "value": [
-              2
-            ]
-          },
-          {
-            "id": "state_2_write",
-            "puts": [],
-            "stateWrite": true,
-            "takes": [],
-            "type": "CHANNEL",
-            "value": []
-          }
-        ],
-        "id": "state_2",
-        "type": "STATE",
-        "value": 2
-      }
-    ]
-  },
-  {
-    "items": [
-      {
-        "children": [
-          {
-            "id": "myView_1_view",
-            "puts": [],
-            "takes": [],
+            "id": "channel_view_myView_2",
             "type": "CHANNEL",
             "value": [
               {
                 "a": "b"
               }
-            ]
+            ],
+            "puts": [],
+            "takes": []
           },
           {
-            "id": "myView_1_props",
-            "puts": [],
-            "takes": [],
+            "id": "channel_props_myView_3",
             "type": "CHANNEL",
             "value": [
               "<circular>"
-            ]
+            ],
+            "puts": [],
+            "takes": []
+          }
+        ]
+      },
+      {
+        "id": "state_5_read",
+        "type": "CHANNEL",
+        "value": [
+          2
+        ],
+        "puts": [],
+        "takes": [],
+        "stateRead": true
+      },
+      {
+        "id": "state_5_write",
+        "type": "CHANNEL",
+        "value": "<circular>",
+        "puts": [],
+        "takes": []
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "state_5",
+      "type": "STATE",
+      "value": 2,
+      "children": [
+        {
+          "id": "state_5_read",
+          "type": "CHANNEL",
+          "value": [
+            2
+          ],
+          "puts": [],
+          "takes": [],
+          "stateRead": true
+        },
+        {
+          "id": "state_5_write",
+          "type": "CHANNEL",
+          "value": [],
+          "puts": [],
+          "takes": [],
+          "stateWrite": true
+        }
+      ]
+    },
+    "what": "GRID_ITEM_ADDED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "a": "b"
+              }
+            ],
+            "puts": [],
+            "takes": []
           },
           {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              "<circular>"
+            ],
+            "puts": [],
+            "takes": []
+          }
+        ]
+      },
+      {
+        "id": "state_5",
+        "type": "STATE",
+        "value": 2,
+        "children": [
+          {
+            "id": "state_5_read",
+            "type": "CHANNEL",
+            "value": "<circular>",
+            "puts": [],
+            "takes": [],
+            "stateRead": true
+          },
+          {
+            "id": "state_5_write",
+            "type": "CHANNEL",
+            "value": "<circular>",
+            "puts": [],
+            "takes": [],
+            "stateWrite": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "CCC",
+      "type": "CHANNEL",
+      "value": [],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_ADDED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "a": "b"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              "<circular>"
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 2,
             "children": [
               {
-                "id": "state_2_read",
-                "puts": [],
-                "stateRead": true,
-                "takes": [],
+                "id": "state_5_read",
                 "type": "CHANNEL",
                 "value": [
                   2
-                ]
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
               },
               {
-                "id": "state_2_write",
-                "puts": [],
-                "stateWrite": true,
-                "takes": [],
+                "id": "state_5_write",
                 "type": "CHANNEL",
-                "value": []
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
               }
-            ],
-            "id": "state_2",
-            "type": "STATE",
-            "value": 2
+            ]
           }
-        ],
-        "id": "myView_1",
-        "name": "myView",
-        "type": "RIEW",
-        "viewData": {
-          "a": "b"
-        }
+        ]
       },
       {
         "id": "CCC",
-        "puts": [],
-        "takes": [],
         "type": "CHANNEL",
-        "value": []
+        "value": "<circular>",
+        "puts": [],
+        "takes": []
       }
     ]
   },
   {
+    "who": {
+      "id": "UUU",
+      "type": "CHANNEL",
+      "value": [],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_ADDED",
     "items": [
       {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b"
+        },
         "children": [
           {
-            "id": "myView_1_view",
-            "puts": [],
-            "takes": [],
+            "id": "channel_view_myView_2",
             "type": "CHANNEL",
             "value": [
               {
                 "a": "b"
               }
-            ]
+            ],
+            "puts": [],
+            "takes": []
           },
           {
-            "id": "myView_1_props",
-            "puts": [],
-            "takes": [],
+            "id": "channel_props_myView_3",
             "type": "CHANNEL",
             "value": [
               "<circular>"
-            ]
+            ],
+            "puts": [],
+            "takes": []
           },
           {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 2,
             "children": [
               {
-                "id": "state_2_read",
-                "puts": [],
-                "stateRead": true,
-                "takes": [],
+                "id": "state_5_read",
                 "type": "CHANNEL",
                 "value": [
                   2
-                ]
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
               },
               {
                 "id": "CCC",
-                "puts": [],
-                "stateRead": true,
-                "takes": [],
                 "type": "CHANNEL",
                 "value": [
                   "Value: 2"
-                ]
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
               },
               {
-                "id": "state_2_write",
-                "puts": [],
-                "stateWrite": true,
-                "takes": [],
+                "id": "state_5_write",
                 "type": "CHANNEL",
-                "value": []
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
               }
-            ],
-            "id": "state_2",
-            "type": "STATE",
-            "value": 2
+            ]
           }
-        ],
-        "id": "myView_1",
-        "name": "myView",
-        "type": "RIEW",
-        "viewData": {
-          "a": "b"
-        }
+        ]
       },
       {
         "id": "UUU",
-        "puts": [],
-        "takes": [],
         "type": "CHANNEL",
-        "value": []
+        "value": "<circular>",
+        "puts": [],
+        "takes": []
       }
     ]
   },
   {
+    "who": {
+      "id": "routine_RRR_4",
+      "type": "ROUTINE",
+      "name": "RRR"
+    },
+    "what": "GRID_ITEM_ADDED",
     "items": [
       {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 2",
+          "update": "function update()"
+        },
         "children": [
           {
-            "id": "myView_1_view",
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "update": "function update()"
+              }
+            ],
             "puts": [],
-            "takes": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "a": "b"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 2,
+            "children": [
+              {
+                "id": "state_5_read",
+                "type": "CHANNEL",
+                "value": [
+                  2
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "CCC",
+                "type": "CHANNEL",
+                "value": [
+                  "Value: 2"
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "state_5_write",
+                "type": "CHANNEL",
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              },
+              {
+                "id": "UUU",
+                "type": "CHANNEL",
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "routine_RRR_4",
+        "type": "ROUTINE",
+        "name": "RRR"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "routine_transform_6",
+      "type": "ROUTINE",
+      "name": "transform"
+    },
+    "what": "GRID_ITEM_ADDED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 5",
+          "update": "function update()",
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
             "type": "CHANNEL",
             "value": [
               {
                 "value": "Value: 5"
               }
-            ]
+            ],
+            "puts": [],
+            "takes": []
           },
           {
-            "id": "myView_1_props",
-            "puts": [],
-            "takes": [],
+            "id": "channel_props_myView_3",
             "type": "CHANNEL",
             "value": [
               {
                 "c": "d"
               }
-            ]
+            ],
+            "puts": [],
+            "takes": []
           },
           {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 5,
             "children": [
               {
-                "id": "state_2_read",
-                "puts": [],
-                "stateRead": true,
-                "takes": [],
+                "id": "state_5_read",
                 "type": "CHANNEL",
                 "value": [
                   5
-                ]
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
               },
               {
                 "id": "CCC",
-                "puts": [],
-                "stateRead": true,
-                "takes": [],
                 "type": "CHANNEL",
                 "value": [
                   "Value: 5"
-                ]
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
               },
               {
-                "id": "state_2_write",
-                "puts": [],
-                "stateWrite": true,
-                "takes": [],
+                "id": "state_5_write",
                 "type": "CHANNEL",
-                "value": []
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
               },
               {
                 "id": "UUU",
-                "puts": [],
-                "stateWrite": true,
-                "takes": [],
                 "type": "CHANNEL",
                 "value": [
                   3
-                ]
+                ],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
               }
-            ],
-            "id": "state_2",
-            "type": "STATE",
-            "value": 5
+            ]
+          },
+          {
+            "id": "routine_RRR_4",
+            "type": "ROUTINE",
+            "name": "RRR"
           }
-        ],
-        "id": "myView_1",
+        ]
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "YYY",
+      "type": "CHANNEL",
+      "value": [],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_ADDED",
+    "items": [
+      {
+        "id": "riew_myView_1",
         "name": "myView",
         "type": "RIEW",
         "viewData": {
           "a": "b",
-          "c": "d",
-          "pointless": "function pointless()",
+          "value": "Value: 5",
           "update": "function update()",
-          "value": "Value: 5"
-        }
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "value": "Value: 5"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 5,
+            "children": [
+              {
+                "id": "state_5_read",
+                "type": "CHANNEL",
+                "value": [
+                  5
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "CCC",
+                "type": "CHANNEL",
+                "value": [
+                  "Value: 5"
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "state_5_write",
+                "type": "CHANNEL",
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              },
+              {
+                "id": "UUU",
+                "type": "CHANNEL",
+                "value": [
+                  3
+                ],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              }
+            ]
+          },
+          {
+            "id": "routine_RRR_4",
+            "type": "ROUTINE",
+            "name": "RRR"
+          }
+        ]
       },
       {
         "id": "YYY",
-        "puts": [],
-        "takes": [],
         "type": "CHANNEL",
-        "value": []
+        "value": "<circular>",
+        "puts": [],
+        "takes": []
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "state_5_read",
+      "type": "CHANNEL",
+      "value": [
+        5
+      ],
+      "puts": [],
+      "takes": [],
+      "stateRead": true
+    },
+    "what": "GRID_ITEM_REMOVED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 5",
+          "update": "function update()",
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "value": "Value: 5"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 5,
+            "children": [
+              {
+                "id": "state_5_read",
+                "type": "CHANNEL",
+                "value": "<circular>",
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "CCC",
+                "type": "CHANNEL",
+                "value": [
+                  "Value: 5"
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "state_5_write",
+                "type": "CHANNEL",
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              },
+              {
+                "id": "UUU",
+                "type": "CHANNEL",
+                "value": [
+                  3
+                ],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              }
+            ]
+          },
+          {
+            "id": "routine_RRR_4",
+            "type": "ROUTINE",
+            "name": "RRR"
+          }
+        ]
+      },
+      {
+        "id": "YYY",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [
+          "Hey"
+        ],
+        "takes": []
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "CCC",
+      "type": "CHANNEL",
+      "value": [
+        "Value: 5"
+      ],
+      "puts": [],
+      "takes": [],
+      "stateRead": true
+    },
+    "what": "GRID_ITEM_REMOVED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 5",
+          "update": "function update()",
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "value": "Value: 5"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 5,
+            "children": [
+              {
+                "id": "state_5_read",
+                "type": "CHANNEL",
+                "value": [
+                  5
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "CCC",
+                "type": "CHANNEL",
+                "value": "<circular>",
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "state_5_write",
+                "type": "CHANNEL",
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              },
+              {
+                "id": "UUU",
+                "type": "CHANNEL",
+                "value": [
+                  3
+                ],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              }
+            ]
+          },
+          {
+            "id": "routine_RRR_4",
+            "type": "ROUTINE",
+            "name": "RRR"
+          }
+        ]
+      },
+      {
+        "id": "YYY",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [
+          "Hey"
+        ],
+        "takes": []
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "state_5_write",
+      "type": "CHANNEL",
+      "value": [],
+      "puts": [],
+      "takes": [],
+      "stateWrite": true
+    },
+    "what": "GRID_ITEM_REMOVED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 5",
+          "update": "function update()",
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "value": "Value: 5"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 5,
+            "children": [
+              {
+                "id": "state_5_read",
+                "type": "CHANNEL",
+                "value": [
+                  5
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "CCC",
+                "type": "CHANNEL",
+                "value": [
+                  "Value: 5"
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "state_5_write",
+                "type": "CHANNEL",
+                "value": "<circular>",
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              },
+              {
+                "id": "UUU",
+                "type": "CHANNEL",
+                "value": [
+                  3
+                ],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              }
+            ]
+          },
+          {
+            "id": "routine_RRR_4",
+            "type": "ROUTINE",
+            "name": "RRR"
+          }
+        ]
+      },
+      {
+        "id": "YYY",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [
+          "Hey"
+        ],
+        "takes": []
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "UUU",
+      "type": "CHANNEL",
+      "value": [
+        3
+      ],
+      "puts": [],
+      "takes": [],
+      "stateWrite": true
+    },
+    "what": "GRID_ITEM_REMOVED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 5",
+          "update": "function update()",
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "value": "Value: 5"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "state_5",
+            "type": "STATE",
+            "value": 5,
+            "children": [
+              {
+                "id": "state_5_read",
+                "type": "CHANNEL",
+                "value": [
+                  5
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "CCC",
+                "type": "CHANNEL",
+                "value": [
+                  "Value: 5"
+                ],
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "state_5_write",
+                "type": "CHANNEL",
+                "value": [],
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              },
+              {
+                "id": "UUU",
+                "type": "CHANNEL",
+                "value": "<circular>",
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              }
+            ]
+          },
+          {
+            "id": "routine_RRR_4",
+            "type": "ROUTINE",
+            "name": "RRR"
+          }
+        ]
+      },
+      {
+        "id": "YYY",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [
+          "Hey"
+        ],
+        "takes": []
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "state_5",
+      "type": "STATE",
+      "children": [
+        {
+          "id": "state_5_read",
+          "type": "CHANNEL",
+          "value": [
+            5
+          ],
+          "puts": [],
+          "takes": [],
+          "stateRead": true
+        },
+        {
+          "id": "CCC",
+          "type": "CHANNEL",
+          "value": [
+            "Value: 5"
+          ],
+          "puts": [],
+          "takes": [],
+          "stateRead": true
+        },
+        {
+          "id": "state_5_write",
+          "type": "CHANNEL",
+          "value": [],
+          "puts": [],
+          "takes": [],
+          "stateWrite": true
+        },
+        {
+          "id": "UUU",
+          "type": "CHANNEL",
+          "value": [
+            3
+          ],
+          "puts": [],
+          "takes": [],
+          "stateWrite": true
+        }
+      ]
+    },
+    "what": "GRID_ITEM_REMOVED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 5",
+          "update": "function update()",
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_myView_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "value": "Value: 5"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_myView_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "state_5",
+            "type": "STATE",
+            "children": [
+              {
+                "id": "state_5_read",
+                "type": "CHANNEL",
+                "value": "<circular>",
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "CCC",
+                "type": "CHANNEL",
+                "value": "<circular>",
+                "puts": [],
+                "takes": [],
+                "stateRead": true
+              },
+              {
+                "id": "state_5_write",
+                "type": "CHANNEL",
+                "value": "<circular>",
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              },
+              {
+                "id": "UUU",
+                "type": "CHANNEL",
+                "value": "<circular>",
+                "puts": [],
+                "takes": [],
+                "stateWrite": true
+              }
+            ]
+          },
+          {
+            "id": "routine_RRR_4",
+            "type": "ROUTINE",
+            "name": "RRR"
+          }
+        ]
+      },
+      {
+        "id": "YYY",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [
+          "Hey"
+        ],
+        "takes": []
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "channel_props_myView_3",
+      "type": "CHANNEL",
+      "value": [
+        {
+          "c": "d"
+        }
+      ],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_REMOVED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 5",
+          "update": "function update()",
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": []
+      },
+      {
+        "id": "channel_view_myView_2",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "value": "Value: 5"
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      {
+        "id": "YYY",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [
+          "Hey"
+        ],
+        "takes": []
+      },
+      {
+        "id": "routine_RRR_4",
+        "type": "ROUTINE",
+        "name": "RRR"
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "channel_view_myView_2",
+      "type": "CHANNEL",
+      "value": [
+        {
+          "value": "Value: 5"
+        }
+      ],
+      "puts": [],
+      "takes": []
+    },
+    "what": "GRID_ITEM_REMOVED",
+    "items": [
+      {
+        "id": "riew_myView_1",
+        "name": "myView",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "value": "Value: 5",
+          "update": "function update()",
+          "pointless": "function pointless()",
+          "c": "d"
+        },
+        "children": []
+      },
+      {
+        "id": "YYY",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [
+          "Hey"
+        ],
+        "takes": []
+      },
+      {
+        "id": "routine_RRR_4",
+        "type": "ROUTINE",
+        "name": "RRR"
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
+      }
+    ]
+  },
+  {
+    "who": {
+      "id": "riew_myView_1",
+      "name": "myView",
+      "type": "RIEW",
+      "viewData": {
+        "a": "b",
+        "value": "Value: 5",
+        "update": "function update()",
+        "pointless": "function pointless()",
+        "c": "d"
+      },
+      "children": []
+    },
+    "what": "GRID_ITEM_REMOVED",
+    "items": [
+      {
+        "id": "YYY",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [
+          "Hey"
+        ],
+        "takes": []
+      },
+      {
+        "id": "routine_RRR_4",
+        "type": "ROUTINE",
+        "name": "RRR"
+      },
+      {
+        "id": "routine_transform_6",
+        "type": "ROUTINE",
+        "name": "transform"
       }
     ]
   }

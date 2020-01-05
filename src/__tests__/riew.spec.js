@@ -101,7 +101,7 @@ describe('Given the `riew` factory function', () => {
       r.mount();
       await delay(2);
       r.unmount();
-      await delay(4);
+      await delay(5);
       expect(spy).not.toBeCalled();
     });
   });
