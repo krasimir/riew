@@ -43,6 +43,7 @@ export function sput(channels, item, callback = noop) {
           }
         });
       });
+      if (__DEV__) logger.snapshot(channel, 'CHANNEL_PUT', item);
     }
   });
 }
@@ -88,7 +89,14 @@ export function stake(channels, callback, options) {
       if (transform) {
         try {
           if (isGeneratorFunction(transform)) {
-            go(transform, v => (callback(v), done()), ...result);
+            go(
+              transform,
+              v => {
+                callback(v);
+                done();
+              },
+              ...result
+            );
           } else {
             callback(transform(...result));
             done();
@@ -135,7 +143,10 @@ export function stake(channels, callback, options) {
       }
     } else {
       // taking
-      channel.buff.take(r => takeDone(r, idx));
+      channel.buff.take(r => {
+        takeDone(r, idx);
+        if (__DEV__) logger.snapshot(channel, 'CHANNEL_TAKE', r);
+      });
     }
     return subscription;
   });
@@ -187,6 +198,7 @@ export function close(channels) {
     grid.remove(ch);
     ch.subscribers = [];
     CHANNELS.del(ch.id);
+    if (__DEV__) logger.snapshot(ch, 'CHANNEL_CLOSED');
   });
   return { op: NOOP };
 }
@@ -198,6 +210,7 @@ export function channelReset(channels) {
   channels.forEach(ch => {
     ch.state(OPEN);
     ch.buff.reset();
+    if (__DEV__) logger.snapshot(ch, 'CHANNEL_RESET');
   });
   return { op: NOOP };
 }
@@ -252,10 +265,13 @@ export function go(func, done = () => {}, ...args) {
     stop() {
       state = STOPPED;
       this.children.forEach(r => r.stop());
+      grid.remove(api);
+      if (__DEV__) logger.snapshot(api, 'ROUTINE_STOPPED');
     },
     rerun() {
       gen = func(...args);
       next();
+      if (__DEV__) logger.snapshot(this, 'ROUTINE_RERUN');
     },
   };
   const addSubRoutine = r => api.children.push(r);
@@ -283,8 +299,7 @@ export function go(func, done = () => {}, ...args) {
         setTimeout(next, i.value.ms);
         break;
       case STOP:
-        state = STOPPED;
-        grid.remove(api);
+        api.stop();
         break;
       case READ:
         sread(i.value.channels, next, i.value.options);
@@ -302,18 +317,24 @@ export function go(func, done = () => {}, ...args) {
   }
 
   function next(value) {
-    if (state === STOPPED) {
-      grid.remove(api);
-      return;
-    }
+    if (state === STOPPED) return;
     const step = gen.next(value);
     if (step.done === true) {
       if (done) done(step.value);
       if (step.value && step.value['@go'] === true) {
         api.rerun();
-      }
+      } else if (__DEV__) logger.snapshot(api, 'ROUTINE_END');
     } else if (isPromise(step.value)) {
-      step.value.then(next).catch(err => processGeneratorStep(gen.throw(err)));
+      if (__DEV__) logger.snapshot(api, 'ROUTINE_ASYNC_BEGIN');
+      step.value
+        .then((...asyncResult) => {
+          if (__DEV__) logger.snapshot(api, 'ROUTINE_ASYNC_END');
+          next(...asyncResult);
+        })
+        .catch(err => {
+          if (__DEV__) logger.snapshot(api, 'ROUTINE_ASYNC_ERROR', err);
+          processGeneratorStep(gen.throw(err));
+        });
     } else {
       processGeneratorStep(step);
     }
@@ -321,6 +342,7 @@ export function go(func, done = () => {}, ...args) {
 
   next();
   grid.add(api);
+  if (__DEV__) logger.snapshot(api, 'ROUTINE_STARTED');
 
   return api;
 }

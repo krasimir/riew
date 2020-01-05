@@ -92,7 +92,7 @@ describe('Given the logger', () => {
         type: 'ROUTINE',
       });
     });
-    fit('should create proper number of frames', async () => {
+    it('should create proper number of frames', async () => {
       await exercise();
       expect(
         logger.frames().map(({ what, who }) => `${who.id} ${what}`)
@@ -118,7 +118,7 @@ describe('Given the logger', () => {
         'riew_myView_1 GRID_ITEM_REMOVED',
       ]);
     });
-    it('should return a snapshot containing the status of the system', async () => {
+    xit('should return a snapshot containing the status of the system', async () => {
       await exercise();
       // 1. Uncomment the line below if this test fails.
       // 2. Run the test

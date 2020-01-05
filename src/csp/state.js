@@ -8,10 +8,11 @@ import {
   isChannel,
   call,
   grid,
+  logger,
 } from '../index';
 import { getId, isGeneratorFunction } from '../utils';
 
-export function createState(...args) {
+export function state(...args) {
   let value = args[0];
   const id = getId('state');
   const readChannels = [];
@@ -70,6 +71,7 @@ export function createState(...args) {
         v => {
           value = v;
           readChannels.forEach(r => runSelector(r, value));
+          if (__DEV__) logger.snapshot(api, 'STATE_VALUE_SET', value);
         },
         {
           *transform(payload) {
@@ -94,6 +96,7 @@ export function createState(...args) {
       writeChannels.forEach(({ ch }) => sclose(ch));
       value = undefined;
       grid.remove(api);
+      if (__DEV__) logger.snapshot(api, 'STATE_DESTROYED');
       return this;
     },
     get() {
@@ -104,12 +107,16 @@ export function createState(...args) {
       readChannels.forEach(r => {
         runSelector(r, value);
       });
+      if (__DEV__) logger.snapshot(api, 'STATE_VALUE_SET', newValue);
       return newValue;
     },
   };
 
   api.select(api.READ);
   api.mutate(api.WRITE);
+
+  grid.add(api);
+  if (__DEV__) logger.snapshot(api, 'STATE_CREATED');
 
   return api;
 }

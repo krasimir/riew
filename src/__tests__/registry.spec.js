@@ -1,6 +1,6 @@
 import { use, register, reset } from '../index';
 
-describe('Given the harvester', () => {
+describe('Given the registry', () => {
   beforeEach(() => {
     reset();
   });

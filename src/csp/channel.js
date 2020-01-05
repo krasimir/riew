@@ -1,6 +1,6 @@
 import { getId } from '../utils';
 import { OPEN } from './constants';
-import { CHANNELS } from '../index';
+import { CHANNELS, logger, grid } from '../index';
 import buffer from './buffer';
 
 function normalizeChannelArguments(args) {
@@ -22,12 +22,12 @@ function normalizeChannelArguments(args) {
   return [id, buff];
 }
 
-export function createChannel(...args) {
+export function chan(...args) {
   let state = OPEN;
   const [id, buff] = normalizeChannelArguments(args);
 
   if (CHANNELS.exists(id)) {
-    return [CHANNELS.get(id), true];
+    return CHANNELS.get(id);
   }
 
   const api = CHANNELS.set(id, {
@@ -43,6 +43,8 @@ export function createChannel(...args) {
     return state;
   };
   api.value = () => buff.getValue();
+  grid.add(api);
+  if (__DEV__) logger.snapshot(api, 'CHANNEL_CREATED');
 
-  return [api, false];
+  return api;
 }

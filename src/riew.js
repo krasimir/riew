@@ -55,13 +55,13 @@ const Renderer = function(pushDataToView) {
   };
 };
 
-export default function createRiew(viewFunc, ...routines) {
+export function riew(viewFunc, ...routines) {
   const name = getFuncName(viewFunc);
   const renderer = Renderer(value => {
     viewFunc(value);
-    if (__DEV__) logger.snapshot(riew, 'RIEW_RENDERED', value);
+    if (__DEV__) logger.snapshot(api, 'RIEW_RENDERED', value);
   });
-  const riew = {
+  const api = {
     id: getId(`riew_${name}`),
     name,
     '@riew': true,
@@ -73,7 +73,7 @@ export default function createRiew(viewFunc, ...routines) {
   const subscriptions = {};
   const state = function(...args) {
     const s = State(...args);
-    riew.children.push(s);
+    api.children.push(s);
     return s;
   };
   const subscribe = function(to, func) {
@@ -85,8 +85,8 @@ export default function createRiew(viewFunc, ...routines) {
   const VIEW_CHANNEL = getId(`channel_view_${name}`);
   const PROPS_CHANNEL = getId(`channel_props_${name}`);
 
-  riew.children.push(Channel(VIEW_CHANNEL, buffer.divorced()));
-  riew.children.push(Channel(PROPS_CHANNEL, buffer.divorced()));
+  api.children.push(Channel(VIEW_CHANNEL, buffer.divorced()));
+  api.children.push(Channel(PROPS_CHANNEL, buffer.divorced()));
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
@@ -104,12 +104,12 @@ export default function createRiew(viewFunc, ...routines) {
       return obj;
     }, {});
 
-  riew.mount = function(props = {}) {
+  api.mount = function(props = {}) {
     requireObject(props);
     sput(PROPS_CHANNEL, props);
     subscribe(PROPS_CHANNEL, newProps => sput(VIEW_CHANNEL, newProps));
     subscribe(VIEW_CHANNEL, renderer.push);
-    riew.children = riew.children.concat(
+    api.children = api.children.concat(
       routines.map(r =>
         go(
           r,
@@ -133,46 +133,46 @@ export default function createRiew(viewFunc, ...routines) {
     if (!isObjectEmpty(externals)) {
       sput(VIEW_CHANNEL, normalizeRenderData(externals));
     }
-    if (__DEV__) logger.snapshot(riew, 'RIEW_MOUNTED');
+    if (__DEV__) logger.snapshot(api, 'RIEW_MOUNTED');
   };
 
-  riew.unmount = function() {
+  api.unmount = function() {
     cleanups.forEach(c => c());
     cleanups = [];
-    riew.children.forEach(c => {
+    api.children.forEach(c => {
       if (isState(c)) {
         c.destroy();
       } else if (isRoutine(c)) {
         c.stop();
       }
     });
-    riew.children = [];
+    api.children = [];
     renderer.destroy();
     close(PROPS_CHANNEL);
     close(VIEW_CHANNEL);
-    grid.remove(riew);
-    if (__DEV__) logger.snapshot(riew, 'RIEW_UNMOUNTED');
+    grid.remove(api);
+    if (__DEV__) logger.snapshot(api, 'RIEW_UNMOUNTED');
   };
 
-  riew.update = function(props = {}) {
+  api.update = function(props = {}) {
     requireObject(props);
     sput(PROPS_CHANNEL, props);
-    if (__DEV__) logger.snapshot(riew, 'RIEW_UPDATED');
+    if (__DEV__) logger.snapshot(api, 'RIEW_UPDATED', props);
   };
 
-  riew.with = (...maps) => {
-    riew.__setExternals(maps);
-    return riew;
+  api.with = (...maps) => {
+    api.__setExternals(maps);
+    return api;
   };
 
-  riew.test = map => {
-    const newInstance = createRiew(viewFunc, ...routines);
+  api.test = map => {
+    const newInstance = riew(viewFunc, ...routines);
 
     newInstance.__setExternals([map]);
     return newInstance;
   };
 
-  riew.__setExternals = maps => {
+  api.__setExternals = maps => {
     const reducedMaps = maps.reduce((res, item) => {
       if (typeof item === 'string') {
         res = { ...res, [item]: use(item) };
@@ -184,5 +184,8 @@ export default function createRiew(viewFunc, ...routines) {
     externals = { ...externals, ...reducedMaps };
   };
 
-  return riew;
+  grid.add(api);
+  if (__DEV__) logger.snapshot(api, 'RIEW_CREATED');
+
+  return api;
 }
