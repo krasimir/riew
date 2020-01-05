@@ -59,7 +59,7 @@ export function riew(viewFunc, ...routines) {
   const name = getFuncName(viewFunc);
   const renderer = Renderer(value => {
     viewFunc(value);
-    if (__DEV__) logger.snapshot(api, 'RIEW_RENDERED', value);
+    if (__DEV__) logger.log(api, 'RIEW_RENDERED', value);
   });
   const api = {
     id: getId(`riew_${name}`),
@@ -133,7 +133,7 @@ export function riew(viewFunc, ...routines) {
     if (!isObjectEmpty(externals)) {
       sput(VIEW_CHANNEL, normalizeRenderData(externals));
     }
-    if (__DEV__) logger.snapshot(api, 'RIEW_MOUNTED');
+    if (__DEV__) logger.log(api, 'RIEW_MOUNTED', props);
   };
 
   api.unmount = function() {
@@ -151,13 +151,13 @@ export function riew(viewFunc, ...routines) {
     close(PROPS_CHANNEL);
     close(VIEW_CHANNEL);
     grid.remove(api);
-    if (__DEV__) logger.snapshot(api, 'RIEW_UNMOUNTED');
+    if (__DEV__) logger.log(api, 'RIEW_UNMOUNTED');
   };
 
   api.update = function(props = {}) {
     requireObject(props);
     sput(PROPS_CHANNEL, props);
-    if (__DEV__) logger.snapshot(api, 'RIEW_UPDATED', props);
+    if (__DEV__) logger.log(api, 'RIEW_UPDATED', props);
   };
 
   api.with = (...maps) => {
@@ -185,7 +185,7 @@ export function riew(viewFunc, ...routines) {
   };
 
   grid.add(api);
-  if (__DEV__) logger.snapshot(api, 'RIEW_CREATED');
+  if (__DEV__) logger.log(api, 'RIEW_CREATED');
 
   return api;
 }

@@ -21,7 +21,7 @@ function normalizeRiew(r) {
     id: r.id,
     name: r.name,
     type: RIEW,
-    viewData: r.renderer.data(),
+    viewData: sanitize(r.renderer.data()),
     children: r.children.map(child => {
       if (isState(child)) {
         return normalizeState(child);
@@ -40,7 +40,7 @@ function normalizeState(s) {
   return {
     id: s.id,
     type: STATE,
-    value: s.get(),
+    value: sanitize(s.get()),
     children: s.children().map(child => {
       if (isChannel(child)) {
         return normalizeChannel(child);
@@ -53,7 +53,7 @@ function normalizeChannel(c) {
   const o = {
     id: c.id,
     type: CHANNEL,
-    value: c.value(),
+    value: sanitize(c.value()),
     puts: c.buff.puts.map(({ item }) => item),
     takes: c.buff.takes.map(() => 'TAKE'),
   };
@@ -72,27 +72,29 @@ function normalizeRoutine(r) {
     name: r.name,
   };
 }
-function normalizeNode(node) {
-  if (isRiew(node)) {
-    return normalizeRiew(node);
-  }
-  if (isState(node)) {
-    return normalizeState(node);
-  }
-  if (isChannel(node)) {
-    return normalizeChannel(node);
-  }
-  if (isRoutine(node)) {
-    return normalizeRoutine(node);
-  }
-  console.warn('Riew logger normalizing node: unrecognized entity type', node);
-}
 
 export default function Logger() {
   const api = {};
   let frames = [];
+  let data = [];
+  let inProgress = false;
 
-  api.snapshot = (who, what, meta) => {
+  api.log = (who, what, meta) => {
+    data.push({
+      who: who.id,
+      what,
+      meta: sanitize(meta),
+    });
+    if (!inProgress) {
+      inProgress = true;
+      Promise.resolve().then(() => {
+        api.snapshot(data);
+        inProgress = false;
+        data = [];
+      });
+    }
+  };
+  api.snapshot = actions => {
     if (frames.length >= MAX_SNAPSHOTS) {
       frames.shift();
     }
@@ -129,10 +131,8 @@ export default function Logger() {
       ro => !riews.find(r => r.children.find(({ id }) => ro.id === id))
     );
     const snapshot = sanitize({
-      who: who ? sanitize(normalizeNode(who)) : undefined,
-      what,
-      meta,
-      items: [
+      actions,
+      state: [
         ...riews,
         ...filteredStates,
         ...filteredChannels,

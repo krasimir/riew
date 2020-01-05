@@ -2,13 +2,15 @@
 import clipboardy from 'clipboardy'; // <-- do not remove, used below
 import { delay } from '../__helpers__';
 import { logger, riew, sput, reset, chan, state, go, sleep } from '../index';
-import expectation from './data/logger.spec.data.json';
+import expectation1 from './data/logger.spec.data1.json';
+import expectation2 from './data/logger.spec.data2.json';
+import expectationRiew from './data/logger.spec.riew.json';
 
 function findItemAllFrames(itemId) {
   const filteredFrames = logger
     .frames()
-    .filter(({ items }) => items.find(({ id }) => id === itemId))
-    .map(({ items }) => items.find(({ id }) => id === itemId));
+    .filter(({ state }) => state.find(({ id }) => id === itemId))
+    .map(({ state }) => state.find(({ id }) => id === itemId));
 
   if (filteredFrames.length > 0) {
     return filteredFrames;
@@ -57,36 +59,40 @@ async function exercise() {
 }
 
 describe('Given the logger', () => {
-  describe('and we call the `snapshot` method', () => {
-    beforeEach(() => {
-      reset();
-    });
-    it('should create a snapshot that contains a riew', () => {
+  beforeEach(() => {
+    reset();
+  });
+  describe('and we call the `frame` method', () => {
+    it('should create a snapshot that contains a riew', async () => {
       const r = riew(() => {});
+      await delay();
       expect(findItem(r.id)).toMatchObject({
         id: r.id,
         type: 'RIEW',
       });
     });
-    it('should create a snapshot that contains a channel', () => {
+    it('should create a snapshot that contains a channel', async () => {
       const c = chan('FOO');
+      await delay();
       expect(findItem(c.id)).toMatchObject({
         id: 'FOO',
         type: 'CHANNEL',
       });
     });
-    it('should create a snapshot that contains a state', () => {
+    it('should create a snapshot that contains a state', async () => {
       const s = state(42);
+      await delay();
       expect(findItem(s.id)).toMatchObject({
         id: s.id,
         type: 'STATE',
         value: 42,
       });
     });
-    it('should create a snapshot that contains a routine', () => {
+    it('should create a snapshot that contains a routine', async () => {
       const r = go(function* Test() {
         yield sleep(20);
       });
+      await delay(30);
       expect(findItem(r.id)).toMatchObject({
         id: r.id,
         type: 'ROUTINE',
@@ -94,39 +100,41 @@ describe('Given the logger', () => {
     });
     it('should create proper number of frames', async () => {
       await exercise();
-      expect(
-        logger.frames().map(({ what, who }) => `${who.id} ${what}`)
-      ).toStrictEqual([
-        'channel_view_myView_2 GRID_ITEM_ADDED',
-        'channel_props_myView_3 GRID_ITEM_ADDED',
-        'riew_myView_1 GRID_ITEM_ADDED',
-        'state_5_read GRID_ITEM_ADDED',
-        'state_5_write GRID_ITEM_ADDED',
-        'state_5 GRID_ITEM_ADDED',
-        'CCC GRID_ITEM_ADDED',
-        'UUU GRID_ITEM_ADDED',
-        'routine_RRR_4 GRID_ITEM_ADDED',
-        'routine_transform_6 GRID_ITEM_ADDED',
-        'YYY GRID_ITEM_ADDED',
-        'state_5_read GRID_ITEM_REMOVED',
-        'CCC GRID_ITEM_REMOVED',
-        'state_5_write GRID_ITEM_REMOVED',
-        'UUU GRID_ITEM_REMOVED',
-        'state_5 GRID_ITEM_REMOVED',
-        'channel_props_myView_3 GRID_ITEM_REMOVED',
-        'channel_view_myView_2 GRID_ITEM_REMOVED',
-        'riew_myView_1 GRID_ITEM_REMOVED',
-      ]);
-    });
-    xit('should return a snapshot containing the status of the system', async () => {
-      await exercise();
+      const logs = logger.frames().map(frame => frame.actions);
       // 1. Uncomment the line below if this test fails.
       // 2. Run the test
       // 3. In the clipboard you'll have all the frames.
       // 4. Make sure that the data is ok and paste it in logger.spec.data.json
       // ------------------------------------------------------
-      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
-      expect(logger.frames()).toStrictEqual(expectation);
+      // clipboardy.writeSync(JSON.stringify(logs, null, 2));
+      expect(logs).toStrictEqual(expectation1);
+    });
+    it('should return a snapshot containing the status of the system', async () => {
+      await exercise();
+      await delay();
+      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      expect(logger.frames()).toStrictEqual(expectation2);
+    });
+  });
+
+  // riew
+
+  describe('when we have a riew', async () => {
+    fit(`should log
+      * RIEW_RENDERED
+      * RIEW_MOUNTED
+      * RIEW_UNMOUNTED
+      * RIEW_UPDATED
+      * RIEW_CREATED
+      `, async () => {
+      const r = riew(() => {});
+      r.mount({ a: 'b' });
+      r.update({ c: 'd' });
+      await delay();
+      r.unmount();
+      await delay();
+      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      expect(logger.frames()).toStrictEqual(expectationRiew);
     });
   });
 });

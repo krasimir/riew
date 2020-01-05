@@ -44,7 +44,7 @@ export function chan(...args) {
   };
   api.value = () => buff.getValue();
   grid.add(api);
-  if (__DEV__) logger.snapshot(api, 'CHANNEL_CREATED');
+  if (__DEV__) logger.log(api, 'CHANNEL_CREATED');
 
   return api;
 }

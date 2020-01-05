@@ -1,0 +1,165 @@
+[
+  {
+    "actions": [
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_CREATED",
+        "meta": null
+      },
+      {
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_CREATED",
+        "meta": null
+      },
+      {
+        "who": "riew_unknown_1",
+        "what": "RIEW_CREATED",
+        "meta": null
+      },
+      {
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_PUT",
+        "meta": {
+          "a": "b"
+        }
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_PUT",
+        "meta": {
+          "a": "b"
+        }
+      },
+      {
+        "who": "riew_unknown_1",
+        "what": "RIEW_MOUNTED",
+        "meta": {
+          "a": "b"
+        }
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_PUT",
+        "meta": {
+          "c": "d"
+        }
+      },
+      {
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_PUT",
+        "meta": {
+          "c": "d"
+        }
+      },
+      {
+        "who": "riew_unknown_1",
+        "what": "RIEW_UPDATED",
+        "meta": {
+          "c": "d"
+        }
+      }
+    ],
+    "state": [
+      {
+        "id": "riew_unknown_1",
+        "name": "unknown",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_unknown_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_unknown_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "actions": [
+      {
+        "who": "riew_unknown_1",
+        "what": "RIEW_RENDERED",
+        "meta": {
+          "a": "b",
+          "c": "d"
+        }
+      }
+    ],
+    "state": [
+      {
+        "id": "riew_unknown_1",
+        "name": "unknown",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "c": "d"
+        },
+        "children": [
+          {
+            "id": "channel_view_unknown_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "channel_props_unknown_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "c": "d"
+              }
+            ],
+            "puts": [],
+            "takes": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "actions": [
+      {
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_CLOSED",
+        "meta": null
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_CLOSED",
+        "meta": null
+      },
+      {
+        "who": "riew_unknown_1",
+        "what": "RIEW_UNMOUNTED",
+        "meta": null
+      }
+    ],
+    "state": []
+  }
+]

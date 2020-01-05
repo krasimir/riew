@@ -1,0 +1,259 @@
+[
+  [
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": "channel_props_myView_3",
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": "riew_myView_1",
+      "what": "RIEW_CREATED",
+      "meta": null
+    },
+    {
+      "who": "channel_props_myView_3",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "a": "b"
+      }
+    },
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "a": "b"
+      }
+    },
+    {
+      "who": "state_5_read",
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": "state_5_read",
+      "what": "CHANNEL_PUT",
+      "meta": 2
+    },
+    {
+      "who": "state_5_write",
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": "state_5",
+      "what": "STATE_CREATED",
+      "meta": null
+    },
+    {
+      "who": "CCC",
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": "CCC",
+      "what": "CHANNEL_PUT",
+      "meta": "Value: 2"
+    },
+    {
+      "who": "UUU",
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "value": "Value: 2"
+      }
+    },
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "value": "Value: 2"
+      }
+    },
+    {
+      "who": "CCC",
+      "what": "CHANNEL_TAKE",
+      "meta": "Value: 2"
+    },
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "update": "function update()"
+      }
+    },
+    {
+      "who": "routine_RRR_4",
+      "what": "ROUTINE_END",
+      "meta": null
+    },
+    {
+      "who": "routine_RRR_4",
+      "what": "ROUTINE_STARTED",
+      "meta": null
+    },
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "pointless": "function pointless()"
+      }
+    },
+    {
+      "who": "riew_myView_1",
+      "what": "RIEW_MOUNTED",
+      "meta": null
+    },
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "c": "d"
+      }
+    },
+    {
+      "who": "channel_props_myView_3",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "c": "d"
+      }
+    },
+    {
+      "who": "riew_myView_1",
+      "what": "RIEW_UPDATED",
+      "meta": {
+        "c": "d"
+      }
+    }
+  ],
+  [
+    {
+      "who": "riew_myView_1",
+      "what": "RIEW_RENDERED",
+      "meta": {
+        "a": "b",
+        "value": "Value: 2",
+        "update": "function update()",
+        "pointless": "function pointless()",
+        "c": "d"
+      }
+    }
+  ],
+  [
+    {
+      "who": "state_5_read",
+      "what": "CHANNEL_PUT",
+      "meta": 5
+    },
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_PUT",
+      "meta": {
+        "value": "Value: 5"
+      }
+    },
+    {
+      "who": "CCC",
+      "what": "CHANNEL_PUT",
+      "meta": "Value: 5"
+    },
+    {
+      "who": "state_5",
+      "what": "STATE_VALUE_SET",
+      "meta": 5
+    },
+    {
+      "who": "routine_transform_6",
+      "what": "ROUTINE_END",
+      "meta": null
+    },
+    {
+      "who": "routine_transform_6",
+      "what": "ROUTINE_STARTED",
+      "meta": null
+    },
+    {
+      "who": "UUU",
+      "what": "CHANNEL_PUT",
+      "meta": 3
+    },
+    {
+      "who": "YYY",
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": "YYY",
+      "what": "CHANNEL_PUT",
+      "meta": "Hey"
+    }
+  ],
+  [
+    {
+      "who": "riew_myView_1",
+      "what": "RIEW_RENDERED",
+      "meta": {
+        "a": "b",
+        "value": "Value: 5",
+        "update": "function update()",
+        "pointless": "function pointless()",
+        "c": "d"
+      }
+    }
+  ],
+  [
+    {
+      "who": "state_5_read",
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": "CCC",
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": "state_5_write",
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": "UUU",
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": "state_5",
+      "what": "STATE_DESTROYED",
+      "meta": null
+    },
+    {
+      "who": "routine_RRR_4",
+      "what": "ROUTINE_STOPPED",
+      "meta": null
+    },
+    {
+      "who": "channel_props_myView_3",
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": "channel_view_myView_2",
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": "riew_myView_1",
+      "what": "RIEW_UNMOUNTED",
+      "meta": null
+    }
+  ]
+]
