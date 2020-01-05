@@ -10,12 +10,15 @@ export default function FixedBuffer(size = 0) {
         api.value.push(item);
         callback(true);
       } else {
-        api.puts.push(v => {
-          api.value.push(item);
-          if (api.takes.length > 0) {
-            api.takes.shift()(api.value.shift());
-          }
-          callback(v || true);
+        api.puts.push({
+          callback: v => {
+            api.value.push(item);
+            if (api.takes.length > 0) {
+              api.takes.shift()(api.value.shift());
+            }
+            callback(v || true);
+          },
+          item,
         });
       }
     } else {
@@ -27,7 +30,7 @@ export default function FixedBuffer(size = 0) {
   api.take = callback => {
     if (api.value.length === 0) {
       if (api.puts.length > 0) {
-        api.puts.shift()();
+        api.puts.shift().callback();
         api.take(callback);
       } else {
         api.takes.push(callback);
@@ -35,7 +38,7 @@ export default function FixedBuffer(size = 0) {
     } else {
       const v = api.value.shift();
       if (api.value.length < size && api.puts.length > 0) {
-        api.puts.shift()();
+        api.puts.shift().callback();
       }
       callback(v);
     }

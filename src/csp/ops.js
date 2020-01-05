@@ -182,7 +182,7 @@ export function close(channels) {
   channels.forEach(ch => {
     const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
     ch.state(newState);
-    ch.buff.puts.forEach(p => p(newState));
+    ch.buff.puts.forEach(p => p.callback(newState));
     ch.buff.takes.forEach(t => t(newState));
     grid.remove(ch);
     ch.subscribers = [];
