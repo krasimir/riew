@@ -6,7 +6,6 @@ import {
   reset,
   grid,
   state,
-  read,
   sread,
   CHANNELS,
   sleep,

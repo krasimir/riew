@@ -106,30 +106,33 @@ function FixedBuffer() {
   api.setValue = function (v) {
     return api.value = v;
   };
-  api.put = function (item, callback) {
+  api.put = function (item, _callback) {
     if (api.takes.length === 0) {
       if (api.value.length < size) {
         api.value.push(item);
-        callback(true);
+        _callback(true);
       } else {
-        api.puts.push(function (v) {
-          api.value.push(item);
-          if (api.takes.length > 0) {
-            api.takes.shift()(api.value.shift());
-          }
-          callback(v || true);
+        api.puts.push({
+          callback: function callback(v) {
+            api.value.push(item);
+            if (api.takes.length > 0) {
+              api.takes.shift()(api.value.shift());
+            }
+            _callback(v || true);
+          },
+          item: item
         });
       }
     } else {
       api.value.push(item);
       api.takes.shift()(api.value.shift());
-      callback(true);
+      _callback(true);
     }
   };
   api.take = function (callback) {
     if (api.value.length === 0) {
       if (api.puts.length > 0) {
-        api.puts.shift()();
+        api.puts.shift().callback();
         api.take(callback);
       } else {
         api.takes.push(callback);
@@ -137,7 +140,7 @@ function FixedBuffer() {
     } else {
       var v = api.value.shift();
       if (api.value.length < size && api.puts.length > 0) {
-        api.puts.shift()();
+        api.puts.shift().callback();
       }
       callback(v);
     }
@@ -298,7 +301,7 @@ function createChannel() {
       buff = _normalizeChannelArgu2[1];
 
   if (_index.CHANNELS.exists(id)) {
-    return _index.CHANNELS.get(id);
+    return [_index.CHANNELS.get(id), true];
   }
 
   var api = _index.CHANNELS.set(id, {
@@ -319,10 +322,10 @@ function createChannel() {
     return buff.getValue();
   };
 
-  return api;
+  return [api, false];
 }
 
-},{"../index":14,"../utils":17,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
+},{"../index":14,"../utils":21,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -440,7 +443,7 @@ function _interopRequireDefault(obj) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.isChannel = undefined;
+exports.isStateWriteChannel = exports.isStateReadChannel = exports.isState = exports.isRiew = exports.isChannel = undefined;
 
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
@@ -468,7 +471,7 @@ exports.call = call;
 exports.fork = fork;
 exports.merge = merge;
 exports.timeout = timeout;
-exports.go = go;
+exports.runRoutine = runRoutine;
 exports.sleep = sleep;
 exports.stop = stop;
 
@@ -479,14 +482,6 @@ var _index = require('../index');
 var _utils = require('../utils');
 
 var _utils2 = require('./utils');
-
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
-}
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -583,7 +578,7 @@ function stake(channels, callback, options) {
       if (transform) {
         try {
           if ((0, _utils.isGeneratorFunction)(transform)) {
-            go.apply(undefined, [transform, function (v) {
+            _index.go.apply(undefined, [transform, function (v) {
               return callback(v), done();
             }].concat(_toConsumableArray(result)));
           } else {
@@ -689,7 +684,7 @@ function close(channels) {
     var newState = ch.buff.isEmpty() ? _constants.ENDED : _constants.CLOSED;
     ch.state(newState);
     ch.buff.puts.forEach(function (p) {
-      return p(newState);
+      return p.callback(newState);
     });
     ch.buff.takes.forEach(function (t) {
       return t(newState);
@@ -756,10 +751,22 @@ function timeout(interval) {
 var isChannel = exports.isChannel = function isChannel(ch) {
   return ch && ch['@channel'] === true;
 };
+var isRiew = exports.isRiew = function isRiew(r) {
+  return r && r['@riew'] === true;
+};
+var isState = exports.isState = function isState(s) {
+  return s && s['@state'] === true;
+};
+var isStateReadChannel = exports.isStateReadChannel = function isStateReadChannel(s) {
+  return s && s['@statereadchannel'] === true;
+};
+var isStateWriteChannel = exports.isStateWriteChannel = function isStateWriteChannel(s) {
+  return s && s['@statewritechannel'] === true;
+};
 
 // **************************************************** go/routine
 
-function go(func) {
+function runRoutine(func) {
   for (var _len4 = arguments.length, args = Array(_len4 > 2 ? _len4 - 2 : 0), _key4 = 2; _key4 < _len4; _key4++) {
     args[_key4 - 2] = arguments[_key4];
   }
@@ -771,6 +778,7 @@ function go(func) {
   var state = RUNNING;
 
   var api = {
+    id: 'routine_' + (0, _utils.getId)(),
     children: [],
     stop: function stop() {
       state = STOPPED;
@@ -816,10 +824,10 @@ function go(func) {
         sread(i.value.channels, next, i.value.options);
         break;
       case _constants.CALL_ROUTINE:
-        addSubRoutine(go.apply(undefined, [i.value.routine, next].concat(_toConsumableArray(i.value.args))));
+        addSubRoutine(_index.go.apply(undefined, [i.value.routine, next].concat(_toConsumableArray(i.value.args))));
         break;
       case _constants.FORK_ROUTINE:
-        addSubRoutine(go.apply(undefined, [i.value.routine, function () {}].concat(_toConsumableArray(i.value.args))));
+        addSubRoutine(_index.go.apply(undefined, [i.value.routine, function () {}].concat(_toConsumableArray(i.value.args))));
         next();
         break;
       default:
@@ -848,31 +856,6 @@ function go(func) {
 
   return api;
 }
-go['@go'] = true;
-go.with = function () {
-  for (var _len6 = arguments.length, maps = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
-    maps[_key6] = arguments[_key6];
-  }
-
-  var reducedMaps = maps.reduce(function (res, item) {
-    if (typeof item === 'string') {
-      res = _extends({}, res, _defineProperty({}, item, (0, _index.use)(item)));
-    } else {
-      res = _extends({}, res, item);
-    }
-    return res;
-  }, {});
-  return function (func) {
-    for (var _len7 = arguments.length, args = Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
-      args[_key7 - 2] = arguments[_key7];
-    }
-
-    var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
-
-    args.push(reducedMaps);
-    return go.apply(undefined, [func, done].concat(args));
-  };
-};
 
 function sleep(ms, callback) {
   if (typeof callback === 'function') {
@@ -886,16 +869,13 @@ function stop() {
   return { op: _constants.STOP };
 }
 
-},{"../index":14,"../utils":17,"./constants":7,"./utils":11}],10:[function(require,module,exports){
+},{"../index":14,"../utils":21,"./constants":7,"./utils":11}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.createState = createState;
-exports.isState = isState;
-exports.isStateReadChannel = isStateReadChannel;
-exports.isStateWriteChannel = isStateWriteChannel;
 
 var _index = require('../index');
 
@@ -907,6 +887,8 @@ function createState() {
   var readChannels = [];
   var writeChannels = [];
   var isThereInitialValue = arguments.length > 0;
+  var READ_CHANNEL = id + '_read';
+  var WRITE_CHANNEL = id + '_write';
 
   function handleError(onError) {
     return function (e) {
@@ -937,8 +919,18 @@ function createState() {
   var api = {
     id: id,
     '@state': true,
-    READ: id + '_read',
-    WRITE: id + '_write',
+    children: function children() {
+      return readChannels.map(function (_ref2) {
+        var ch = _ref2.ch;
+        return ch;
+      }).concat(writeChannels.map(function (_ref3) {
+        var ch = _ref3.ch;
+        return ch;
+      }));
+    },
+
+    READ: READ_CHANNEL,
+    WRITE: WRITE_CHANNEL,
     select: function select(c) {
       var selector = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (v) {
         return v;
@@ -1012,12 +1004,12 @@ function createState() {
       return this;
     },
     destroy: function destroy() {
-      readChannels.forEach(function (_ref2) {
-        var ch = _ref2.ch;
+      readChannels.forEach(function (_ref4) {
+        var ch = _ref4.ch;
         return (0, _index.sclose)(ch);
       });
-      writeChannels.forEach(function (_ref3) {
-        var ch = _ref3.ch;
+      writeChannels.forEach(function (_ref5) {
+        var ch = _ref5.ch;
         return (0, _index.sclose)(ch);
       });
       value = undefined;
@@ -1042,17 +1034,7 @@ function createState() {
   return api;
 }
 
-function isState(s) {
-  return s && s['@state'] === true;
-}
-function isStateReadChannel(s) {
-  return s && s['@statereadchannel'] === true;
-}
-function isStateWriteChannel(s) {
-  return s && s['@statewritechannel'] === true;
-}
-
-},{"../index":14,"../utils":17}],11:[function(require,module,exports){
+},{"../index":14,"../utils":21}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1118,7 +1100,8 @@ function normalizeOptions(options) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-function Grid() {
+exports.default = Grid;
+function Grid(logger) {
   var gridAPI = {};
   var nodes = [];
 
@@ -1127,6 +1110,7 @@ function Grid() {
       throw new Error("Each node in the grid must be an object with \"id\" field. Instead \"" + product + "\" given.");
     }
     nodes.push(product);
+    logger.snapshot();
   };
   gridAPI.remove = function (product) {
     var idx = nodes.findIndex(function (_ref) {
@@ -1138,6 +1122,7 @@ function Grid() {
       // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach
       nodes.splice(idx, 1);
     }
+    logger.snapshot();
   };
   gridAPI.reset = function () {
     nodes = [];
@@ -1155,16 +1140,38 @@ function Grid() {
   return gridAPI;
 }
 
-var grid = Grid();
-
-exports.default = grid;
-
 },{}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _slicedToArray = function () {
+  function sliceIterator(arr, i) {
+    var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
+      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;_e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"]) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }return _arr;
+  }return function (arr, i) {
+    if (Array.isArray(arr)) {
+      return arr;
+    } else if (Symbol.iterator in Object(arr)) {
+      return sliceIterator(arr, i);
+    } else {
+      throw new TypeError("Invalid attempt to destructure non-iterable instance");
+    }
+  };
+}(); /* eslint-disable no-use-before-define */
 
 var _riew = require('./riew');
 
@@ -1174,9 +1181,7 @@ var _react = require('./react');
 
 var _react2 = _interopRequireDefault(_react);
 
-var _grid = require('./grid');
-
-var _grid2 = _interopRequireDefault(_grid);
+var _index = require('./index');
 
 var _csp = require('./csp');
 
@@ -1184,7 +1189,6 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-/* eslint-disable no-use-before-define */
 function Harvester() {
   var api = {};
   var products = {};
@@ -1234,7 +1238,7 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
 
     var riew = _riew2.default.apply(undefined, [viewFunc].concat(controllers));
 
-    _grid2.default.add(riew);
+    _index.grid.add(riew);
     return riew;
   });
   hInstance.defineProduct('reactRiew', function (viewFunc) {
@@ -1245,16 +1249,27 @@ var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabili
     return _react2.default.apply(undefined, [viewFunc].concat(controllers));
   });
   hInstance.defineProduct('channel', function () {
-    var channel = _csp.createChannel.apply(undefined, arguments);
+    var _createChannel = _csp.createChannel.apply(undefined, arguments),
+        _createChannel2 = _slicedToArray(_createChannel, 2),
+        channel = _createChannel2[0],
+        exists = _createChannel2[1];
 
-    _grid2.default.add(channel);
+    if (!exists) {
+      _index.grid.add(channel);
+    }
     return channel;
   });
   hInstance.defineProduct('state', function () {
     var state = _csp.createState.apply(undefined, arguments);
 
-    _grid2.default.add(state);
+    _index.grid.add(state);
     return state;
+  });
+  hInstance.defineProduct('routine', function () {
+    var r = _csp.runRoutine.apply(undefined, arguments);
+
+    _index.grid.add(r);
+    return r;
   });
 };
 
@@ -1264,7 +1279,7 @@ defineHarvesterBuiltInCapabilities(h);
 
 exports.default = h;
 
-},{"./csp":8,"./grid":12,"./react":15,"./riew":16}],14:[function(require,module,exports){
+},{"./csp":8,"./index":14,"./react":16,"./riew":17}],14:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1272,13 +1287,23 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.grid = exports.harvester = exports.reset = exports.register = exports.use = exports.state = exports.chan = exports.react = exports.riew = undefined;
+exports.harvester = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.go = exports.state = exports.chan = exports.react = exports.riew = undefined;
+
+var _extends = Object.assign || function (target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        target[key] = source[key];
+      }
+    }
+  }return target;
+};
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 } : function (obj) {
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
+}; /* eslint-disable no-param-reassign */
 
 var _csp = require('./csp');
 
@@ -1300,8 +1325,20 @@ var _grid = require('./grid');
 
 var _grid2 = _interopRequireDefault(_grid);
 
+var _logger = require('./logger');
+
+var _logger2 = _interopRequireDefault(_logger);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
 }
 
 var riew = exports.riew = function riew() {
@@ -1334,9 +1371,16 @@ var state = exports.state = function state() {
 
   return _harvester2.default.produce.apply(_harvester2.default, ['state'].concat(args));
 };
+var go = exports.go = function go() {
+  for (var _len5 = arguments.length, args = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+    args[_key5] = arguments[_key5];
+  }
+
+  return _harvester2.default.produce.apply(_harvester2.default, ['routine'].concat(args));
+};
 var use = exports.use = function use(name) {
-  for (var _len5 = arguments.length, args = Array(_len5 > 1 ? _len5 - 1 : 0), _key5 = 1; _key5 < _len5; _key5++) {
-    args[_key5 - 1] = arguments[_key5];
+  for (var _len6 = arguments.length, args = Array(_len6 > 1 ? _len6 - 1 : 0), _key6 = 1; _key6 < _len6; _key6++) {
+    args[_key6 - 1] = arguments[_key6];
   }
 
   return _harvester2.default.produce.apply(_harvester2.default, [name].concat(args));
@@ -1350,13 +1394,187 @@ var register = exports.register = function register(name, whatever) {
   });
   return whatever;
 };
+var logger = exports.logger = new _logger2.default();
+var grid = exports.grid = new _grid2.default(logger);
 var reset = exports.reset = function reset() {
-  return _grid2.default.reset(), _harvester2.default.reset(), _csp.CHANNELS.reset();
+  return grid.reset(), _harvester2.default.reset(), _csp.CHANNELS.reset(), logger.reset();
 };
 var harvester = exports.harvester = _harvester2.default;
-var grid = exports.grid = _grid2.default;
 
-},{"./csp":8,"./grid":12,"./harvester":13}],15:[function(require,module,exports){
+go['@go'] = true;
+go.with = function () {
+  for (var _len7 = arguments.length, maps = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
+    maps[_key7] = arguments[_key7];
+  }
+
+  var reducedMaps = maps.reduce(function (res, item) {
+    if (typeof item === 'string') {
+      res = _extends({}, res, _defineProperty({}, item, use(item)));
+    } else {
+      res = _extends({}, res, item);
+    }
+    return res;
+  }, {});
+  return function (func) {
+    for (var _len8 = arguments.length, args = Array(_len8 > 2 ? _len8 - 2 : 0), _key8 = 2; _key8 < _len8; _key8++) {
+      args[_key8 - 2] = arguments[_key8];
+    }
+
+    var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
+
+    args.push(reducedMaps);
+    return go.apply(undefined, [func, done].concat(args));
+  };
+};
+
+},{"./csp":8,"./grid":12,"./harvester":13,"./logger":15}],15:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = Logger;
+
+var _index = require('./index');
+
+var _sanitize = require('./sanitize');
+
+var _sanitize2 = _interopRequireDefault(_sanitize);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _toConsumableArray(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }return arr2;
+  } else {
+    return Array.from(arr);
+  }
+} /* eslint-disable no-use-before-define */
+
+var MAX_SNAPSHOTS = 100;
+var RIEW = 'RIEW';
+var STATE = 'STATE';
+var CHANNEL = 'CHANNEL';
+
+function normalizeRiew(r) {
+  return {
+    id: r.id,
+    name: r.name,
+    type: RIEW,
+    viewData: r.renderer.data(),
+    children: r.children.map(function (child) {
+      if ((0, _index.isState)(child)) {
+        return normalizeState(child);
+      }
+      if ((0, _index.isChannel)(child)) {
+        return normalizeChannel(child);
+      }
+      console.warn('Riew logger: unrecognized riew child', child);
+    })
+  };
+}
+function normalizeState(s) {
+  return {
+    id: s.id,
+    type: STATE,
+    value: s.get(),
+    children: s.children().map(function (child) {
+      if ((0, _index.isChannel)(child)) {
+        return normalizeChannel(child);
+      }
+      console.warn('Riew logger: unrecognized state child', child);
+    })
+  };
+}
+function normalizeChannel(c) {
+  var o = {
+    id: c.id,
+    type: CHANNEL,
+    value: c.value(),
+    puts: c.buff.puts.map(function (_ref) {
+      var item = _ref.item;
+      return item;
+    }),
+    takes: c.buff.takes.map(function () {
+      return 'TAKE';
+    })
+  };
+  if ((0, _index.isStateWriteChannel)(c)) {
+    o.stateWrite = true;
+  }
+  if ((0, _index.isStateReadChannel)(c)) {
+    o.stateRead = true;
+  }
+  return o;
+}
+
+function Logger() {
+  var api = {};
+  var frames = [];
+
+  api.snapshot = function () {
+    if (frames.length >= MAX_SNAPSHOTS) {
+      frames.shift();
+    }
+    var riews = [];
+    var states = [];
+    var filteredStates = [];
+    var channels = [];
+    var filteredChannels = [];
+
+    _index.grid.nodes().forEach(function (node) {
+      if ((0, _index.isRiew)(node)) {
+        riews.push(normalizeRiew(node));
+      } else if ((0, _index.isState)(node)) {
+        states.push(normalizeState(node));
+      } else if ((0, _index.isChannel)(node)) {
+        channels.push(normalizeChannel(node));
+      } else {
+        // console.warn('Riew logger: unrecognized entity type', node);
+      }
+    });
+    filteredStates = states.filter(function (s) {
+      return !riews.find(function (r) {
+        return r.children.find(function (_ref2) {
+          var id = _ref2.id;
+          return s.id === id;
+        });
+      });
+    });
+    filteredChannels = channels.filter(function (c) {
+      return !riews.find(function (r) {
+        return r.children.find(function (_ref3) {
+          var id = _ref3.id;
+          return c.id === id;
+        });
+      }) && !states.find(function (s) {
+        return s.children.find(function (_ref4) {
+          var id = _ref4.id;
+          return c.id === id;
+        });
+      });
+    });
+    var snapshot = (0, _sanitize2.default)({
+      items: [].concat(riews, _toConsumableArray(filteredStates), _toConsumableArray(filteredChannels))
+    });
+    frames.push(snapshot);
+    return snapshot;
+  };
+  api.frames = function () {
+    return frames;
+  };
+  api.reset = function () {
+    frames = [];
+  };
+
+  return api;
+}
+
+},{"./index":14,"./sanitize":18}],16:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1488,7 +1706,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":14,"../utils":17}],16:[function(require,module,exports){
+},{"../index":14,"../utils":21}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1520,7 +1738,7 @@ function _defineProperty(obj, key, value) {
 } /* eslint-disable no-param-reassign */
 
 var Renderer = function Renderer(viewFunc) {
-  var data = {};
+  var _data = {};
   var inProgress = false;
   var active = true;
 
@@ -1529,12 +1747,12 @@ var Renderer = function Renderer(viewFunc) {
       if (newData === _index.chan.CLOSED || newData === _index.chan.ENDED) {
         return;
       }
-      data = (0, _utils.accumulate)(data, newData);
+      _data = (0, _utils.accumulate)(_data, newData);
       if (!inProgress) {
         inProgress = true;
         Promise.resolve().then(function () {
           if (active) {
-            viewFunc(data);
+            viewFunc(_data);
           }
           inProgress = false;
         });
@@ -1542,6 +1760,9 @@ var Renderer = function Renderer(viewFunc) {
     },
     destroy: function destroy() {
       active = false;
+    },
+    data: function data() {
+      return _data;
     }
   };
 };
@@ -1552,19 +1773,24 @@ function createRiew(viewFunc) {
   }
 
   var name = (0, _utils.getFuncName)(viewFunc);
-  var riew = { id: (0, _utils.getId)(name), name: name };
   var renderer = Renderer(viewFunc);
-  var states = [];
+  var riew = {
+    id: (0, _utils.getId)(name),
+    name: name,
+    '@riew': true,
+    children: [],
+    renderer: renderer
+  };
   var cleanups = [];
   var runningRoutines = [];
   var externals = {};
   var subscriptions = {};
   var state = function state() {
     var s = _index.state.apply(undefined, arguments);
-    states.push(s);
+    riew.children.push(s);
     return s;
   };
-  var read = function read(to, func) {
+  var subscribe = function subscribe(to, func) {
     if (!(to in subscriptions)) {
       subscriptions[to] = true;
       (0, _index.sread)(to, func, { listen: true });
@@ -1573,17 +1799,20 @@ function createRiew(viewFunc) {
   var VIEW_CHANNEL = riew.id + '_view';
   var PROPS_CHANNEL = riew.id + '_props';
 
+  riew.children.push((0, _index.chan)(VIEW_CHANNEL, _index.buffer.divorced()));
+  riew.children.push((0, _index.chan)(PROPS_CHANNEL, _index.buffer.divorced()));
+
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
       if (_index.CHANNELS.exists(value[key]) || (0, _index.isChannel)(value[key])) {
-        read(value[key], function (v) {
+        subscribe(value[key], function (v) {
           (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
         (0, _index.stake)(value[key], function (v) {
           return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
       } else if ((0, _index.isState)(value[key])) {
-        read(value[key].READ, function (v) {
+        subscribe(value[key].READ, function (v) {
           return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
         (0, _index.stake)(value[key].READ, function (v) {
@@ -1600,10 +1829,11 @@ function createRiew(viewFunc) {
     var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     (0, _utils.requireObject)(props);
-    read(PROPS_CHANNEL, function (newProps) {
+    (0, _index.sput)(PROPS_CHANNEL, props);
+    subscribe(PROPS_CHANNEL, function (newProps) {
       return (0, _index.sput)(VIEW_CHANNEL, newProps);
     });
-    read(VIEW_CHANNEL, renderer.push);
+    subscribe(VIEW_CHANNEL, renderer.push);
     runningRoutines = routines.map(function (r) {
       return (0, _index.go)(r, function (result) {
         if (typeof result === 'function') {
@@ -1621,7 +1851,6 @@ function createRiew(viewFunc) {
     if (!(0, _utils.isObjectEmpty)(externals)) {
       (0, _index.sput)(VIEW_CHANNEL, normalizeRenderData(externals));
     }
-    (0, _index.sput)(PROPS_CHANNEL, props);
   };
 
   riew.unmount = function () {
@@ -1629,10 +1858,12 @@ function createRiew(viewFunc) {
       return c();
     });
     cleanups = [];
-    states.forEach(function (s) {
-      return s.destroy();
+    riew.children.forEach(function (c) {
+      if ((0, _index.isState)(c)) {
+        c.destroy();
+      }
     });
-    states = [];
+    riew.children = [];
     runningRoutines.forEach(function (r) {
       return r.stop();
     });
@@ -1640,6 +1871,7 @@ function createRiew(viewFunc) {
     renderer.destroy();
     (0, _index.close)(PROPS_CHANNEL);
     (0, _index.close)(VIEW_CHANNEL);
+    _index.grid.remove(riew);
   };
 
   riew.update = function () {
@@ -1680,7 +1912,328 @@ function createRiew(viewFunc) {
   return riew;
 }
 
-},{"./index":14,"./utils":17}],17:[function(require,module,exports){
+},{"./index":14,"./utils":21}],18:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = sanitize;
+
+var _CircularJSON = require('./vendors/CircularJSON');
+
+var _CircularJSON2 = _interopRequireDefault(_CircularJSON);
+
+var _SerializeError = require('./vendors/SerializeError');
+
+var _SerializeError2 = _interopRequireDefault(_SerializeError);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function sanitize(something) {
+  var showErrorInConsole = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+  var result = void 0;
+
+  try {
+    result = JSON.parse(_CircularJSON2.default.stringify(something, function (key, value) {
+      if (typeof value === 'function') {
+        return value.name === '' ? '<anonymous>' : 'function ' + value.name + '()';
+      }
+      if (value instanceof Error) {
+        return (0, _SerializeError2.default)(value);
+      }
+      return value;
+    }, undefined, true));
+  } catch (error) {
+    if (showErrorInConsole) {
+      console.log(error);
+    }
+    result = null;
+  }
+  return result;
+}
+
+},{"./vendors/CircularJSON":19,"./vendors/SerializeError":20}],19:[function(require,module,exports){
+'use strict';
+
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
+
+/* eslint-disable */
+/*!
+Copyright (C) 2013-2017 by Andrea Giammarchi - @WebReflection
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+*/
+var
+// should be a not so common char
+// possibly one JSON does not encode
+// possibly one encodeURIComponent does not encode
+// right now this char is '~' but this might change in the future
+specialChar = '~',
+    safeSpecialChar = '\\x' + ('0' + specialChar.charCodeAt(0).toString(16)).slice(-2),
+    escapedSafeSpecialChar = '\\' + safeSpecialChar,
+    specialCharRG = new RegExp(safeSpecialChar, 'g'),
+    safeSpecialCharRG = new RegExp(escapedSafeSpecialChar, 'g'),
+    safeStartWithSpecialCharRG = new RegExp('(?:^|([^\\\\]))' + escapedSafeSpecialChar),
+    indexOf = [].indexOf || function (v) {
+  for (var i = this.length; i-- && this[i] !== v;) {}
+  return i;
+},
+    $String = String // there's no way to drop warnings in JSHint
+// about new String ... well, I need that here!
+// faked, and happy linter!
+;
+
+function generateReplacer(value, replacer, resolve) {
+  var inspect = !!replacer,
+      path = [],
+      all = [value],
+      seen = [value],
+      mapp = [resolve ? specialChar : '<circular>'],
+      last = value,
+      lvl = 1,
+      i,
+      fn;
+  if (inspect) {
+    fn = (typeof replacer === 'undefined' ? 'undefined' : _typeof(replacer)) === 'object' ? function (key, value) {
+      return key !== '' && replacer.indexOf(key) < 0 ? void 0 : value;
+    } : replacer;
+  }
+  return function (key, value) {
+    // the replacer has rights to decide
+    // if a new object should be returned
+    // or if there's some key to drop
+    // let's call it here rather than "too late"
+    if (inspect) value = fn.call(this, key, value);
+
+    // did you know ? Safari passes keys as integers for arrays
+    // which means if (key) when key === 0 won't pass the check
+    if (key !== '') {
+      if (last !== this) {
+        i = lvl - indexOf.call(all, this) - 1;
+        lvl -= i;
+        all.splice(lvl, all.length);
+        path.splice(lvl - 1, path.length);
+        last = this;
+      }
+      // console.log(lvl, key, path);
+      if ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && value) {
+        // if object isn't referring to parent object, add to the
+        // object path stack. Otherwise it is already there.
+        if (indexOf.call(all, value) < 0) {
+          all.push(last = value);
+        }
+        lvl = all.length;
+        i = indexOf.call(seen, value);
+        if (i < 0) {
+          i = seen.push(value) - 1;
+          if (resolve) {
+            // key cannot contain specialChar but could be not a string
+            path.push(('' + key).replace(specialCharRG, safeSpecialChar));
+            mapp[i] = specialChar + path.join(specialChar);
+          } else {
+            mapp[i] = mapp[0];
+          }
+        } else {
+          value = mapp[i];
+        }
+      } else {
+        if (typeof value === 'string' && resolve) {
+          // ensure no special char involved on deserialization
+          // in this case only first char is important
+          // no need to replace all value (better performance)
+          value = value.replace(safeSpecialChar, escapedSafeSpecialChar).replace(specialChar, safeSpecialChar);
+        }
+      }
+    }
+    return value;
+  };
+}
+
+function retrieveFromPath(current, keys) {
+  for (var i = 0, length = keys.length; i < length; current = current[
+  // keys should be normalized back here
+  keys[i++].replace(safeSpecialCharRG, specialChar)]) {}
+  return current;
+}
+
+function generateReviver(reviver) {
+  return function (key, value) {
+    var isString = typeof value === 'string';
+    if (isString && value.charAt(0) === specialChar) {
+      return new $String(value.slice(1));
+    }
+    if (key === '') value = regenerate(value, value, {});
+    // again, only one needed, do not use the RegExp for this replacement
+    // only keys need the RegExp
+    if (isString) value = value.replace(safeStartWithSpecialCharRG, '$1' + specialChar).replace(escapedSafeSpecialChar, safeSpecialChar);
+    return reviver ? reviver.call(this, key, value) : value;
+  };
+}
+
+function regenerateArray(root, current, retrieve) {
+  for (var i = 0, length = current.length; i < length; i++) {
+    current[i] = regenerate(root, current[i], retrieve);
+  }
+  return current;
+}
+
+function regenerateObject(root, current, retrieve) {
+  for (var key in current) {
+    if (current.hasOwnProperty(key)) {
+      current[key] = regenerate(root, current[key], retrieve);
+    }
+  }
+  return current;
+}
+
+function regenerate(root, current, retrieve) {
+  return current instanceof Array ?
+  // fast Array reconstruction
+  regenerateArray(root, current, retrieve) : current instanceof $String ?
+  // root is an empty string
+  current.length ? retrieve.hasOwnProperty(current) ? retrieve[current] : retrieve[current] = retrieveFromPath(root, current.split(specialChar)) : root : current instanceof Object ?
+  // dedicated Object parser
+  regenerateObject(root, current, retrieve) :
+  // value as it is
+  current;
+}
+
+function stringifyRecursion(value, replacer, space, doNotResolve) {
+  return JSON.stringify(value, generateReplacer(value, replacer, !doNotResolve), space);
+}
+
+function parseRecursion(text, reviver) {
+  return JSON.parse(text, generateReviver(reviver));
+}
+
+exports.default = {
+  stringify: stringifyRecursion,
+  parse: parseRecursion
+};
+
+},{}],20:[function(require,module,exports){
+/* eslint-disable */
+// Credits: https://github.com/sindresorhus/serialize-error
+
+'use strict';
+
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+	return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+	return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
+
+module.exports = function (value) {
+	if ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
+		return destroyCircular(value, []);
+	}
+
+	// People sometimes throw things besides Error objects, so…
+
+	if (typeof value === 'function') {
+		// JSON.stringify discards functions. We do too, unless a function is thrown directly.
+		return '[Function: ' + (value.name || 'anonymous') + ']';
+	}
+
+	return value;
+};
+
+// https://www.npmjs.com/package/destroy-circular
+function destroyCircular(from, seen) {
+	var to = Array.isArray(from) ? [] : {};
+
+	seen.push(from);
+
+	var _iteratorNormalCompletion = true;
+	var _didIteratorError = false;
+	var _iteratorError = undefined;
+
+	try {
+		for (var _iterator = Object.keys(from)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+			var key = _step.value;
+
+			var value = from[key];
+
+			if (typeof value === 'function') {
+				continue;
+			}
+
+			if (!value || (typeof value === 'undefined' ? 'undefined' : _typeof(value)) !== 'object') {
+				to[key] = value;
+				continue;
+			}
+
+			if (seen.indexOf(from[key]) === -1) {
+				to[key] = destroyCircular(from[key], seen.slice(0));
+				continue;
+			}
+
+			to[key] = '[Circular]';
+		}
+	} catch (err) {
+		_didIteratorError = true;
+		_iteratorError = err;
+	} finally {
+		try {
+			if (!_iteratorNormalCompletion && _iterator.return) {
+				_iterator.return();
+			}
+		} finally {
+			if (_didIteratorError) {
+				throw _iteratorError;
+			}
+		}
+	}
+
+	if (typeof from.name === 'string') {
+		to.name = from.name;
+	}
+
+	if (typeof from.message === 'string') {
+		to.message = from.message;
+	}
+
+	if (typeof from.stack === 'string') {
+		to.stack = from.stack;
+	}
+
+	return to;
+}
+
+},{}],21:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };

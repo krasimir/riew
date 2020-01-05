@@ -13,6 +13,7 @@ import {
   CHANNELS,
   isChannel,
   buffer,
+  grid,
 } from './index';
 import {
   isObjectEmpty,
@@ -142,6 +143,7 @@ export default function createRiew(viewFunc, ...routines) {
     renderer.destroy();
     close(PROPS_CHANNEL);
     close(VIEW_CHANNEL);
+    grid.remove(riew);
   };
 
   riew.update = function(props = {}) {

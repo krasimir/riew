@@ -7,6 +7,7 @@ import {
   isStateWriteChannel,
   isStateReadChannel,
 } from './index';
+import sanitize from './sanitize';
 
 const MAX_SNAPSHOTS = 100;
 const RIEW = 'RIEW';
@@ -60,19 +61,20 @@ function normalizeChannel(c) {
   return o;
 }
 
-function Logger() {
+export default function Logger() {
   const api = {};
-  const snapshots = [];
+  let frames = [];
 
   api.snapshot = () => {
-    if (snapshots.length >= MAX_SNAPSHOTS) {
-      snapshots.shift();
+    if (frames.length >= MAX_SNAPSHOTS) {
+      frames.shift();
     }
     const riews = [];
     const states = [];
     let filteredStates = [];
     const channels = [];
     let filteredChannels = [];
+
     grid.nodes().forEach(node => {
       if (isRiew(node)) {
         riews.push(normalizeRiew(node));
@@ -81,7 +83,7 @@ function Logger() {
       } else if (isChannel(node)) {
         channels.push(normalizeChannel(node));
       } else {
-        console.warn('Riew logger: unrecognized entity type', node);
+        // console.warn('Riew logger: unrecognized entity type', node);
       }
     });
     filteredStates = states.filter(
@@ -92,10 +94,16 @@ function Logger() {
         !riews.find(r => r.children.find(({ id }) => c.id === id)) &&
         !states.find(s => s.children.find(({ id }) => c.id === id))
     );
-    return [...riews, ...filteredStates, ...filteredChannels];
+    const snapshot = sanitize({
+      items: [...riews, ...filteredStates, ...filteredChannels],
+    });
+    frames.push(snapshot);
+    return snapshot;
+  };
+  api.frames = () => frames;
+  api.reset = () => {
+    frames = [];
   };
 
   return api;
 }
-
-export const logger = Logger();

@@ -1,9 +1,9 @@
 import h from './harvester';
-import g from './grid';
+import Grid from './grid';
 import { CHANNELS } from './csp';
+import Logger from './logger';
 
 export * from './csp';
-export * from './logger';
 
 export const riew = (...args) => h.produce('riew', ...args);
 export const react = {
@@ -19,6 +19,9 @@ export const register = (name, whatever) => {
   h.defineProduct(name, () => whatever);
   return whatever;
 };
-export const reset = () => (g.reset(), h.reset(), CHANNELS.reset());
+export const logger = new Logger();
+export const grid = new Grid(logger);
+export const reset = () => (
+  grid.reset(), h.reset(), CHANNELS.reset(), logger.reset()
+);
 export const harvester = h;
-export const grid = g;

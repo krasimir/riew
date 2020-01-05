@@ -1,8 +1,8 @@
 /* eslint-disable no-use-before-define */
 import createRiew from './riew';
 import reactRiew from './react';
-import grid from './grid';
-import { createChannel, createState } from './csp';
+import { grid } from './index';
+import { createChannel, createState, runRoutine } from './csp';
 
 function Harvester() {
   const api = {};
@@ -60,6 +60,12 @@ const defineHarvesterBuiltInCapabilities = function(hInstance) {
 
     grid.add(state);
     return state;
+  });
+  hInstance.defineProduct('routine', (...args) => {
+    const r = runRoutine(...args);
+
+    grid.add(r);
+    return r;
   });
 };
 
