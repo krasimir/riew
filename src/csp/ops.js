@@ -16,7 +16,7 @@ import {
   ONE_OF,
 } from './constants';
 import { grid, chan, use, logger } from '../index';
-import { isPromise, isGeneratorFunction, getId, getFuncName } from '../utils';
+import { isPromise, getId, getFuncName } from '../utils';
 import { normalizeChannels, normalizeOptions, normalizeTo } from './utils';
 
 const noop = () => {};
@@ -30,57 +30,33 @@ export function sput(channels, item, callback = noop) {
   channels = normalizeChannels(channels, 'WRITE');
 
   const items = channels.length > 1 ? item : [item];
+  const processedChannels = channels.map(() => NOTHING);
   channels.forEach((channel, idx) => {
     const state = channel.state();
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
-      const subscriptions = [...channel.subscribers];
-      const processedChannels = channels.map(() => NOTHING);
-      const processedSubscribers = subscriptions.map(() => NOTHING);
-      const isItDone = () => {};
+      const subscribers = [...channel.subscribers];
       channel.buff.put(items[idx], value => {
-        result[idx] = value;
-        if (!result.includes(NOTHING)) {
-          callback(result.length === 1 ? result[0] : result);
+        processedChannels[idx] = value;
+        if (!processedChannels.includes(NOTHING)) {
+          callback(
+            processedChannels.length === 1
+              ? processedChannels[0]
+              : processedChannels
+          );
         }
       });
       channel.subscribers = [];
-      subscriptions.forEach(s => {
+      subscribers.forEach(s => {
         const { notify, listen } = s;
         if (listen) {
           channel.subscribers.push(s);
         }
-        notify(item, () => {});
+        notify(item);
       });
       if (__DEV__) logger.log(channel, 'CHANNEL_PUT', item);
-      // callSubscribers(channel, items[idx], () => {
-      //   channel.buff.put(items[idx], value => {
-      //     result[idx] = value;
-      //     if (!result.includes(NOTHING)) {
-      //       callback(result.length === 1 ? result[0] : result);
-      //     }
-      //   });
-      // });
     }
-  });
-}
-function callSubscribers(channel, item, callback) {
-  const notificationProcess = channel.subscribers.map(() => 1); // just to count the notified channels
-  if (notificationProcess.length === 0) return callback();
-  const subscriptions = [...channel.subscribers];
-  channel.subscribers = [];
-  subscriptions.forEach(s => {
-    const { notify, listen } = s;
-    if (listen) {
-      channel.subscribers.push(s);
-    }
-    notify(item, () => {
-      notificationProcess.shift();
-      if (notificationProcess.length === 0) {
-        callback();
-      }
-    });
   });
 }
 
@@ -93,9 +69,9 @@ export function stake(channels, callback, options) {
   channels = normalizeChannels(channels);
   options = normalizeOptions(options);
   const data = channels.map(() => NOTHING);
-  const { transform, onError, initialCall, listen } = options;
+  const { initialCall, listen } = options;
 
-  const takeDone = (value, idx, done = noop) => {
+  const takeDone = (value, idx) => {
     data[idx] = value;
     let result = null;
     if (options.strategy === ONE_OF) {
@@ -104,34 +80,10 @@ export function stake(channels, callback, options) {
       result = [...data];
     }
     if (result !== null) {
-      if (transform) {
-        try {
-          if (isGeneratorFunction(transform)) {
-            go(
-              transform,
-              v => {
-                callback(v);
-                done();
-              },
-              ...result
-            );
-          } else {
-            callback(transform(...result));
-            done();
-          }
-        } catch (e) {
-          if (onError === null) {
-            throw e;
-          }
-          onError(e);
-        }
+      if (options.strategy === ONE_OF) {
+        callback(...result);
       } else {
-        if (options.strategy === ONE_OF) {
-          callback(...result);
-        } else {
-          callback(result.length === 1 ? result[0] : result);
-        }
-        done();
+        callback(result.length === 1 ? result[0] : result);
       }
     }
   };
@@ -150,7 +102,7 @@ export function stake(channels, callback, options) {
         channel.subscribers.push(
           (subscription = {
             callback,
-            notify: (value, done) => takeDone(value, idx, done),
+            notify: value => takeDone(value, idx),
             listen,
           })
         );

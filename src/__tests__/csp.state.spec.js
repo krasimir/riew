@@ -100,7 +100,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we use state into a routine', () => {
-    fit(`should
+    it(`should
       * have non-blocking puts
       * have non-blocking takes
       * when no puts the take should resolve with the initial value`, () => {
@@ -273,7 +273,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we use the same channel for multiple mutations', () => {
-    it('should mutate multiple states at once', () => {
+    fit('should mutate multiple states at once', () => {
       const s1 = state('foo');
       const s2 = state(12);
 
