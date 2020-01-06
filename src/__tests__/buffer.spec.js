@@ -1,5 +1,6 @@
 import { buffer, reset, chan, put, take, sleep, go, sput } from '../index';
 import { exercise, Test, delay } from '../__helpers__';
+import { sread } from '../csp';
 
 describe('Given the Fixed buffer', () => {
   beforeEach(() => {
@@ -434,14 +435,18 @@ describe('Given the divorce buffer', () => {
     it('should allow us to provide custom put and take resolvers', async () => {
       const spy = jest.fn();
       const ch = chan(
-        buffer.divorced(
-          (getItem, callback) => {
-            setTimeout(() => callback(getItem().toUpperCase()), 10);
+        buffer.divorced({
+          value: [],
+          onPut(getItem, callback) {
+            setTimeout(() => {
+              this.value = [getItem().toUpperCase()];
+              callback(true);
+            }, 10);
           },
-          (getValue, callback) => {
-            setTimeout(() => callback(`value: ${getValue()}`), 20);
-          }
-        )
+          onTake(callback) {
+            setTimeout(() => callback(`value: ${this.value[0]}`), 20);
+          },
+        })
       );
 
       go(function*() {
@@ -459,6 +464,91 @@ describe('Given the divorce buffer', () => {
         ['A'],
         ['take=value: FOO'],
         ['B']
+      );
+      expect(ch.value()).toStrictEqual(['FOO']);
+    });
+    it('should allow us to add more then one behavior', () => {
+      const spy = jest.fn();
+      const ch = chan(
+        buffer.divorced({
+          value: [],
+          onPut(getItem, callback) {
+            spy((this.value = [getItem()]));
+            callback(true);
+          },
+          onTake(callback) {
+            callback(this.value[0]);
+          },
+        })
+      );
+
+      ch.buff.addBehavior({
+        value: [],
+        onPut(getItem, callback) {
+          spy((this.value = [`Value: ${getItem()}`]));
+          callback(true);
+        },
+        onTake(callback) {
+          callback(this.value[0]);
+        },
+      });
+
+      sput(ch, 'foo');
+      sput(ch, 'bar');
+
+      expect(spy).toBeCalledWithArgs(
+        [['foo']],
+        [['Value: foo']],
+        [['bar']],
+        [['Value: bar']]
+      );
+      expect(ch.value()).toStrictEqual([['bar'], ['Value: bar']]);
+    });
+    it('should block if not all the behaviors are resolved', async () => {
+      const spy = jest.fn();
+      const ch = chan(
+        buffer.divorced({
+          value: [],
+          onPut(getItem, callback) {
+            setTimeout(() => {
+              this.value = [getItem()];
+              callback('b1 onPut');
+            }, 10);
+          },
+          onTake(callback) {
+            setTimeout(() => {
+              callback('b1 onTake');
+            }, 10);
+          },
+        })
+      );
+
+      ch.buff.addBehavior({
+        value: [],
+        onPut(getItem, callback) {
+          this.value = [getItem()];
+          callback('b2 onPut');
+        },
+        onTake(callback) {
+          callback('b2 onTake');
+        },
+      });
+
+      go(function*() {
+        spy('>');
+        spy(yield put(ch, 'foo'));
+        spy(ch.value());
+        spy(yield take(ch));
+        spy('<');
+      });
+
+      await delay(30);
+      expect(spy).toBeCalledWithArgs(
+        ['>'],
+        [['b1 onPut', 'b2 onPut']],
+        [[['foo'], ['foo']]],
+        [['b1 onTake', 'b2 onTake']],
+        ['<']
       );
     });
   });

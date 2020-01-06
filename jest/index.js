@@ -8,15 +8,17 @@ const { SimpleConsole } = require('./Console');
 global.console = new SimpleConsole(process.stdout, process.stderr);
 
 function sanitize(something, showErrorInConsole = false) {
-  var result;
+  let result;
 
   try {
     result = JSON.parse(
       CircularJSON.stringify(
         something,
-        function (key, value) {
+        function(key, value) {
           if (typeof value === 'function') {
-            return value.name === '' ? '<anonymous>' : `function ${value.name}()`;
+            return value.name === ''
+              ? '<anonymous>'
+              : `function ${value.name}()`;
           }
           if (value instanceof Error) {
             return SerializeError(value);
@@ -56,12 +58,12 @@ const special = [
   'sixteenth',
   'seventeenth',
   'eighteenth',
-  'nineteenth'
+  'nineteenth',
 ];
 
 function stringifyNumber(n) {
-  if (special[ n ]) {
-    return special[ n ];
+  if (special[n]) {
+    return special[n];
   }
   return n;
 }
@@ -71,27 +73,33 @@ expect.extend({
     if (func.mock.calls.length !== called.length) {
       return {
         message: () =>
-          `Wrong number of calls:\n\nExpected: ${called.length}\nActual:   ${func.mock.calls.length}\n\nCalls:\n${JSON.stringify(
-            sanitize(func.mock.calls),
-            null,
-            2
-          )}`,
-        pass: false
+          `Wrong number of calls:\n\nExpected: ${called.length}\nActual:   ${
+            func.mock.calls.length
+          }\n\nCalls:\n${JSON.stringify(sanitize(func.mock.calls), null, 2)}`,
+        pass: false,
       };
     }
 
-    let doesFailed = called.reduce((result, args, index) => {
+    const doesFailed = called.reduce((result, args, index) => {
       if (result !== false) return result;
-      if (!this.equals(args, func.mock.calls[ index ])) {
-        let expectedStr = JSON.stringify(sanitize(args), null, 2);
-        let actualStr = JSON.stringify(sanitize(func.mock.calls[ index ]), null, 2);
+      if (!this.equals(args, func.mock.calls[index])) {
+        const expectedStr = JSON.stringify(sanitize(args), null, 2);
+        const actualStr = JSON.stringify(
+          sanitize(func.mock.calls[index]),
+          null,
+          2
+        );
 
         return {
           message: () =>
             `The ${stringifyNumber(
               index + 1
-            )} call happened with different arguments:\n\nExpected:\n${expectedStr}\n\nActual:\n${actualStr}`,
-          pass: false
+            )} call happened with different arguments:\n\nExpected:\n${expectedStr}\n\nActual:\n${actualStr}\n\nAll calls:\n${JSON.stringify(
+              sanitize(func.mock.calls),
+              null,
+              2
+            )}`,
+          pass: false,
         };
       }
       return false;
@@ -102,7 +110,7 @@ expect.extend({
     }
     return {
       message: () => 'All good',
-      pass: true
+      pass: true,
     };
-  }
+  },
 });

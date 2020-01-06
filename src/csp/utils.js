@@ -1,6 +1,6 @@
 /* eslint-disable no-param-reassign, no-multi-assign */
 import { chan, isChannel, isState, sput, buffer } from '../index';
-import { ALL_REQUIRED } from './constants';
+import { PARALLEL } from './constants';
 
 export function normalizeChannels(channels, stateOp = 'READ') {
   if (!Array.isArray(channels)) channels = [channels];
@@ -35,7 +35,7 @@ export function normalizeOptions(options) {
   options = options || DEFAULT_OPTIONS;
   const transform = options.transform || DEFAULT_OPTIONS.transform;
   const onError = options.onError || DEFAULT_OPTIONS.onError;
-  const strategy = options.strategy || ALL_REQUIRED;
+  const strategy = options.strategy || PARALLEL;
   const listen = 'listen' in options ? options.listen : false;
   const read = 'read' in options ? options.read : false;
   const initialCall =

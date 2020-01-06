@@ -26,7 +26,6 @@ describe('Given a CSP', () => {
   beforeEach(() => {
     reset();
   });
-
   describe('when we have a channel', () => {
     it('should allow us to put and take from it', () => {
       const spy = jest.fn();
@@ -39,7 +38,7 @@ describe('Given a CSP', () => {
 
       expect(spy).toBeCalledWithArgs(['foo'], [true], [true], ['bar']);
     });
-    it('should allow us to wait a take from multiple channels (ALL_REQUIRED strategy)', () => {
+    it('should allow us to wait a take from multiple channels (SERIAL strategy)', () => {
       const spy = jest.fn();
       const ch1 = chan();
       const ch2 = chan();
@@ -458,10 +457,10 @@ describe('Given a CSP', () => {
 
       await delay(20);
       expect(spy).toBeCalledWithArgs(
-        ['xxx=foo'],
+        ['xxx=foo,bar'],
         ['OOO'],
         ['Save successful!'],
-        ['yyy=bar']
+        ['yyy=foo,bar']
       );
     });
   });

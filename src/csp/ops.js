@@ -14,10 +14,12 @@ import {
   FORK_ROUTINE,
   NOTHING,
   ONE_OF,
+  PARALLEL,
 } from './constants';
 import { grid, chan, use, logger } from '../index';
 import { isPromise, getId, getFuncName } from '../utils';
 import { normalizeChannels, normalizeOptions, normalizeTo } from './utils';
+import pipeline from './pipeline';
 
 const noop = () => {};
 
@@ -28,36 +30,52 @@ export function put(channels, item) {
 }
 export function sput(channels, item, callback = noop) {
   channels = normalizeChannels(channels, 'WRITE');
-
-  const items = channels.length > 1 ? item : [item];
-  const processedChannels = channels.map(() => NOTHING);
-  channels.forEach((channel, idx) => {
-    const state = channel.state();
-    if (state === CLOSED || state === ENDED) {
-      callback(state);
-    } else {
-      const subscribers = [...channel.subscribers];
-      channel.buff.put(items[idx], value => {
-        processedChannels[idx] = value;
-        if (!processedChannels.includes(NOTHING)) {
-          callback(
-            processedChannels.length === 1
-              ? processedChannels[0]
-              : processedChannels
-          );
-        }
+  const p = pipeline(PARALLEL);
+  channels.forEach(channel => {
+    const chState = channel.state();
+    p.append((result, cb) => {
+      if (chState === CLOSED || chState === ENDED) {
+        callback(chState);
+        return;
+      }
+      channel.pipelines.put.run(item, r => {
+        cb([...result, r]);
+        if (__DEV__) logger.log(channel, 'CHANNEL_PUT', item);
       });
-      channel.subscribers = [];
-      subscribers.forEach(s => {
-        const { notify, listen } = s;
-        if (listen) {
-          channel.subscribers.push(s);
-        }
-        notify(item);
-      });
-      if (__DEV__) logger.log(channel, 'CHANNEL_PUT', item);
-    }
+    });
   });
+  p.run([], putResult => {
+    callback(putResult.length === 1 ? putResult[0] : putResult);
+  });
+
+  // const items = channels.length > 1 ? item : [item];
+  // const processedChannels = channels.map(() => NOTHING);
+  // channels.forEach((channel, idx) => {
+  //   const state = channel.state();
+  //   if (state === CLOSED || state === ENDED) {
+  //     callback(state);
+  //   } else {
+  //     channel.pipelines.put.run(item, result => {
+  //       processedChannels[idx] = result;
+  //       if (!processedChannels.includes(NOTHING)) {
+  //         callback(
+  //           processedChannels.length === 1
+  //             ? processedChannels[0]
+  //             : processedChannels
+  //         );
+  //       }
+  //     });
+  //     // channel.subscribers = [];
+  //     // subscribers.forEach(s => {
+  //     //   const { notify, listen } = s;
+  //     //   if (listen) {
+  //     //     channel.subscribers.push(s);
+  //     //   }
+  //     //   notify(item);
+  //     // });
+  //     // if (__DEV__) logger.log(channel, 'CHANNEL_PUT', item);
+  //   }
+  // });
 }
 
 // **************************************************** take
@@ -71,61 +89,66 @@ export function stake(channels, callback, options) {
   const data = channels.map(() => NOTHING);
   const { initialCall, listen } = options;
 
-  const takeDone = (value, idx) => {
-    data[idx] = value;
-    let result = null;
-    if (options.strategy === ONE_OF) {
-      result = [value, idx];
-    } else if (!data.includes(NOTHING)) {
-      result = [...data];
-    }
-    if (result !== null) {
-      if (options.strategy === ONE_OF) {
-        callback(...result);
-      } else {
-        callback(result.length === 1 ? result[0] : result);
+  const p = pipeline(options.strategy);
+  channels.forEach(channel => {
+    const chState = channel.state();
+    p.append((result, cb) => {
+      if (chState === CLOSED || chState === ENDED) {
+        callback(chState);
+        return;
       }
-    }
-  };
-
-  const subscriptions = channels.map((channel, idx) => {
-    const state = channel.state();
-    let subscription = {};
-    if (state === ENDED) {
-      takeDone(ENDED, idx);
-    } else if (state === CLOSED && channel.buff.isEmpty()) {
-      channel.state(ENDED);
-      takeDone(ENDED, idx);
-    } else if (options.read) {
-      // reading
-      if (!channel.subscribers.find(({ callback: c }) => c === callback)) {
-        channel.subscribers.push(
-          (subscription = {
-            callback,
-            notify: value => takeDone(value, idx),
-            listen,
-          })
-        );
-      }
-      const currentChannelBufValue = channel.value();
-      if (initialCall && currentChannelBufValue.length > 0) {
-        takeDone(currentChannelBufValue[0], idx);
-      }
-    } else {
-      // taking
-      channel.buff.take(r => {
-        takeDone(r, idx);
-        if (__DEV__) logger.log(channel, 'CHANNEL_TAKE', r);
+      channel.pipelines.take.run(null, r => {
+        cb(r);
+        if (__DEV__) logger.log(channel, 'CHANNEL_TAKE');
       });
+    });
+  });
+  p.run([], (takeResult, idx) => {
+    if (typeof idx !== 'undefined') {
+      callback(takeResult, idx);
+    } else {
+      callback(takeResult);
     }
-    return subscription;
   });
 
-  return {
-    listen() {
-      subscriptions.forEach(s => (s.listen = true));
-    },
-  };
+  // const takeDone = (value, idx) => {
+  //   data[idx] = value;
+  //   let result = null;
+  //   if (options.strategy === ONE_OF) {
+  //     result = [value, idx];
+  //   } else if (!data.includes(NOTHING)) {
+  //     result = [...data];
+  //   }
+  //   if (result !== null) {
+  //     if (options.strategy === ONE_OF) {
+  //       callback(...result);
+  //     } else {
+  //       callback(result.length === 1 ? result[0] : result);
+  //     }
+  //   }
+  // };
+
+  // channels.forEach((channel, idx) => {
+  //   const state = channel.state();
+  //   if (state === ENDED) {
+  //     takeDone(ENDED, idx);
+  //   } else if (state === CLOSED && channel.buff.isEmpty()) {
+  //     channel.state(ENDED);
+  //     takeDone(ENDED, idx);
+  //   } else if (options.read) {
+  //     // reading
+  //     channel.pipelines.put.append((value, cb) => {
+  //       takeDone(value, idx);
+  //       cb(value);
+  //     });
+  //   } else {
+  //     // taking
+  //     channel.pipelines.take.run(null, result => {
+  //       takeDone(result, idx);
+  //       if (__DEV__) logger.log(channel, 'CHANNEL_TAKE', result);
+  //     });
+  //   }
+  // });
 }
 
 // **************************************************** read

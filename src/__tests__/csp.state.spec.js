@@ -111,10 +111,13 @@ describe('Given a CSP state extension', () => {
       s.select('R', value => value.toUpperCase());
       s.mutate('W', (a, b) => a + b);
 
-      sread(s, v => listen(`READ=${v}`), { listen: true });
+      sread(s.READ, v => listen(`READ=${v}`), { listen: true });
       sread('R', v => listen(`R=${v}`), { listen: true });
-      sread(s.WRITE, v => listen(`WRITE=${v}`), { listen: true });
-      sread('W', v => listen(`W=${v}`), { listen: true });
+      sread(s.WRITE, v => listen(`WRITE=${v}`), {
+        listen: true,
+        initialCall: false,
+      });
+      sread('W', v => listen(`W=${v}`), { listen: true, initialCall: false });
 
       listen('----');
 
@@ -132,10 +135,10 @@ describe('Given a CSP state extension', () => {
       expect(spy).toBeCalledWithArgs(
         ['foo'],
         ['FOO'],
-        [true],
+        [[true, true]],
         ['bar'],
         ['BAR'],
-        [true],
+        [[true, true]],
         ['barhello world my friend'],
         ['BARHELLO WORLD MY FRIEND']
       );
@@ -190,7 +193,7 @@ describe('Given a CSP state extension', () => {
   describe('when we use a generator as a selector', () => {
     it('should wait till the routine is gone', async () => {
       const spy = jest.fn();
-      const s = state();
+      const s = state('foo');
 
       s.select('IS', function*(word) {
         return word;
@@ -201,7 +204,7 @@ describe('Given a CSP state extension', () => {
       sput(s, 'zar');
 
       await delay(2);
-      expect(spy).toBeCalledWithArgs(['bar'], ['zar']);
+      expect(spy).toBeCalledWithArgs(['foo'], ['bar'], ['zar']);
     });
   });
   describe('when we pass an already existing channel as a selector', () => {
@@ -273,7 +276,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we use the same channel for multiple mutations', () => {
-    fit('should mutate multiple states at once', () => {
+    it('should mutate multiple states at once', () => {
       const s1 = state('foo');
       const s2 = state(12);
 

@@ -1,13 +1,11 @@
 /* eslint-disable no-use-before-define */
 import {
   go,
-  sread,
   chan,
   sput,
   sclose,
   buffer,
   isChannel,
-  call,
   grid,
   logger,
 } from '../index';
@@ -16,9 +14,9 @@ import { getId, isGeneratorFunction } from '../utils';
 export function state(...args) {
   let value = args[0];
   const id = getId('state');
+  const isThereInitialValue = args.length > 0;
   const readChannels = [];
   const writeChannels = [];
-  const isThereInitialValue = args.length > 0;
   const READ_CHANNEL = `${id}_read`;
   const WRITE_CHANNEL = `${id}_write`;
 
@@ -30,24 +28,12 @@ export function state(...args) {
       onError(e);
     };
   }
-  function runSelector({ ch, selector, onError }, v) {
-    try {
-      if (isGeneratorFunction(selector)) {
-        go(selector, routineRes => sput(ch, routineRes), value);
-        return;
-      }
-      sput(ch, selector(v));
-    } catch (e) {
-      handleError(onError)(e);
-    }
-  }
   function runReducer(reducerFunc, payload, callback) {
     if (isGeneratorFunction(reducerFunc)) {
       go(
         reducerFunc,
         reducerValue => {
           value = reducerValue;
-          readChannels.forEach(r => runSelector(r, value));
           callback(value);
           if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
         },
@@ -56,9 +42,19 @@ export function state(...args) {
       );
     } else {
       value = reducerFunc(value, payload);
-      readChannels.forEach(r => runSelector(r, value));
       callback(value);
       if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+    }
+  }
+  function runSelector(selector, callback, onError) {
+    try {
+      if (isGeneratorFunction(selector)) {
+        go(selector, routineRes => callback(routineRes), value);
+        return;
+      }
+      callback(selector(value));
+    } catch (e) {
+      handleError(onError)(e);
     }
   }
 
@@ -73,37 +69,47 @@ export function state(...args) {
     READ: READ_CHANNEL,
     WRITE: WRITE_CHANNEL,
     select(c, selector = v => v, onError = null) {
-      const ch = isChannel(c) ? c : chan(c, buffer.divorced());
+      const behavior = {
+        value: [],
+        onPut(getItem, callback) {
+          this.value = [getItem()];
+          callback(true);
+        },
+        onTake(callback) {
+          callback(this.value[0]);
+        },
+      };
+      runSelector(selector, v => (behavior.value = [v]), onError);
+      const ch = isChannel(c) ? c : chan(c, buffer.divorced(behavior));
       ch['@statereadchannel'] = true;
-      const reader = { ch, selector, onError };
-      readChannels.push(reader);
+      readChannels.push({ ch, selector, onError });
       if (isThereInitialValue) {
-        runSelector(reader, value);
+        // put to channels
       }
       return this;
     },
     mutate(c, reducer = (_, v) => v, onError = null) {
-      function onPut(getItem, callback) {
-        try {
-          runReducer(reducer, getItem(), callback);
-        } catch (e) {
-          handleError(onError)(e);
-        }
-      }
-      function onTake(getValue, callback) {
-        callback(getValue());
-      }
-      let ch;
-      if (isChannel(c)) {
-        ch = c;
-        sread(ch, v => runReducer(reducer, v, () => {}), {
-          onError: handleError(onError),
-          initialCall: true,
-          listen: true,
-        });
-      } else {
-        ch = chan(c, buffer.divorced(onPut, onTake));
-      }
+      const behavior = {
+        value: [],
+        onPut(getItem, callback) {
+          try {
+            runReducer(reducer, getItem(), v => {
+              this.value = [v];
+              readChannels.forEach(r => {
+                runSelector(r.selector, va => sput(r.ch, va), r.onError);
+              });
+              callback(true);
+            });
+          } catch (e) {
+            handleError(onError)(e);
+          }
+        },
+        onTake(callback) {
+          callback(this.value[0]);
+        },
+      };
+      const ch = chan(c, buffer.divorced());
+      ch.buff.addBehavior(behavior);
       ch['@statewritechannel'] = true;
       const writer = { ch };
       writeChannels.push(writer);
@@ -123,8 +129,8 @@ export function state(...args) {
     },
     set(newValue) {
       value = newValue;
-      readChannels.forEach(r => {
-        runSelector(r, value);
+      readChannels.forEach(({ ch, selector, onError }) => {
+        runSelector(selector, v => sput(ch, v), onError);
       });
       if (__DEV__) logger.log(api, 'STATE_VALUE_SET', newValue);
       return newValue;

@@ -1,7 +1,8 @@
 import { getId } from '../utils';
-import { OPEN } from './constants';
+import { OPEN, CLOSED, ENDED } from './constants';
 import { CHANNELS, logger, grid } from '../index';
 import buffer from './buffer';
+import pipeline from './pipeline';
 
 function normalizeChannelArguments(args) {
   let id;
@@ -34,6 +35,10 @@ export function chan(...args) {
     id,
     '@channel': true,
     subscribers: [],
+    pipelines: {
+      put: pipeline(),
+      take: pipeline(),
+    },
   });
 
   api.isActive = () => api.state() === OPEN;
@@ -43,6 +48,20 @@ export function chan(...args) {
     return state;
   };
   api.value = () => buff.getValue();
+
+  api.pipelines.put.append((item, callback) => {
+    api.buff.put(item, putResult => {
+      callback(true);
+    });
+    if (__DEV__) logger.log(api, 'CHANNEL_PUT', item);
+  });
+  api.pipelines.take.append((item, callback) => {
+    api.buff.take(r => {
+      callback(r);
+      if (__DEV__) logger.log(api, 'CHANNEL_TAKE', r);
+    });
+  });
+
   grid.add(api);
   if (__DEV__) logger.log(api, 'CHANNEL_CREATED');
 
