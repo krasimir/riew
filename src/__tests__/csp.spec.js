@@ -832,6 +832,36 @@ describe('Given a CSP', () => {
       expect(takeSpy).toBeCalledWithArgs([undefined], ['foo'], ['bar']);
       expect(putSpy).toBeCalledWithArgs([true], [true]);
     });
+    it('should allow us to provide custom put and take resolvers', async () => {
+      const spy = jest.fn();
+      const ch = chan(
+        buffer.divorced(
+          (getItem, callback) => {
+            setTimeout(() => callback(getItem().toUpperCase()), 10);
+          },
+          (getValue, callback) => {
+            setTimeout(() => callback(`value: ${getValue()}`), 20);
+          }
+        )
+      );
+
+      go(function*() {
+        spy(`put=${yield put(ch, 'foo')}`);
+        spy('A');
+      });
+      go(function*() {
+        spy(`take=${yield take(ch)}`);
+        spy('B');
+      });
+
+      await delay(20);
+      expect(spy).toBeCalledWithArgs(
+        ['put=true'],
+        ['A'],
+        ['take=value: FOO'],
+        ['B']
+      );
+    });
   });
 
   // merge

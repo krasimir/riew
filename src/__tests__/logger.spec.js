@@ -5,6 +5,7 @@ import { logger, riew, sput, reset, chan, state, go, sleep } from '../index';
 import expectation1 from './data/logger.spec.data1.json';
 import expectation2 from './data/logger.spec.data2.json';
 import expectationRiew from './data/logger.spec.riew.json';
+import expectationState from './data/logger.spec.state.json';
 
 function findItemAllFrames(itemId) {
   const filteredFrames = logger
@@ -112,15 +113,12 @@ describe('Given the logger', () => {
     it('should return a snapshot containing the status of the system', async () => {
       await exercise();
       await delay();
-      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectation2);
     });
   });
-
-  // riew
-
   describe('when we have a riew', async () => {
-    fit(`should log
+    it(`should log
       * RIEW_RENDERED
       * RIEW_MOUNTED
       * RIEW_UNMOUNTED
@@ -135,6 +133,24 @@ describe('Given the logger', () => {
       await delay();
       // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationRiew);
+    });
+  });
+  describe('when we have a state', async () => {
+    it(`should log
+      * STATE_VALUE_SET
+      * STATE_DESTROYED
+      * STATE_VALUE_SET
+      * STATE_CREATED
+      `, async () => {
+      const s = state(42);
+      s.mutate('X', (old, newValue) => old + newValue);
+      s.set(100);
+      sput('X', 12);
+      await delay();
+      s.destroy();
+      await delay();
+      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      expect(logger.frames()).toStrictEqual(expectationState);
     });
   });
 });

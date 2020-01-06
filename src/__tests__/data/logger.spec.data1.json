@@ -30,6 +30,11 @@
       }
     },
     {
+      "who": "routine_RRR_4",
+      "what": "ROUTINE_STARTED",
+      "meta": null
+    },
+    {
       "who": "state_5_read",
       "what": "CHANNEL_CREATED",
       "meta": null
@@ -96,11 +101,6 @@
       "meta": null
     },
     {
-      "who": "routine_RRR_4",
-      "what": "ROUTINE_STARTED",
-      "meta": null
-    },
-    {
       "who": "channel_view_myView_2",
       "what": "CHANNEL_PUT",
       "meta": {
@@ -110,7 +110,9 @@
     {
       "who": "riew_myView_1",
       "what": "RIEW_MOUNTED",
-      "meta": null
+      "meta": {
+        "a": "b"
+      }
     },
     {
       "who": "channel_view_myView_2",
@@ -149,6 +151,11 @@
   ],
   [
     {
+      "who": "routine_stateTransform_6",
+      "what": "ROUTINE_STARTED",
+      "meta": null
+    },
+    {
       "who": "state_5_read",
       "what": "CHANNEL_PUT",
       "meta": 5
@@ -171,13 +178,8 @@
       "meta": 5
     },
     {
-      "who": "routine_transform_6",
+      "who": "routine_stateTransform_6",
       "what": "ROUTINE_END",
-      "meta": null
-    },
-    {
-      "who": "routine_transform_6",
-      "what": "ROUTINE_STARTED",
       "meta": null
     },
     {

@@ -28,22 +28,40 @@ export function put(channels, item) {
 }
 export function sput(channels, item, callback = noop) {
   channels = normalizeChannels(channels, 'WRITE');
-  const result = channels.map(() => NOTHING);
+
   const items = channels.length > 1 ? item : [item];
   channels.forEach((channel, idx) => {
     const state = channel.state();
     if (state === CLOSED || state === ENDED) {
       callback(state);
     } else {
-      callSubscribers(channel, items[idx], () => {
-        channel.buff.put(items[idx], value => {
-          result[idx] = value;
-          if (!result.includes(NOTHING)) {
-            callback(result.length === 1 ? result[0] : result);
-          }
-        });
+      const subscriptions = [...channel.subscribers];
+      const processedChannels = channels.map(() => NOTHING);
+      const processedSubscribers = subscriptions.map(() => NOTHING);
+      const isItDone = () => {};
+      channel.buff.put(items[idx], value => {
+        result[idx] = value;
+        if (!result.includes(NOTHING)) {
+          callback(result.length === 1 ? result[0] : result);
+        }
+      });
+      channel.subscribers = [];
+      subscriptions.forEach(s => {
+        const { notify, listen } = s;
+        if (listen) {
+          channel.subscribers.push(s);
+        }
+        notify(item, () => {});
       });
       if (__DEV__) logger.log(channel, 'CHANNEL_PUT', item);
+      // callSubscribers(channel, items[idx], () => {
+      //   channel.buff.put(items[idx], value => {
+      //     result[idx] = value;
+      //     if (!result.includes(NOTHING)) {
+      //       callback(result.length === 1 ? result[0] : result);
+      //     }
+      //   });
+      // });
     }
   });
 }
@@ -340,9 +358,9 @@ export function go(func, done = () => {}, ...args) {
     }
   }
 
-  next();
   grid.add(api);
   if (__DEV__) logger.log(api, 'ROUTINE_STARTED');
+  next();
 
   return api;
 }

@@ -1,0 +1,139 @@
+[
+  {
+    "actions": [
+      {
+        "who": "state_1_read",
+        "what": "CHANNEL_CREATED",
+        "meta": null
+      },
+      {
+        "who": "state_1_read",
+        "what": "CHANNEL_PUT",
+        "meta": 42
+      },
+      {
+        "who": "state_1_write",
+        "what": "CHANNEL_CREATED",
+        "meta": null
+      },
+      {
+        "who": "state_1",
+        "what": "STATE_CREATED",
+        "meta": null
+      },
+      {
+        "who": "X",
+        "what": "CHANNEL_CREATED",
+        "meta": null
+      },
+      {
+        "who": "state_1_read",
+        "what": "CHANNEL_PUT",
+        "meta": 100
+      },
+      {
+        "who": "state_1",
+        "what": "STATE_VALUE_SET",
+        "meta": 100
+      },
+      {
+        "who": "routine_stateTransform_2",
+        "what": "ROUTINE_STARTED",
+        "meta": null
+      },
+      {
+        "who": "state_1_read",
+        "what": "CHANNEL_PUT",
+        "meta": 112
+      },
+      {
+        "who": "state_1",
+        "what": "STATE_VALUE_SET",
+        "meta": 112
+      },
+      {
+        "who": "routine_stateTransform_2",
+        "what": "ROUTINE_END",
+        "meta": null
+      },
+      {
+        "who": "X",
+        "what": "CHANNEL_PUT",
+        "meta": 12
+      }
+    ],
+    "state": [
+      {
+        "id": "state_1",
+        "type": "STATE",
+        "value": 112,
+        "children": [
+          {
+            "id": "state_1_read",
+            "type": "CHANNEL",
+            "value": [
+              112
+            ],
+            "puts": [],
+            "takes": [],
+            "stateRead": true
+          },
+          {
+            "id": "state_1_write",
+            "type": "CHANNEL",
+            "value": [],
+            "puts": [],
+            "takes": [],
+            "stateWrite": true
+          },
+          {
+            "id": "X",
+            "type": "CHANNEL",
+            "value": [
+              12
+            ],
+            "puts": [],
+            "takes": [],
+            "stateWrite": true
+          }
+        ]
+      },
+      {
+        "id": "routine_stateTransform_2",
+        "type": "ROUTINE",
+        "name": "stateTransform"
+      }
+    ]
+  },
+  {
+    "actions": [
+      {
+        "who": "state_1_read",
+        "what": "CHANNEL_CLOSED",
+        "meta": null
+      },
+      {
+        "who": "state_1_write",
+        "what": "CHANNEL_CLOSED",
+        "meta": null
+      },
+      {
+        "who": "X",
+        "what": "CHANNEL_CLOSED",
+        "meta": null
+      },
+      {
+        "who": "state_1",
+        "what": "STATE_DESTROYED",
+        "meta": null
+      }
+    ],
+    "state": [
+      {
+        "id": "routine_stateTransform_2",
+        "type": "ROUTINE",
+        "name": "stateTransform"
+      }
+    ]
+  }
+]

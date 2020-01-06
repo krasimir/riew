@@ -100,7 +100,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we use state into a routine', () => {
-    it(`should
+    fit(`should
       * have non-blocking puts
       * have non-blocking takes
       * when no puts the take should resolve with the initial value`, () => {
@@ -115,6 +115,8 @@ describe('Given a CSP state extension', () => {
       sread('R', v => listen(`R=${v}`), { listen: true });
       sread(s.WRITE, v => listen(`WRITE=${v}`), { listen: true });
       sread('W', v => listen(`W=${v}`), { listen: true });
+
+      listen('----');
 
       go(function*() {
         spy(yield take(s));
@@ -140,12 +142,13 @@ describe('Given a CSP state extension', () => {
       expect(listen).toBeCalledWithArgs(
         ['READ=foo'],
         ['R=FOO'],
+        ['----'],
         ['READ=bar'],
         ['R=BAR'],
-        ['WRITE=bar'],
         ['READ=barhello world my friend'],
         ['R=BARHELLO WORLD MY FRIEND'],
-        ['W=hello world my friend']
+        ['W=hello world my friend'],
+        ['WRITE=bar']
       );
     });
   });

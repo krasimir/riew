@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define */
 import {
   go,
   sread,
@@ -40,6 +41,26 @@ export function state(...args) {
       handleError(onError)(e);
     }
   }
+  function runReducer(reducerFunc, payload, callback) {
+    if (isGeneratorFunction(reducerFunc)) {
+      go(
+        reducerFunc,
+        reducerValue => {
+          value = reducerValue;
+          readChannels.forEach(r => runSelector(r, value));
+          callback(value);
+          if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+        },
+        value,
+        payload
+      );
+    } else {
+      value = reducerFunc(value, payload);
+      readChannels.forEach(r => runSelector(r, value));
+      callback(value);
+      if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+    }
+  }
 
   const api = {
     id,
@@ -62,33 +83,31 @@ export function state(...args) {
       return this;
     },
     mutate(c, reducer = (_, v) => v, onError = null) {
-      const ch = isChannel(c) ? c : chan(c, buffer.divorced());
-      ch['@statewritechannel'] = true;
-      const writer = { ch };
-      writeChannels.push(writer);
-      sread(
-        ch,
-        v => {
-          value = v;
-          readChannels.forEach(r => runSelector(r, value));
-          if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
-        },
-        {
-          *transform(payload) {
-            try {
-              if (isGeneratorFunction(reducer)) {
-                return yield call(reducer, value, payload);
-              }
-              return reducer(value, payload);
-            } catch (e) {
-              handleError(onError)(e);
-            }
-          },
+      function onPut(getItem, callback) {
+        try {
+          runReducer(reducer, getItem(), callback);
+        } catch (e) {
+          handleError(onError)(e);
+        }
+      }
+      function onTake(getValue, callback) {
+        callback(getValue());
+      }
+      let ch;
+      if (isChannel(c)) {
+        ch = c;
+        sread(ch, v => runReducer(reducer, v, () => {}), {
           onError: handleError(onError),
           initialCall: true,
           listen: true,
-        }
-      );
+        });
+      } else {
+        ch = chan(c, buffer.divorced(onPut, onTake));
+      }
+      ch['@statewritechannel'] = true;
+      const writer = { ch };
+      writeChannels.push(writer);
+
       return this;
     },
     destroy() {
