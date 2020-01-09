@@ -14,8 +14,11 @@ import {
   close,
   sleep,
   ONE_OF,
+  state,
+  stake,
+  unreadAll,
 } from '../index';
-import { delay } from '../__helpers__';
+import { delay, Test, exercise } from '../__helpers__';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -373,6 +376,352 @@ describe('Given a CSP pubsub extension', () => {
         ['b', 1],
         ['moo', 0],
         ['c', 1]
+      );
+    });
+  });
+  describe('when piping', () => {
+    it('sub from one channel and pass it to another', () => {
+      const c1 = chan();
+      const c2 = chan();
+      const spy = jest.fn();
+
+      sread(c1, c2, { listen: true });
+
+      go(function*() {
+        spy(`put1=${yield put(c1, 'foo')}`);
+        spy(`put2=${yield put(c1, 'bar')}`);
+      });
+      go(function*() {
+        spy(`take1=${yield take(c2)}`);
+        spy(`take2=${yield take(c2)}`);
+      });
+      sput(c1, 'baz');
+
+      expect(spy).toBeCalledWithArgs(['take1=foo'], ['take2=baz']);
+    });
+  });
+  describe('when composing two channels', () => {
+    it(`should
+      * aggregate value
+      * put to the 'to' channel only if all the source channels receive data`, () => {
+      const c1 = chan();
+      const c2 = chan();
+      const c3 = chan();
+      const spy = jest.fn();
+
+      sread([c1, c2], c3, { listen: true });
+      sread(c3, spy, { listen: true });
+      sput(c1, 'foo');
+      sput(c2, 'bar');
+      sput(c1, 'baz');
+
+      expect(spy).toBeCalledWithArgs([['foo', 'bar']], [['baz', 'bar']]);
+    });
+    it('should use the transform function', () => {
+      const c1 = chan();
+      const c2 = chan();
+      const c3 = chan();
+      const spy = jest.fn();
+
+      sread([c1, c2], c3, {
+        transform: (a, b) => a.toUpperCase() + b.toUpperCase(),
+        listen: true,
+      });
+      sread(c3, spy, { listen: true });
+      sput(c1, 'foo');
+      sput(c2, 'bar');
+      sput(c1, 'baz');
+
+      expect(spy).toBeCalledWithArgs(['FOOBAR'], ['BAZBAR']);
+    });
+    describe('and when we use state', () => {
+      it('should aggregate state values', () => {
+        const users = state([
+          { name: 'Joe' },
+          { name: 'Steve' },
+          { name: 'Rebeka' },
+        ]);
+        const currentUser = state(1);
+        const spy = jest.fn();
+
+        sread('app', spy, { listen: true });
+        sread([users, currentUser], chan('app'), {
+          transform: (us, currentUserIndex) => us[currentUserIndex].name,
+        });
+
+        sput(currentUser, 2);
+
+        expect(spy).toBeCalledWithArgs(['Steve'], ['Rebeka']);
+      });
+    });
+    describe('when we use state together with a routine', () => {
+      it('should work just fine', () => {
+        const users = state([
+          { name: 'Joe' },
+          { name: 'Steve' },
+          { name: 'Rebeka' },
+        ]);
+        const currentUser = state(1);
+        const spy = jest.fn();
+
+        sread([users, currentUser], chan('app'), {
+          transform: (us, currentUserIndex) => us[currentUserIndex].name,
+        });
+
+        go(function*() {
+          spy(yield take('app'));
+          spy(yield take('app'));
+        });
+        go(function*() {
+          spy(yield put(currentUser, 2));
+        });
+
+        expect(spy).toBeCalledWithArgs(['Steve'], ['Rebeka'], [true]);
+      });
+    });
+    describe('when we use sub by passing a string for a channel', () => {
+      it('should create a channel with a DivorceBuffer', () => {
+        const users = state([
+          { name: 'Joe' },
+          { name: 'Steve' },
+          { name: 'Rebeka' },
+        ]);
+        const currentUser = state(1);
+        const spy = jest.fn();
+
+        users.mutate('WWW', arr =>
+          arr.map((user, i) => {
+            if (i === 2) return { name: 'Batman' };
+            return user;
+          })
+        );
+
+        sread([users, currentUser], 'app', {
+          transform: (us, currentUserIndex) => us[currentUserIndex].name,
+          listen: true,
+        });
+
+        go(function*() {
+          spy(yield take('app'));
+          spy(yield take('app'));
+          spy(yield put(currentUser, 2));
+          spy(yield take('app'));
+          spy(yield put('WWW'));
+          spy(yield take('app'));
+        });
+
+        expect(spy).toBeCalledWithArgs(
+          ['Steve'],
+          ['Steve'],
+          [true],
+          ['Rebeka'],
+          [true],
+          ['Batman']
+        );
+      });
+    });
+  });
+  describe('when we pipe to other channels', () => {
+    it('should distribute a single value to multiple channels', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const ch3 = chan();
+
+      sread(ch1, ch2, { listen: true });
+      sread(ch2, ch3, { listen: true });
+
+      exercise(
+        Test(
+          function* A(log) {
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => log(`take_ch3=${v}`));
+            stake(ch3, v => log(`take_ch3=${v}`));
+          },
+          function* B() {
+            sput(ch1, 'foo');
+            sput(ch1, 'bar');
+          }
+        ),
+        ['>A', '<A', '>B', 'take_ch3=foo', 'take_ch2=foo', 'take_ch3=bar', '<B']
+      );
+    });
+    it('should support nested piping', () => {
+      const ch1 = chan('ch1');
+      const ch2 = chan('ch2');
+      const ch3 = chan('ch3');
+      const ch4 = chan('ch4');
+
+      sread(ch1, ch2, { listen: true });
+      sread(ch1, ch3, { listen: true });
+      sread(ch2, ch4, { listen: true });
+
+      exercise(
+        Test(
+          function* A() {
+            yield put(ch1, 'foo');
+          },
+          function* B(log) {
+            stake(ch1, v => log(`take_ch1=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => log(`take_ch3=${v}`));
+            stake(ch4, v => log(`take_ch4=${v}`));
+          }
+        ),
+        [
+          '>A',
+          '>B',
+          '<A',
+          'take_ch1=foo',
+          'take_ch2=foo',
+          'take_ch3=foo',
+          'take_ch4=foo',
+          '<B',
+        ]
+      );
+    });
+    describe('and we tap multiple times to the same channel', () => {
+      it('should register the channel only once', () => {
+        const ch1 = chan('ch1');
+        const ch2 = chan('ch2');
+        const ch3 = chan('ch3');
+
+        sread(ch1, ch2, { listen: true });
+        sread(ch1, ch2, { listen: true });
+        sread(ch1, ch2, { listen: true });
+        sread(ch1, ch3, { listen: true });
+
+        exercise(
+          Test(
+            function* A() {
+              sput(ch1, 'foo');
+              sput(ch1, 'bar');
+            },
+            function* B(log) {
+              stake(ch2, v => log(`ch2_1=${v}`));
+              stake(ch2, v => log(`ch2_2=${v}`));
+              stake(ch3, v => log(`ch3_2=${v}`));
+              stake(ch3, v => log(`ch3_1=${v}`));
+            }
+          ),
+          [
+            '>A',
+            '<A',
+            '>B',
+            'ch2_1=foo',
+            'ch2_2=bar',
+            'ch3_2=foo',
+            'ch3_1=bar',
+            '<B',
+          ]
+        );
+      });
+    });
+    it('should properly handle the situation when a tapped channel is not open anymore', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const ch3 = chan();
+
+      sread(ch1, ch2, { listen: true });
+      sread(ch1, ch3, { listen: true });
+
+      exercise(
+        Test(
+          function* A(log) {
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => {
+              log(`take_ch3=${v}`);
+              close(ch3);
+            });
+            stake(ch3, v => log(`take_ch3=${v.toString()}`));
+            stake(ch3, v => log(`take_ch3=${v.toString()}`));
+          },
+          function* B() {
+            sput(ch1, 'foo');
+            sput(ch1, 'bar');
+            sput(ch1, 'zar');
+          }
+        ),
+        [
+          '>A',
+          '<A',
+          '>B',
+          'take_ch2=foo',
+          'take_ch3=foo',
+          'take_ch3=Symbol(ENDED)',
+          'take_ch3=Symbol(ENDED)',
+          'take_ch2=bar',
+          'take_ch2=zar',
+          '<B',
+        ]
+      );
+    });
+    it('should allow us to unsubscribe', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const ch3 = chan();
+
+      sread(ch1, ch2, { listen: true });
+      sread(ch1, ch3, { listen: true });
+
+      exercise(
+        Test(
+          function* A(log) {
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => {
+              log(`take_ch3=${v}`);
+              unread(ch1, ch3);
+            });
+            stake(ch3, v => log(`take_ch3=${v.toString()}`));
+          },
+          function* B() {
+            sput(ch1, 'foo');
+            sput(ch1, 'bar');
+            sput(ch1, 'zar');
+          }
+        ),
+        [
+          '>A',
+          '<A',
+          '>B',
+          'take_ch2=foo',
+          'take_ch3=foo',
+          'take_ch2=bar',
+          'take_ch2=zar',
+          '<B',
+        ]
+      );
+    });
+    it('should allow us to unsubscribe all', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const ch3 = chan();
+
+      sread(ch1, ch2, { listen: true });
+      sread(ch1, ch3, { listen: true });
+
+      exercise(
+        Test(
+          function* A(log) {
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch2, v => log(`take_ch2=${v}`));
+            stake(ch3, v => {
+              log(`take_ch3=${v}`);
+              unreadAll(ch1);
+            });
+            stake(ch3, v => log(`take_ch3=${v.toString()}`));
+          },
+          function* B() {
+            sput(ch1, 'foo');
+            sput(ch1, 'bar');
+            sput(ch1, 'zar');
+          }
+        ),
+        ['>A', '<A', '>B', 'take_ch2=foo', 'take_ch3=foo', '<B']
       );
     });
   });
