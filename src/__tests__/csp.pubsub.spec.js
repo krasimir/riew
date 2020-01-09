@@ -3,7 +3,6 @@ import {
   buffer,
   read,
   sread,
-  unread,
   CHANNELS,
   go,
   reset,
@@ -25,11 +24,10 @@ describe('Given a CSP pubsub extension', () => {
   });
   describe('when we subscribe to a channel', () => {
     describe('and we put to the same channel', () => {
-      it(`should
+      fit(`should
         * call our callbacks
         * should keep the blocking nature of the put operation`, () => {
         expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
-
         const spyA = jest.fn();
         const spyB = jest.fn();
         const spyC = jest.fn();
@@ -56,12 +54,12 @@ describe('Given a CSP pubsub extension', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      sread('a', spyA, { listen: true });
+      const unread = sread('a', spyA, { listen: true });
       sread('a', spyB, { listen: true });
 
       go(function*() {
         yield put('a', 'foo');
-        unread('a', spyA);
+        unread();
         yield put('a', 'bar');
       });
       go(function*() {
@@ -71,7 +69,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyA).toBeCalledWithArgs(['foo']);
       expect(spyB).toBeCalledWithArgs(['foo'], ['bar']);
     });
-    it('should create a dedicated channel for each subscription', () => {
+    it('should create a dedicated channel for each sread call', () => {
       expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
@@ -116,12 +114,12 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyB).not.toBeCalled();
     });
   });
-  describe('when we pass a channel instead of a string to the sub function', () => {
+  describe('when we pass a channel instead of a string to the sput function', () => {
     it('should still work', () => {
       const spy = jest.fn();
       const ch = chan();
 
-      sread(ch, spy);
+      sread(ch, spy, { listen: true });
       sput(ch, 'foo');
       close(ch);
       sput(ch, 'bar');

@@ -51,7 +51,7 @@ export function chan(...args) {
 
   api.pipelines.put.append((item, callback) => {
     api.buff.put(item, putResult => {
-      callback(true);
+      callback(putResult);
     });
     if (__DEV__) logger.log(api, 'CHANNEL_PUT', item);
   });

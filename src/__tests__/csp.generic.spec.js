@@ -219,7 +219,7 @@ describe('Given a CSP', () => {
         expect(spy).toBeCalledWithArgs([0], [1], [2], [2], [2], [3]);
         expect(counter).toBe(3);
       });
-      it('should stop the current routine before running it again', () => {
+      it('should stop the current routine before running it again', async () => {
         const ch = chan();
         const spy = jest.fn();
 
@@ -230,6 +230,8 @@ describe('Given a CSP', () => {
 
         sput(ch, 'foo');
         sput(ch, 'bar');
+
+        await delay(30);
 
         expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
       });

@@ -25,139 +25,80 @@ const noop = () => {};
 
 // **************************************************** put
 
-export function put(channels, item) {
-  return { channels, op: PUT, item };
-}
-export function sput(channels, item, callback = noop) {
+export function sput(channels, itemToPut, resolvePutOpWith = noop) {
   channels = normalizeChannels(channels, 'WRITE');
-  const p = pipeline(PARALLEL);
-  channels.forEach(channel => {
-    const chState = channel.state();
-    p.append((result, cb) => {
+
+  const putOpPipeline = pipeline(PARALLEL);
+  channels
+    .map(channel => (item, resolveChannelPutWith) => {
+      const chState = channel.state();
       if (chState === CLOSED || chState === ENDED) {
-        callback(chState);
+        resolveChannelPutWith(chState);
         return;
       }
       channel.pipelines.put.run(item, r => {
-        cb([...result, r]);
+        console.log('-->', r, channel.pipelines.put.steps.length);
+        resolveChannelPutWith(r);
         if (__DEV__) logger.log(channel, 'CHANNEL_PUT', item);
       });
-    });
+    })
+    .forEach(putOpPipeline.append);
+  putOpPipeline.run(itemToPut, r => {
+    console.log(r);
+    resolvePutOpWith(r);
   });
-  p.run([], putResult => {
-    callback(putResult.length === 1 ? putResult[0] : putResult);
-  });
-
-  // const items = channels.length > 1 ? item : [item];
-  // const processedChannels = channels.map(() => NOTHING);
-  // channels.forEach((channel, idx) => {
-  //   const state = channel.state();
-  //   if (state === CLOSED || state === ENDED) {
-  //     callback(state);
-  //   } else {
-  //     channel.pipelines.put.run(item, result => {
-  //       processedChannels[idx] = result;
-  //       if (!processedChannels.includes(NOTHING)) {
-  //         callback(
-  //           processedChannels.length === 1
-  //             ? processedChannels[0]
-  //             : processedChannels
-  //         );
-  //       }
-  //     });
-  //     // channel.subscribers = [];
-  //     // subscribers.forEach(s => {
-  //     //   const { notify, listen } = s;
-  //     //   if (listen) {
-  //     //     channel.subscribers.push(s);
-  //     //   }
-  //     //   notify(item);
-  //     // });
-  //     // if (__DEV__) logger.log(channel, 'CHANNEL_PUT', item);
-  //   }
-  // });
+}
+export function put(channels, item) {
+  return { channels, op: PUT, item };
 }
 
 // **************************************************** take
 
-export function take(channels, options) {
-  return { channels, op: TAKE, options };
-}
 export function stake(channels, callback, options) {
   channels = normalizeChannels(channels);
   options = normalizeOptions(options);
-  const data = channels.map(() => NOTHING);
-  const { initialCall, listen } = options;
 
-  const p = pipeline(options.strategy);
-  channels.forEach(channel => {
-    const chState = channel.state();
-    p.append((result, cb) => {
+  const takeOpPipeline = pipeline(options.strategy);
+  const removes = [];
+  channels
+    .map(channel => (notused, resolveChannelTakeWith) => {
+      const chState = channel.state();
       if (chState === CLOSED || chState === ENDED) {
-        callback(chState);
+        resolveChannelTakeWith(chState);
         return;
       }
-      channel.pipelines.take.run(null, r => {
-        cb(r);
-        if (__DEV__) logger.log(channel, 'CHANNEL_TAKE');
-      });
-    });
-  });
-  p.run([], (takeResult, idx) => {
-    if (typeof idx !== 'undefined') {
-      callback(takeResult, idx);
-    } else {
-      callback(takeResult);
-    }
-  });
-
-  // const takeDone = (value, idx) => {
-  //   data[idx] = value;
-  //   let result = null;
-  //   if (options.strategy === ONE_OF) {
-  //     result = [value, idx];
-  //   } else if (!data.includes(NOTHING)) {
-  //     result = [...data];
-  //   }
-  //   if (result !== null) {
-  //     if (options.strategy === ONE_OF) {
-  //       callback(...result);
-  //     } else {
-  //       callback(result.length === 1 ? result[0] : result);
-  //     }
-  //   }
-  // };
-
-  // channels.forEach((channel, idx) => {
-  //   const state = channel.state();
-  //   if (state === ENDED) {
-  //     takeDone(ENDED, idx);
-  //   } else if (state === CLOSED && channel.buff.isEmpty()) {
-  //     channel.state(ENDED);
-  //     takeDone(ENDED, idx);
-  //   } else if (options.read) {
-  //     // reading
-  //     channel.pipelines.put.append((value, cb) => {
-  //       takeDone(value, idx);
-  //       cb(value);
-  //     });
-  //   } else {
-  //     // taking
-  //     channel.pipelines.take.run(null, result => {
-  //       takeDone(result, idx);
-  //       if (__DEV__) logger.log(channel, 'CHANNEL_TAKE', result);
-  //     });
-  //   }
-  // });
+      if (options.read) {
+        removes.push(
+          channel.pipelines.put[options.listen ? 'prepend' : 'prependOnce'](
+            (putItem, cb) => {
+              cb(true);
+              resolveChannelTakeWith(putItem);
+              if (__DEV__) logger.log(channel, 'CHANNEL_READ');
+            }
+          )
+        );
+      } else {
+        channel.pipelines.take.run(null, bufferTakeResult => {
+          resolveChannelTakeWith(bufferTakeResult);
+          if (__DEV__) logger.log(channel, 'CHANNEL_TAKE');
+        });
+      }
+    })
+    .forEach(takeOpPipeline.append);
+  takeOpPipeline.run(null, callback);
+  return () => removes.forEach(f => f());
+}
+export function take(channels, options) {
+  return { channels, op: TAKE, options };
 }
 
 // **************************************************** read
 
-export function read(channels, options) {
-  return { channels, op: READ, options: { ...options, read: true } };
-}
 export function sread(channels, to, options) {
   return stake(channels, normalizeTo(to), { ...options, read: true });
+}
+export function read(channels, options) {
+  return { channels, op: READ, options: { ...options, read: true } };
 }
 export function unread(channels, callback) {
   channels = normalizeChannels(channels);
@@ -178,69 +119,6 @@ export function unreadAll(channels) {
     ch.subscribers = [];
   });
 }
-
-// **************************************************** close, reset, call, fork, merge, timeout, isChannel
-
-export function close(channels) {
-  channels = normalizeChannels(channels);
-  channels.forEach(ch => {
-    const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
-    ch.state(newState);
-    ch.buff.puts.forEach(p => p.callback(newState));
-    ch.buff.takes.forEach(t => t(newState));
-    grid.remove(ch);
-    ch.subscribers = [];
-    CHANNELS.del(ch.id);
-    if (__DEV__) logger.log(ch, 'CHANNEL_CLOSED');
-  });
-  return { op: NOOP };
-}
-export function sclose(id) {
-  return close(id);
-}
-export function channelReset(channels) {
-  channels = normalizeChannels(channels);
-  channels.forEach(ch => {
-    ch.state(OPEN);
-    ch.buff.reset();
-    if (__DEV__) logger.log(ch, 'CHANNEL_RESET');
-  });
-  return { op: NOOP };
-}
-export function schannelReset(id) {
-  channelReset(id);
-}
-export function call(routine, ...args) {
-  return { op: CALL_ROUTINE, routine, args };
-}
-export function fork(routine, ...args) {
-  return { op: FORK_ROUTINE, routine, args };
-}
-export function merge(...channels) {
-  const newCh = chan();
-
-  channels.forEach(ch => {
-    (function taker() {
-      stake(ch, v => {
-        if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
-          sput(newCh, v, taker);
-        }
-      });
-    })();
-  });
-  return newCh;
-}
-export function timeout(interval) {
-  const ch = chan();
-  setTimeout(() => close(ch), interval);
-  return ch;
-}
-export const isChannel = ch => ch && ch['@channel'] === true;
-export const isRiew = r => r && r['@riew'] === true;
-export const isState = s => s && s['@state'] === true;
-export const isRoutine = r => r && r['@routine'] === true;
-export const isStateReadChannel = s => s && s['@statereadchannel'] === true;
-export const isStateWriteChannel = s => s && s['@statewritechannel'] === true;
 
 // **************************************************** go/routine
 
@@ -354,6 +232,69 @@ go.with = (...maps) => {
     return go(func, done, ...args);
   };
 };
+
+// **************************************************** close, reset, call, fork, merge, timeout, isChannel
+
+export function close(channels) {
+  channels = normalizeChannels(channels);
+  channels.forEach(ch => {
+    const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
+    ch.state(newState);
+    ch.buff.puts.forEach(p => p.callback(newState));
+    ch.buff.takes.forEach(t => t(newState));
+    grid.remove(ch);
+    ch.subscribers = [];
+    CHANNELS.del(ch.id);
+    if (__DEV__) logger.log(ch, 'CHANNEL_CLOSED');
+  });
+  return { op: NOOP };
+}
+export function sclose(id) {
+  return close(id);
+}
+export function channelReset(channels) {
+  channels = normalizeChannels(channels);
+  channels.forEach(ch => {
+    ch.state(OPEN);
+    ch.buff.reset();
+    if (__DEV__) logger.log(ch, 'CHANNEL_RESET');
+  });
+  return { op: NOOP };
+}
+export function schannelReset(id) {
+  channelReset(id);
+}
+export function call(routine, ...args) {
+  return { op: CALL_ROUTINE, routine, args };
+}
+export function fork(routine, ...args) {
+  return { op: FORK_ROUTINE, routine, args };
+}
+export function merge(...channels) {
+  const newCh = chan();
+
+  channels.forEach(ch => {
+    (function taker() {
+      stake(ch, v => {
+        if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
+          sput(newCh, v, taker);
+        }
+      });
+    })();
+  });
+  return newCh;
+}
+export function timeout(interval) {
+  const ch = chan();
+  setTimeout(() => close(ch), interval);
+  return ch;
+}
+export const isChannel = ch => ch && ch['@channel'] === true;
+export const isRiew = r => r && r['@riew'] === true;
+export const isState = s => s && s['@state'] === true;
+export const isRoutine = r => r && r['@routine'] === true;
+export const isStateReadChannel = s => s && s['@statereadchannel'] === true;
+export const isStateWriteChannel = s => s && s['@statewritechannel'] === true;
 
 export function sleep(ms, callback) {
   if (typeof callback === 'function') {
