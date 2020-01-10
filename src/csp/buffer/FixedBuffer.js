@@ -20,8 +20,7 @@ export default function FixedBuffer(size = 0) {
 
     // resolving takers
     if (takers.length > 0) {
-      api.value.push(item);
-      api.consumeTake(takers[0], api.value.shift());
+      api.consumeTake(takers[0], item);
       callback(true);
     } else {
       if (api.value.length < size) {
@@ -48,7 +47,7 @@ export default function FixedBuffer(size = 0) {
     if (api.value.length === 0) {
       if (api.puts.length > 0 && !options.read) {
         api.puts.shift().resolvePut();
-        api.take(callback, options);
+        callback(api.value.shift());
       } else {
         api.takes.push({ callback, options });
       }

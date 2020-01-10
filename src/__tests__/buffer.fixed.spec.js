@@ -18,6 +18,149 @@ describe('Given the Fixed buffer', () => {
   beforeEach(() => {
     reset();
   });
+
+  // put
+
+  describe('when we try to put and there are readers', () => {
+    it(`should fire all the readers and remove those which are not listeners`, () => {
+      const buf = buffer.fixed();
+      const spy = jest.fn();
+
+      buf.take(v => spy('take1', v), { read: true });
+      buf.take(v => spy('take2', v), { read: true, listen: true });
+      buf.take(v => spy('take3', v), { read: true });
+
+      buf.put('foo');
+      buf.put('bar');
+
+      expect(spy).toBeCalledWithArgs(
+        ['take1', 'foo'],
+        ['take2', 'foo'],
+        ['take3', 'foo'],
+        ['take2', 'bar']
+      );
+    });
+  });
+  describe('when there are pending takers', () => {
+    it(`should
+      * register the added value to the buffer
+      * consume the first taker from the list
+      * resolve the put`, () => {
+      const buf = buffer.fixed();
+      const spy = jest.fn();
+
+      buf.take(v => spy('take1', v));
+      buf.take(v => spy('take2', v));
+      buf.put('foo', () => spy('put'));
+
+      expect(spy).toBeCalledWithArgs(['take1', 'foo'], ['put']);
+    });
+  });
+  describe('when we put but there is no pending takers', () => {
+    describe('and buffer has empty space', () => {
+      it('should fill the buffer with values and resolve the put', () => {
+        const buf = buffer.fixed(2);
+        const spy = jest.fn();
+
+        buf.put('foo', () => spy('put1'));
+        buf.put('bar', () => spy('put2'));
+        buf.put('zoo', () => spy('put3'));
+
+        expect(spy).toBeCalledWithArgs(['put1'], ['put2']);
+      });
+    });
+    describe('and buffer has no empty space', () => {
+      it('should create a pending put', () => {
+        const buf = buffer.fixed();
+        const spy = jest.fn();
+
+        buf.put('foo', () => spy('put1'));
+        buf.put('bar', () => spy('put2'));
+
+        expect(spy).toBeCalledWithArgs();
+        expect(buf.puts).toHaveLength(2);
+      });
+    });
+  });
+
+  // take
+
+  describe('when we take but the buffer is empty', () => {
+    describe('and there are pending puts', () => {
+      describe('and we are not reading', () => {
+        it('should resolve the first pending put and then the take', () => {
+          const buf = buffer.fixed();
+          const spy = jest.fn();
+
+          buf.put('foo', v => spy('put', v));
+          expect(buf.puts).toHaveLength(1);
+          buf.take(spy);
+
+          expect(spy).toBeCalledWithArgs(['put', true], ['foo']);
+        });
+      });
+      describe('and we are reading', () => {
+        it('should create a pending reader', () => {
+          const buf = buffer.fixed();
+          const spy = jest.fn();
+
+          buf.put('foo', v => spy('put', v));
+          expect(buf.puts).toHaveLength(1);
+          buf.take(spy, { read: true });
+          expect(spy).toBeCalledWithArgs();
+          expect(buf.takes).toHaveLength(1);
+        });
+      });
+    });
+    describe('and there are no pending puts', () => {
+      it('should create a pending taker', () => {
+        const buf = buffer.fixed();
+        const spy = jest.fn();
+
+        buf.take(spy);
+        expect(spy).toBeCalledWithArgs();
+        expect(buf.takes).toHaveLength(1);
+      });
+    });
+  });
+  describe('when we take and the buffer is not empty', () => {
+    describe('and we are reading', () => {
+      it('should resolve the reader and leave the value in the buffer', () => {
+        const buf = buffer.fixed(1);
+        const spy = jest.fn();
+
+        buf.put('foo', () => spy('put'));
+        buf.take(spy, { read: true });
+        expect(spy).toBeCalledWithArgs(['put'], ['foo']);
+        expect(buf.getValue()).toStrictEqual(['foo']);
+      });
+    });
+    describe('and we are not reading', () => {
+      it('should consume a value of the buffer', () => {
+        const buf = buffer.fixed(1);
+        const spy = jest.fn();
+
+        buf.put('foo', () => spy('put'));
+        buf.take(spy);
+        expect(spy).toBeCalledWithArgs(['put'], ['foo']);
+        expect(buf.getValue()).toStrictEqual([]);
+      });
+      describe('and there are pending puts and space in the buffer', () => {
+        it('should resolve the next pending put', () => {
+          const buf = buffer.fixed(1);
+          const spy = jest.fn();
+
+          buf.put('foo', () => spy('put1'));
+          buf.put('bar', () => spy('put2'));
+          buf.take(spy);
+          expect(spy).toBeCalledWithArgs(['put1'], ['put2'], ['foo']);
+          expect(buf.getValue()).toStrictEqual(['bar']);
+        });
+      });
+    });
+  });
+
+  // ****************************************************************************
   describe('when we put but there is no take', () => {
     it('should wait for a take', () => {
       const buf = buffer.fixed();
@@ -50,6 +193,68 @@ describe('Given the Fixed buffer', () => {
       );
     });
   });
+  describe('when we read but there is no put', () => {
+    it('should resolve the read without consuming the put', () => {
+      const buf = buffer.fixed();
+      const spy = jest.fn();
+
+      buf.take(v => spy('take', v), { read: true });
+      spy('waiting');
+      buf.put('foo', v => spy('put', v));
+      buf.put('bar', v => spy('put', v));
+
+      expect(spy).toBeCalledWithArgs(['waiting'], ['take', 'foo']);
+    });
+  });
+  describe('when we read and listen', () => {
+    it('should resolve the read multiple times without consuming the puts', () => {
+      const buf = buffer.fixed();
+      const spy = jest.fn();
+
+      buf.take(v => spy('take', v), { read: true, listen: true });
+      spy('waiting');
+      buf.put('foo', v => spy('put1', v));
+      buf.put('bar', v => spy('put2', v));
+
+      expect(spy).toBeCalledWithArgs(
+        ['waiting'],
+        ['take', 'foo'],
+        ['take', 'bar']
+      );
+    });
+  });
+  describe('when we read after a put', () => {
+    it('should do nothing', () => {
+      const buf = buffer.fixed();
+      const spy = jest.fn();
+
+      buf.put('foo', v => spy('put1', v));
+      spy('waiting');
+      buf.take(v => spy('take', v), { read: true });
+
+      expect(spy).toBeCalledWithArgs(['waiting']);
+    });
+  });
+  describe('when we have a mix type of readers and takers', () => {
+    it('should do nothing', () => {
+      const buf = buffer.fixed();
+      const spy = jest.fn();
+
+      buf.take(v => spy('read', v), { read: true, listen: true });
+      buf.take(v => spy('take', v));
+      spy('waiting');
+      buf.put('foo', v => spy('put1', v));
+      buf.put('bar', v => spy('put2', v));
+
+      expect(spy).toBeCalledWithArgs(
+        ['waiting'],
+        ['read', 'foo'],
+        ['take', 'foo'],
+        ['put1', true],
+        ['read', 'bar']
+      );
+    });
+  });
   describe('when we have size > 0', () => {
     it('should wait for a put to resolve the take', () => {
       const buf = buffer.fixed(1);
@@ -68,13 +273,7 @@ describe('Given the Fixed buffer', () => {
       );
     });
   });
-  describe('when the size is 0', () => {
-    it('allow writing and reading', () => {
-      const ch = chan();
-
-      put(ch, 'foo');
-      take(ch, v => expect(v).toEqual('foo'));
-    });
+  describe('when using inside a routine', () => {
     it('should block the channel if there is no puts but we want to take', () => {
       const ch = chan();
 

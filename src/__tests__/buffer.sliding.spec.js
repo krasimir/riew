@@ -13,8 +13,6 @@ import {
 } from '../index';
 import { Test, exercise } from '../__helpers__';
 
-// Dropping buffer
-
 // Sliding buffer
 
 describe('Given we have a sliding buffer', () => {
