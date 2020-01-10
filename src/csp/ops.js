@@ -56,7 +56,7 @@ export function stake(channels, callback, options) {
     const setResult = (idx, value) => {
       result[idx] = value;
       if (!result.includes(NOTHING)) {
-        callback(result.length === 1 ? result[0] : result);
+        callback(result.length === 1 ? result[0] : [...result]);
       }
     };
     channels.forEach((channel, idx) => {

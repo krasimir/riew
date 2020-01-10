@@ -28,7 +28,9 @@ export default function FixedBuffer(size = 0) {
       api.takes.reduce(
         (status, take, idx) => {
           if (take.options.read) {
-            api.takes.splice(idx, 1);
+            if (!take.options.listen) {
+              api.takes.splice(idx, 1);
+            }
             take.callback(item);
           } else if (!status.takeConsumed) {
             api.takes.splice(idx, 1);

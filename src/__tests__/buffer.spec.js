@@ -9,6 +9,7 @@ import {
   go,
   read,
   sread,
+  ONE_OF,
 } from '../index';
 import { Test, exercise } from '../__helpers__';
 
@@ -249,6 +250,46 @@ describe('Given we use take with options and a fixed buffer', () => {
       sput(ch2, 'bar', spy); // <- spy didn't call here
 
       expect(spy).toBeCalledWithArgs([['foo', 'bar']]);
+    });
+  });
+  describe('when we listen', () => {
+    it('should wait till both channels have something', () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      sread(ch, spy, { listen: true });
+      sput(ch, 'foo', spy); // <- spy didn't call here
+      sput(ch, 'bar', spy); // <- spy didn't call here
+
+      expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
+    });
+  });
+  describe('when we listen from multiple channels', () => {
+    it('should wait till both channels have something', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const spy = jest.fn();
+
+      sread([ch1, ch2], spy, { listen: true });
+      sput(ch1, 'foo', spy); // <- spy didn't call here
+      sput(ch2, 'bar', spy); // <- spy didn't call here
+      sput(ch2, 'xxx', spy); // <- spy didn't call here
+
+      expect(spy).toBeCalledWithArgs([['foo', 'bar']], [['foo', 'xxx']]);
+    });
+  });
+  describe('when we listen from multiple channels using the ONE_OF strategy', () => {
+    it('should fire the callback as soon as there is a value', () => {
+      const ch1 = chan();
+      const ch2 = chan();
+      const spy = jest.fn();
+
+      sread([ch1, ch2], spy, { listen: true, strategy: ONE_OF });
+      sput(ch1, 'foo', spy); // <- spy didn't call here
+      sput(ch2, 'bar', spy); // <- spy didn't call here
+      sput(ch2, 'xxx', spy); // <- spy didn't call here
+
+      expect(spy).toBeCalledWithArgs(['foo', 0], ['bar', 1], ['xxx', 1]);
     });
   });
 });
