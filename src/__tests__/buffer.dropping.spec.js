@@ -155,17 +155,16 @@ describe('Given we use take with options and a dropping buffer', () => {
         '>A',
         '>B',
         'read1=foo',
-        true,
+        `true put foo`,
         'read2=bar',
         '<A',
-        true,
-        true,
-        true,
+        `true put bar`,
+        `false put zar`,
         '<B',
       ],
     ],
   ])('when we _read_ from a channel via routine (%s)', (_, ch, expected) => {
-    fit('should just resolve the read but not consume the value and not resolve puts', () => {
+    it('should just resolve the read but not consume the value and not resolve puts', () => {
       exercise(
         Test(
           function* A(log) {
@@ -214,7 +213,7 @@ describe('Given we use take with options and a dropping buffer', () => {
             sput(ch2, 'bar', log);
           }
         ),
-        ['>A', '>B', 'read=foo,bar', '<A', '<B']
+        ['>A', '>B', true, 'read=foo,bar', '<A', true, '<B']
       );
     });
   });
@@ -225,14 +224,18 @@ describe('Given we use take with options and a dropping buffer', () => {
       const spy = jest.fn();
 
       sread([ch1, ch2], spy);
-      sput(ch1, 'foo', spy); // <- spy didn't call here
-      sput(ch2, 'bar', spy); // <- spy didn't call here
+      sput(ch1, 'foo', spy);
+      sput(ch2, 'bar', spy);
 
-      expect(spy).toBeCalledWithArgs([['foo', 'bar']]);
+      expect(spy).toBeCalledWithArgs([true], [['foo', 'bar']], [true]);
     });
   });
   describe.each([
-    ['buffer size = 0', chan(buffer.dropping()), [['foo'], ['bar']]],
+    [
+      'buffer size = 0',
+      chan(buffer.dropping()),
+      [['foo'], [true], ['bar'], [false]],
+    ],
     [
       'buffer size > 0',
       chan(buffer.dropping(2)),
@@ -256,11 +259,17 @@ describe('Given we use take with options and a dropping buffer', () => {
       const spy = jest.fn();
 
       sread([ch1, ch2], spy, { listen: true });
-      sput(ch1, 'foo', spy); // <- spy didn't call here
-      sput(ch2, 'bar', spy); // <- spy didn't call here
-      sput(ch2, 'xxx', spy); // <- spy didn't call here
+      sput(ch1, 'foo', spy);
+      sput(ch2, 'bar', spy);
+      sput(ch2, 'xxx', spy);
 
-      expect(spy).toBeCalledWithArgs([['foo', 'bar']], [['foo', 'xxx']]);
+      expect(spy).toBeCalledWithArgs(
+        [true],
+        [['foo', 'bar']],
+        [true],
+        [['foo', 'xxx']],
+        [false]
+      );
     });
   });
   describe('when we listen from multiple channels using the ONE_OF strategy', () => {
@@ -270,35 +279,34 @@ describe('Given we use take with options and a dropping buffer', () => {
       const spy = jest.fn();
 
       sread([ch1, ch2], spy, { listen: true, strategy: ONE_OF });
-      sput(ch1, 'foo', spy); // <- spy didn't call here
-      sput(ch2, 'bar', spy); // <- spy didn't call here
-      sput(ch2, 'xxx', spy); // <- spy didn't call here
+      sput(ch1, 'foo', spy);
+      sput(ch2, 'bar', spy);
+      sput(ch2, 'xxx', spy);
 
-      expect(spy).toBeCalledWithArgs(['foo', 0], ['bar', 1], ['xxx', 1]);
+      expect(spy).toBeCalledWithArgs(
+        ['foo', 0],
+        [true],
+        ['bar', 1],
+        [true],
+        ['xxx', 1],
+        [false]
+      );
     });
   });
   describe('when we read after we have puts to the channel', () => {
-    it('should do nothing', () => {
+    it('should properly resolve callback', () => {
       const ch = chan(buffer.dropping());
       const spy = jest.fn();
 
-      sput(ch, 'foo', () => spy('first put'));
-      sput(ch, 'bar', () => spy('second put'));
+      sput(ch, 'foo', v => spy('first put', v));
+      sput(ch, 'bar', v => spy('second put', v));
       sread(ch, spy);
 
-      expect(spy).toBeCalledWithArgs();
-    });
-  });
-  describe('when we read after we have puts to the channel but with a channel with size > 0', () => {
-    it('should resolve the read with the first put item', () => {
-      const ch = chan(buffer.dropping(2));
-      const spy = jest.fn();
-
-      sput(ch, 'foo', () => spy('first put'));
-      sput(ch, 'bar', () => spy('second put'));
-      sread(ch, spy);
-
-      expect(spy).toBeCalledWithArgs(['first put'], ['second put'], ['foo']);
+      expect(spy).toBeCalledWithArgs(
+        ['first put', true],
+        ['second put', false],
+        ['foo']
+      );
     });
   });
 });

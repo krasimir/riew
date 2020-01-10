@@ -2,7 +2,9 @@
 import BufferInterface from './Interface';
 import { normalizeOptions } from '../utils';
 
-export default function FixedBuffer(size = 0) {
+const DEFAULT_OPTIONS = { dropping: false, sliding: false };
+
+export default function FixedBuffer(size = 0, { dropping } = DEFAULT_OPTIONS) {
   const api = BufferInterface();
 
   api.setValue = v => (api.value = v);
@@ -28,13 +30,13 @@ export default function FixedBuffer(size = 0) {
         callback(true);
         return;
       }
+      if (dropping) {
+        callback(false);
+        return;
+      }
       api.puts.push({
-        resolvePut: v => {
+        callback: v => {
           api.value.push(item);
-          const { takers: tks } = api.decomposeTakers();
-          if (tks.length > 0) {
-            api.consumeTake(tks[0], api.value.shift());
-          }
           callback(v || true);
         },
         item,
@@ -46,7 +48,7 @@ export default function FixedBuffer(size = 0) {
     options = normalizeOptions(options);
     if (api.value.length === 0) {
       if (api.puts.length > 0 && !options.read) {
-        api.puts.shift().resolvePut();
+        api.puts.shift().callback();
         callback(api.value.shift());
       } else {
         api.takes.push({ callback, options });
@@ -55,10 +57,10 @@ export default function FixedBuffer(size = 0) {
       callback(api.value[0]);
     } else {
       const v = api.value.shift();
-      if (api.value.length < size && api.puts.length > 0) {
-        api.puts.shift().resolvePut();
-      }
       callback(v);
+      if (api.value.length < size && api.puts.length > 0) {
+        api.puts.shift().callback();
+      }
     }
   };
 

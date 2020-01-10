@@ -153,59 +153,15 @@ describe('Given the Fixed buffer', () => {
           buf.put('foo', () => spy('put1'));
           buf.put('bar', () => spy('put2'));
           buf.take(spy);
-          expect(spy).toBeCalledWithArgs(['put1'], ['put2'], ['foo']);
+          expect(spy).toBeCalledWithArgs(['put1'], ['foo'], ['put2']);
           expect(buf.getValue()).toStrictEqual(['bar']);
         });
       });
     });
   });
 
-  // ****************************************************************************
-  describe('when we put but there is no take', () => {
-    it('should wait for a take', () => {
-      const buf = buffer.fixed();
-      const spy = jest.fn();
+  // Other
 
-      buf.put('foo', v => spy('put', v));
-      spy('waiting');
-      buf.take(v => spy('take', v));
-
-      expect(spy).toBeCalledWithArgs(
-        ['waiting'],
-        ['put', true],
-        ['take', 'foo']
-      );
-    });
-  });
-  describe('when we take but there is no put', () => {
-    it('should wait for a put to resolve the take', () => {
-      const buf = buffer.fixed();
-      const spy = jest.fn();
-
-      buf.take(v => spy('take', v));
-      spy('waiting');
-      buf.put('foo', v => spy('put', v));
-
-      expect(spy).toBeCalledWithArgs(
-        ['waiting'],
-        ['take', 'foo'],
-        ['put', true]
-      );
-    });
-  });
-  describe('when we read but there is no put', () => {
-    it('should resolve the read without consuming the put', () => {
-      const buf = buffer.fixed();
-      const spy = jest.fn();
-
-      buf.take(v => spy('take', v), { read: true });
-      spy('waiting');
-      buf.put('foo', v => spy('put', v));
-      buf.put('bar', v => spy('put', v));
-
-      expect(spy).toBeCalledWithArgs(['waiting'], ['take', 'foo']);
-    });
-  });
   describe('when we read and listen', () => {
     it('should resolve the read multiple times without consuming the puts', () => {
       const buf = buffer.fixed();
@@ -268,8 +224,8 @@ describe('Given the Fixed buffer', () => {
       expect(spy).toBeCalledWithArgs(
         ['put', true],
         ['waiting'],
-        ['put', true],
-        ['take', 'foo']
+        ['take', 'foo'],
+        ['put', true]
       );
     });
   });
@@ -363,13 +319,13 @@ describe('Given the Fixed buffer', () => {
           'value3=foo,bar',
           '>B',
           'end of waiting',
-          'put3=true',
-          'value4=bar,zar',
           'take1=foo',
+          'take2=bar',
+          'put3=true',
+          'value4=zar',
           'put4=true',
           'value5=zar,mar',
           '<A',
-          'take2=bar',
           'take3=zar',
           'take4=mar',
           '<B',
@@ -461,8 +417,8 @@ describe('Given we use take with options and a fixed buffer', () => {
       const spy = jest.fn();
 
       sread([ch1, ch2], spy);
-      sput(ch1, 'foo', spy); // <- spy didn't call here
-      sput(ch2, 'bar', spy); // <- spy didn't call here
+      sput(ch1, 'foo', spy);
+      sput(ch2, 'bar', spy);
 
       expect(spy).toBeCalledWithArgs([['foo', 'bar']]);
     });
@@ -492,9 +448,9 @@ describe('Given we use take with options and a fixed buffer', () => {
       const spy = jest.fn();
 
       sread([ch1, ch2], spy, { listen: true });
-      sput(ch1, 'foo', spy); // <- spy didn't call here
-      sput(ch2, 'bar', spy); // <- spy didn't call here
-      sput(ch2, 'xxx', spy); // <- spy didn't call here
+      sput(ch1, 'foo', spy);
+      sput(ch2, 'bar', spy);
+      sput(ch2, 'xxx', spy);
 
       expect(spy).toBeCalledWithArgs([['foo', 'bar']], [['foo', 'xxx']]);
     });
@@ -506,9 +462,9 @@ describe('Given we use take with options and a fixed buffer', () => {
       const spy = jest.fn();
 
       sread([ch1, ch2], spy, { listen: true, strategy: ONE_OF });
-      sput(ch1, 'foo', spy); // <- spy didn't call here
-      sput(ch2, 'bar', spy); // <- spy didn't call here
-      sput(ch2, 'xxx', spy); // <- spy didn't call here
+      sput(ch1, 'foo', spy);
+      sput(ch2, 'bar', spy);
+      sput(ch2, 'xxx', spy);
 
       expect(spy).toBeCalledWithArgs(['foo', 0], ['bar', 1], ['xxx', 1]);
     });
