@@ -14,6 +14,7 @@ import {
   FORK_ROUTINE,
   NOTHING,
   ONE_OF,
+  ALL_REQUIRED,
 } from './constants';
 import { grid, chan, use, logger } from '../index';
 import { isPromise, isGeneratorFunction, getId, getFuncName } from '../utils';
@@ -23,139 +24,64 @@ const noop = () => {};
 
 // **************************************************** put
 
-export function put(channels, item) {
-  return { channels, op: PUT, item };
-}
 export function sput(channels, item, callback = noop) {
   channels = normalizeChannels(channels, 'WRITE');
   const result = channels.map(() => NOTHING);
-  const items = channels.length > 1 ? item : [item];
+  const setResult = (idx, value) => {
+    result[idx] = value;
+    if (!result.includes(NOTHING)) {
+      callback(result.length === 1 ? result[0] : result);
+    }
+  };
   channels.forEach((channel, idx) => {
-    const state = channel.state();
-    if (state === CLOSED || state === ENDED) {
-      callback(state);
+    const chState = channel.state();
+    if (chState !== OPEN) {
+      setResult(idx, chState);
     } else {
-      callSubscribers(channel, items[idx], () => {
-        channel.buff.put(items[idx], value => {
-          result[idx] = value;
-          if (!result.includes(NOTHING)) {
-            callback(result.length === 1 ? result[0] : result);
-          }
-        });
-      });
-      if (__DEV__) logger.log(channel, 'CHANNEL_PUT', item);
+      channel.buff.put(item, putResult => setResult(idx, putResult));
     }
   });
 }
-function callSubscribers(channel, item, callback) {
-  const notificationProcess = channel.subscribers.map(() => 1); // just to count the notified channels
-  if (notificationProcess.length === 0) return callback();
-  const subscriptions = [...channel.subscribers];
-  channel.subscribers = [];
-  subscriptions.forEach(s => {
-    const { notify, listen } = s;
-    if (listen) {
-      channel.subscribers.push(s);
-    }
-    notify(item, () => {
-      notificationProcess.shift();
-      if (notificationProcess.length === 0) {
-        callback();
-      }
-    });
-  });
+export function put(channels, item) {
+  return { channels, op: PUT, item };
 }
 
 // **************************************************** take
 
-export function take(channels, options) {
-  return { channels, op: TAKE, options };
-}
 export function stake(channels, callback, options) {
   channels = normalizeChannels(channels);
   options = normalizeOptions(options);
-  const data = channels.map(() => NOTHING);
-  const { transform, onError, initialCall, listen } = options;
-
-  const takeDone = (value, idx, done = noop) => {
-    data[idx] = value;
-    let result = null;
-    if (options.strategy === ONE_OF) {
-      result = [value, idx];
-    } else if (!data.includes(NOTHING)) {
-      result = [...data];
-    }
-    if (result !== null) {
-      if (transform) {
-        try {
-          if (isGeneratorFunction(transform)) {
-            go(
-              transform,
-              v => {
-                callback(v);
-                done();
-              },
-              ...result
-            );
-          } else {
-            callback(transform(...result));
-            done();
-          }
-        } catch (e) {
-          if (onError === null) {
-            throw e;
-          }
-          onError(e);
-        }
+  if (options.strategy === ALL_REQUIRED) {
+    const result = channels.map(() => NOTHING);
+    const setResult = (idx, value) => {
+      result[idx] = value;
+      if (!result.includes(NOTHING)) {
+        callback(result.length === 1 ? result[0] : result);
+      }
+    };
+    channels.forEach((channel, idx) => {
+      const chState = channel.state();
+      if (chState !== OPEN) {
+        setResult(idx, chState);
       } else {
-        if (options.strategy === ONE_OF) {
-          callback(...result);
-        } else {
-          callback(result.length === 1 ? result[0] : result);
-        }
-        done();
+        channel.buff.take(takeResult => setResult(idx, takeResult), options);
       }
-    }
-  };
-
-  const subscriptions = channels.map((channel, idx) => {
-    const state = channel.state();
-    let subscription = {};
-    if (state === ENDED) {
-      takeDone(ENDED, idx);
-    } else if (state === CLOSED && channel.buff.isEmpty()) {
-      channel.state(ENDED);
-      takeDone(ENDED, idx);
-    } else if (options.read) {
-      // reading
-      if (!channel.subscribers.find(({ callback: c }) => c === callback)) {
-        channel.subscribers.push(
-          (subscription = {
-            callback,
-            notify: (value, done) => takeDone(value, idx, done),
-            listen,
-          })
-        );
+    });
+  } else if (options.strategy === ONE_OF) {
+    channels.forEach((channel, idx) => {
+      const chState = channel.state();
+      if (chState !== OPEN) {
+        callback(chState, idx);
+      } else {
+        channel.buff.take(takeResult => callback(takeResult, idx), options);
       }
-      const currentChannelBufValue = channel.value();
-      if (initialCall && currentChannelBufValue.length > 0) {
-        takeDone(currentChannelBufValue[0], idx);
-      }
-    } else {
-      // taking
-      channel.buff.take(r => {
-        takeDone(r, idx);
-        if (__DEV__) logger.log(channel, 'CHANNEL_TAKE', r);
-      });
-    }
-    return subscription;
-  });
-
-  return {
-    listen() {
-      subscriptions.forEach(s => (s.listen = true));
-    },
-  };
+    });
+  } else {
+    throw new Error(`Unrecognized strategy "${options.strategy}"`);
+  }
+}
+export function take(channels, options) {
+  return { channels, op: TAKE, options };
 }
 
 // **************************************************** read
@@ -166,25 +92,8 @@ export function read(channels, options) {
 export function sread(channels, to, options) {
   return stake(channels, normalizeTo(to), { ...options, read: true });
 }
-export function unread(channels, callback) {
-  channels = normalizeChannels(channels);
-  channels.forEach(ch => {
-    if (isChannel(callback)) {
-      callback = callback.__subFunc;
-    }
-    ch.subscribers = ch.subscribers.filter(({ callback: c }) => {
-      if (c !== callback) {
-        return true;
-      }
-      return false;
-    });
-  });
-}
-export function unreadAll(channels) {
-  normalizeChannels(channels).forEach(ch => {
-    ch.subscribers = [];
-  });
-}
+export function unread(channels, callback) {}
+export function unreadAll(channels) {}
 
 // **************************************************** close, reset, call, fork, merge, timeout, isChannel
 

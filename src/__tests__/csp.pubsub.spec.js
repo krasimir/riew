@@ -51,7 +51,7 @@ describe('Given a CSP pubsub extension', () => {
         expect(spyC).toBeCalledWithArgs([true]);
       });
     });
-    it('should provide an API for unsubscribing', () => {
+    xit('should provide an API for unsubscribing', () => {
       expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
@@ -72,7 +72,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyA).toBeCalledWithArgs(['foo']);
       expect(spyB).toBeCalledWithArgs(['foo'], ['bar']);
     });
-    it('should create a dedicated channel for each subscription', () => {
+    xit('should create a dedicated channel for each subscription', () => {
       expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
@@ -100,7 +100,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we subscribe to a channel after someone publish on it', () => {
-    it(`should not trigger any of the subscriptions`, () => {
+    xit(`should not trigger any of the subscriptions`, () => {
       expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
@@ -118,7 +118,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we pass a channel instead of a string to the sub function', () => {
-    it('should still work', () => {
+    xit('should still work', () => {
       const spy = jest.fn();
       const ch = chan();
 
@@ -131,7 +131,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we use read once (by default)', () => {
-    it('should unsubscribe after the first call', () => {
+    xit('should unsubscribe after the first call', () => {
       const spy = jest.fn();
       const ch = chan();
 
@@ -144,7 +144,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['foo']);
     });
     describe('and when we read once as part of another read once', () => {
-      it('should read once again', () => {
+      xit('should read once again', () => {
         const spy = jest.fn();
         const ch = chan();
         const callback = v => {
@@ -162,7 +162,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('and when the subscriber is a channel', () => {
-      it('should read once again', () => {
+      xit('should read once again', () => {
         const spy = jest.fn();
         const source = chan();
         const subscriber = chan();
@@ -182,7 +182,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we read inside a routine', () => {
-    it('should do read once', () => {
+    xit('should do read once', () => {
       const spy = jest.fn();
       const ch = chan();
 
@@ -199,7 +199,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['start'], ['foo'], ['end']);
     });
     describe('and when there is already a value in the channel', () => {
-      it('should perform a non-blocking read', () => {
+      xit('should perform a non-blocking read', () => {
         const ch = chan(buffer.fixed(1));
         const spy = jest.fn();
 
@@ -225,7 +225,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('and we want to make a loop inside the routine', () => {
-      it('should allow us to wait for the same channel many times', () => {
+      xit('should allow us to wait for the same channel many times', () => {
         const spy = jest.fn();
         let counter = 0;
 
@@ -252,7 +252,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we read and there is already a value in the channel', () => {
-    it('should fire the callback at least once with the value', () => {
+    xit('should fire the callback at least once with the value', () => {
       const spy = jest.fn();
       const ch = chan(buffer.fixed(1));
 
@@ -265,7 +265,7 @@ describe('Given a CSP pubsub extension', () => {
 
       expect(spy).toBeCalledWithArgs(['foo']);
     });
-    it('should allow us to turn that behavior off', () => {
+    xit('should allow us to turn that behavior off', () => {
       const spy = jest.fn();
       const ch = chan(buffer.fixed(1));
 
@@ -280,7 +280,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we use the transform function', () => {
-    it('should change the value before it gets send to the `to` function/channel', () => {
+    xit('should change the value before it gets send to the `to` function/channel', () => {
       const spy = jest.fn();
       const ch = chan();
 
@@ -294,7 +294,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
     });
     describe('and when the transform is async', () => {
-      it('should slow down the operation on the `to` function/channel', async () => {
+      xit('should slow down the operation on the `to` function/channel', async () => {
         const spy = jest.fn();
         const ch = chan();
 
@@ -315,7 +315,7 @@ describe('Given a CSP pubsub extension', () => {
   });
   describe('when we use ON_OFF strategy', () => {
     describe('and we use `sub` function', () => {
-      it('should fire the callback without waiting for all the channels', () => {
+      xit('should fire the callback without waiting for all the channels', () => {
         const ch1 = chan();
         const ch2 = chan();
         const spy = jest.fn();
@@ -330,7 +330,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('and we use `read` in a routine', () => {
-      it('should unblock when one of the channels receives value', () => {
+      xit('should unblock when one of the channels receives value', () => {
         const ch1 = chan();
         const ch2 = chan();
         const spy = jest.fn();
@@ -349,7 +349,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we use `sread().listen()`', () => {
-    it('should set the `listen` option to `true`', () => {
+    xit('should set the `listen` option to `true`', () => {
       const ch = chan();
       const ch2 = chan();
       const spy1 = jest.fn();
@@ -380,7 +380,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when piping', () => {
-    it('sub from one channel and pass it to another', () => {
+    xit('sub from one channel and pass it to another', () => {
       const c1 = chan();
       const c2 = chan();
       const spy = jest.fn();
@@ -401,7 +401,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when composing two channels', () => {
-    it(`should
+    xit(`should
       * aggregate value
       * put to the 'to' channel only if all the source channels receive data`, () => {
       const c1 = chan();
@@ -417,7 +417,7 @@ describe('Given a CSP pubsub extension', () => {
 
       expect(spy).toBeCalledWithArgs([['foo', 'bar']], [['baz', 'bar']]);
     });
-    it('should use the transform function', () => {
+    xit('should use the transform function', () => {
       const c1 = chan();
       const c2 = chan();
       const c3 = chan();
@@ -435,7 +435,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['FOOBAR'], ['BAZBAR']);
     });
     describe('and when we use state', () => {
-      it('should aggregate state values', () => {
+      xit('should aggregate state values', () => {
         const users = state([
           { name: 'Joe' },
           { name: 'Steve' },
@@ -455,7 +455,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('when we use state together with a routine', () => {
-      it('should work just fine', () => {
+      xit('should work just fine', () => {
         const users = state([
           { name: 'Joe' },
           { name: 'Steve' },
@@ -480,7 +480,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('when we use sub by passing a string for a channel', () => {
-      it('should create a channel with a DivorceBuffer', () => {
+      xit('should create a channel with a DivorceBuffer', () => {
         const users = state([
           { name: 'Joe' },
           { name: 'Steve' },
@@ -522,7 +522,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we pipe to other channels', () => {
-    it('should distribute a single value to multiple channels', () => {
+    xit('should distribute a single value to multiple channels', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
@@ -545,7 +545,7 @@ describe('Given a CSP pubsub extension', () => {
         ['>A', '<A', '>B', 'take_ch3=foo', 'take_ch2=foo', 'take_ch3=bar', '<B']
       );
     });
-    it('should support nested piping', () => {
+    xit('should support nested piping', () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
       const ch3 = chan('ch3');
@@ -580,7 +580,7 @@ describe('Given a CSP pubsub extension', () => {
       );
     });
     describe('and we tap multiple times to the same channel', () => {
-      it('should register the channel only once', () => {
+      xit('should register the channel only once', () => {
         const ch1 = chan('ch1');
         const ch2 = chan('ch2');
         const ch3 = chan('ch3');
@@ -616,7 +616,7 @@ describe('Given a CSP pubsub extension', () => {
         );
       });
     });
-    it('should properly handle the situation when a tapped channel is not open anymore', () => {
+    xit('should properly handle the situation when a tapped channel is not open anymore', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
@@ -657,7 +657,7 @@ describe('Given a CSP pubsub extension', () => {
         ]
       );
     });
-    it('should allow us to unsubscribe', () => {
+    xit('should allow us to unsubscribe', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
@@ -695,7 +695,7 @@ describe('Given a CSP pubsub extension', () => {
         ]
       );
     });
-    it('should allow us to unsubscribe all', () => {
+    xit('should allow us to unsubscribe all', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
