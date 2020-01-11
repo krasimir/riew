@@ -47,6 +47,9 @@ function BufferInterface() {
         this.takes.splice(idx, 1);
       }
     },
+    deleteReaders() {
+      this.takes = this.takes.filter(({ options }) => !options.read);
+    },
   };
 }
 

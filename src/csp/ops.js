@@ -51,6 +51,7 @@ export function put(channels, item) {
 export function stake(channels, callback, options) {
   channels = normalizeChannels(channels);
   options = normalizeOptions(options);
+  callback = normalizeTo(callback);
   let unsubscribers;
   if (options.strategy === ALL_REQUIRED) {
     const result = channels.map(() => NOTHING);
@@ -113,15 +114,11 @@ export function read(channels, options) {
   return { channels, op: READ, options: { ...options, read: true } };
 }
 export function sread(channels, to, options) {
-  return stake(channels, normalizeTo(to), { ...options, read: true });
+  return stake(channels, to, { ...options, read: true });
 }
-export function unread(channels, callback) {
-  channels = normalizeChannels(channels);
-  channels.forEach(ch => {
-    ch.buff.deleteReader(callback);
-  });
+export function unreadAll(channel) {
+  channel.buff.deleteReaders();
 }
-export function unreadAll(channels) {}
 
 // **************************************************** close, reset, call, fork, merge, timeout, isChannel
 

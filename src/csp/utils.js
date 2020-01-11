@@ -20,11 +20,11 @@ export function normalizeTo(to) {
     return to;
   }
   if (isChannel(to)) {
-    return to.__subFunc || (to.__subFunc = v => sput(to, v));
+    return v => sput(to, v);
   }
   if (typeof to === 'string') {
     const ch = chan(to, buffer.divorced());
-    return (ch.__subFunc = v => sput(to, v));
+    return v => sput(ch, v);
   }
   throw new Error(
     `'read' accepts string, channel or a function as a second argument. ${to} given.`

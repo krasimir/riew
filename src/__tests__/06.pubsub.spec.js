@@ -314,39 +314,8 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
   });
-  describe('when we use `sread().listen()`', () => {
-    xit('should set the `listen` option to `true`', () => {
-      const ch = chan();
-      const ch2 = chan();
-      const spy1 = jest.fn();
-      const spy2 = jest.fn();
-      const spy3 = jest.fn();
-
-      sread(ch, spy1);
-      sread(ch, spy2).listen();
-      sread([ch, ch2], spy3, { strategy: ONE_OF }).listen();
-
-      sput(ch, 'foo');
-      sput(ch2, 'a');
-      sput(ch, 'bar');
-      sput(ch2, 'b');
-      sput(ch, 'moo');
-      sput(ch2, 'c');
-
-      expect(spy1).toBeCalledWithArgs(['foo']);
-      expect(spy2).toBeCalledWithArgs(['foo'], ['bar'], ['moo']);
-      expect(spy3).toBeCalledWithArgs(
-        ['foo', 0],
-        ['a', 1],
-        ['bar', 0],
-        ['b', 1],
-        ['moo', 0],
-        ['c', 1]
-      );
-    });
-  });
   describe('when piping', () => {
-    xit('sub from one channel and pass it to another', () => {
+    it('take from one channel and pass it to another', () => {
       const c1 = chan();
       const c2 = chan();
       const spy = jest.fn();
@@ -367,7 +336,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when composing two channels', () => {
-    xit(`should
+    it(`should
       * aggregate value
       * put to the 'to' channel only if all the source channels receive data`, () => {
       const c1 = chan();
@@ -383,16 +352,21 @@ describe('Given a CSP pubsub extension', () => {
 
       expect(spy).toBeCalledWithArgs([['foo', 'bar']], [['baz', 'bar']]);
     });
-    xit('should use the transform function', () => {
+    it('should allow us to transform', () => {
       const c1 = chan();
       const c2 = chan();
       const c3 = chan();
       const spy = jest.fn();
 
-      sread([c1, c2], c3, {
-        transform: (a, b) => a.toUpperCase() + b.toUpperCase(),
-        listen: true,
-      });
+      sread(
+        [c1, c2],
+        ([a, b]) => {
+          sput(c3, a.toUpperCase() + b.toUpperCase());
+        },
+        {
+          listen: true,
+        }
+      );
       sread(c3, spy, { listen: true });
       sput(c1, 'foo');
       sput(c2, 'bar');
@@ -488,7 +462,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we pipe to other channels', () => {
-    xit('should distribute a single value to multiple channels', () => {
+    it('should distribute a single value to multiple channels', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
@@ -511,7 +485,7 @@ describe('Given a CSP pubsub extension', () => {
         ['>A', '<A', '>B', 'take_ch3=foo', 'take_ch2=foo', 'take_ch3=bar', '<B']
       );
     });
-    xit('should support nested piping', () => {
+    it('should support nested piping', () => {
       const ch1 = chan('ch1');
       const ch2 = chan('ch2');
       const ch3 = chan('ch3');
@@ -545,44 +519,7 @@ describe('Given a CSP pubsub extension', () => {
         ]
       );
     });
-    describe('and we tap multiple times to the same channel', () => {
-      xit('should register the channel only once', () => {
-        const ch1 = chan('ch1');
-        const ch2 = chan('ch2');
-        const ch3 = chan('ch3');
-
-        sread(ch1, ch2, { listen: true });
-        sread(ch1, ch2, { listen: true });
-        sread(ch1, ch2, { listen: true });
-        sread(ch1, ch3, { listen: true });
-
-        exercise(
-          Test(
-            function* A() {
-              sput(ch1, 'foo');
-              sput(ch1, 'bar');
-            },
-            function* B(log) {
-              stake(ch2, v => log(`ch2_1=${v}`));
-              stake(ch2, v => log(`ch2_2=${v}`));
-              stake(ch3, v => log(`ch3_2=${v}`));
-              stake(ch3, v => log(`ch3_1=${v}`));
-            }
-          ),
-          [
-            '>A',
-            '<A',
-            '>B',
-            'ch2_1=foo',
-            'ch2_2=bar',
-            'ch3_2=foo',
-            'ch3_1=bar',
-            '<B',
-          ]
-        );
-      });
-    });
-    xit('should properly handle the situation when a tapped channel is not open anymore', () => {
+    it('should properly handle the situation when a tapped channel is not open anymore', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
@@ -623,13 +560,13 @@ describe('Given a CSP pubsub extension', () => {
         ]
       );
     });
-    xit('should allow us to unsubscribe', () => {
+    it('should allow us to unsubscribe', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
 
       sread(ch1, ch2, { listen: true });
-      sread(ch1, ch3, { listen: true });
+      const unread = sread(ch1, ch3, { listen: true });
 
       exercise(
         Test(
@@ -661,7 +598,7 @@ describe('Given a CSP pubsub extension', () => {
         ]
       );
     });
-    xit('should allow us to unsubscribe all', () => {
+    it('should allow us to unsubscribe all', () => {
       const ch1 = chan();
       const ch2 = chan();
       const ch3 = chan();
