@@ -6,7 +6,7 @@ describe('Given csp features', () => {
     reset();
   });
   describe('when we have an error inside a routine', () => {
-    it('should allow us to catch the error', () => {
+    xit('should allow us to catch the error', () => {
       expect(() => {
         go(function*() {
           throw new Error('boo');
@@ -15,7 +15,7 @@ describe('Given csp features', () => {
     });
   });
   describe('when we yield a promise and it gets rejected', () => {
-    it('should pass back the error to the routine and should allow us to continue yielding', async () => {
+    xit('should pass back the error to the routine and should allow us to continue yielding', async () => {
       const error = new Error('ops');
       const ch = chan();
       const spy = jest.fn();
@@ -36,7 +36,7 @@ describe('Given csp features', () => {
     });
   });
   describe('when we have an error inside the state selectors', () => {
-    it('should allow us to catch the error', () => {
+    xit('should allow us to catch the error', () => {
       const s = state('foo');
 
       s.select('R', function(value) {
@@ -48,7 +48,7 @@ describe('Given csp features', () => {
 
       expect(() => sput(s, 'a-ha')).toThrowError('foo');
     });
-    it('should allow us to catch the error with a callback', done => {
+    xit('should allow us to catch the error with a callback', done => {
       const s = state('foo');
       const error = new Error('foo');
 
@@ -69,7 +69,7 @@ describe('Given csp features', () => {
       sput(s, 'a-ha');
     });
     describe('and we use a routine', () => {
-      it('should allow us to catch the error', () => {
+      xit('should allow us to catch the error', () => {
         const s = state('foo');
 
         s.select('R', function*(value) {
@@ -81,7 +81,7 @@ describe('Given csp features', () => {
 
         expect(() => sput(s, 'a-ha')).toThrowError('foo');
       });
-      it('should allow us to catch the error with a callback', done => {
+      xit('should allow us to catch the error with a callback', done => {
         const s = state('foo');
         const error = new Error('foo');
 
@@ -104,7 +104,7 @@ describe('Given csp features', () => {
     });
   });
   describe('when we have an error in a mutator', () => {
-    it('should allow us to catch the error', async () => {
+    xit('should allow us to catch the error', async () => {
       const s = state('foo');
       const error = new Error('ops');
 
@@ -114,7 +114,7 @@ describe('Given csp features', () => {
 
       expect(() => sput('W', 'zoo')).toThrowError(error);
     });
-    it('should allow us to catch the error with a callback', done => {
+    xit('should allow us to catch the error with a callback', done => {
       const s = state('foo');
       const error = new Error('ops');
 
@@ -132,7 +132,7 @@ describe('Given csp features', () => {
       sput('W', 'zoo');
     });
     describe('and we use a routine', () => {
-      it('should allow us to catch the error', async () => {
+      xit('should allow us to catch the error', async () => {
         const s = state('foo');
         const error = new Error('ops');
 
@@ -142,7 +142,7 @@ describe('Given csp features', () => {
 
         expect(() => sput('W', 'zoo')).toThrowError(error);
       });
-      it('should allow us to catch the error with a callback', done => {
+      xit('should allow us to catch the error with a callback', done => {
         const s = state('foo');
         const error = new Error('ops');
 

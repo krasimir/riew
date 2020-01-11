@@ -101,7 +101,7 @@ describe('Given a CSP', () => {
     });
   });
   describe('and we close a buffered channel', () => {
-    xit(`should
+    it(`should
       - resolve the pending puts with CLOSED
       - resolve the future puts with CLOSED if the buffer is not empty
       - resolve the future puts with ENDED if the buffer is empty
@@ -116,12 +116,13 @@ describe('Given a CSP', () => {
             log(`p2=${(yield put(ch, 'bar')).toString()}`);
             close(ch);
             log(`p3=${(yield put(ch, 'zar')).toString()}`);
-            yield sleep(2);
+            yield sleep(5);
             log(`p4=${(yield put(ch, 'moo')).toString()}`);
           },
           function* B(log) {
             log(`take1=${(yield take(ch)).toString()}`);
-            yield sleep(4);
+            yield sleep(2);
+            log([...ch.buff.getValue()]);
             log(`take2=${(yield take(ch)).toString()}`);
             log(`take3=${(yield take(ch)).toString()}`);
           }
@@ -130,19 +131,20 @@ describe('Given a CSP', () => {
           '>A',
           'p1=true',
           '>B',
+          'take1=foo',
           'p2=true',
           'p3=Symbol(CLOSED)',
-          'take1=foo',
-          'p4=Symbol(CLOSED)',
-          '<A',
+          ['bar'],
           'take2=bar',
           'take3=Symbol(ENDED)',
           '<B',
+          'p4=Symbol(ENDED)',
+          '<A',
         ],
         10
       );
     });
-    xit('should resolve the pending takes with ENDED', () => {
+    it('should resolve the pending takes with ENDED', () => {
       const ch = chan();
 
       exercise(

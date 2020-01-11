@@ -51,6 +51,7 @@ export function put(channels, item) {
 export function stake(channels, callback, options) {
   channels = normalizeChannels(channels);
   options = normalizeOptions(options);
+  let unsubscribers;
   if (options.strategy === ALL_REQUIRED) {
     const result = channels.map(() => NOTHING);
     const setResult = (idx, value) => {
@@ -59,26 +60,48 @@ export function stake(channels, callback, options) {
         callback(result.length === 1 ? result[0] : [...result]);
       }
     };
-    channels.forEach((channel, idx) => {
+    unsubscribers = channels.map((channel, idx) => {
       const chState = channel.state();
-      if (chState !== OPEN) {
+      if (chState === ENDED) {
         setResult(idx, chState);
+      } else if (chState === CLOSED && channel.buff.isEmpty()) {
+        channel.state(ENDED);
+        setResult(idx, ENDED);
       } else {
-        channel.buff.take(takeResult => setResult(idx, takeResult), options);
+        return channel.buff.take(
+          takeResult => setResult(idx, takeResult),
+          options
+        );
       }
     });
   } else if (options.strategy === ONE_OF) {
-    channels.forEach((channel, idx) => {
+    const done = (...takeResult) => {
+      // This function is here to clean up the unresolved buffer readers.
+      // In the ONE_OF strategy there are pending readers that should be
+      // killed since one of the others in the list is called. And this
+      // should happen only if we are not listening.
+      if (!options.listen) {
+        unsubscribers.filter(f => f).forEach(f => f());
+      }
+      callback(...takeResult);
+    };
+    unsubscribers = channels.map((channel, idx) => {
       const chState = channel.state();
-      if (chState !== OPEN) {
-        callback(chState, idx);
+      if (chState === ENDED) {
+        done(chState, idx);
+      } else if (chState === CLOSED && channel.buff.isEmpty()) {
+        channel.state(ENDED);
+        done(ENDED, idx);
       } else {
-        channel.buff.take(takeResult => callback(takeResult, idx), options);
+        return channel.buff.take(takeResult => done(takeResult, idx), options);
       }
     });
   } else {
     throw new Error(`Unrecognized strategy "${options.strategy}"`);
   }
+  return function unsubscribe() {
+    unsubscribers.filter(f => f).forEach(f => f());
+  };
 }
 export function take(channels, options) {
   return { channels, op: TAKE, options };
@@ -92,7 +115,12 @@ export function read(channels, options) {
 export function sread(channels, to, options) {
   return stake(channels, normalizeTo(to), { ...options, read: true });
 }
-export function unread(channels, callback) {}
+export function unread(channels, callback) {
+  channels = normalizeChannels(channels);
+  channels.forEach(ch => {
+    ch.buff.deleteReader(callback);
+  });
+}
 export function unreadAll(channels) {}
 
 // **************************************************** close, reset, call, fork, merge, timeout, isChannel
@@ -103,7 +131,7 @@ export function close(channels) {
     const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
     ch.state(newState);
     ch.buff.puts.forEach(p => p.callback(newState));
-    ch.buff.takes.forEach(t => t(newState));
+    ch.buff.takes.forEach(t => t.callback(newState));
     grid.remove(ch);
     ch.subscribers = [];
     CHANNELS.del(ch.id);

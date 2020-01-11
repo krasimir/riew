@@ -3,7 +3,6 @@ import {
   buffer,
   read,
   sread,
-  unread,
   CHANNELS,
   go,
   reset,
@@ -51,13 +50,13 @@ describe('Given a CSP pubsub extension', () => {
         expect(spyC).toBeCalledWithArgs([true]);
       });
     });
-    xit('should provide an API for unsubscribing', () => {
+    it('should provide an API for unsubscribing', () => {
       expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      sread('a', spyA, { listen: true });
+      const unread = sread('a', spyA, { listen: true });
       sread('a', spyB, { listen: true });
 
       go(function*() {
@@ -72,7 +71,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyA).toBeCalledWithArgs(['foo']);
       expect(spyB).toBeCalledWithArgs(['foo'], ['bar']);
     });
-    xit('should create a dedicated channel for each subscription', () => {
+    it('should create a dedicated take for each subscription', () => {
       expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
@@ -100,7 +99,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we subscribe to a channel after someone publish on it', () => {
-    xit(`should not trigger any of the subscriptions`, () => {
+    it(`should not trigger any of the subscriptions`, () => {
       expect(Object.keys(CHANNELS.getAll())).toHaveLength(0);
 
       const spyA = jest.fn();
@@ -117,8 +116,8 @@ describe('Given a CSP pubsub extension', () => {
       expect(spyB).not.toBeCalled();
     });
   });
-  describe('when we pass a channel instead of a string to the sub function', () => {
-    xit('should still work', () => {
+  describe('when we pass a channel instead of a string to the read functions', () => {
+    it('should still work', () => {
       const spy = jest.fn();
       const ch = chan();
 
@@ -131,7 +130,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we use read once (by default)', () => {
-    xit('should unsubscribe after the first call', () => {
+    it('should subscribe only once', () => {
       const spy = jest.fn();
       const ch = chan();
 
@@ -144,7 +143,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['foo']);
     });
     describe('and when we read once as part of another read once', () => {
-      xit('should read once again', () => {
+      it('should read once again', () => {
         const spy = jest.fn();
         const ch = chan();
         const callback = v => {
@@ -162,7 +161,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('and when the subscriber is a channel', () => {
-      xit('should read once again', () => {
+      it('should read once again', () => {
         const spy = jest.fn();
         const source = chan();
         const subscriber = chan();
@@ -182,7 +181,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we read inside a routine', () => {
-    xit('should do read once', () => {
+    it('should do read once', () => {
       const spy = jest.fn();
       const ch = chan();
 
@@ -199,7 +198,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['start'], ['foo'], ['end']);
     });
     describe('and when there is already a value in the channel', () => {
-      xit('should perform a non-blocking read', () => {
+      it('should perform a non-blocking read', () => {
         const ch = chan(buffer.fixed(1));
         const spy = jest.fn();
 
@@ -225,7 +224,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('and we want to make a loop inside the routine', () => {
-      xit('should allow us to wait for the same channel many times', () => {
+      it('should allow us to wait for the same channel many times', () => {
         const spy = jest.fn();
         let counter = 0;
 
@@ -252,7 +251,7 @@ describe('Given a CSP pubsub extension', () => {
     });
   });
   describe('when we read and there is already a value in the channel', () => {
-    xit('should fire the callback at least once with the value', () => {
+    it('should fire the callback at least once with the value', () => {
       const spy = jest.fn();
       const ch = chan(buffer.fixed(1));
 
@@ -265,7 +264,7 @@ describe('Given a CSP pubsub extension', () => {
 
       expect(spy).toBeCalledWithArgs(['foo']);
     });
-    xit('should allow us to turn that behavior off', () => {
+    it('should allow us to turn that behavior off', () => {
       const spy = jest.fn();
       const ch = chan(buffer.fixed(1));
 
@@ -279,43 +278,9 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).not.toBeCalled();
     });
   });
-  describe('when we use the transform function', () => {
-    xit('should change the value before it gets send to the `to` function/channel', () => {
-      const spy = jest.fn();
-      const ch = chan();
-
-      sread(ch, spy, {
-        transform: value => value.toUpperCase(),
-        listen: true,
-      });
-      sput(ch, 'foo');
-      sput(ch, 'bar');
-
-      expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
-    });
-    describe('and when the transform is async', () => {
-      xit('should slow down the operation on the `to` function/channel', async () => {
-        const spy = jest.fn();
-        const ch = chan();
-
-        sread(ch, spy, {
-          *transform(v) {
-            yield sleep(2);
-            return v.toUpperCase();
-          },
-          listen: true,
-        });
-        sput(ch, 'foo');
-        sput(ch, 'bar');
-
-        await delay(10);
-        expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
-      });
-    });
-  });
   describe('when we use ON_OFF strategy', () => {
     describe('and we use `sub` function', () => {
-      xit('should fire the callback without waiting for all the channels', () => {
+      it('should fire the callback without waiting for all the channels', () => {
         const ch1 = chan();
         const ch2 = chan();
         const spy = jest.fn();
@@ -330,7 +295,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('and we use `read` in a routine', () => {
-      xit('should unblock when one of the channels receives value', () => {
+      it('should unblock when one of the channels receives value', () => {
         const ch1 = chan();
         const ch2 = chan();
         const spy = jest.fn();
@@ -342,9 +307,10 @@ describe('Given a CSP pubsub extension', () => {
         });
 
         sput(ch1, 'foo');
-        sput(ch2, 'bar');
+        sput(ch1, 'bar');
+        sput(ch2, 'zar');
 
-        expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
+        expect(spy).toBeCalledWithArgs(['foo'], ['bar'], ['zar']);
       });
     });
   });

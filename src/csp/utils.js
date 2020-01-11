@@ -11,7 +11,6 @@ export function normalizeChannels(channels, stateOp = 'READ') {
 }
 
 const DEFAULT_OPTIONS = {
-  transform: null,
   onError: null,
   initialCall: true,
 };
@@ -33,7 +32,6 @@ export function normalizeTo(to) {
 }
 export function normalizeOptions(options) {
   options = options || DEFAULT_OPTIONS;
-  const transform = options.transform || DEFAULT_OPTIONS.transform;
   const onError = options.onError || DEFAULT_OPTIONS.onError;
   const strategy = options.strategy || ALL_REQUIRED;
   const listen = 'listen' in options ? options.listen : false;
@@ -43,5 +41,12 @@ export function normalizeOptions(options) {
       ? options.initialCall
       : DEFAULT_OPTIONS.initialCall;
 
-  return { transform, onError, strategy, initialCall, listen, read };
+  return {
+    onError,
+    strategy,
+    initialCall,
+    listen,
+    read,
+    userTakeCallback: options.userTakeCallback,
+  };
 }

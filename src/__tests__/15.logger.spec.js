@@ -63,7 +63,7 @@ describe('Given the logger', () => {
     reset();
   });
   describe('and we call the `frame` method', () => {
-    it('should create a snapshot that contains a riew', async () => {
+    xit('should create a snapshot that contains a riew', async () => {
       const r = riew(() => {});
       await delay();
       expect(findItem(r.id)).toMatchObject({
@@ -71,7 +71,7 @@ describe('Given the logger', () => {
         type: 'RIEW',
       });
     });
-    it('should create a snapshot that contains a channel', async () => {
+    xit('should create a snapshot that contains a channel', async () => {
       const c = chan('FOO');
       await delay();
       expect(findItem(c.id)).toMatchObject({
@@ -79,7 +79,7 @@ describe('Given the logger', () => {
         type: 'CHANNEL',
       });
     });
-    it('should create a snapshot that contains a state', async () => {
+    xit('should create a snapshot that contains a state', async () => {
       const s = state(42);
       await delay();
       expect(findItem(s.id)).toMatchObject({
@@ -88,7 +88,7 @@ describe('Given the logger', () => {
         value: 42,
       });
     });
-    it('should create a snapshot that contains a routine', async () => {
+    xit('should create a snapshot that contains a routine', async () => {
       const r = go(function* Test() {
         yield sleep(20);
       });
@@ -98,7 +98,7 @@ describe('Given the logger', () => {
         type: 'ROUTINE',
       });
     });
-    it('should create proper number of frames', async () => {
+    xit('should create proper number of frames', async () => {
       await exercise();
       const logs = logger.frames().map(frame => frame.actions);
       // 1. Uncomment the line below if this test fails.
@@ -109,7 +109,7 @@ describe('Given the logger', () => {
       // clipboardy.writeSync(JSON.stringify(logs, null, 2));
       expect(logs).toStrictEqual(expectation1);
     });
-    it('should return a snapshot containing the status of the system', async () => {
+    xit('should return a snapshot containing the status of the system', async () => {
       await exercise();
       await delay();
       // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
@@ -120,21 +120,24 @@ describe('Given the logger', () => {
   // riew
 
   describe('when we have a riew', async () => {
-    fit(`should log
+    fxit(
+      `should log
       * RIEW_RENDERED
       * RIEW_MOUNTED
       * RIEW_UNMOUNTED
       * RIEW_UPDATED
       * RIEW_CREATED
-      `, async () => {
-      const r = riew(() => {});
-      r.mount({ a: 'b' });
-      r.update({ c: 'd' });
-      await delay();
-      r.unmount();
-      await delay();
-      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
-      expect(logger.frames()).toStrictEqual(expectationRiew);
-    });
+      `,
+      async () => {
+        const r = riew(() => {});
+        r.mount({ a: 'b' });
+        r.update({ c: 'd' });
+        await delay();
+        r.unmount();
+        await delay();
+        // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+        expect(logger.frames()).toStrictEqual(expectationRiew);
+      }
+    );
   });
 });

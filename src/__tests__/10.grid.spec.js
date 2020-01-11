@@ -17,7 +17,7 @@ describe('Given the grid', () => {
     reset();
   });
   describe('when we use the grid', () => {
-    it('should store products and let us free resources', () => {
+    xit('should store products and let us free resources', () => {
       const g = new Grid({
         snapshot() {},
       });
@@ -36,7 +36,7 @@ describe('Given the grid', () => {
     });
   });
   describe('when we mount and unmount a riew', () => {
-    it('should add an item to the grid and remove it', () => {
+    xit('should add an item to the grid and remove it', () => {
       const r = riew(() => {});
 
       r.mount();
@@ -48,7 +48,7 @@ describe('Given the grid', () => {
     });
   });
   describe('when we create and close a channel', () => {
-    it('should add an item to the grid and remove it', () => {
+    xit('should add an item to the grid and remove it', () => {
       const c = chan();
 
       expect(grid.nodes().find(({ id }) => c.id === id)).toMatchObject({
@@ -59,7 +59,7 @@ describe('Given the grid', () => {
     });
   });
   describe('when we create and state and destroy it', () => {
-    it('should add an item to the grid and remove it', () => {
+    xit('should add an item to the grid and remove it', () => {
       const s = state();
 
       expect(grid.nodes().find(({ id }) => s.id === id)).toMatchObject({
@@ -70,7 +70,7 @@ describe('Given the grid', () => {
     });
   });
   describe('when we run a routine and when it finishes', () => {
-    it('should add an item to the grid and leave it there', async () => {
+    xit('should add an item to the grid and leave it there', async () => {
       const r = go(function*() {
         yield sleep(10);
       });
@@ -83,7 +83,7 @@ describe('Given the grid', () => {
     });
   });
   describe('when we run a routine and stop it', () => {
-    it('should add an item to the grid and remove it', async () => {
+    xit('should add an item to the grid and remove it', async () => {
       const spy = jest.fn();
       const r = go(function*() {
         yield sleep(10);
@@ -98,7 +98,7 @@ describe('Given the grid', () => {
       expect(grid.nodes()).toHaveLength(0);
       expect(spy).not.toBeCalled();
     });
-    it('should add an item to the grid and remove it', async () => {
+    xit('should add an item to the grid and remove it', async () => {
       const spy = jest.fn();
       const r = go(function*() {
         yield sleep(10);

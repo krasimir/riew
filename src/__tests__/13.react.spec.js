@@ -10,7 +10,7 @@ describe('Given the React riew function', () => {
     reset();
   });
   describe('when we use the riew Component', () => {
-    it('should always render the view at least once', () =>
+    xit('should always render the view at least once', () =>
       act(async () => {
         const R = riew(() => <p>Hello</p>);
         const { container } = render(<R />);
@@ -18,7 +18,7 @@ describe('Given the React riew function', () => {
         await delay(10);
         exerciseHTML(container, '<p>Hello</p>');
       }));
-    it(`should
+    xit(`should
       * run the routine function
       * render once by default
       * render every time when we call the "data" method`, () =>
@@ -36,7 +36,7 @@ describe('Given the React riew function', () => {
         expect(view).toBeCalledWithArgs([{}, {}], [{ foo: 'bar' }, {}]);
       }));
     describe('and we use a state', () => {
-      it(`should
+      xit(`should
         * render with the given state data
         * re-render with a new value when we update the state
         * teardown the state when the component is unmounted`, () =>
@@ -58,7 +58,7 @@ describe('Given the React riew function', () => {
           unmount();
         }));
       describe('and we use a state that is exported into the grid', () => {
-        it('should receive the state value and subscribe for changes', () =>
+        xit('should receive the state value and subscribe for changes', () =>
           act(async () => {
             const s = state(42);
             const s2 = state('foo');
@@ -78,7 +78,7 @@ describe('Given the React riew function', () => {
             exerciseHTML(container, '<p>foo200</p>');
           }));
       });
-      it('should allow us to use different statesMap', () =>
+      xit('should allow us to use different statesMap', () =>
         act(async () => {
           const spy = jest.fn().mockImplementation(() => null);
           const R = riew(spy);
@@ -97,7 +97,7 @@ describe('Given the React riew function', () => {
         }));
     });
     describe('and we use "props"', () => {
-      it(`should
+      xit(`should
         * have access to the props
         * have to be able to subscribe to props change`, () =>
         act(async () => {
@@ -126,7 +126,7 @@ describe('Given the React riew function', () => {
     });
   });
   describe('when we want to use the React children prop', () => {
-    it('should work', () =>
+    xit('should work', () =>
       act(async () => {
         const R = riew(({ children }) => children('John'));
         const { container } = render(<R>{name => `Hello ${name}!`}</R>);
@@ -136,7 +136,7 @@ describe('Given the React riew function', () => {
       }));
   });
   describe('when we render a channel and pass a function to update the value of the channel', () => {
-    it('when firing the mutation func should re-render with a new value', () =>
+    xit('when firing the mutation func should re-render with a new value', () =>
       act(async () => {
         const routine = function*({ render }) {
           const s = state([
@@ -188,7 +188,7 @@ describe('Given the React riew function', () => {
       }));
   });
   describe('when we register a state', () => {
-    it('should provide the value to the react component', async () =>
+    xit('should provide the value to the react component', async () =>
       act(async () => {
         const s = state(true);
         const changeToFalse = () => sput(s, false);

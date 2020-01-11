@@ -41,6 +41,12 @@ function BufferInterface() {
       }
       take.callback(value);
     },
+    deleteReader(cb) {
+      const idx = this.takes.findIndex(({ callback }) => callback === cb);
+      if (idx >= 0) {
+        this.takes.splice(idx, 1);
+      }
+    },
   };
 }
 
@@ -98,6 +104,7 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
         callback(api.value.shift());
       } else {
         api.takes.push({ callback, options });
+        return () => api.deleteReader(callback);
       }
     } else if (options.read) {
       callback(api.value[0]);
@@ -108,6 +115,7 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
         api.puts.shift().callback();
       }
     }
+    return () => {};
   };
 
   return api;
