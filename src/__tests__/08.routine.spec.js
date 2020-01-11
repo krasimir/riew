@@ -23,7 +23,7 @@ describe('Given a CSP', () => {
   // Routines basics
 
   describe('and we run a routine', () => {
-    xit('should put and take from channels', () => {
+    it('should put and take from channels', () => {
       const ch = chan();
       const spy = jest.fn();
       const cleanup1 = jest.fn();
@@ -51,7 +51,7 @@ describe('Given a CSP', () => {
       expect(cleanup1).toBeCalledWithArgs(['a']);
       expect(cleanup2).toBeCalledWithArgs(['b']);
     });
-    xit('should allow us to take from multiple channels (ALL_REQUIRED)', () => {
+    it('should allow us to take from multiple channels (ALL_REQUIRED)', () => {
       const ch1 = chan();
       const ch2 = chan();
       const spy = jest.fn();
@@ -65,7 +65,7 @@ describe('Given a CSP', () => {
 
       expect(spy).toBeCalledWithArgs([['bar', 'foo']]);
     });
-    xit('should allow us to take using the ONE_OF strategy', () => {
+    it('should allow us to take using the ONE_OF strategy', () => {
       const ch1 = chan();
       const ch2 = chan();
       const spy = jest.fn();
@@ -78,7 +78,7 @@ describe('Given a CSP', () => {
 
       expect(spy).toBeCalledWithArgs([['foo', 1]]);
     });
-    xit('should provide an API to stop the routine', async () => {
+    it('should provide an API to stop the routine', async () => {
       const spy = jest.fn();
       const routine = go(function* A() {
         yield sleep(4);
@@ -90,7 +90,7 @@ describe('Given a CSP', () => {
       await delay(4);
       expect(spy).not.toBeCalled();
     });
-    xit('should provide an API for re-running the routine', async () => {
+    it('should provide an API for re-running the routine', async () => {
       const spy = jest.fn();
       const routine = go(function* A() {
         yield sleep(2);
@@ -103,7 +103,7 @@ describe('Given a CSP', () => {
       expect(spy).toBeCalledWithArgs(['foo'], ['foo']);
     });
     describe('and we use channels to control flow', () => {
-      xit('should work', async () => {
+      it('should work', async () => {
         const spy = jest.fn();
         go(function*() {
           const value = yield take('xxx');
@@ -119,7 +119,7 @@ describe('Given a CSP', () => {
       });
     });
     describe('and when we yield a promise', () => {
-      xit('should continue with the routing after the promise is resolved', async () => {
+      it('should continue with the routing after the promise is resolved', async () => {
         const spy = jest.fn();
         go(function*() {
           spy(
@@ -133,7 +133,7 @@ describe('Given a CSP', () => {
       });
     });
     describe('and when we yield `stop`', () => {
-      xit('should stop the routine', async () => {
+      it('should stop the routine', async () => {
         const spy = jest.fn();
         sread(
           'XXX',
@@ -155,7 +155,7 @@ describe('Given a CSP', () => {
       });
     });
     describe('and when we return the `go` function', () => {
-      xit('should re-run the routine', async () => {
+      it('should re-run the routine', async () => {
         const spy = jest.fn();
         let counter = 0;
 
@@ -178,7 +178,7 @@ describe('Given a CSP', () => {
         expect(spy).toBeCalledWithArgs([0], [1], [2], [2], [2], [3]);
         expect(counter).toBe(3);
       });
-      xit('should stop the current routine before running it again', () => {
+      it('should stop the current routine before running it again', () => {
         const ch = chan();
         const spy = jest.fn();
 
@@ -194,7 +194,7 @@ describe('Given a CSP', () => {
       });
     });
     describe('and we yield another routine via `call` method', () => {
-      xit('should run that other routine and wait till it finishes', async () => {
+      it('should run that other routine and wait till it finishes', async () => {
         const spy = jest.fn();
         const r1 = function*(a, b) {
           yield sleep(5);
@@ -218,7 +218,7 @@ describe('Given a CSP', () => {
       });
     });
     describe('and we yield another routine via `fork` method', () => {
-      xit('should run that other routine and NOT block the main one', async () => {
+      it('should run that other routine and NOT block the main one', async () => {
         const spy = jest.fn();
         const r1 = function*(a, b) {
           yield sleep(5);
@@ -242,7 +242,7 @@ describe('Given a CSP', () => {
       });
     });
     describe('and we have child routines and we stop the main one', () => {
-      xit('should stop the child routines as well', async () => {
+      it('should stop the child routines as well', async () => {
         const spy = jest.fn();
         const c1 = function*() {
           spy('>C1');

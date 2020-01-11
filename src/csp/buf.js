@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 import { normalizeOptions } from './utils';
 
-const DEFAULT_OPTIONS = { dropping: false, sliding: false, divorced: false };
+const DEFAULT_OPTIONS = { dropping: false, sliding: false, memory: false };
 
 function BufferInterface() {
   return {
@@ -53,7 +53,7 @@ function BufferInterface() {
   };
 }
 
-function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
+function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
   const api = BufferInterface();
 
   api.setValue = v => (api.value = v);
@@ -70,6 +70,14 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
     readers.forEach(reader => api.consumeTake(reader, item));
 
     // resolving takers
+    if (memory) {
+      api.value = [item];
+      callback(true);
+      if (takers.length > 0) {
+        api.consumeTake(takers[0], item);
+      }
+      return;
+    }
     if (takers.length > 0) {
       api.consumeTake(takers[0], item);
       callback(true);
@@ -109,6 +117,12 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
         api.takes.push({ callback, options });
         return () => api.deleteReader(callback);
       }
+    } else if (memory) {
+      callback(api.value[0]);
+      if (options.listen) {
+        api.takes.push({ callback, options });
+        return () => api.deleteReader(callback);
+      }
     } else if (options.read) {
       callback(api.value[0]);
     } else {
@@ -138,7 +152,7 @@ const buffer = {
     }
     return CSPBuffer(size, { sliding: true });
   },
-  divorced: size => CSPBuffer(size, { divorced: true }),
+  memory: () => CSPBuffer(0, { memory: true }),
 };
 
 export default buffer;

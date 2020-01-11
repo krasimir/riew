@@ -19,7 +19,7 @@ describe('Given a CSP state extension', () => {
     reset();
   });
   describe('when we use the imperative get and set api', () => {
-    xit('should manage the state', () => {
+    it('should manage the state', () => {
       const s = state('foo');
       const data = { bar: 42 };
 
@@ -27,12 +27,12 @@ describe('Given a CSP state extension', () => {
       s.set(data);
       expect(s.get()).toBe(data);
     });
-    xit('should trigger the defined selectors', () => {
+    it('should trigger the defined selectors', () => {
       const s = state('foo');
       const spy = jest.fn();
 
       s.select('R', value => value.toUpperCase());
-      sread('R', spy);
+      sread('R', spy, { listen: true });
       s.set('bar');
       expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
     });

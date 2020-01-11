@@ -52,7 +52,7 @@ export function state(...args) {
     READ: READ_CHANNEL,
     WRITE: WRITE_CHANNEL,
     select(c, selector = v => v, onError = null) {
-      const ch = isChannel(c) ? c : chan(c, buffer.divorced());
+      const ch = isChannel(c) ? c : chan(c, buffer.memory());
       ch['@statereadchannel'] = true;
       const reader = { ch, selector, onError };
       readChannels.push(reader);
@@ -62,7 +62,7 @@ export function state(...args) {
       return this;
     },
     mutate(c, reducer = (_, v) => v, onError = null) {
-      const ch = isChannel(c) ? c : chan(c, buffer.divorced());
+      const ch = isChannel(c) ? c : chan(c, buffer.memory());
       ch['@statewritechannel'] = true;
       const writer = { ch };
       writeChannels.push(writer);
@@ -112,8 +112,8 @@ export function state(...args) {
     },
   };
 
-  api.select(api.READ);
-  api.mutate(api.WRITE);
+  // api.select(api.READ);
+  // api.mutate(api.WRITE);
 
   grid.add(api);
   if (__DEV__) logger.log(api, 'STATE_CREATED');
