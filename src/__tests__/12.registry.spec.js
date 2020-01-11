@@ -5,7 +5,7 @@ describe('Given the registry', () => {
     reset();
   });
   describe('when we register something in there', () => {
-    xit('should let us use it later', () => {
+    it('should let us use it later', () => {
       const myFunc = () => 42;
       const fff = register('foo', myFunc);
 

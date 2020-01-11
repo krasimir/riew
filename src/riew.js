@@ -85,8 +85,8 @@ export function riew(viewFunc, ...routines) {
   const VIEW_CHANNEL = getId(`channel_view_${name}`);
   const PROPS_CHANNEL = getId(`channel_props_${name}`);
 
-  api.children.push(Channel(VIEW_CHANNEL, buffer.divorced()));
-  api.children.push(Channel(PROPS_CHANNEL, buffer.divorced()));
+  api.children.push(Channel(VIEW_CHANNEL, buffer.memory()));
+  api.children.push(Channel(PROPS_CHANNEL, buffer.memory()));
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
