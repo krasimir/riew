@@ -5,7 +5,7 @@
 
 <h3 align="center">Reactive View</h3>
 
-<p align="center"><b>Riew</b> is a reactive library that uses <a href="https://en.wikipedia.org/wiki/Communicating_sequential_processes">CSP</a>  concepts for managing data and application flow.</p>
+<p align="center"><b>Riew</b> is a reactive library that uses <a href="https://en.wikipedia.org/wiki/Communicating_sequential_processes">CSP</a> concepts for managing data and application flow.</p>
 
 ---
 
@@ -76,7 +76,7 @@
 
 ### Routines & channels
 
-Imagine that you need to transfer messages between two entities in your system. They don't know about each other. With Riew you can use a _channel_ to connect and synchronize them. We can put and take messages from the channel. Consider the following example:
+Imagine that you need to transfer messages between two functions in your system. They don't know about each other. With Riew you can use a _channel_ to connect and synchronize them. We can put and take messages from that channel. Consider the following example:
 
 ```js
 const ch = chan();
