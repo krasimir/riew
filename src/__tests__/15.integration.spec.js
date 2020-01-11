@@ -12,7 +12,7 @@ describe('Given the Riew library', () => {
     reset();
   });
   describe('when we use an async effect', () => {
-    xit('should allow us to render multiple times', () =>
+    it('should allow us to render multiple times', () =>
       act(async () => {
         const A = riew(DummyComponent, function*({ render }) {
           render({ text: 'Hello' });
@@ -28,7 +28,7 @@ describe('Given the Riew library', () => {
         expect(queryByText('Hello')).toBe(null);
         expect(getByText('world')).toBeDefined();
       }));
-    xit('should not try to re-render if the bridge is unmounted', () =>
+    it('should not try to re-render if the bridge is unmounted', () =>
       act(async () => {
         const spy = jest.spyOn(console, 'error');
         const A = riew(DummyComponent, function*({ render }) {
@@ -45,7 +45,7 @@ describe('Given the Riew library', () => {
       }));
   });
   describe('when reusing the same riew', () => {
-    xit('should create a separate instance', () =>
+    it('should create a separate instance', () =>
       act(async () => {
         const R = riew(props => <p>{props.answer}</p>);
 
@@ -65,7 +65,7 @@ describe('Given the Riew library', () => {
       }));
   });
   describe('when using riew with a hook', () => {
-    xit('should keep the hook working', () =>
+    it('should keep the hook working', () =>
       act(async () => {
         const Input = function() {
           const [text, setText] = useState('');
@@ -94,7 +94,7 @@ describe('Given the Riew library', () => {
       }));
   });
   describe('when we use useState hook together with props', () => {
-    xit('should get props callback fired every time when we update the state', () =>
+    it('should get props callback fired every time when we update the state', () =>
       act(async () => {
         const FetchTime = riew(
           function({ location }) {
@@ -141,7 +141,7 @@ describe('Given the Riew library', () => {
       }));
   });
   describe('when we mutate the state and have a selector subscribed to it', () => {
-    xit('should re-render the view with the new data', () =>
+    it('should re-render the view with the new data', () =>
       act(async () => {
         const repos = state([
           { id: 'a', selected: false },
@@ -201,7 +201,7 @@ describe('Given the Riew library', () => {
   });
   describe('when we have a channel passed to a React component', () => {
     describe('and we update the state', () => {
-      xit('should re-render the react component with the correct data', () =>
+      it('should re-render the react component with the correct data', () =>
         act(async () => {
           const s = state([15, 4, 12]);
           s.select('moreThen10', nums => nums.filter(n => n > 10));

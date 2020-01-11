@@ -17,7 +17,7 @@ import {
   ALL_REQUIRED,
 } from './constants';
 import { grid, chan, use, logger } from '../index';
-import { isPromise, isGeneratorFunction, getId, getFuncName } from '../utils';
+import { isPromise, getId, getFuncName } from '../utils';
 import { normalizeChannels, normalizeOptions, normalizeTo } from './utils';
 
 const noop = () => {};

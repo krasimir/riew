@@ -1,0 +1,55 @@
+[
+  {
+    "actions": [
+      {
+        "who": "ch_1",
+        "what": "CHANNEL_CREATED",
+        "meta": null
+      },
+      {
+        "who": "ch_2",
+        "what": "CHANNEL_CREATED",
+        "meta": null
+      },
+      {
+        "what": "CHANNEL_TAKE_INITIATED",
+        "meta": null
+      },
+      {
+        "what": "CHANNEL_TAKE_INITIATED",
+        "meta": null
+      },
+      {
+        "what": "CHANNEL_PUT_INITIATED",
+        "meta": "foo"
+      },
+      {
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          "foo"
+        ]
+      },
+      {
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          "foo"
+        ]
+      },
+      {
+        "what": "CHANNEL_PUT_RESOLVED",
+        "meta": true
+      },
+      {
+        "who": "ch_1",
+        "what": "CHANNEL_CLOSED",
+        "meta": null
+      },
+      {
+        "who": "ch_2",
+        "what": "CHANNEL_RESET",
+        "meta": null
+      }
+    ],
+    "state": []
+  }
+]
