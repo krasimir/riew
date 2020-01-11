@@ -43,6 +43,10 @@ export function chan(...args) {
     return state;
   };
   api.value = () => buff.getValue();
+  api.beforePut = buff.beforePut;
+  api.afterPut = buff.afterPut;
+  api.beforeTake = buff.beforeTake;
+  api.afterTake = buff.afterTake;
   grid.add(api);
   if (__DEV__) logger.log(api, 'CHANNEL_CREATED');
 

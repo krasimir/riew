@@ -2,62 +2,66 @@
 import { normalizeOptions } from './utils';
 
 const DEFAULT_OPTIONS = { dropping: false, sliding: false, memory: false };
+const NOOP = (v, cb) => cb(v);
 
-function BufferInterface() {
-  return {
+function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
+  const api = {
     value: [],
     puts: [],
     takes: [],
-    isEmpty() {
-      return this.value.length === 0;
-    },
-    reset() {
-      this.value = [];
-      this.puts = [];
-      this.takes = [];
-    },
-    setValue(v) {
-      this.value = v;
-    },
-    getValue() {
-      return this.value;
-    },
-    decomposeTakers() {
-      return this.takes.reduce(
-        (res, take) => {
-          res[take.options.read ? 'readers' : 'takers'].push(take);
-          return res;
-        },
-        {
-          readers: [],
-          takers: [],
-        }
-      );
-    },
-    consumeTake(take, value) {
-      if (!take.options.listen) {
-        const idx = this.takes.findIndex(t => t === take);
-        if (idx >= 0) this.takes.splice(idx, 1);
-      }
-      take.callback(value);
-    },
-    deleteReader(cb) {
-      const idx = this.takes.findIndex(({ callback }) => callback === cb);
-      if (idx >= 0) {
-        this.takes.splice(idx, 1);
-      }
-    },
-    deleteReaders() {
-      this.takes = this.takes.filter(({ options }) => !options.read);
+    hooks: {
+      beforePut: NOOP,
+      afterPut: NOOP,
+      beforeTake: cb => cb(),
+      afterTake: NOOP,
     },
   };
-}
 
-function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
-  const api = BufferInterface();
+  api.beforePut = hook => (api.hooks.beforePut = hook);
+  api.afterPut = hook => (api.hooks.afterPut = hook);
+  api.beforeTake = hook => (api.hooks.beforeTake = hook);
+  api.afterTake = hook => (api.hooks.afterTake = hook);
+  api.isEmpty = () => api.value.length === 0;
+  api.reset = () => {
+    api.value = [];
+    api.puts = [];
+    api.takes = [];
+  };
+  api.setValue = v => {
+    api.value = v;
+  };
+  api.getValue = () => api.value;
+  api.decomposeTakers = () =>
+    api.takes.reduce(
+      (res, takeObj) => {
+        res[takeObj.options.read ? 'readers' : 'takers'].push(takeObj);
+        return res;
+      },
+      {
+        readers: [],
+        takers: [],
+      }
+    );
+  api.consumeTake = (takeObj, value) => {
+    if (!takeObj.options.listen) {
+      const idx = api.takes.findIndex(t => t === takeObj);
+      if (idx >= 0) api.takes.splice(idx, 1);
+    }
+    takeObj.callback(value);
+  };
+  api.deleteReader = cb => {
+    const idx = api.takes.findIndex(({ callback }) => callback === cb);
+    if (idx >= 0) {
+      api.takes.splice(idx, 1);
+    }
+  };
+  api.deleteReaders = () => {
+    api.takes = api.takes.filter(({ options }) => !options.read);
+  };
 
   api.setValue = v => (api.value = v);
-  api.put = (item, callback) => {
+
+  const put = (item, callback) => {
     const { readers, takers } = api.decomposeTakers();
     // console.log(
     //   `put=${item}`,
@@ -106,7 +110,8 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
       });
     }
   };
-  api.take = (callback, options) => {
+
+  const take = (callback, options) => {
     // console.log('take', `puts=${api.puts.length}`, `value=${api.value.length}`);
     options = normalizeOptions(options);
     if (api.value.length === 0) {
@@ -134,6 +139,16 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
     }
     return () => {};
   };
+
+  api.put = (item, callback) => {
+    api.hooks.beforePut(item, beforePutRes =>
+      put(beforePutRes, putOpRes => api.hooks.afterPut(putOpRes, callback))
+    );
+  };
+  api.take = (callback, options) =>
+    api.hooks.beforeTake(() =>
+      take(takeOpRes => api.hooks.afterTake(takeOpRes, callback), options)
+    );
 
   return api;
 }

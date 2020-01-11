@@ -10,13 +10,8 @@ import {
   take,
   stake,
   sleep,
-  stop,
   channelReset,
   CHANNELS,
-  read,
-  sread,
-  call,
-  fork,
   ONE_OF,
   register,
 } from '../index';
@@ -59,6 +54,141 @@ describe('Given a CSP', () => {
       sput(ch2, 'foo');
 
       expect(spy).toBeCalledWithArgs(['foo', 1]);
+    });
+  });
+
+  // hooks
+
+  describe('when adding a before put hook', () => {
+    it('should fire the hook before performing the actual put', () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      stake(ch, spy);
+      ch.beforePut((item, cb) => {
+        spy('beforePut');
+        cb(item);
+      });
+      sput(ch, 'foo', v => spy('put', v));
+
+      expect(spy).toBeCalledWithArgs(['beforePut'], ['foo'], ['put', true]);
+    });
+    describe('and when the before put hook is async', () => {
+      it('should delay the put till the hook is completed', async () => {
+        const ch = chan();
+        const spy = jest.fn();
+
+        stake(ch, spy);
+        ch.beforePut((item, cb) => {
+          setTimeout(() => {
+            spy('beforePut');
+            cb(item.toUpperCase());
+          }, 10);
+        });
+        sput(ch, 'foo', v => spy('put', v));
+
+        await delay(20);
+        expect(spy).toBeCalledWithArgs(['beforePut'], ['FOO'], ['put', true]);
+      });
+    });
+  });
+  describe('when adding an after put hook', () => {
+    it('should fire the hook after performing the actual put', () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      stake(ch, spy);
+      ch.afterPut((item, cb) => {
+        spy('afterPut');
+        cb(item);
+      });
+      sput(ch, 'foo', v => spy('put', v));
+
+      expect(spy).toBeCalledWithArgs(['foo'], ['afterPut'], ['put', true]);
+    });
+    describe('and when the after put hook is async', () => {
+      it('should delay the put till the hook is completed', async () => {
+        const ch = chan();
+        const spy = jest.fn();
+
+        stake(ch, spy);
+        ch.afterPut((item, cb) => {
+          setTimeout(() => {
+            spy('afterPut');
+            cb('yo');
+          }, 10);
+        });
+        sput(ch, 'foo', v => spy('put', v));
+
+        await delay(20);
+        expect(spy).toBeCalledWithArgs(['foo'], ['afterPut'], ['put', 'yo']);
+      });
+    });
+  });
+  describe('when adding a before take hook', () => {
+    it('should fire the hook before performing the actual take', () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      ch.beforeTake(cb => {
+        spy('beforeTake');
+        cb();
+      });
+      stake(ch, spy);
+      sput(ch, 'foo', v => spy('put', v));
+
+      expect(spy).toBeCalledWithArgs(['beforeTake'], ['foo'], ['put', true]);
+    });
+    describe('and when the before take hook is async', () => {
+      it('should delay the take till the hook is completed', async () => {
+        const ch = chan();
+        const spy = jest.fn();
+
+        ch.beforeTake(cb => {
+          setTimeout(() => {
+            spy('beforeTake');
+            cb('yo');
+          }, 10);
+        });
+        stake(ch, spy);
+        sput(ch, 'foo', v => spy('put', v));
+
+        await delay(20);
+        expect(spy).toBeCalledWithArgs(['beforeTake'], ['put', true], ['foo']);
+      });
+    });
+  });
+  describe('when adding an after take hook', () => {
+    it('should fire the hook after performing the actual take but before calling the user callback', () => {
+      const ch = chan();
+      const spy = jest.fn();
+
+      ch.afterTake((item, cb) => {
+        spy('afterTake');
+        cb(item);
+      });
+      stake(ch, spy);
+      sput(ch, 'foo', v => spy('put', v));
+
+      expect(spy).toBeCalledWithArgs(['afterTake'], ['foo'], ['put', true]);
+    });
+    describe('and when the after take hook is async', () => {
+      it('should delay the take till the hook is completed', async () => {
+        const ch = chan();
+        const spy = jest.fn();
+
+        ch.afterTake((item, cb) => {
+          setTimeout(() => {
+            spy('afterTake');
+            cb(item.toUpperCase());
+          }, 10);
+        });
+        stake(ch, spy);
+        sput(ch, 'foo', v => spy('put', v));
+
+        await delay(20);
+        expect(spy).toBeCalledWithArgs(['put', true], ['afterTake'], ['FOO']);
+      });
     });
   });
 

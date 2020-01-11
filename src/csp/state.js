@@ -6,7 +6,6 @@ import {
   sclose,
   buffer,
   isChannel,
-  call,
   grid,
   logger,
 } from '../index';
@@ -29,7 +28,7 @@ export function state(...args) {
       onError(e);
     };
   }
-  function runSelector({ ch, selector, onError }, v) {
+  function runReader({ ch, selector, onError }, v) {
     try {
       if (isGeneratorFunction(selector)) {
         go(selector, routineRes => sput(ch, routineRes), value);
@@ -57,7 +56,7 @@ export function state(...args) {
       const reader = { ch, selector, onError };
       readChannels.push(reader);
       if (isThereInitialValue) {
-        runSelector(reader, value);
+        runReader(reader, value);
       }
       return this;
     },
@@ -68,22 +67,29 @@ export function state(...args) {
       writeChannels.push(writer);
       sread(
         ch,
-        v => {
-          value = v;
-          readChannels.forEach(r => runSelector(r, value));
-          if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+        payload => {
+          try {
+            if (isGeneratorFunction(reducer)) {
+              go(
+                reducer,
+                genResult => {
+                  value = genResult;
+                  readChannels.forEach(r => runReader(r, value));
+                  if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+                },
+                value,
+                payload
+              );
+              return;
+            }
+            value = reducer(value, payload);
+            readChannels.forEach(r => runReader(r, value));
+            if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+          } catch (e) {
+            handleError(onError)(e);
+          }
         },
         {
-          *transform(payload) {
-            try {
-              if (isGeneratorFunction(reducer)) {
-                return yield call(reducer, value, payload);
-              }
-              return reducer(value, payload);
-            } catch (e) {
-              handleError(onError)(e);
-            }
-          },
           onError: handleError(onError),
           initialCall: true,
           listen: true,
@@ -105,15 +111,15 @@ export function state(...args) {
     set(newValue) {
       value = newValue;
       readChannels.forEach(r => {
-        runSelector(r, value);
+        runReader(r, value);
       });
       if (__DEV__) logger.log(api, 'STATE_VALUE_SET', newValue);
       return newValue;
     },
   };
 
-  // api.select(api.READ);
-  // api.mutate(api.WRITE);
+  api.select(api.READ);
+  api.mutate(api.WRITE);
 
   grid.add(api);
   if (__DEV__) logger.log(api, 'STATE_CREATED');
