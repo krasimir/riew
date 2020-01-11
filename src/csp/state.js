@@ -1,6 +1,5 @@
 import {
   go,
-  sread,
   chan,
   sput,
   sclose,
@@ -65,36 +64,30 @@ export function state(...args) {
       ch['@statewritechannel'] = true;
       const writer = { ch };
       writeChannels.push(writer);
-      sread(
-        ch,
-        payload => {
-          try {
-            if (isGeneratorFunction(reducer)) {
-              go(
-                reducer,
-                genResult => {
-                  value = genResult;
-                  readChannels.forEach(r => runReader(r, value));
-                  if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
-                },
-                value,
-                payload
-              );
-              return;
-            }
-            value = reducer(value, payload);
-            readChannels.forEach(r => runReader(r, value));
-            if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
-          } catch (e) {
-            handleError(onError)(e);
+      ch.beforePut((payload, resolveBeforePutHook) => {
+        try {
+          if (isGeneratorFunction(reducer)) {
+            go(
+              reducer,
+              genResult => {
+                value = genResult;
+                readChannels.forEach(r => runReader(r, value));
+                resolveBeforePutHook(value);
+                if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+              },
+              value,
+              payload
+            );
+            return;
           }
-        },
-        {
-          onError: handleError(onError),
-          initialCall: true,
-          listen: true,
+          value = reducer(value, payload);
+          readChannels.forEach(r => runReader(r, value));
+          resolveBeforePutHook(value);
+          if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+        } catch (e) {
+          handleError(onError)(e);
         }
-      );
+      });
       return this;
     },
     destroy() {

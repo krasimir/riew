@@ -137,7 +137,7 @@ describe('Given a CSP state extension', () => {
         ['WRITE=bar'],
         ['READ=barhello world my friend'],
         ['R=BARHELLO WORLD MY FRIEND'],
-        ['W=hello world my friend']
+        ['W=barhello world my friend']
       );
     });
   });
@@ -158,7 +158,7 @@ describe('Given a CSP state extension', () => {
       await delay(10);
       expect(spy).toBeCalledWithArgs(['foo'], ['foozoobar']);
     });
-    xit('should block the put till the mutator is done', async () => {
+    it('should block the put till the mutator is done', async () => {
       const spy = jest.fn();
       const s = state('foo');
 
@@ -177,7 +177,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we use a generator as a selector', () => {
-    xit('should wait till the routine is gone', async () => {
+    it('should wait till the routine is gone', async () => {
       const spy = jest.fn();
       const s = state();
 
@@ -194,7 +194,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we pass an already existing channel as a selector', () => {
-    xit('should put selected values to that channel', () => {
+    it('should put selected values to that channel', () => {
       const ch = chan('XXX');
       const s1 = state('foo');
       const s2 = state([{ name: 'A' }, { name: 'B' }]);
@@ -212,7 +212,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we pass an already existing channel as a mutator', () => {
-    xit('should mutate every time when we put to that channel', () => {
+    it('should mutate every time when we put to that channel', () => {
       const ch = chan();
       const s = state('a');
       const spy = jest.fn();
@@ -233,7 +233,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we define a mutation', () => {
-    xit('should be possible to react on a mutation from within multiple routines', () => {
+    it('should be possible to react on a mutation from within multiple routines', () => {
       const current = state('xxx');
       const spy = jest.fn();
 
@@ -261,36 +261,22 @@ describe('Given a CSP state extension', () => {
       );
     });
   });
-  describe('when we use the same channel for multiple mutations', () => {
-    xit('should mutate multiple states at once', () => {
+  describe('when we pipe from one channel to two mutation channels', () => {
+    it('should mutate both states', () => {
       const s1 = state('foo');
       const s2 = state(12);
 
-      s1.mutate('X', (value, payload) => value + payload);
-      s2.mutate('X', (value, payload) => value * payload);
+      s1.mutate('X1', (value, payload) => value + payload);
+      s2.mutate('X2', (value, payload) => value * payload);
+
+      sread('X', 'X1', { listen: true });
+      sread('X', 'X2', { listen: true });
 
       sput('X', 3);
       sput('X', 10);
 
       expect(s1.get()).toBe('foo310');
       expect(s2.get()).toBe(360);
-    });
-    xit('should not mess up the state values', () => {
-      const spy = jest.fn();
-      const table = state([]);
-      table.mutate('ADD', (elements, newElement) => [...elements, newElement]);
-      const counter = state(0);
-      counter.mutate('ADD', n => n + 1);
-
-      go(function* A() {
-        yield put('ADD', 20);
-        yield put('ADD', 30);
-        yield put('ADD', 12);
-        spy(yield take(table));
-        spy(yield take(counter));
-      });
-
-      expect(spy).toBeCalledWithArgs([[20, 30, 12]], [3]);
     });
   });
 });

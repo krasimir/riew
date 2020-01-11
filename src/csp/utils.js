@@ -23,7 +23,7 @@ export function normalizeTo(to) {
     return v => sput(to, v);
   }
   if (typeof to === 'string') {
-    const ch = chan(to, buffer.divorced());
+    const ch = chan(to, buffer.memory());
     return v => sput(ch, v);
   }
   throw new Error(
