@@ -1,7 +1,7 @@
 import { getId } from '../utils';
 import { OPEN } from './constants';
 import { CHANNELS, logger, grid } from '../index';
-import buffer from './buffer';
+import buffer from './buf';
 
 function normalizeChannelArguments(args) {
   let id;

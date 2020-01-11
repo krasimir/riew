@@ -1,4 +1,4 @@
-export { default as buffer } from './buffer';
+export { default as buffer } from './buf';
 export * from './channel';
 export * from './ops';
 export * from './state';

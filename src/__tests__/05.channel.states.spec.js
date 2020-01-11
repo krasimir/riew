@@ -101,7 +101,7 @@ describe('Given a CSP', () => {
     });
   });
   describe('and we close a buffered channel', () => {
-    it(`should
+    xit(`should
       - resolve the pending puts with CLOSED
       - resolve the future puts with CLOSED if the buffer is not empty
       - resolve the future puts with ENDED if the buffer is empty
@@ -142,7 +142,7 @@ describe('Given a CSP', () => {
         10
       );
     });
-    it('should resolve the pending takes with ENDED', () => {
+    xit('should resolve the pending takes with ENDED', () => {
       const ch = chan();
 
       exercise(
