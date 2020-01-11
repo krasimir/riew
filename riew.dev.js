@@ -4,215 +4,249 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = DivorcedBuffer;
 
-var _Interface = require('./Interface');
+var _utils = require('./utils');
 
-var _Interface2 = _interopRequireDefault(_Interface);
+var _index = require('../index');
 
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
+/* eslint-disable no-param-reassign */
+var DEFAULT_OPTIONS = { dropping: false, sliding: false, memory: false };
+var NOOP = function NOOP(v, cb) {
+  return cb(v);
+};
 
-function DivorcedBuffer() {
-  var api = (0, _Interface2.default)();
-
-  api.setValue = function (v) {
-    return api.value = v;
-  };
-  api.put = function (item, callback) {
-    api.value = [item];
-    callback(true);
-  };
-  api.take = function (callback) {
-    callback(api.value[0]);
-  };
-
-  return api;
-}
-
-},{"./Interface":4}],2:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = DroppingBuffer;
-
-var _Interface = require('./Interface');
-
-var _Interface2 = _interopRequireDefault(_Interface);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function DroppingBuffer() {
-  var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-  var sliding = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-
-  var api = (0, _Interface2.default)();
-
-  api.setValue = function (v) {
-    return api.value = v;
-  };
-  api.put = function (item, callback) {
-    var r = true;
-    if (api.value.length < size) {
-      api.value.push(item);
-    } else if (sliding) {
-      api.value.shift();
-      api.value.push(item);
-    } else {
-      r = false;
-    }
-    if (api.takes.length > 0) {
-      api.takes.shift()(api.value.shift());
-    }
-    callback(r);
-  };
-  api.take = function (callback) {
-    if (api.value.length === 0) {
-      api.takes.push(callback);
-    } else {
-      callback(api.value.shift());
-    }
-  };
-
-  return api;
-}
-
-},{"./Interface":4}],3:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = FixedBuffer;
-
-var _Interface = require('./Interface');
-
-var _Interface2 = _interopRequireDefault(_Interface);
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function FixedBuffer() {
+function CSPBuffer() {
   var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
 
-  var api = (0, _Interface2.default)();
+  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_OPTIONS,
+      dropping = _ref.dropping,
+      sliding = _ref.sliding,
+      memory = _ref.memory;
 
-  api.setValue = function (v) {
-    return api.value = v;
-  };
-  api.put = function (item, _callback) {
-    if (api.takes.length === 0) {
-      if (api.value.length < size) {
-        api.value.push(item);
-        _callback(true);
-      } else {
-        api.puts.push({
-          callback: function callback(v) {
-            api.value.push(item);
-            if (api.takes.length > 0) {
-              api.takes.shift()(api.value.shift());
-            }
-            _callback(v || true);
-          },
-          item: item
-        });
-      }
-    } else {
-      api.value.push(item);
-      api.takes.shift()(api.value.shift());
-      _callback(true);
-    }
-  };
-  api.take = function (callback) {
-    if (api.value.length === 0) {
-      if (api.puts.length > 0) {
-        api.puts.shift().callback();
-        api.take(callback);
-      } else {
-        api.takes.push(callback);
-      }
-    } else {
-      var v = api.value.shift();
-      if (api.value.length < size && api.puts.length > 0) {
-        api.puts.shift().callback();
-      }
-      callback(v);
-    }
-  };
-
-  return api;
-}
-
-},{"./Interface":4}],4:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = BufferInterface;
-function BufferInterface() {
-  return {
+  var api = {
     value: [],
     puts: [],
     takes: [],
-    isEmpty: function isEmpty() {
-      return this.value.length === 0;
+    hooks: {
+      beforePut: NOOP,
+      afterPut: NOOP,
+      beforeTake: function beforeTake(cb) {
+        return cb();
+      },
+      afterTake: NOOP
     },
-    reset: function reset() {
-      this.value = [];
-      this.puts = [];
-      this.takes = [];
-    },
-    setValue: function setValue(v) {
-      this.value = v;
-    },
-    getValue: function getValue() {
-      return this.value;
+    parent: null
+  };
+
+  api.beforePut = function (hook) {
+    return api.hooks.beforePut = hook;
+  };
+  api.afterPut = function (hook) {
+    return api.hooks.afterPut = hook;
+  };
+  api.beforeTake = function (hook) {
+    return api.hooks.beforeTake = hook;
+  };
+  api.afterTake = function (hook) {
+    return api.hooks.afterTake = hook;
+  };
+  api.isEmpty = function () {
+    return api.value.length === 0;
+  };
+  api.reset = function () {
+    api.value = [];
+    api.puts = [];
+    api.takes = [];
+  };
+  api.setValue = function (v) {
+    api.value = v;
+  };
+  api.getValue = function () {
+    return api.value;
+  };
+  api.decomposeTakers = function () {
+    return api.takes.reduce(function (res, takeObj) {
+      res[takeObj.options.read ? 'readers' : 'takers'].push(takeObj);
+      return res;
+    }, {
+      readers: [],
+      takers: []
+    });
+  };
+  api.consumeTake = function (takeObj, value) {
+    if (!takeObj.options.listen) {
+      var idx = api.takes.findIndex(function (t) {
+        return t === takeObj;
+      });
+      if (idx >= 0) api.takes.splice(idx, 1);
+    }
+    takeObj.callback(value);
+  };
+  api.deleteReader = function (cb) {
+    var idx = api.takes.findIndex(function (_ref2) {
+      var callback = _ref2.callback;
+      return callback === cb;
+    });
+    if (idx >= 0) {
+      api.takes.splice(idx, 1);
     }
   };
-}
+  api.deleteReaders = function () {
+    api.takes = api.takes.filter(function (_ref3) {
+      var options = _ref3.options;
+      return !options.read;
+    });
+  };
 
-},{}],5:[function(require,module,exports){
-'use strict';
+  api.setValue = function (v) {
+    return api.value = v;
+  };
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
+  var put = function put(item, _callback) {
+    var _api$decomposeTakers = api.decomposeTakers(),
+        readers = _api$decomposeTakers.readers,
+        takers = _api$decomposeTakers.takers;
+    // console.log(
+    //   `put=${item}`,
+    //   `readers=${readers.length}`,
+    //   `takers=${takers.length}`,
+    //   `value=${api.value.length} size=${size}`
+    // );
 
-var _FixedBuffer = require('./FixedBuffer');
+    // resolving readers
 
-var _FixedBuffer2 = _interopRequireDefault(_FixedBuffer);
 
-var _DroppingBuffer = require('./DroppingBuffer');
+    readers.forEach(function (reader) {
+      return api.consumeTake(reader, item);
+    });
 
-var _DroppingBuffer2 = _interopRequireDefault(_DroppingBuffer);
+    // resolving takers
+    if (memory) {
+      api.value = [item];
+      _callback(true);
+      if (takers.length > 0) {
+        api.consumeTake(takers[0], item);
+      }
+      return;
+    }
+    if (takers.length > 0) {
+      api.consumeTake(takers[0], item);
+      _callback(true);
+    } else {
+      if (api.value.length < size) {
+        api.value.push(item);
+        _callback(true);
+        return;
+      }
+      if (dropping) {
+        _callback(false);
+        return;
+      }
+      if (sliding) {
+        api.value.shift();
+        api.value.push(item);
+        _callback(true);
+        return;
+      }
+      api.puts.push({
+        callback: function callback(v) {
+          api.value.push(item);
+          _callback(v || true);
+        },
+        item: item
+      });
+    }
+  };
 
-var _DivorcedBuffer = require('./DivorcedBuffer');
+  var take = function take(callback, options) {
+    // console.log('take', `puts=${api.puts.length}`, `value=${api.value.length}`);
+    options = (0, _utils.normalizeOptions)(options);
+    if (api.value.length === 0) {
+      if (api.puts.length > 0 && !options.read) {
+        api.puts.shift().callback();
+        callback(api.value.shift());
+      } else {
+        api.takes.push({ callback: callback, options: options });
+        return function () {
+          return api.deleteReader(callback);
+        };
+      }
+    } else if (memory) {
+      callback(api.value[0]);
+      if (options.listen) {
+        api.takes.push({ callback: callback, options: options });
+        return function () {
+          return api.deleteReader(callback);
+        };
+      }
+    } else if (options.read) {
+      callback(api.value[0]);
+    } else {
+      var v = api.value.shift();
+      callback(v);
+      if (api.value.length < size && api.puts.length > 0) {
+        api.puts.shift().callback();
+      }
+    }
+    return function () {};
+  };
 
-var _DivorcedBuffer2 = _interopRequireDefault(_DivorcedBuffer);
+  api.put = function (item, callback) {
+    if (true) _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
+    return api.hooks.beforePut(item, function (beforePutRes) {
+      return put(beforePutRes, function (putOpRes) {
+        return api.hooks.afterPut(putOpRes, function (res) {
+          if (true) _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', res);
+          callback(res);
+        });
+      });
+    });
+  };
+  api.take = function (callback, options) {
+    if (true) _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
+    return api.hooks.beforeTake(function () {
+      return take(function (takeOpRes) {
+        return api.hooks.afterTake(takeOpRes, function () {
+          for (var _len = arguments.length, res = Array(_len), _key = 0; _key < _len; _key++) {
+            res[_key] = arguments[_key];
+          }
 
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
+          if (true) _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', res);
+          callback.apply(undefined, res);
+        });
+      }, options);
+    });
+  };
+
+  return api;
 }
 
 var buffer = {
-  fixed: _FixedBuffer2.default,
-  dropping: _DroppingBuffer2.default,
-  sliding: function sliding(size) {
-    return (0, _DroppingBuffer2.default)(size, true);
+  fixed: CSPBuffer,
+  dropping: function dropping() {
+    var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+
+    if (size < 1) {
+      throw new Error('The dropping buffer should have at least size of one.');
+    }
+    return CSPBuffer(size, { dropping: true });
   },
-  divorced: _DivorcedBuffer2.default
+  sliding: function sliding() {
+    var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+
+    if (size < 1) {
+      throw new Error('The sliding buffer should have at least size of one.');
+    }
+    return CSPBuffer(size, { sliding: true });
+  },
+  memory: function memory() {
+    return CSPBuffer(0, { memory: true });
+  }
 };
 
 exports.default = buffer;
 
-},{"./DivorcedBuffer":1,"./DroppingBuffer":2,"./FixedBuffer":3}],6:[function(require,module,exports){
+},{"../index":9,"./utils":7}],2:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -253,7 +287,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 };
 
-exports.createChannel = createChannel;
+exports.chan = chan;
 
 var _utils = require('../utils');
 
@@ -261,9 +295,9 @@ var _constants = require('./constants');
 
 var _index = require('../index');
 
-var _buffer = require('./buffer');
+var _buf = require('./buf');
 
-var _buffer2 = _interopRequireDefault(_buffer);
+var _buf2 = _interopRequireDefault(_buf);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -277,18 +311,18 @@ function normalizeChannelArguments(args) {
     buff = args[1];
   } else if (args.length === 1 && typeof args[0] === 'string') {
     id = args[0];
-    buff = _buffer2.default.fixed();
+    buff = _buf2.default.fixed();
   } else if (args.length === 1 && _typeof(args[0]) === 'object') {
     id = (0, _utils.getId)('ch');
     buff = args[0];
   } else {
     id = (0, _utils.getId)('ch');
-    buff = _buffer2.default.fixed();
+    buff = _buf2.default.fixed();
   }
   return [id, buff];
 }
 
-function createChannel() {
+function chan() {
   var state = _constants.OPEN;
 
   for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -301,7 +335,7 @@ function createChannel() {
       buff = _normalizeChannelArgu2[1];
 
   if (_index.CHANNELS.exists(id)) {
-    return [_index.CHANNELS.get(id), true];
+    return _index.CHANNELS.get(id);
   }
 
   var api = _index.CHANNELS.set(id, {
@@ -309,6 +343,8 @@ function createChannel() {
     '@channel': true,
     subscribers: []
   });
+
+  buff.parent = api.id;
 
   api.isActive = function () {
     return api.state() === _constants.OPEN;
@@ -321,11 +357,17 @@ function createChannel() {
   api.value = function () {
     return buff.getValue();
   };
+  api.beforePut = buff.beforePut;
+  api.afterPut = buff.afterPut;
+  api.beforeTake = buff.beforeTake;
+  api.afterTake = buff.afterTake;
+  _index.grid.add(api);
+  if (true) _index.logger.log(api, 'CHANNEL_CREATED');
 
-  return [api, false];
+  return api;
 }
 
-},{"../index":14,"../utils":21,"./buffer":5,"./constants":7}],7:[function(require,module,exports){
+},{"../index":9,"../utils":17,"./buf":1,"./constants":3}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -369,19 +411,19 @@ var CHANNELS = exports.CHANNELS = {
   }
 };
 
-},{}],8:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _buffer = require('./buffer');
+var _buf = require('./buf');
 
 Object.defineProperty(exports, 'buffer', {
   enumerable: true,
   get: function get() {
-    return _interopRequireDefault(_buffer).default;
+    return _interopRequireDefault(_buf).default;
   }
 });
 
@@ -437,13 +479,13 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-},{"./buffer":5,"./channel":6,"./constants":7,"./ops":9,"./state":10}],9:[function(require,module,exports){
+},{"./buf":1,"./channel":2,"./constants":3,"./ops":5,"./state":6}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.isStateWriteChannel = exports.isStateReadChannel = exports.isState = exports.isRiew = exports.isChannel = undefined;
+exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.isChannel = undefined;
 
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
@@ -455,13 +497,12 @@ var _extends = Object.assign || function (target) {
   }return target;
 };
 
-exports.put = put;
 exports.sput = sput;
-exports.take = take;
+exports.put = put;
 exports.stake = stake;
+exports.take = take;
 exports.read = read;
 exports.sread = sread;
-exports.unread = unread;
 exports.unreadAll = unreadAll;
 exports.close = close;
 exports.sclose = sclose;
@@ -471,7 +512,7 @@ exports.call = call;
 exports.fork = fork;
 exports.merge = merge;
 exports.timeout = timeout;
-exports.runRoutine = runRoutine;
+exports.go = go;
 exports.sleep = sleep;
 exports.stop = stop;
 
@@ -482,6 +523,14 @@ var _index = require('../index');
 var _utils = require('../utils');
 
 var _utils2 = require('./utils');
+
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+  } else {
+    obj[key] = value;
+  }return obj;
+}
 
 function _toConsumableArray(arr) {
   if (Array.isArray(arr)) {
@@ -497,9 +546,6 @@ var noop = function noop() {};
 
 // **************************************************** put
 
-function put(channels, item) {
-  return { channels: channels, op: _constants.PUT, item: item };
-}
 function sput(channels, item) {
   var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : noop;
 
@@ -507,143 +553,98 @@ function sput(channels, item) {
   var result = channels.map(function () {
     return _constants.NOTHING;
   });
-  var items = channels.length > 1 ? item : [item];
+  var setResult = function setResult(idx, value) {
+    result[idx] = value;
+    if (!result.includes(_constants.NOTHING)) {
+      callback(result.length === 1 ? result[0] : result);
+    }
+  };
   channels.forEach(function (channel, idx) {
-    var state = channel.state();
-    if (state === _constants.CLOSED || state === _constants.ENDED) {
-      callback(state);
+    var chState = channel.state();
+    if (chState !== _constants.OPEN) {
+      setResult(idx, chState);
     } else {
-      callSubscribers(channel, items[idx], function () {
-        channel.buff.put(items[idx], function (value) {
-          result[idx] = value;
-          if (!result.includes(_constants.NOTHING)) {
-            callback(result.length === 1 ? result[0] : result);
-          }
-        });
+      channel.buff.put(item, function (putResult) {
+        return setResult(idx, putResult);
       });
     }
   });
 }
-function callSubscribers(channel, item, callback) {
-  var notificationProcess = channel.subscribers.map(function () {
-    return 1;
-  }); // just to count the notified channels
-  if (notificationProcess.length === 0) return callback();
-  var subscriptions = [].concat(_toConsumableArray(channel.subscribers));
-  channel.subscribers = [];
-  subscriptions.forEach(function (s) {
-    var notify = s.notify,
-        listen = s.listen;
-
-    if (listen) {
-      channel.subscribers.push(s);
-    }
-    notify(item, function () {
-      notificationProcess.shift();
-      if (notificationProcess.length === 0) {
-        callback();
-      }
-    });
-  });
+function put(channels, item) {
+  return { channels: channels, op: _constants.PUT, item: item };
 }
 
 // **************************************************** take
 
-function take(channels, options) {
-  return { channels: channels, op: _constants.TAKE, options: options };
-}
 function stake(channels, callback, options) {
   channels = (0, _utils2.normalizeChannels)(channels);
   options = (0, _utils2.normalizeOptions)(options);
-  var data = channels.map(function () {
-    return _constants.NOTHING;
-  });
-  var _options = options,
-      transform = _options.transform,
-      onError = _options.onError,
-      initialCall = _options.initialCall,
-      listen = _options.listen;
-
-  var takeDone = function takeDone(value, idx) {
-    var done = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : noop;
-
-    data[idx] = value;
-    var result = null;
-    if (options.strategy === _constants.ONE_OF) {
-      result = [value, idx];
-    } else if (!data.includes(_constants.NOTHING)) {
-      result = [].concat(_toConsumableArray(data));
-    }
-    if (result !== null) {
-      if (transform) {
-        try {
-          if ((0, _utils.isGeneratorFunction)(transform)) {
-            _index.go.apply(undefined, [transform, function (v) {
-              return callback(v), done();
-            }].concat(_toConsumableArray(result)));
-          } else {
-            callback(transform.apply(undefined, _toConsumableArray(result)));
-            done();
-          }
-        } catch (e) {
-          if (onError === null) {
-            throw e;
-          }
-          onError(e);
-        }
-      } else {
-        if (options.strategy === _constants.ONE_OF) {
-          callback.apply(undefined, _toConsumableArray(result));
-        } else {
-          callback(result.length === 1 ? result[0] : result);
-        }
-        done();
+  callback = (0, _utils2.normalizeTo)(callback);
+  var unsubscribers = void 0;
+  if (options.strategy === _constants.ALL_REQUIRED) {
+    var result = channels.map(function () {
+      return _constants.NOTHING;
+    });
+    var setResult = function setResult(idx, value) {
+      result[idx] = value;
+      if (!result.includes(_constants.NOTHING)) {
+        callback(result.length === 1 ? result[0] : [].concat(_toConsumableArray(result)));
       }
-    }
-  };
-
-  var subscriptions = channels.map(function (channel, idx) {
-    var state = channel.state();
-    var subscription = {};
-    if (state === _constants.ENDED) {
-      takeDone(_constants.ENDED, idx);
-    } else if (state === _constants.CLOSED && channel.buff.isEmpty()) {
-      channel.state(_constants.ENDED);
-      takeDone(_constants.ENDED, idx);
-    } else if (options.read) {
-      // reading
-      if (!channel.subscribers.find(function (_ref) {
-        var c = _ref.callback;
-        return c === callback;
-      })) {
-        channel.subscribers.push(subscription = {
-          callback: callback,
-          notify: function notify(value, done) {
-            return takeDone(value, idx, done);
-          },
-          listen: listen
+    };
+    unsubscribers = channels.map(function (channel, idx) {
+      var chState = channel.state();
+      if (chState === _constants.ENDED) {
+        setResult(idx, chState);
+      } else if (chState === _constants.CLOSED && channel.buff.isEmpty()) {
+        channel.state(_constants.ENDED);
+        setResult(idx, _constants.ENDED);
+      } else {
+        return channel.buff.take(function (takeResult) {
+          return setResult(idx, takeResult);
+        }, options);
+      }
+    });
+  } else if (options.strategy === _constants.ONE_OF) {
+    var done = function done() {
+      // This function is here to clean up the unresolved buffer readers.
+      // In the ONE_OF strategy there are pending readers that should be
+      // killed since one of the others in the list is called. And this
+      // should happen only if we are not listening.
+      if (!options.listen) {
+        unsubscribers.filter(function (f) {
+          return f;
+        }).forEach(function (f) {
+          return f();
         });
       }
-      var currentChannelBufValue = channel.value();
-      if (initialCall && currentChannelBufValue.length > 0) {
-        takeDone(currentChannelBufValue[0], idx);
+      callback.apply(undefined, arguments);
+    };
+    unsubscribers = channels.map(function (channel, idx) {
+      var chState = channel.state();
+      if (chState === _constants.ENDED) {
+        done(chState, idx);
+      } else if (chState === _constants.CLOSED && channel.buff.isEmpty()) {
+        channel.state(_constants.ENDED);
+        done(_constants.ENDED, idx);
+      } else {
+        return channel.buff.take(function (takeResult) {
+          return done(takeResult, idx);
+        }, options);
       }
-    } else {
-      // taking
-      channel.buff.take(function (r) {
-        return takeDone(r, idx);
-      });
-    }
-    return subscription;
-  });
-
-  return {
-    listen: function listen() {
-      subscriptions.forEach(function (s) {
-        return s.listen = true;
-      });
-    }
+    });
+  } else {
+    throw new Error('Unrecognized strategy "' + options.strategy + '"');
+  }
+  return function unsubscribe() {
+    unsubscribers.filter(function (f) {
+      return f;
+    }).forEach(function (f) {
+      return f();
+    });
   };
+}
+function take(channels, options) {
+  return { channels: channels, op: _constants.TAKE, options: options };
 }
 
 // **************************************************** read
@@ -652,28 +653,10 @@ function read(channels, options) {
   return { channels: channels, op: _constants.READ, options: _extends({}, options, { read: true }) };
 }
 function sread(channels, to, options) {
-  return stake(channels, (0, _utils2.normalizeTo)(to), _extends({}, options, { read: true }));
+  return stake(channels, to, _extends({}, options, { read: true }));
 }
-function unread(channels, callback) {
-  channels = (0, _utils2.normalizeChannels)(channels);
-  channels.forEach(function (ch) {
-    if (isChannel(callback)) {
-      callback = callback.__subFunc;
-    }
-    ch.subscribers = ch.subscribers.filter(function (_ref2) {
-      var c = _ref2.callback;
-
-      if (c !== callback) {
-        return true;
-      }
-      return false;
-    });
-  });
-}
-function unreadAll(channels) {
-  (0, _utils2.normalizeChannels)(channels).forEach(function (ch) {
-    ch.subscribers = [];
-  });
+function unreadAll(channel) {
+  channel.buff.deleteReaders();
 }
 
 // **************************************************** close, reset, call, fork, merge, timeout, isChannel
@@ -687,11 +670,12 @@ function close(channels) {
       return p.callback(newState);
     });
     ch.buff.takes.forEach(function (t) {
-      return t(newState);
+      return t.callback(newState);
     });
     _index.grid.remove(ch);
     ch.subscribers = [];
     _constants.CHANNELS.del(ch.id);
+    if (true) _index.logger.log(ch, 'CHANNEL_CLOSED');
   });
   return { op: _constants.NOOP };
 }
@@ -703,6 +687,7 @@ function channelReset(channels) {
   channels.forEach(function (ch) {
     ch.state(_constants.OPEN);
     ch.buff.reset();
+    if (true) _index.logger.log(ch, 'CHANNEL_RESET');
   });
   return { op: _constants.NOOP };
 }
@@ -757,6 +742,9 @@ var isRiew = exports.isRiew = function isRiew(r) {
 var isState = exports.isState = function isState(s) {
   return s && s['@state'] === true;
 };
+var isRoutine = exports.isRoutine = function isRoutine(r) {
+  return r && r['@routine'] === true;
+};
 var isStateReadChannel = exports.isStateReadChannel = function isStateReadChannel(s) {
   return s && s['@statereadchannel'] === true;
 };
@@ -766,7 +754,7 @@ var isStateWriteChannel = exports.isStateWriteChannel = function isStateWriteCha
 
 // **************************************************** go/routine
 
-function runRoutine(func) {
+function go(func) {
   for (var _len4 = arguments.length, args = Array(_len4 > 2 ? _len4 - 2 : 0), _key4 = 2; _key4 < _len4; _key4++) {
     args[_key4 - 2] = arguments[_key4];
   }
@@ -776,19 +764,25 @@ function runRoutine(func) {
   var RUNNING = 'RUNNING';
   var STOPPED = 'STOPPED';
   var state = RUNNING;
+  var name = (0, _utils.getFuncName)(func);
 
   var api = {
-    id: 'routine_' + (0, _utils.getId)(),
+    id: (0, _utils.getId)('routine_' + name),
+    '@routine': true,
+    name: name,
     children: [],
     stop: function stop() {
       state = STOPPED;
       this.children.forEach(function (r) {
         return r.stop();
       });
+      _index.grid.remove(api);
+      if (true) _index.logger.log(api, 'ROUTINE_STOPPED');
     },
     rerun: function rerun() {
       gen = func.apply(undefined, args);
       next();
+      if (true) _index.logger.log(this, 'ROUTINE_RERUN');
     }
   };
   var addSubRoutine = function addSubRoutine(r) {
@@ -818,16 +812,16 @@ function runRoutine(func) {
         setTimeout(next, i.value.ms);
         break;
       case _constants.STOP:
-        state = STOPPED;
+        api.stop();
         break;
       case _constants.READ:
         sread(i.value.channels, next, i.value.options);
         break;
       case _constants.CALL_ROUTINE:
-        addSubRoutine(_index.go.apply(undefined, [i.value.routine, next].concat(_toConsumableArray(i.value.args))));
+        addSubRoutine(go.apply(undefined, [i.value.routine, next].concat(_toConsumableArray(i.value.args))));
         break;
       case _constants.FORK_ROUTINE:
-        addSubRoutine(_index.go.apply(undefined, [i.value.routine, function () {}].concat(_toConsumableArray(i.value.args))));
+        addSubRoutine(go.apply(undefined, [i.value.routine, function () {}].concat(_toConsumableArray(i.value.args))));
         next();
         break;
       default:
@@ -842,10 +836,15 @@ function runRoutine(func) {
       if (done) done(step.value);
       if (step.value && step.value['@go'] === true) {
         api.rerun();
-      }
+      } else if (true) _index.logger.log(api, 'ROUTINE_END');
     } else if ((0, _utils.isPromise)(step.value)) {
-      step.value.then(next).catch(function (err) {
-        return processGeneratorStep(gen.throw(err));
+      if (true) _index.logger.log(api, 'ROUTINE_ASYNC_BEGIN');
+      step.value.then(function () {
+        if (true) _index.logger.log(api, 'ROUTINE_ASYNC_END');
+        next.apply(undefined, arguments);
+      }).catch(function (err) {
+        if (true) _index.logger.log(api, 'ROUTINE_ASYNC_ERROR', err);
+        processGeneratorStep(gen.throw(err));
       });
     } else {
       processGeneratorStep(step);
@@ -853,9 +852,36 @@ function runRoutine(func) {
   }
 
   next();
+  _index.grid.add(api);
+  if (true) _index.logger.log(api, 'ROUTINE_STARTED');
 
   return api;
 }
+go['@go'] = true;
+go.with = function () {
+  for (var _len6 = arguments.length, maps = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+    maps[_key6] = arguments[_key6];
+  }
+
+  var reducedMaps = maps.reduce(function (res, item) {
+    if (typeof item === 'string') {
+      res = _extends({}, res, _defineProperty({}, item, (0, _index.use)(item)));
+    } else {
+      res = _extends({}, res, item);
+    }
+    return res;
+  }, {});
+  return function (func) {
+    for (var _len7 = arguments.length, args = Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
+      args[_key7 - 2] = arguments[_key7];
+    }
+
+    var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
+
+    args.push(reducedMaps);
+    return go.apply(undefined, [func, done].concat(args));
+  };
+};
 
 function sleep(ms, callback) {
   if (typeof callback === 'function') {
@@ -869,19 +895,19 @@ function stop() {
   return { op: _constants.STOP };
 }
 
-},{"../index":14,"../utils":21,"./constants":7,"./utils":11}],10:[function(require,module,exports){
+},{"../index":9,"../utils":17,"./constants":3,"./utils":7}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createState = createState;
+exports.state = state;
 
 var _index = require('../index');
 
 var _utils = require('../utils');
 
-function createState() {
+function state() {
   var value = arguments.length <= 0 ? undefined : arguments[0];
   var id = (0, _utils.getId)('state');
   var readChannels = [];
@@ -898,7 +924,7 @@ function createState() {
       onError(e);
     };
   }
-  function runSelector(_ref, v) {
+  function runReader(_ref, v) {
     var ch = _ref.ch,
         selector = _ref.selector,
         onError = _ref.onError;
@@ -937,12 +963,12 @@ function createState() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.divorced());
+      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.memory());
       ch['@statereadchannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
       if (isThereInitialValue) {
-        runSelector(reader, value);
+        runReader(reader, value);
       }
       return this;
     },
@@ -952,54 +978,32 @@ function createState() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.divorced());
+      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.memory());
       ch['@statewritechannel'] = true;
       var writer = { ch: ch };
       writeChannels.push(writer);
-      (0, _index.sread)(ch, function (v) {
-        value = v;
-        readChannels.forEach(function (r) {
-          return runSelector(r, value);
-        });
-      }, {
-        transform: /*#__PURE__*/regeneratorRuntime.mark(function transform(payload) {
-          return regeneratorRuntime.wrap(function transform$(_context) {
-            while (1) {
-              switch (_context.prev = _context.next) {
-                case 0:
-                  _context.prev = 0;
-
-                  if (!(0, _utils.isGeneratorFunction)(reducer)) {
-                    _context.next = 5;
-                    break;
-                  }
-
-                  _context.next = 4;
-                  return (0, _index.call)(reducer, value, payload);
-
-                case 4:
-                  return _context.abrupt('return', _context.sent);
-
-                case 5:
-                  return _context.abrupt('return', reducer(value, payload));
-
-                case 8:
-                  _context.prev = 8;
-                  _context.t0 = _context['catch'](0);
-
-                  handleError(onError)(_context.t0);
-
-                case 11:
-                case 'end':
-                  return _context.stop();
-              }
-            }
-          }, transform, this, [[0, 8]]);
-        }),
-
-        onError: handleError(onError),
-        initialCall: true,
-        listen: true
+      ch.beforePut(function (payload, resolveBeforePutHook) {
+        try {
+          if ((0, _utils.isGeneratorFunction)(reducer)) {
+            (0, _index.go)(reducer, function (genResult) {
+              value = genResult;
+              readChannels.forEach(function (r) {
+                return runReader(r, value);
+              });
+              resolveBeforePutHook(value);
+              if (true) _index.logger.log(api, 'STATE_VALUE_SET', value);
+            }, value, payload);
+            return;
+          }
+          value = reducer(value, payload);
+          readChannels.forEach(function (r) {
+            return runReader(r, value);
+          });
+          resolveBeforePutHook(value);
+          if (true) _index.logger.log(api, 'STATE_VALUE_SET', value);
+        } catch (e) {
+          handleError(onError)(e);
+        }
       });
       return this;
     },
@@ -1014,6 +1018,7 @@ function createState() {
       });
       value = undefined;
       _index.grid.remove(api);
+      if (true) _index.logger.log(api, 'STATE_DESTROYED');
       return this;
     },
     get: function get() {
@@ -1022,8 +1027,9 @@ function createState() {
     set: function set(newValue) {
       value = newValue;
       readChannels.forEach(function (r) {
-        runSelector(r, value);
+        runReader(r, value);
       });
+      if (true) _index.logger.log(api, 'STATE_VALUE_SET', newValue);
       return newValue;
     }
   };
@@ -1031,10 +1037,13 @@ function createState() {
   api.select(api.READ);
   api.mutate(api.WRITE);
 
+  _index.grid.add(api);
+  if (true) _index.logger.log(api, 'STATE_CREATED');
+
   return api;
 }
 
-},{"../index":14,"../utils":21}],11:[function(require,module,exports){
+},{"../index":9,"../utils":17}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1060,7 +1069,6 @@ function normalizeChannels(channels) {
 }
 
 var DEFAULT_OPTIONS = {
-  transform: null,
   onError: null,
   initialCall: true
 };
@@ -1070,38 +1078,44 @@ function normalizeTo(to) {
     return to;
   }
   if ((0, _index.isChannel)(to)) {
-    return to.__subFunc || (to.__subFunc = function (v) {
+    return function (v) {
       return (0, _index.sput)(to, v);
-    });
+    };
   }
   if (typeof to === 'string') {
-    var ch = (0, _index.chan)(to, _index.buffer.divorced());
-    return ch.__subFunc = function (v) {
-      return (0, _index.sput)(to, v);
+    var ch = (0, _index.chan)(to, _index.buffer.memory());
+    return function (v) {
+      return (0, _index.sput)(ch, v);
     };
   }
   throw new Error('\'read\' accepts string, channel or a function as a second argument. ' + to + ' given.');
 }
 function normalizeOptions(options) {
   options = options || DEFAULT_OPTIONS;
-  var transform = options.transform || DEFAULT_OPTIONS.transform;
   var onError = options.onError || DEFAULT_OPTIONS.onError;
   var strategy = options.strategy || _constants.ALL_REQUIRED;
   var listen = 'listen' in options ? options.listen : false;
   var read = 'read' in options ? options.read : false;
   var initialCall = 'initialCall' in options ? options.initialCall : DEFAULT_OPTIONS.initialCall;
 
-  return { transform: transform, onError: onError, strategy: strategy, initialCall: initialCall, listen: listen, read: read };
+  return {
+    onError: onError,
+    strategy: strategy,
+    initialCall: initialCall,
+    listen: listen,
+    read: read,
+    userTakeCallback: options.userTakeCallback
+  };
 }
 
-},{"../index":14,"./constants":7}],12:[function(require,module,exports){
+},{"../index":9,"./constants":3}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = Grid;
-function Grid(logger) {
+function Grid() {
   var gridAPI = {};
   var nodes = [];
 
@@ -1110,7 +1124,6 @@ function Grid(logger) {
       throw new Error("Each node in the grid must be an object with \"id\" field. Instead \"" + product + "\" given.");
     }
     nodes.push(product);
-    logger.snapshot();
   };
   gridAPI.remove = function (product) {
     var idx = nodes.findIndex(function (_ref) {
@@ -1122,7 +1135,6 @@ function Grid(logger) {
       // splice because of https://krasimirtsonev.com/blog/article/foreach-or-not-to-foreach
       nodes.splice(idx, 1);
     }
-    logger.snapshot();
   };
   gridAPI.reset = function () {
     nodes = [];
@@ -1140,146 +1152,7 @@ function Grid(logger) {
   return gridAPI;
 }
 
-},{}],13:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _slicedToArray = function () {
-  function sliceIterator(arr, i) {
-    var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
-      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-        _arr.push(_s.value);if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;_e = err;
-    } finally {
-      try {
-        if (!_n && _i["return"]) _i["return"]();
-      } finally {
-        if (_d) throw _e;
-      }
-    }return _arr;
-  }return function (arr, i) {
-    if (Array.isArray(arr)) {
-      return arr;
-    } else if (Symbol.iterator in Object(arr)) {
-      return sliceIterator(arr, i);
-    } else {
-      throw new TypeError("Invalid attempt to destructure non-iterable instance");
-    }
-  };
-}(); /* eslint-disable no-use-before-define */
-
-var _riew = require('./riew');
-
-var _riew2 = _interopRequireDefault(_riew);
-
-var _react = require('./react');
-
-var _react2 = _interopRequireDefault(_react);
-
-var _index = require('./index');
-
-var _csp = require('./csp');
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function Harvester() {
-  var api = {};
-  var products = {};
-
-  api.defineProduct = function (type, func) {
-    if (products[type]) {
-      throw new Error('A product with type "' + type + '" already exists.');
-    }
-    products[type] = func;
-  };
-  api.undefineProduct = function (type) {
-    if (!products[type]) {
-      throw new Error('There is no product with type "' + type + '" to be removed.');
-    }
-    delete products[type];
-  };
-  api.produce = function (type) {
-    var _products;
-
-    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
-    }
-
-    if (!products[type]) {
-      throw new Error('There is no product with type "' + type + '".');
-    }
-    return (_products = products)[type].apply(_products, args);
-  };
-  api.reset = function () {
-    products = {};
-    defineHarvesterBuiltInCapabilities(api);
-  };
-  api.debug = function () {
-    return {
-      productNames: Object.keys(products)
-    };
-  };
-
-  return api;
-}
-
-var defineHarvesterBuiltInCapabilities = function defineHarvesterBuiltInCapabilities(hInstance) {
-  hInstance.defineProduct('riew', function (viewFunc) {
-    for (var _len2 = arguments.length, controllers = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-      controllers[_key2 - 1] = arguments[_key2];
-    }
-
-    var riew = _riew2.default.apply(undefined, [viewFunc].concat(controllers));
-
-    _index.grid.add(riew);
-    return riew;
-  });
-  hInstance.defineProduct('reactRiew', function (viewFunc) {
-    for (var _len3 = arguments.length, controllers = Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
-      controllers[_key3 - 1] = arguments[_key3];
-    }
-
-    return _react2.default.apply(undefined, [viewFunc].concat(controllers));
-  });
-  hInstance.defineProduct('channel', function () {
-    var _createChannel = _csp.createChannel.apply(undefined, arguments),
-        _createChannel2 = _slicedToArray(_createChannel, 2),
-        channel = _createChannel2[0],
-        exists = _createChannel2[1];
-
-    if (!exists) {
-      _index.grid.add(channel);
-    }
-    return channel;
-  });
-  hInstance.defineProduct('state', function () {
-    var state = _csp.createState.apply(undefined, arguments);
-
-    _index.grid.add(state);
-    return state;
-  });
-  hInstance.defineProduct('routine', function () {
-    var r = _csp.runRoutine.apply(undefined, arguments);
-
-    _index.grid.add(r);
-    return r;
-  });
-};
-
-var h = Harvester();
-
-defineHarvesterBuiltInCapabilities(h);
-
-exports.default = h;
-
-},{"./csp":8,"./index":14,"./react":16,"./riew":17}],14:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1287,23 +1160,25 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.harvester = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.go = exports.state = exports.chan = exports.react = exports.riew = undefined;
-
-var _extends = Object.assign || function (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];for (var key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key];
-      }
-    }
-  }return target;
-};
+exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 } : function (obj) {
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-}; /* eslint-disable no-param-reassign */
+};
+
+var _riew = require('./riew');
+
+Object.keys(_riew).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _riew[key];
+    }
+  });
+});
 
 var _csp = require('./csp');
 
@@ -1317,9 +1192,9 @@ Object.keys(_csp).forEach(function (key) {
   });
 });
 
-var _harvester = require('./harvester');
+var _registry = require('./registry');
 
-var _harvester2 = _interopRequireDefault(_harvester);
+var _registry2 = _interopRequireDefault(_registry);
 
 var _grid = require('./grid');
 
@@ -1329,105 +1204,45 @@ var _logger = require('./logger');
 
 var _logger2 = _interopRequireDefault(_logger);
 
+var _utils = require('./utils');
+
+var _react = require('./react');
+
+var _react2 = _interopRequireDefault(_react);
+
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-  } else {
-    obj[key] = value;
-  }return obj;
-}
-
-var riew = exports.riew = function riew() {
-  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-    args[_key] = arguments[_key];
-  }
-
-  return _harvester2.default.produce.apply(_harvester2.default, ['riew'].concat(args));
-};
 var react = exports.react = {
   riew: function riew() {
-    for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-
-    return _harvester2.default.produce.apply(_harvester2.default, ['reactRiew'].concat(args));
+    return _react2.default.apply(undefined, arguments);
   }
-};
-var chan = exports.chan = function chan() {
-  for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-    args[_key3] = arguments[_key3];
-  }
-
-  return _harvester2.default.produce.apply(_harvester2.default, ['channel'].concat(args));
-};
-var state = exports.state = function state() {
-  for (var _len4 = arguments.length, args = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-    args[_key4] = arguments[_key4];
-  }
-
-  return _harvester2.default.produce.apply(_harvester2.default, ['state'].concat(args));
-};
-var go = exports.go = function go() {
-  for (var _len5 = arguments.length, args = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
-    args[_key5] = arguments[_key5];
-  }
-
-  return _harvester2.default.produce.apply(_harvester2.default, ['routine'].concat(args));
 };
 var use = exports.use = function use(name) {
-  for (var _len6 = arguments.length, args = Array(_len6 > 1 ? _len6 - 1 : 0), _key6 = 1; _key6 < _len6; _key6++) {
-    args[_key6 - 1] = arguments[_key6];
+  for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    args[_key - 1] = arguments[_key];
   }
 
-  return _harvester2.default.produce.apply(_harvester2.default, [name].concat(args));
+  return _registry2.default.produce.apply(_registry2.default, [name].concat(args));
 };
 var register = exports.register = function register(name, whatever) {
   if ((typeof whatever === 'undefined' ? 'undefined' : _typeof(whatever)) === 'object' || typeof whatever === 'function') {
     whatever.__registered = name;
   }
-  _harvester2.default.defineProduct(name, function () {
+  _registry2.default.defineProduct(name, function () {
     return whatever;
   });
   return whatever;
 };
 var logger = exports.logger = new _logger2.default();
-var grid = exports.grid = new _grid2.default(logger);
+var grid = exports.grid = new _grid2.default();
 var reset = exports.reset = function reset() {
-  return grid.reset(), _harvester2.default.reset(), _csp.CHANNELS.reset(), logger.reset();
+  return (0, _utils.resetIds)(), grid.reset(), _registry2.default.reset(), _csp.CHANNELS.reset(), logger.reset();
 };
-var harvester = exports.harvester = _harvester2.default;
+var registry = exports.registry = _registry2.default;
 
-go['@go'] = true;
-go.with = function () {
-  for (var _len7 = arguments.length, maps = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
-    maps[_key7] = arguments[_key7];
-  }
-
-  var reducedMaps = maps.reduce(function (res, item) {
-    if (typeof item === 'string') {
-      res = _extends({}, res, _defineProperty({}, item, use(item)));
-    } else {
-      res = _extends({}, res, item);
-    }
-    return res;
-  }, {});
-  return function (func) {
-    for (var _len8 = arguments.length, args = Array(_len8 > 2 ? _len8 - 2 : 0), _key8 = 2; _key8 < _len8; _key8++) {
-      args[_key8 - 2] = arguments[_key8];
-    }
-
-    var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
-
-    args.push(reducedMaps);
-    return go.apply(undefined, [func, done].concat(args));
-  };
-};
-
-},{"./csp":8,"./grid":12,"./harvester":13,"./logger":15}],15:[function(require,module,exports){
+},{"./csp":4,"./grid":8,"./logger":10,"./react":11,"./registry":12,"./riew":13,"./utils":17}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1459,19 +1274,23 @@ var MAX_SNAPSHOTS = 100;
 var RIEW = 'RIEW';
 var STATE = 'STATE';
 var CHANNEL = 'CHANNEL';
+var ROUTINE = 'ROUTINE';
 
 function normalizeRiew(r) {
   return {
     id: r.id,
     name: r.name,
     type: RIEW,
-    viewData: r.renderer.data(),
+    viewData: (0, _sanitize2.default)(r.renderer.data()),
     children: r.children.map(function (child) {
       if ((0, _index.isState)(child)) {
         return normalizeState(child);
       }
       if ((0, _index.isChannel)(child)) {
         return normalizeChannel(child);
+      }
+      if ((0, _index.isRoutine)(child)) {
+        return normalizeRoutine(child);
       }
       console.warn('Riew logger: unrecognized riew child', child);
     })
@@ -1481,7 +1300,7 @@ function normalizeState(s) {
   return {
     id: s.id,
     type: STATE,
-    value: s.get(),
+    value: (0, _sanitize2.default)(s.get()),
     children: s.children().map(function (child) {
       if ((0, _index.isChannel)(child)) {
         return normalizeChannel(child);
@@ -1494,13 +1313,17 @@ function normalizeChannel(c) {
   var o = {
     id: c.id,
     type: CHANNEL,
-    value: c.value(),
+    value: (0, _sanitize2.default)(c.value()),
     puts: c.buff.puts.map(function (_ref) {
       var item = _ref.item;
-      return item;
+      return { item: item };
     }),
-    takes: c.buff.takes.map(function () {
-      return 'TAKE';
+    takes: c.buff.takes.map(function (_ref2) {
+      var options = _ref2.options;
+      return {
+        read: options.read,
+        listen: options.listen
+      };
     })
   };
   if ((0, _index.isStateWriteChannel)(c)) {
@@ -1511,12 +1334,36 @@ function normalizeChannel(c) {
   }
   return o;
 }
+function normalizeRoutine(r) {
+  return {
+    id: r.id,
+    type: ROUTINE,
+    name: r.name
+  };
+}
 
 function Logger() {
   var api = {};
   var frames = [];
+  var data = [];
+  var inProgress = false;
 
-  api.snapshot = function () {
+  api.log = function (who, what, meta) {
+    data.push({
+      who: who.id,
+      what: what,
+      meta: (0, _sanitize2.default)(meta)
+    });
+    if (!inProgress) {
+      inProgress = true;
+      Promise.resolve().then(function () {
+        api.snapshot(data);
+        inProgress = false;
+        data = [];
+      });
+    }
+  };
+  api.snapshot = function (actions) {
     if (frames.length >= MAX_SNAPSHOTS) {
       frames.shift();
     }
@@ -1524,6 +1371,8 @@ function Logger() {
     var states = [];
     var filteredStates = [];
     var channels = [];
+    var filteredRoutines = [];
+    var routines = [];
     var filteredChannels = [];
 
     _index.grid.nodes().forEach(function (node) {
@@ -1533,33 +1382,44 @@ function Logger() {
         states.push(normalizeState(node));
       } else if ((0, _index.isChannel)(node)) {
         channels.push(normalizeChannel(node));
+      } else if ((0, _index.isRoutine)(node)) {
+        routines.push(normalizeRoutine(node));
       } else {
-        // console.warn('Riew logger: unrecognized entity type', node);
+        console.warn('Riew logger: unrecognized entity type', node);
       }
     });
     filteredStates = states.filter(function (s) {
       return !riews.find(function (r) {
-        return r.children.find(function (_ref2) {
-          var id = _ref2.id;
+        return r.children.find(function (_ref3) {
+          var id = _ref3.id;
           return s.id === id;
         });
       });
     });
     filteredChannels = channels.filter(function (c) {
       return !riews.find(function (r) {
-        return r.children.find(function (_ref3) {
-          var id = _ref3.id;
+        return r.children.find(function (_ref4) {
+          var id = _ref4.id;
           return c.id === id;
         });
       }) && !states.find(function (s) {
-        return s.children.find(function (_ref4) {
-          var id = _ref4.id;
+        return s.children.find(function (_ref5) {
+          var id = _ref5.id;
           return c.id === id;
         });
       });
     });
+    filteredRoutines = routines.filter(function (ro) {
+      return !riews.find(function (r) {
+        return r.children.find(function (_ref6) {
+          var id = _ref6.id;
+          return ro.id === id;
+        });
+      });
+    });
     var snapshot = (0, _sanitize2.default)({
-      items: [].concat(riews, _toConsumableArray(filteredStates), _toConsumableArray(filteredChannels))
+      actions: actions,
+      state: [].concat(riews, _toConsumableArray(filteredStates), _toConsumableArray(filteredChannels), _toConsumableArray(filteredRoutines))
     });
     frames.push(snapshot);
     return snapshot;
@@ -1574,7 +1434,7 @@ function Logger() {
   return api;
 }
 
-},{"./index":14,"./sanitize":18}],16:[function(require,module,exports){
+},{"./index":9,"./sanitize":14}],11:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1706,7 +1566,58 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":14,"../utils":21}],17:[function(require,module,exports){
+},{"../index":9,"../utils":17}],12:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+/* eslint-disable no-use-before-define */
+function Harvester() {
+  var api = {};
+  var products = {};
+
+  api.defineProduct = function (type, func) {
+    if (products[type]) {
+      throw new Error("A product with type \"" + type + "\" already exists.");
+    }
+    products[type] = func;
+  };
+  api.undefineProduct = function (type) {
+    if (!products[type]) {
+      throw new Error("There is no product with type \"" + type + "\" to be removed.");
+    }
+    delete products[type];
+  };
+  api.produce = function (type) {
+    var _products;
+
+    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      args[_key - 1] = arguments[_key];
+    }
+
+    if (!products[type]) {
+      throw new Error("There is no product with type \"" + type + "\".");
+    }
+    return (_products = products)[type].apply(_products, args);
+  };
+  api.reset = function () {
+    products = {};
+  };
+  api.debug = function () {
+    return {
+      productNames: Object.keys(products)
+    };
+  };
+
+  return api;
+}
+
+var h = Harvester();
+
+exports.default = h;
+
+},{}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1723,11 +1634,13 @@ var _extends = Object.assign || function (target) {
   }return target;
 };
 
-exports.default = createRiew;
+exports.riew = riew;
 
 var _index = require('./index');
 
 var _utils = require('./utils');
+
+var _csp = require('./csp');
 
 function _defineProperty(obj, key, value) {
   if (key in obj) {
@@ -1735,9 +1648,9 @@ function _defineProperty(obj, key, value) {
   } else {
     obj[key] = value;
   }return obj;
-} /* eslint-disable no-param-reassign */
+} /* eslint-disable no-param-reassign, no-use-before-define */
 
-var Renderer = function Renderer(viewFunc) {
+var Renderer = function Renderer(pushDataToView) {
   var _data = {};
   var inProgress = false;
   var active = true;
@@ -1752,7 +1665,7 @@ var Renderer = function Renderer(viewFunc) {
         inProgress = true;
         Promise.resolve().then(function () {
           if (active) {
-            viewFunc(_data);
+            pushDataToView(_data);
           }
           inProgress = false;
         });
@@ -1767,27 +1680,29 @@ var Renderer = function Renderer(viewFunc) {
   };
 };
 
-function createRiew(viewFunc) {
+function riew(viewFunc) {
   for (var _len = arguments.length, routines = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
     routines[_key - 1] = arguments[_key];
   }
 
   var name = (0, _utils.getFuncName)(viewFunc);
-  var renderer = Renderer(viewFunc);
-  var riew = {
-    id: (0, _utils.getId)(name),
+  var renderer = Renderer(function (value) {
+    viewFunc(value);
+    if (true) _index.logger.log(api, 'RIEW_RENDERED', value);
+  });
+  var api = {
+    id: (0, _utils.getId)('riew_' + name),
     name: name,
     '@riew': true,
     children: [],
     renderer: renderer
   };
   var cleanups = [];
-  var runningRoutines = [];
   var externals = {};
   var subscriptions = {};
   var state = function state() {
     var s = _index.state.apply(undefined, arguments);
-    riew.children.push(s);
+    api.children.push(s);
     return s;
   };
   var subscribe = function subscribe(to, func) {
@@ -1796,11 +1711,11 @@ function createRiew(viewFunc) {
       (0, _index.sread)(to, func, { listen: true });
     }
   };
-  var VIEW_CHANNEL = riew.id + '_view';
-  var PROPS_CHANNEL = riew.id + '_props';
+  var VIEW_CHANNEL = (0, _utils.getId)('channel_view_' + name);
+  var PROPS_CHANNEL = (0, _utils.getId)('channel_props_' + name);
 
-  riew.children.push((0, _index.chan)(VIEW_CHANNEL, _index.buffer.divorced()));
-  riew.children.push((0, _index.chan)(PROPS_CHANNEL, _index.buffer.divorced()));
+  api.children.push((0, _index.chan)(VIEW_CHANNEL, _index.buffer.memory()));
+  api.children.push((0, _index.chan)(PROPS_CHANNEL, _index.buffer.memory()));
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
@@ -1825,7 +1740,7 @@ function createRiew(viewFunc) {
     }, {});
   };
 
-  riew.mount = function () {
+  api.mount = function () {
     var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     (0, _utils.requireObject)(props);
@@ -1834,7 +1749,7 @@ function createRiew(viewFunc) {
       return (0, _index.sput)(VIEW_CHANNEL, newProps);
     });
     subscribe(VIEW_CHANNEL, renderer.push);
-    runningRoutines = routines.map(function (r) {
+    api.children = api.children.concat(routines.map(function (r) {
       return (0, _index.go)(r, function (result) {
         if (typeof result === 'function') {
           cleanups.push(result);
@@ -1847,57 +1762,58 @@ function createRiew(viewFunc) {
         state: state,
         props: PROPS_CHANNEL
       }, externals));
-    });
+    }));
     if (!(0, _utils.isObjectEmpty)(externals)) {
       (0, _index.sput)(VIEW_CHANNEL, normalizeRenderData(externals));
     }
+    if (true) _index.logger.log(api, 'RIEW_MOUNTED', props);
   };
 
-  riew.unmount = function () {
+  api.unmount = function () {
     cleanups.forEach(function (c) {
       return c();
     });
     cleanups = [];
-    riew.children.forEach(function (c) {
+    api.children.forEach(function (c) {
       if ((0, _index.isState)(c)) {
         c.destroy();
+      } else if ((0, _csp.isRoutine)(c)) {
+        c.stop();
       }
     });
-    riew.children = [];
-    runningRoutines.forEach(function (r) {
-      return r.stop();
-    });
-    runningRoutines = [];
+    api.children = [];
     renderer.destroy();
     (0, _index.close)(PROPS_CHANNEL);
     (0, _index.close)(VIEW_CHANNEL);
-    _index.grid.remove(riew);
+    _index.grid.remove(api);
+    if (true) _index.logger.log(api, 'RIEW_UNMOUNTED');
   };
 
-  riew.update = function () {
+  api.update = function () {
     var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     (0, _utils.requireObject)(props);
     (0, _index.sput)(PROPS_CHANNEL, props);
+    if (true) _index.logger.log(api, 'RIEW_UPDATED', props);
   };
 
-  riew.with = function () {
+  api.with = function () {
     for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
       maps[_key2] = arguments[_key2];
     }
 
-    riew.__setExternals(maps);
-    return riew;
+    api.__setExternals(maps);
+    return api;
   };
 
-  riew.test = function (map) {
-    var newInstance = createRiew.apply(undefined, [viewFunc].concat(routines));
+  api.test = function (map) {
+    var newInstance = riew.apply(undefined, [viewFunc].concat(routines));
 
     newInstance.__setExternals([map]);
     return newInstance;
   };
 
-  riew.__setExternals = function (maps) {
+  api.__setExternals = function (maps) {
     var reducedMaps = maps.reduce(function (res, item) {
       if (typeof item === 'string') {
         res = _extends({}, res, _defineProperty({}, item, (0, _index.use)(item)));
@@ -1909,10 +1825,13 @@ function createRiew(viewFunc) {
     externals = _extends({}, externals, reducedMaps);
   };
 
-  return riew;
+  _index.grid.add(api);
+  if (true) _index.logger.log(api, 'RIEW_CREATED');
+
+  return api;
 }
 
-},{"./index":14,"./utils":21}],18:[function(require,module,exports){
+},{"./csp":4,"./index":9,"./utils":17}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1956,7 +1875,7 @@ function sanitize(something) {
   return result;
 }
 
-},{"./vendors/CircularJSON":19,"./vendors/SerializeError":20}],19:[function(require,module,exports){
+},{"./vendors/CircularJSON":15,"./vendors/SerializeError":16}],15:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -2142,7 +2061,7 @@ exports.default = {
   parse: parseRecursion
 };
 
-},{}],20:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 /* eslint-disable */
 // Credits: https://github.com/sindresorhus/serialize-error
 
@@ -2233,7 +2152,7 @@ function destroyCircular(from, seen) {
 	return to;
 }
 
-},{}],21:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -2260,6 +2179,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
 
 exports.isObjectEmpty = isObjectEmpty;
 exports.requireObject = requireObject;
+exports.resetIds = resetIds;
 var getFuncName = exports.getFuncName = function getFuncName(func) {
   if (func.name) return func.name;
   var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
@@ -2307,6 +2227,9 @@ var isGeneratorFunction = exports.isGeneratorFunction = function isGeneratorFunc
   }
   return isGenerator(constructor.prototype);
 };
+function resetIds() {
+  ids = 0;
+}
 
-},{}]},{},[14])(14)
+},{}]},{},[9])(9)
 });
