@@ -15,8 +15,6 @@ import {
   close,
   channelReset,
 } from '../index';
-import expectation1 from './data/logger.spec.data1.json';
-import expectation2 from './data/logger.spec.data2.json';
 import expectationRiew from './data/logger.spec.riew.json';
 import expectationChannel from './data/logger.spec.channel.json';
 
@@ -37,39 +35,6 @@ function findItem(itemId) {
     return allFrames.pop();
   }
   return null;
-}
-
-async function exercise() {
-  const viewSpy = jest.fn();
-  const myView = function({ value, update, pointless }) {
-    if (value === 'Value: 2') {
-      setTimeout(() => {
-        update(3);
-        pointless();
-      }, 10);
-    }
-    viewSpy(value);
-  };
-  const routine = function* RRR({ state, render }) {
-    const counter = state(2);
-
-    counter.select('CCC', value => `Value: ${value}`);
-    counter.mutate('UUU', (current, n) => current + n);
-
-    render({ value: 'CCC', update: n => sput('UUU', n) });
-  };
-  const r = riew(myView, routine).with({
-    pointless: () => sput('YYY', 'Hey'),
-  });
-
-  r.mount({ a: 'b' });
-  r.update({ c: 'd' });
-
-  await delay(20);
-  r.unmount();
-  expect(viewSpy).toBeCalledWithArgs(['Value: 2'], ['Value: 5']);
-
-  return { r };
 }
 
 describe('Given the logger', () => {
@@ -122,18 +87,6 @@ describe('Given the logger', () => {
         type: 'ROUTINE',
       });
     });
-    xit('should create proper number of frames', async () => {
-      await exercise();
-      const logs = logger.frames().map(frame => frame.actions);
-      // clipboardy.writeSync(JSON.stringify(logs, null, 2));
-      expect(logs).toStrictEqual(expectation1);
-    });
-    xit('should return a snapshot containing the status of the system', async () => {
-      await exercise();
-      await delay();
-      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
-      expect(logger.frames()).toStrictEqual(expectation2);
-    });
   });
 
   // channel
@@ -166,7 +119,7 @@ describe('Given the logger', () => {
   // riew
 
   describe('when we have a riew', async () => {
-    xit(`should log
+    it(`should log
       * RIEW_RENDERED
       * RIEW_MOUNTED
       * RIEW_UNMOUNTED

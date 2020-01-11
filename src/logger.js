@@ -54,8 +54,11 @@ function normalizeChannel(c) {
     id: c.id,
     type: CHANNEL,
     value: sanitize(c.value()),
-    puts: c.buff.puts.map(({ item }) => item),
-    takes: c.buff.takes.map(() => 'TAKE'),
+    puts: c.buff.puts.map(({ item }) => ({ item })),
+    takes: c.buff.takes.map(({ options }) => ({
+      read: options.read,
+      listen: options.listen,
+    })),
   };
   if (isStateWriteChannel(c)) {
     o.stateWrite = true;

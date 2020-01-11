@@ -36,6 +36,8 @@ export function chan(...args) {
     subscribers: [],
   });
 
+  buff.parent = api.id;
+
   api.isActive = () => api.state() === OPEN;
   api.buff = buff;
   api.state = s => {

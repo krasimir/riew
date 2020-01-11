@@ -16,6 +16,7 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
       beforeTake: cb => cb(),
       afterTake: NOOP,
     },
+    parent: null,
   };
 
   api.beforePut = hook => (api.hooks.beforePut = hook);
@@ -142,23 +143,25 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
   };
 
   api.put = (item, callback) => {
-    if (__DEV__) logger.log(api, 'CHANNEL_PUT_INITIATED', item);
+    if (__DEV__) logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
     return api.hooks.beforePut(item, beforePutRes =>
       put(beforePutRes, putOpRes =>
         api.hooks.afterPut(putOpRes, res => {
-          if (__DEV__) logger.log(api, 'CHANNEL_PUT_RESOLVED', res);
+          if (__DEV__)
+            logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', res);
           callback(res);
         })
       )
     );
   };
   api.take = (callback, options) => {
-    if (__DEV__) logger.log(api, 'CHANNEL_TAKE_INITIATED');
+    if (__DEV__) logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
     return api.hooks.beforeTake(() =>
       take(
         takeOpRes =>
           api.hooks.afterTake(takeOpRes, (...res) => {
-            if (__DEV__) logger.log(api, 'CHANNEL_TAKE_RESOLVED', res);
+            if (__DEV__)
+              logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', res);
             callback(...res);
           }),
         options

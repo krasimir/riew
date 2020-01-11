@@ -12,30 +12,36 @@
         "meta": null
       },
       {
+        "who": "ch_1",
         "what": "CHANNEL_TAKE_INITIATED",
         "meta": null
       },
       {
+        "who": "ch_1",
         "what": "CHANNEL_TAKE_INITIATED",
         "meta": null
       },
       {
+        "who": "ch_1",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": "foo"
       },
       {
+        "who": "ch_1",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": [
           "foo"
         ]
       },
       {
+        "who": "ch_1",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": [
           "foo"
         ]
       },
       {
+        "who": "ch_1",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },

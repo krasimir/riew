@@ -18,17 +18,55 @@
       },
       {
         "who": "channel_props_unknown_3",
-        "what": "CHANNEL_PUT",
+        "what": "CHANNEL_PUT_INITIATED",
+        "meta": {
+          "a": "b"
+        }
+      },
+      {
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_PUT_RESOLVED",
+        "meta": true
+      },
+      {
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_TAKE_INITIATED",
+        "meta": null
+      },
+      {
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          {
+            "a": "b"
+          }
+        ]
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "a": "b"
         }
       },
       {
         "who": "channel_view_unknown_2",
-        "what": "CHANNEL_PUT",
-        "meta": {
-          "a": "b"
-        }
+        "what": "CHANNEL_PUT_RESOLVED",
+        "meta": true
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_TAKE_INITIATED",
+        "meta": null
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          {
+            "a": "b"
+          }
+        ]
       },
       {
         "who": "riew_unknown_1",
@@ -38,18 +76,46 @@
         }
       },
       {
-        "who": "channel_view_unknown_2",
-        "what": "CHANNEL_PUT",
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "c": "d"
         }
       },
       {
         "who": "channel_props_unknown_3",
-        "what": "CHANNEL_PUT",
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          {
+            "c": "d"
+          }
+        ]
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "c": "d"
         }
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          {
+            "c": "d"
+          }
+        ]
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_PUT_RESOLVED",
+        "meta": true
+      },
+      {
+        "who": "channel_props_unknown_3",
+        "what": "CHANNEL_PUT_RESOLVED",
+        "meta": true
       },
       {
         "who": "riew_unknown_1",
@@ -78,7 +144,12 @@
               }
             ],
             "puts": [],
-            "takes": []
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
           },
           {
             "id": "channel_props_unknown_3",
@@ -89,7 +160,12 @@
               }
             ],
             "puts": [],
-            "takes": []
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
           }
         ]
       }
@@ -125,7 +201,12 @@
               }
             ],
             "puts": [],
-            "takes": []
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
           },
           {
             "id": "channel_props_unknown_3",
@@ -136,7 +217,12 @@
               }
             ],
             "puts": [],
-            "takes": []
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
           }
         ]
       }
@@ -146,8 +232,39 @@
     "actions": [
       {
         "who": "channel_props_unknown_3",
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          null
+        ]
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_PUT_INITIATED",
+        "meta": null
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          null
+        ]
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_PUT_RESOLVED",
+        "meta": true
+      },
+      {
+        "who": "channel_props_unknown_3",
         "what": "CHANNEL_CLOSED",
         "meta": null
+      },
+      {
+        "who": "channel_view_unknown_2",
+        "what": "CHANNEL_TAKE_RESOLVED",
+        "meta": [
+          null
+        ]
       },
       {
         "who": "channel_view_unknown_2",

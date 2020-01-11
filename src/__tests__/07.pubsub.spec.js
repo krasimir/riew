@@ -11,13 +11,12 @@ import {
   put,
   sput,
   close,
-  sleep,
   ONE_OF,
   state,
   stake,
   unreadAll,
 } from '../index';
-import { delay, Test, exercise } from '../__helpers__';
+import { Test, exercise } from '../__helpers__';
 
 describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
@@ -375,7 +374,7 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['FOOBAR'], ['BAZBAR']);
     });
     describe('and when we use state', () => {
-      xit('should aggregate state values', () => {
+      it('should aggregate state values', () => {
         const users = state([
           { name: 'Joe' },
           { name: 'Steve' },
@@ -385,9 +384,13 @@ describe('Given a CSP pubsub extension', () => {
         const spy = jest.fn();
 
         sread('app', spy, { listen: true });
-        sread([users, currentUser], chan('app'), {
-          transform: (us, currentUserIndex) => us[currentUserIndex].name,
-        });
+        sread(
+          [users, currentUser],
+          ([us, currentUserIndex]) => {
+            sput('app', us[currentUserIndex].name);
+          },
+          { listen: true }
+        );
 
         sput(currentUser, 2);
 
@@ -395,7 +398,7 @@ describe('Given a CSP pubsub extension', () => {
       });
     });
     describe('when we use state together with a routine', () => {
-      xit('should work just fine', () => {
+      it('should work just fine', () => {
         const users = state([
           { name: 'Joe' },
           { name: 'Steve' },
@@ -404,9 +407,13 @@ describe('Given a CSP pubsub extension', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        sread([users, currentUser], chan('app'), {
-          transform: (us, currentUserIndex) => us[currentUserIndex].name,
-        });
+        sread(
+          [users, currentUser],
+          ([us, currentUserIndex]) => {
+            sput('app', us[currentUserIndex].name);
+          },
+          { listen: true }
+        );
 
         go(function*() {
           spy(yield take('app'));
@@ -419,8 +426,8 @@ describe('Given a CSP pubsub extension', () => {
         expect(spy).toBeCalledWithArgs(['Steve'], ['Rebeka'], [true]);
       });
     });
-    describe('when we use sub by passing a string for a channel', () => {
-      xit('should create a channel with a DivorceBuffer', () => {
+    describe('when we use sread by passing a string for a channel', () => {
+      it('should create a channel with a MemoryBuffer', () => {
         const users = state([
           { name: 'Joe' },
           { name: 'Steve' },
@@ -436,13 +443,15 @@ describe('Given a CSP pubsub extension', () => {
           })
         );
 
-        sread([users, currentUser], 'app', {
-          transform: (us, currentUserIndex) => us[currentUserIndex].name,
-          listen: true,
-        });
+        sread(
+          [users, currentUser],
+          ([us, currentUserIndex]) => {
+            sput('app', us[currentUserIndex].name);
+          },
+          { listen: true }
+        );
 
         go(function*() {
-          spy(yield take('app'));
           spy(yield take('app'));
           spy(yield put(currentUser, 2));
           spy(yield take('app'));
@@ -452,12 +461,16 @@ describe('Given a CSP pubsub extension', () => {
 
         expect(spy).toBeCalledWithArgs(
           ['Steve'],
-          ['Steve'],
           [true],
           ['Rebeka'],
           [true],
           ['Batman']
         );
+        expect(users.get()).toStrictEqual([
+          { name: 'Joe' },
+          { name: 'Steve' },
+          { name: 'Batman' },
+        ]);
       });
     });
   });
