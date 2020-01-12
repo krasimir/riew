@@ -2,7 +2,7 @@
 # yarn lockfile v1
 
 
-riew@2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/riew/-/riew-2.0.0.tgz#f7306118f89a64d565d4b7d64d8fa2b001bdbfb2"
-  integrity sha512-1RTaaPKOXp3IP1Z2F34S6H/OUtUYrnv7GZBR2+FTJXIioWU6VCzVX3g7GjiplobLsBBg0Q+FcjwYmJwa9EGnXQ==
+riew@2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/riew/-/riew-2.0.1.tgz#cc623be3b8e9b10806788aa8ea1bb35f57e5a077"
+  integrity sha512-mZS/k/XuAKrWjZfSjuSo64Uagki0gMh8k/Nt2VxoS1h1p5qbgHWa32YdYKN0cgSaKgrnaRzD6vO069W/7s1Clg==

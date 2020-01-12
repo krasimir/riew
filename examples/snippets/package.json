@@ -1,6 +1,6 @@
 {
   "name": "snippets",
-  "private": "true",
+  "private": true,
   "version": "1.0.0",
   "description": "",
   "main": "code.js",
@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "riew": "2.0.0"
+    "riew": "2.0.1"
   }
 }
