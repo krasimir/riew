@@ -81,8 +81,10 @@ export default function Logger() {
   let frames = [];
   let data = [];
   let inProgress = false;
+  let enabled = false;
 
   api.log = (who, what, meta) => {
+    if (!enabled) return null;
     data.push({
       who: who.id,
       what,
@@ -98,6 +100,7 @@ export default function Logger() {
     }
   };
   api.snapshot = actions => {
+    if (!enabled) return null;
     if (frames.length >= MAX_SNAPSHOTS) {
       frames.shift();
     }
@@ -148,6 +151,13 @@ export default function Logger() {
   api.frames = () => frames;
   api.reset = () => {
     frames = [];
+    enabled = false;
+  };
+  api.enable = () => {
+    enabled = true;
+  };
+  api.disable = () => {
+    enabled = false;
   };
 
   return api;

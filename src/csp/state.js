@@ -73,7 +73,7 @@ export function state(...args) {
                 value = genResult;
                 readChannels.forEach(r => runReader(r, value));
                 resolveBeforePutHook(value);
-                if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+                logger.log(api, 'STATE_VALUE_SET', value);
               },
               value,
               payload
@@ -83,7 +83,7 @@ export function state(...args) {
           value = reducer(value, payload);
           readChannels.forEach(r => runReader(r, value));
           resolveBeforePutHook(value);
-          if (__DEV__) logger.log(api, 'STATE_VALUE_SET', value);
+          logger.log(api, 'STATE_VALUE_SET', value);
         } catch (e) {
           handleError(onError)(e);
         }
@@ -95,7 +95,7 @@ export function state(...args) {
       writeChannels.forEach(({ ch }) => sclose(ch));
       value = undefined;
       grid.remove(api);
-      if (__DEV__) logger.log(api, 'STATE_DESTROYED');
+      logger.log(api, 'STATE_DESTROYED');
       return this;
     },
     get() {
@@ -106,7 +106,7 @@ export function state(...args) {
       readChannels.forEach(r => {
         runReader(r, value);
       });
-      if (__DEV__) logger.log(api, 'STATE_VALUE_SET', newValue);
+      logger.log(api, 'STATE_VALUE_SET', newValue);
       return newValue;
     },
   };
@@ -115,7 +115,7 @@ export function state(...args) {
   api.mutate(api.WRITE);
 
   grid.add(api);
-  if (__DEV__) logger.log(api, 'STATE_CREATED');
+  logger.log(api, 'STATE_CREATED');
 
   return api;
 }

@@ -40,6 +40,7 @@ function findItem(itemId) {
 describe('Given the logger', () => {
   beforeEach(() => {
     reset();
+    logger.enable();
   });
   describe('and we call the `frame` method', () => {
     it('should create a snapshot that contains a riew', async () => {
@@ -109,6 +110,7 @@ describe('Given the logger', () => {
       sput(ch, 'foo');
       close(ch);
       reset();
+      logger.enable();
       channelReset(ch2);
       await delay();
       // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));

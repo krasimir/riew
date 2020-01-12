@@ -1,0 +1,15 @@
+{
+  "name": "snippets",
+  "private": "true",
+  "version": "1.0.0",
+  "description": "",
+  "main": "code.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "riew": "2.0.0"
+  }
+}

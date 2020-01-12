@@ -50,7 +50,7 @@ export function chan(...args) {
   api.beforeTake = buff.beforeTake;
   api.afterTake = buff.afterTake;
   grid.add(api);
-  if (__DEV__) logger.log(api, 'CHANNEL_CREATED');
+  logger.log(api, 'CHANNEL_CREATED');
 
   return api;
 }

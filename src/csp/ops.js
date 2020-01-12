@@ -132,7 +132,7 @@ export function close(channels) {
     grid.remove(ch);
     ch.subscribers = [];
     CHANNELS.del(ch.id);
-    if (__DEV__) logger.log(ch, 'CHANNEL_CLOSED');
+    logger.log(ch, 'CHANNEL_CLOSED');
   });
   return { op: NOOP };
 }
@@ -144,7 +144,7 @@ export function channelReset(channels) {
   channels.forEach(ch => {
     ch.state(OPEN);
     ch.buff.reset();
-    if (__DEV__) logger.log(ch, 'CHANNEL_RESET');
+    logger.log(ch, 'CHANNEL_RESET');
   });
   return { op: NOOP };
 }
@@ -200,12 +200,12 @@ export function go(func, done = () => {}, ...args) {
       state = STOPPED;
       this.children.forEach(r => r.stop());
       grid.remove(api);
-      if (__DEV__) logger.log(api, 'ROUTINE_STOPPED');
+      logger.log(api, 'ROUTINE_STOPPED');
     },
     rerun() {
       gen = func(...args);
       next();
-      if (__DEV__) logger.log(this, 'ROUTINE_RERUN');
+      logger.log(this, 'ROUTINE_RERUN');
     },
   };
   const addSubRoutine = r => api.children.push(r);
@@ -257,16 +257,16 @@ export function go(func, done = () => {}, ...args) {
       if (done) done(step.value);
       if (step.value && step.value['@go'] === true) {
         api.rerun();
-      } else if (__DEV__) logger.log(api, 'ROUTINE_END');
+      } else logger.log(api, 'ROUTINE_END');
     } else if (isPromise(step.value)) {
-      if (__DEV__) logger.log(api, 'ROUTINE_ASYNC_BEGIN');
+      logger.log(api, 'ROUTINE_ASYNC_BEGIN');
       step.value
         .then((...asyncResult) => {
-          if (__DEV__) logger.log(api, 'ROUTINE_ASYNC_END');
+          logger.log(api, 'ROUTINE_ASYNC_END');
           next(...asyncResult);
         })
         .catch(err => {
-          if (__DEV__) logger.log(api, 'ROUTINE_ASYNC_ERROR', err);
+          logger.log(api, 'ROUTINE_ASYNC_ERROR', err);
           processGeneratorStep(gen.throw(err));
         });
     } else {
@@ -276,7 +276,7 @@ export function go(func, done = () => {}, ...args) {
 
   next();
   grid.add(api);
-  if (__DEV__) logger.log(api, 'ROUTINE_STARTED');
+  logger.log(api, 'ROUTINE_STARTED');
 
   return api;
 }

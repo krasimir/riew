@@ -192,18 +192,18 @@ function CSPBuffer() {
   };
 
   api.put = function (item, callback) {
-    if (true) _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
+    _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
     return api.hooks.beforePut(item, function (beforePutRes) {
       return put(beforePutRes, function (putOpRes) {
         return api.hooks.afterPut(putOpRes, function (res) {
-          if (true) _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', res);
+          _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', res);
           callback(res);
         });
       });
     });
   };
   api.take = function (callback, options) {
-    if (true) _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
+    _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
     return api.hooks.beforeTake(function () {
       return take(function (takeOpRes) {
         return api.hooks.afterTake(takeOpRes, function () {
@@ -211,7 +211,7 @@ function CSPBuffer() {
             res[_key] = arguments[_key];
           }
 
-          if (true) _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', res);
+          _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', res);
           callback.apply(undefined, res);
         });
       }, options);
@@ -362,7 +362,7 @@ function chan() {
   api.beforeTake = buff.beforeTake;
   api.afterTake = buff.afterTake;
   _index.grid.add(api);
-  if (true) _index.logger.log(api, 'CHANNEL_CREATED');
+  _index.logger.log(api, 'CHANNEL_CREATED');
 
   return api;
 }
@@ -675,7 +675,7 @@ function close(channels) {
     _index.grid.remove(ch);
     ch.subscribers = [];
     _constants.CHANNELS.del(ch.id);
-    if (true) _index.logger.log(ch, 'CHANNEL_CLOSED');
+    _index.logger.log(ch, 'CHANNEL_CLOSED');
   });
   return { op: _constants.NOOP };
 }
@@ -687,7 +687,7 @@ function channelReset(channels) {
   channels.forEach(function (ch) {
     ch.state(_constants.OPEN);
     ch.buff.reset();
-    if (true) _index.logger.log(ch, 'CHANNEL_RESET');
+    _index.logger.log(ch, 'CHANNEL_RESET');
   });
   return { op: _constants.NOOP };
 }
@@ -777,12 +777,12 @@ function go(func) {
         return r.stop();
       });
       _index.grid.remove(api);
-      if (true) _index.logger.log(api, 'ROUTINE_STOPPED');
+      _index.logger.log(api, 'ROUTINE_STOPPED');
     },
     rerun: function rerun() {
       gen = func.apply(undefined, args);
       next();
-      if (true) _index.logger.log(this, 'ROUTINE_RERUN');
+      _index.logger.log(this, 'ROUTINE_RERUN');
     }
   };
   var addSubRoutine = function addSubRoutine(r) {
@@ -836,14 +836,14 @@ function go(func) {
       if (done) done(step.value);
       if (step.value && step.value['@go'] === true) {
         api.rerun();
-      } else if (true) _index.logger.log(api, 'ROUTINE_END');
+      } else _index.logger.log(api, 'ROUTINE_END');
     } else if ((0, _utils.isPromise)(step.value)) {
-      if (true) _index.logger.log(api, 'ROUTINE_ASYNC_BEGIN');
+      _index.logger.log(api, 'ROUTINE_ASYNC_BEGIN');
       step.value.then(function () {
-        if (true) _index.logger.log(api, 'ROUTINE_ASYNC_END');
+        _index.logger.log(api, 'ROUTINE_ASYNC_END');
         next.apply(undefined, arguments);
       }).catch(function (err) {
-        if (true) _index.logger.log(api, 'ROUTINE_ASYNC_ERROR', err);
+        _index.logger.log(api, 'ROUTINE_ASYNC_ERROR', err);
         processGeneratorStep(gen.throw(err));
       });
     } else {
@@ -853,7 +853,7 @@ function go(func) {
 
   next();
   _index.grid.add(api);
-  if (true) _index.logger.log(api, 'ROUTINE_STARTED');
+  _index.logger.log(api, 'ROUTINE_STARTED');
 
   return api;
 }
@@ -991,7 +991,7 @@ function state() {
                 return runReader(r, value);
               });
               resolveBeforePutHook(value);
-              if (true) _index.logger.log(api, 'STATE_VALUE_SET', value);
+              _index.logger.log(api, 'STATE_VALUE_SET', value);
             }, value, payload);
             return;
           }
@@ -1000,7 +1000,7 @@ function state() {
             return runReader(r, value);
           });
           resolveBeforePutHook(value);
-          if (true) _index.logger.log(api, 'STATE_VALUE_SET', value);
+          _index.logger.log(api, 'STATE_VALUE_SET', value);
         } catch (e) {
           handleError(onError)(e);
         }
@@ -1018,7 +1018,7 @@ function state() {
       });
       value = undefined;
       _index.grid.remove(api);
-      if (true) _index.logger.log(api, 'STATE_DESTROYED');
+      _index.logger.log(api, 'STATE_DESTROYED');
       return this;
     },
     get: function get() {
@@ -1029,7 +1029,7 @@ function state() {
       readChannels.forEach(function (r) {
         runReader(r, value);
       });
-      if (true) _index.logger.log(api, 'STATE_VALUE_SET', newValue);
+      _index.logger.log(api, 'STATE_VALUE_SET', newValue);
       return newValue;
     }
   };
@@ -1038,7 +1038,7 @@ function state() {
   api.mutate(api.WRITE);
 
   _index.grid.add(api);
-  if (true) _index.logger.log(api, 'STATE_CREATED');
+  _index.logger.log(api, 'STATE_CREATED');
 
   return api;
 }
@@ -1347,8 +1347,10 @@ function Logger() {
   var frames = [];
   var data = [];
   var inProgress = false;
+  var enabled = false;
 
   api.log = function (who, what, meta) {
+    if (!enabled) return null;
     data.push({
       who: who.id,
       what: what,
@@ -1364,6 +1366,7 @@ function Logger() {
     }
   };
   api.snapshot = function (actions) {
+    if (!enabled) return null;
     if (frames.length >= MAX_SNAPSHOTS) {
       frames.shift();
     }
@@ -1429,6 +1432,13 @@ function Logger() {
   };
   api.reset = function () {
     frames = [];
+    enabled = false;
+  };
+  api.enable = function () {
+    enabled = true;
+  };
+  api.disable = function () {
+    enabled = false;
   };
 
   return api;
@@ -1688,7 +1698,7 @@ function riew(viewFunc) {
   var name = (0, _utils.getFuncName)(viewFunc);
   var renderer = Renderer(function (value) {
     viewFunc(value);
-    if (true) _index.logger.log(api, 'RIEW_RENDERED', value);
+    _index.logger.log(api, 'RIEW_RENDERED', value);
   });
   var api = {
     id: (0, _utils.getId)('riew_' + name),
@@ -1766,7 +1776,7 @@ function riew(viewFunc) {
     if (!(0, _utils.isObjectEmpty)(externals)) {
       (0, _index.sput)(VIEW_CHANNEL, normalizeRenderData(externals));
     }
-    if (true) _index.logger.log(api, 'RIEW_MOUNTED', props);
+    _index.logger.log(api, 'RIEW_MOUNTED', props);
   };
 
   api.unmount = function () {
@@ -1786,7 +1796,7 @@ function riew(viewFunc) {
     (0, _index.close)(PROPS_CHANNEL);
     (0, _index.close)(VIEW_CHANNEL);
     _index.grid.remove(api);
-    if (true) _index.logger.log(api, 'RIEW_UNMOUNTED');
+    _index.logger.log(api, 'RIEW_UNMOUNTED');
   };
 
   api.update = function () {
@@ -1794,7 +1804,7 @@ function riew(viewFunc) {
 
     (0, _utils.requireObject)(props);
     (0, _index.sput)(PROPS_CHANNEL, props);
-    if (true) _index.logger.log(api, 'RIEW_UPDATED', props);
+    _index.logger.log(api, 'RIEW_UPDATED', props);
   };
 
   api.with = function () {
@@ -1826,7 +1836,7 @@ function riew(viewFunc) {
   };
 
   _index.grid.add(api);
-  if (true) _index.logger.log(api, 'RIEW_CREATED');
+  _index.logger.log(api, 'RIEW_CREATED');
 
   return api;
 }
