@@ -15,6 +15,7 @@ import {
   buffer,
   grid,
   logger,
+  isRoutine,
 } from './index';
 import {
   isObjectEmpty,
@@ -23,7 +24,6 @@ import {
   requireObject,
   accumulate,
 } from './utils';
-import { isRoutine } from './csp';
 
 const Renderer = function(pushDataToView) {
   let data = {};

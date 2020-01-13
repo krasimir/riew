@@ -10,7 +10,7 @@ import {
 } from '../index';
 import { getId, isGeneratorFunction } from '../utils';
 
-export function state(...args) {
+export default function state(...args) {
   let value = args[0];
   const id = getId('state');
   const readChannels = [];

@@ -15,16 +15,20 @@ import {
   NOTHING,
   ONE_OF,
   ALL_REQUIRED,
-} from './constants';
-import { grid, chan, use, logger } from '../index';
+  grid,
+  chan,
+  use,
+  logger,
+} from '../index';
 import { isPromise, getId, getFuncName } from '../utils';
 import { normalizeChannels, normalizeOptions, normalizeTo } from './utils';
 
 const noop = () => {};
+const ops = {};
 
 // **************************************************** put
 
-export function sput(channels, item, callback = noop) {
+ops.sput = function sput(channels, item, callback = noop) {
   channels = normalizeChannels(channels, 'WRITE');
   const result = channels.map(() => NOTHING);
   const setResult = (idx, value) => {
@@ -41,14 +45,14 @@ export function sput(channels, item, callback = noop) {
       channel.buff.put(item, putResult => setResult(idx, putResult));
     }
   });
-}
-export function put(channels, item) {
+};
+ops.put = function put(channels, item) {
   return { channels, op: PUT, item };
-}
+};
 
 // **************************************************** take
 
-export function stake(channels, callback, options) {
+ops.stake = function stake(channels, callback, options) {
   channels = normalizeChannels(channels);
   options = normalizeOptions(options);
   callback = normalizeTo(callback);
@@ -103,26 +107,26 @@ export function stake(channels, callback, options) {
   return function unsubscribe() {
     unsubscribers.filter(f => f).forEach(f => f());
   };
-}
-export function take(channels, options) {
+};
+ops.take = function take(channels, options) {
   return { channels, op: TAKE, options };
-}
+};
 
 // **************************************************** read
 
-export function read(channels, options) {
+ops.read = function read(channels, options) {
   return { channels, op: READ, options: { ...options, read: true } };
-}
-export function sread(channels, to, options) {
-  return stake(channels, to, { ...options, read: true });
-}
-export function unreadAll(channel) {
+};
+ops.sread = function sread(channels, to, options) {
+  return ops.stake(channels, to, { ...options, read: true });
+};
+ops.unreadAll = function unreadAll(channel) {
   channel.buff.deleteReaders();
-}
+};
 
 // **************************************************** close, reset, call, fork, merge, timeout, isChannel
 
-export function close(channels) {
+ops.close = function close(channels) {
   channels = normalizeChannels(channels);
   channels.forEach(ch => {
     const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
@@ -135,11 +139,11 @@ export function close(channels) {
     logger.log(ch, 'CHANNEL_CLOSED');
   });
   return { op: NOOP };
-}
-export function sclose(id) {
-  return close(id);
-}
-export function channelReset(channels) {
+};
+ops.sclose = function sclose(id) {
+  return ops.close(id);
+};
+ops.channelReset = function channelReset(channels) {
   channels = normalizeChannels(channels);
   channels.forEach(ch => {
     ch.state(OPEN);
@@ -147,45 +151,45 @@ export function channelReset(channels) {
     logger.log(ch, 'CHANNEL_RESET');
   });
   return { op: NOOP };
-}
-export function schannelReset(id) {
+};
+ops.schannelReset = function schannelReset(id) {
   channelReset(id);
-}
-export function call(routine, ...args) {
+};
+ops.call = function call(routine, ...args) {
   return { op: CALL_ROUTINE, routine, args };
-}
-export function fork(routine, ...args) {
+};
+ops.fork = function fork(routine, ...args) {
   return { op: FORK_ROUTINE, routine, args };
-}
-export function merge(...channels) {
+};
+ops.merge = function merge(...channels) {
   const newCh = chan();
 
   channels.forEach(ch => {
     (function taker() {
-      stake(ch, v => {
+      ops.stake(ch, v => {
         if (v !== CLOSED && v !== ENDED && newCh.state() === OPEN) {
-          sput(newCh, v, taker);
+          ops.sput(newCh, v, taker);
         }
       });
     })();
   });
   return newCh;
-}
-export function timeout(interval) {
+};
+ops.timeout = function timeout(interval) {
   const ch = chan();
-  setTimeout(() => close(ch), interval);
+  setTimeout(() => ops.close(ch), interval);
   return ch;
-}
-export const isChannel = ch => ch && ch['@channel'] === true;
-export const isRiew = r => r && r['@riew'] === true;
-export const isState = s => s && s['@state'] === true;
-export const isRoutine = r => r && r['@routine'] === true;
-export const isStateReadChannel = s => s && s['@statereadchannel'] === true;
-export const isStateWriteChannel = s => s && s['@statewritechannel'] === true;
+};
+ops.isChannel = ch => ch && ch['@channel'] === true;
+ops.isRiew = r => r && r['@riew'] === true;
+ops.isState = s => s && s['@state'] === true;
+ops.isRoutine = r => r && r['@routine'] === true;
+ops.isStateReadChannel = s => s && s['@statereadchannel'] === true;
+ops.isStateWriteChannel = s => s && s['@statewritechannel'] === true;
 
 // **************************************************** go/routine
 
-export function go(func, done = () => {}, ...args) {
+ops.go = function go(func, done = () => {}, ...args) {
   const RUNNING = 'RUNNING';
   const STOPPED = 'STOPPED';
   let state = RUNNING;
@@ -215,10 +219,10 @@ export function go(func, done = () => {}, ...args) {
   function processGeneratorStep(i) {
     switch (i.value.op) {
       case PUT:
-        sput(i.value.channels, i.value.item, next);
+        ops.sput(i.value.channels, i.value.item, next);
         break;
       case TAKE:
-        stake(
+        ops.stake(
           i.value.channels,
           (...nextArgs) => {
             next(nextArgs.length === 1 ? nextArgs[0] : nextArgs);
@@ -236,13 +240,13 @@ export function go(func, done = () => {}, ...args) {
         api.stop();
         break;
       case READ:
-        sread(i.value.channels, next, i.value.options);
+        ops.sread(i.value.channels, next, i.value.options);
         break;
       case CALL_ROUTINE:
-        addSubRoutine(go(i.value.routine, next, ...i.value.args));
+        addSubRoutine(ops.go(i.value.routine, next, ...i.value.args));
         break;
       case FORK_ROUTINE:
-        addSubRoutine(go(i.value.routine, () => {}, ...i.value.args));
+        addSubRoutine(ops.go(i.value.routine, () => {}, ...i.value.args));
         next();
         break;
       default:
@@ -279,9 +283,9 @@ export function go(func, done = () => {}, ...args) {
   logger.log(api, 'ROUTINE_STARTED');
 
   return api;
-}
-go['@go'] = true;
-go.with = (...maps) => {
+};
+ops.go['@go'] = true;
+ops.go.with = (...maps) => {
   const reducedMaps = maps.reduce((res, item) => {
     if (typeof item === 'string') {
       res = { ...res, [item]: use(item) };
@@ -292,18 +296,20 @@ go.with = (...maps) => {
   }, {});
   return (func, done = () => {}, ...args) => {
     args.push(reducedMaps);
-    return go(func, done, ...args);
+    return ops.go(func, done, ...args);
   };
 };
 
-export function sleep(ms, callback) {
+ops.sleep = function sleep(ms, callback) {
   if (typeof callback === 'function') {
     setTimeout(callback, ms);
   } else {
     return { op: SLEEP, ms };
   }
-}
+};
 
-export function stop() {
+ops.stop = function stop() {
   return { op: STOP };
-}
+};
+
+export default ops;

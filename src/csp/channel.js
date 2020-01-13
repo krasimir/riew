@@ -1,6 +1,5 @@
 import { getId } from '../utils';
-import { OPEN } from './constants';
-import { CHANNELS, logger, grid } from '../index';
+import { CHANNELS, logger, grid, OPEN } from '../index';
 import buffer from './buf';
 
 function normalizeChannelArguments(args) {
@@ -22,7 +21,7 @@ function normalizeChannelArguments(args) {
   return [id, buff];
 }
 
-export function chan(...args) {
+export default function chan(...args) {
   let state = OPEN;
   const [id, buff] = normalizeChannelArguments(args);
 

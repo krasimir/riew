@@ -1,6 +1,5 @@
 /* eslint-disable no-param-reassign, no-multi-assign */
-import { chan, isChannel, isState, sput, buffer } from '../index';
-import { ALL_REQUIRED } from './constants';
+import { ALL_REQUIRED, chan, isChannel, isState, sput, buffer } from '../index';
 
 export function normalizeChannels(channels, stateOp = 'READ') {
   if (!Array.isArray(channels)) channels = [channels];
