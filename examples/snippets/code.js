@@ -1,10 +1,17 @@
-import { chan, buffer, sput, sread, go, put } from 'riew';
+import { chan, buffer, sput, sread, take, go, put, riew } from 'riew';
 
-const ch = chan(buffer.memory());
+const view = function(props) {
+  console.log(props);
+};
+function* A() {
+  const name = yield take('MY_CHANNEL');
+  yield put('MY_CHANNEL', `Hey ${name}, how are you?`);
+}
+function* B({ render }) {
+  yield put('MY_CHANNEL', 'Steve');
+  render({ message: yield take('MY_CHANNEL') });
+}
 
-sread(ch, v => console.log(v), { listen: true });
-sput(ch, 'foo', () => console.log('Yeah'));
+const r = riew(view, A, B);
 
-go(function*() {
-  yield put(ch, 'bar');
-});
+r.mount();

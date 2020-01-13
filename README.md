@@ -110,11 +110,11 @@ go(function * () {
 
 This is intentional and it's here by design. It becomes much easier to use a channel from any point of the application because we just need to know its ID.
 
-As for the routines, we may `yield` all sort of things. We may `put`, `take`, `sleep` but we may also `yield` a promise. Then Riew will wait till the promise is resolved and will resume the generator. We may even use the `call` helper to run another routine. 😮
+As for the routines, we may `yield` all sort of things. We may `put`, `take`, `sleep` but we may also `yield` a promise. Then Riew will wait till the promise is resolved and will resume the generator. We may even use the `call` or `fork` helper to run another routine. 😮
 
 ### Riews
 
-The _riew_ is a combination between view function and routine functions. It's materialized into an object that has `mount`, `update` and `unmount` methods. The routines get executed when we mount the riew. They receive a `render` method so we can send data to the view function.
+The _riew_ is a combination between _view_ function and routine functions. It's materialized into an object that has `mount`, `update` and `unmount` methods. The routines get started when we mount the riew. They receive a `render` method so we can send data to the view function.
 
 ```js
 const view = function (props) {
