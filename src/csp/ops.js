@@ -153,7 +153,7 @@ ops.channelReset = function channelReset(channels) {
   return { op: NOOP };
 };
 ops.schannelReset = function schannelReset(id) {
-  channelReset(id);
+  ops.channelReset(id);
 };
 ops.call = function call(routine, ...args) {
   return { op: CALL_ROUTINE, routine, args };

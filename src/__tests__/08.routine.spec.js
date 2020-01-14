@@ -267,4 +267,18 @@ describe('Given a CSP', () => {
       });
     });
   });
+  describe('when we put to multiple channels', () => {
+    fit('should resolve the put only if we take from all the channels', () => {
+      const spy = jest.fn();
+      go(function*() {
+        spy(yield take('ChannelA'));
+        spy(yield take('ChannelB'));
+      });
+      go(function*() {
+        spy(yield put(['ChannelA', 'ChannelB'], 'foo'));
+      });
+
+      expect(spy).toBeCalledWithArgs(['foo'], ['foo'], [[true, true]]);
+    });
+  });
 });

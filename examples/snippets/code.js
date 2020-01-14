@@ -1,17 +1,38 @@
-import { chan, buffer, sput, sread, take, go, put, riew } from 'riew';
+import {
+  chan,
+  buffer,
+  sput,
+  sread,
+  take,
+  go,
+  put,
+  riew,
+  state,
+  sleep,
+  stop,
+  register,
+  ONE_OF,
+  stake,
+  close,
+  sclose,
+  read,
+  unreadAll,
+  call,
+  fork,
+  timeout,
+  merge,
+  use,
+} from 'riew';
+
+register('config', { theme: 'dark' });
 
 const view = function(props) {
-  console.log(props);
+  console.log(`Selected theme: ${props.theme}`); // Selected theme: dark
 };
-function* A() {
-  const name = yield take('MY_CHANNEL');
-  yield put('MY_CHANNEL', `Hey ${name}, how are you?`);
-}
-function* B({ render }) {
-  yield put('MY_CHANNEL', 'Steve');
-  render({ message: yield take('MY_CHANNEL') });
-}
-
-const r = riew(view, A, B);
+const routine = function*({ render }) {
+  const config = use('config');
+  render({ theme: config.theme });
+};
+const r = riew(view, routine).with('config');
 
 r.mount();
