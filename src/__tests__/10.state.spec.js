@@ -137,7 +137,7 @@ describe('Given a CSP state extension', () => {
         ['WRITE=bar'],
         ['READ=barhello world my friend'],
         ['R=BARHELLO WORLD MY FRIEND'],
-        ['W=barhello world my friend']
+        ['W=hello world my friend']
       );
     });
   });
@@ -280,7 +280,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when using same channel for mutations on different states', () => {
-    fit('should work for both states', () => {
+    it('should work for both states', () => {
       const s1 = state('foo');
       const s2 = state(12);
       const CHANGE = 'CHANGE';
@@ -292,14 +292,6 @@ describe('Given a CSP state extension', () => {
 
       expect(s1.get()).toBe('FOO');
       expect(s2.get()).toBe(32);
-    });
-  });
-  describe('when passing a non-string to select or mutate', () => {
-    it('should throw an error', () => {
-      const s = state('foo');
-
-      expect(() => s.select(chan('foo'))).toThrow('fff');
-      expect(() => s.mutate(chan('foo'))).toThrow('fff');
     });
   });
 });

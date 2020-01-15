@@ -268,7 +268,7 @@ describe('Given a CSP', () => {
     });
   });
   describe('when we put to multiple channels', () => {
-    fit('should resolve the put only if we take from all the channels', () => {
+    it('should resolve the put only if we take from all the channels', () => {
       const spy = jest.fn();
       go(function*() {
         spy(yield take('ChannelA'));

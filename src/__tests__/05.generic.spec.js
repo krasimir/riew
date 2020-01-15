@@ -81,14 +81,18 @@ describe('Given a CSP', () => {
         stake(ch, spy);
         ch.beforePut((item, cb) => {
           setTimeout(() => {
-            spy('beforePut');
-            cb(item.toUpperCase());
+            spy('beforePut', item);
+            cb();
           }, 10);
         });
         sput(ch, 'foo', v => spy('put', v));
 
         await delay(20);
-        expect(spy).toBeCalledWithArgs(['beforePut'], ['FOO'], ['put', true]);
+        expect(spy).toBeCalledWithArgs(
+          ['beforePut', 'foo'],
+          ['foo'],
+          ['put', true]
+        );
       });
     });
   });
@@ -114,14 +118,18 @@ describe('Given a CSP', () => {
         stake(ch, spy);
         ch.afterPut((item, cb) => {
           setTimeout(() => {
-            spy('afterPut');
-            cb('yo');
+            spy('afterPut', item);
+            cb();
           }, 10);
         });
         sput(ch, 'foo', v => spy('put', v));
 
         await delay(20);
-        expect(spy).toBeCalledWithArgs(['foo'], ['afterPut'], ['put', 'yo']);
+        expect(spy).toBeCalledWithArgs(
+          ['foo'],
+          ['afterPut', true],
+          ['put', true]
+        );
       });
     });
   });
@@ -130,7 +138,7 @@ describe('Given a CSP', () => {
       const ch = chan();
       const spy = jest.fn();
 
-      ch.beforeTake(cb => {
+      ch.beforeTake((_, cb) => {
         spy('beforeTake');
         cb();
       });
@@ -144,7 +152,7 @@ describe('Given a CSP', () => {
         const ch = chan();
         const spy = jest.fn();
 
-        ch.beforeTake(cb => {
+        ch.beforeTake((_, cb) => {
           setTimeout(() => {
             spy('beforeTake');
             cb('yo');
@@ -179,15 +187,19 @@ describe('Given a CSP', () => {
 
         ch.afterTake((item, cb) => {
           setTimeout(() => {
-            spy('afterTake');
-            cb(item.toUpperCase());
+            spy('afterTake', item);
+            cb();
           }, 10);
         });
         stake(ch, spy);
         sput(ch, 'foo', v => spy('put', v));
 
         await delay(20);
-        expect(spy).toBeCalledWithArgs(['put', true], ['afterTake'], ['FOO']);
+        expect(spy).toBeCalledWithArgs(
+          ['put', true],
+          ['afterTake', 'foo'],
+          ['foo']
+        );
       });
     });
   });

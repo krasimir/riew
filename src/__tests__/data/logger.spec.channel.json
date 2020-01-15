@@ -29,16 +29,12 @@
       {
         "who": "ch_1",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          "foo"
-        ]
+        "meta": "foo"
       },
       {
         "who": "ch_1",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          "foo"
-        ]
+        "meta": "foo"
       },
       {
         "who": "ch_1",

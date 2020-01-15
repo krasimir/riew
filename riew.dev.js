@@ -12,7 +12,7 @@ var _index = require('../index');
 /* eslint-disable no-param-reassign */
 var DEFAULT_OPTIONS = { dropping: false, sliding: false, memory: false };
 var NOOP = function NOOP(v, cb) {
-  return cb(v);
+  return cb();
 };
 
 function CSPBuffer() {
@@ -28,27 +28,39 @@ function CSPBuffer() {
     puts: [],
     takes: [],
     hooks: {
-      beforePut: NOOP,
-      afterPut: NOOP,
-      beforeTake: function beforeTake(cb) {
-        return cb();
-      },
-      afterTake: NOOP
+      beforePut: [NOOP],
+      afterPut: [NOOP],
+      beforeTake: [NOOP],
+      afterTake: [NOOP]
     },
     parent: null
   };
 
+  function runHook(type, item, cb) {
+    var hooks = api.hooks[type];
+    var numOfHooksDone = 0;
+    var hookDone = function hookDone() {
+      numOfHooksDone += 1;
+      if (numOfHooksDone === hooks.length) {
+        cb();
+      }
+    };
+    hooks.forEach(function (h) {
+      return h(item, hookDone);
+    });
+  }
+
   api.beforePut = function (hook) {
-    return api.hooks.beforePut = hook;
+    return api.hooks.beforePut.push(hook);
   };
   api.afterPut = function (hook) {
-    return api.hooks.afterPut = hook;
+    return api.hooks.afterPut.push(hook);
   };
   api.beforeTake = function (hook) {
-    return api.hooks.beforeTake = hook;
+    return api.hooks.beforeTake.push(hook);
   };
   api.afterTake = function (hook) {
-    return api.hooks.afterTake = hook;
+    return api.hooks.afterTake.push(hook);
   };
   api.isEmpty = function () {
     return api.value.length === 0;
@@ -57,6 +69,12 @@ function CSPBuffer() {
     api.value = [];
     api.puts = [];
     api.takes = [];
+    api.hooks = {
+      beforePut: [NOOP],
+      afterPut: [NOOP],
+      beforeTake: [NOOP],
+      afterTake: [NOOP]
+    };
   };
   api.setValue = function (v) {
     api.value = v;
@@ -193,29 +211,29 @@ function CSPBuffer() {
 
   api.put = function (item, callback) {
     _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
-    return api.hooks.beforePut(item, function (beforePutRes) {
-      return put(beforePutRes, function (putOpRes) {
-        return api.hooks.afterPut(putOpRes, function (res) {
-          _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', res);
-          callback(res);
+    runHook('beforePut', item, function () {
+      put(item, function (putOpRes) {
+        return runHook('afterPut', putOpRes, function () {
+          _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', putOpRes);
+          callback(putOpRes);
         });
       });
     });
   };
   api.take = function (callback, options) {
+    var unsubscribe = function unsubscribe() {};
     _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
-    return api.hooks.beforeTake(function () {
-      return take(function (takeOpRes) {
-        return api.hooks.afterTake(takeOpRes, function () {
-          for (var _len = arguments.length, res = Array(_len), _key = 0; _key < _len; _key++) {
-            res[_key] = arguments[_key];
-          }
-
-          _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', res);
-          callback.apply(undefined, res);
+    runHook('beforeTake', undefined, function () {
+      return unsubscribe = take(function (takeOpRes) {
+        return runHook('afterTake', takeOpRes, function () {
+          _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', takeOpRes);
+          callback(takeOpRes);
         });
       }, options);
     });
+    return function () {
+      return unsubscribe();
+    };
   };
 
   return api;
@@ -411,7 +429,8 @@ var ops = {};
 
 // **************************************************** put
 
-ops.sput = function sput(channels, item) {
+ops.sput = function sput(channels) {
+  var item = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
   var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : noop;
 
   channels = (0, _utils2.normalizeChannels)(channels, 'WRITE');

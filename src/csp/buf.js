@@ -3,7 +3,7 @@ import { normalizeOptions } from './utils';
 import { logger } from '../index';
 
 const DEFAULT_OPTIONS = { dropping: false, sliding: false, memory: false };
-const NOOP = (v, cb) => cb(v);
+const NOOP = (v, cb) => cb();
 
 function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
   const api = {
@@ -11,23 +11,41 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
     puts: [],
     takes: [],
     hooks: {
-      beforePut: NOOP,
-      afterPut: NOOP,
-      beforeTake: cb => cb(),
-      afterTake: NOOP,
+      beforePut: [NOOP],
+      afterPut: [NOOP],
+      beforeTake: [NOOP],
+      afterTake: [NOOP],
     },
     parent: null,
   };
 
-  api.beforePut = hook => (api.hooks.beforePut = hook);
-  api.afterPut = hook => (api.hooks.afterPut = hook);
-  api.beforeTake = hook => (api.hooks.beforeTake = hook);
-  api.afterTake = hook => (api.hooks.afterTake = hook);
+  function runHook(type, item, cb) {
+    const hooks = api.hooks[type];
+    let numOfHooksDone = 0;
+    const hookDone = () => {
+      numOfHooksDone += 1;
+      if (numOfHooksDone === hooks.length) {
+        cb();
+      }
+    };
+    hooks.forEach(h => h(item, hookDone));
+  }
+
+  api.beforePut = hook => api.hooks.beforePut.push(hook);
+  api.afterPut = hook => api.hooks.afterPut.push(hook);
+  api.beforeTake = hook => api.hooks.beforeTake.push(hook);
+  api.afterTake = hook => api.hooks.afterTake.push(hook);
   api.isEmpty = () => api.value.length === 0;
   api.reset = () => {
     api.value = [];
     api.puts = [];
     api.takes = [];
+    api.hooks = {
+      beforePut: [NOOP],
+      afterPut: [NOOP],
+      beforeTake: [NOOP],
+      afterTake: [NOOP],
+    };
   };
   api.setValue = v => {
     api.value = v;
@@ -144,27 +162,36 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
 
   api.put = (item, callback) => {
     logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
-    return api.hooks.beforePut(item, beforePutRes =>
-      put(beforePutRes, putOpRes =>
-        api.hooks.afterPut(putOpRes, res => {
-          logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', res);
-          callback(res);
+    runHook('beforePut', item, () => {
+      put(item, putOpRes =>
+        runHook('afterPut', putOpRes, () => {
+          logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', putOpRes);
+          callback(putOpRes);
         })
-      )
-    );
+      );
+    });
   };
   api.take = (callback, options) => {
+    let unsubscribe = () => {};
     logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
-    return api.hooks.beforeTake(() =>
-      take(
-        takeOpRes =>
-          api.hooks.afterTake(takeOpRes, (...res) => {
-            logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', res);
-            callback(...res);
-          }),
-        options
-      )
+    runHook(
+      'beforeTake',
+      undefined,
+      () =>
+        (unsubscribe = take(
+          takeOpRes =>
+            runHook('afterTake', takeOpRes, () => {
+              logger.log(
+                { id: api.parent },
+                'CHANNEL_TAKE_RESOLVED',
+                takeOpRes
+              );
+              callback(takeOpRes);
+            }),
+          options
+        ))
     );
+    return () => unsubscribe();
   };
 
   return api;

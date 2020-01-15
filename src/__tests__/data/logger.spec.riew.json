@@ -36,11 +36,9 @@
       {
         "who": "channel_props_unknown_3",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          {
-            "a": "b"
-          }
-        ]
+        "meta": {
+          "a": "b"
+        }
       },
       {
         "who": "channel_view_unknown_2",
@@ -62,11 +60,9 @@
       {
         "who": "channel_view_unknown_2",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          {
-            "a": "b"
-          }
-        ]
+        "meta": {
+          "a": "b"
+        }
       },
       {
         "who": "riew_unknown_1",
@@ -85,11 +81,9 @@
       {
         "who": "channel_props_unknown_3",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          {
-            "c": "d"
-          }
-        ]
+        "meta": {
+          "c": "d"
+        }
       },
       {
         "who": "channel_view_unknown_2",
@@ -101,11 +95,9 @@
       {
         "who": "channel_view_unknown_2",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          {
-            "c": "d"
-          }
-        ]
+        "meta": {
+          "c": "d"
+        }
       },
       {
         "who": "channel_view_unknown_2",
@@ -233,9 +225,7 @@
       {
         "who": "channel_props_unknown_3",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          null
-        ]
+        "meta": null
       },
       {
         "who": "channel_view_unknown_2",
@@ -245,9 +235,7 @@
       {
         "who": "channel_view_unknown_2",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          null
-        ]
+        "meta": null
       },
       {
         "who": "channel_view_unknown_2",
@@ -262,9 +250,7 @@
       {
         "who": "channel_view_unknown_2",
         "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": [
-          null
-        ]
+        "meta": null
       },
       {
         "who": "channel_view_unknown_2",
