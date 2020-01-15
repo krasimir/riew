@@ -7,3 +7,4 @@ export const IS_COMPLETED = 'IS_COMPLETED';
 export const CURRENT_QUESTION = 'CURRENT_QUESTION';
 export const GET_ERROR = 'GET_ERROR';
 export const GET_QUESTIONS = 'GET_QUESTIONS';
+export const NEXT_STEP_CLICK = 'NEXT_STEP_CLICK';

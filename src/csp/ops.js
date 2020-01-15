@@ -28,7 +28,7 @@ const ops = {};
 
 // **************************************************** put
 
-ops.sput = function sput(channels, item, callback = noop) {
+ops.sput = function sput(channels, item = null, callback = noop) {
   channels = normalizeChannels(channels, 'WRITE');
   const result = channels.map(() => NOTHING);
   const setResult = (idx, value) => {

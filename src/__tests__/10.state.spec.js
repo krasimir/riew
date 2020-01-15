@@ -279,4 +279,27 @@ describe('Given a CSP state extension', () => {
       expect(s2.get()).toBe(360);
     });
   });
+  describe('when using same channel for mutations on different states', () => {
+    fit('should work for both states', () => {
+      const s1 = state('foo');
+      const s2 = state(12);
+      const CHANGE = 'CHANGE';
+
+      s1.mutate(CHANGE, a => a.toUpperCase());
+      s2.mutate(CHANGE, a => a + 20);
+
+      sput(CHANGE);
+
+      expect(s1.get()).toBe('FOO');
+      expect(s2.get()).toBe(32);
+    });
+  });
+  describe('when passing a non-string to select or mutate', () => {
+    it('should throw an error', () => {
+      const s = state('foo');
+
+      expect(() => s.select(chan('foo'))).toThrow('fff');
+      expect(() => s.mutate(chan('foo'))).toThrow('fff');
+    });
+  });
 });

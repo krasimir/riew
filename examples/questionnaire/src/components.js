@@ -9,6 +9,7 @@ import {
   GET_ERROR,
   START_OVER,
   GET_QUESTIONS,
+  NEXT_STEP_CLICK,
 } from './constants';
 import { nextStepRoutine, startOverRoutine } from './routines';
 
@@ -81,7 +82,7 @@ export const App = riew(
       <Fragment>
         <Error />
         <Question />
-        <button onClick={() => sput('NEXT_STEP_CLICK')} type="button">
+        <button onClick={() => sput(NEXT_STEP_CLICK)} type="button">
           Next question
         </button>
       </Fragment>

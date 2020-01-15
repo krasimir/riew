@@ -1,6 +1,6 @@
 /* eslint-disable no-shadow */
 
-import { state, take, sread } from 'riew';
+import { state, take, sread, sput, chan, buffer } from 'riew';
 import {
   ANSWER,
   START_OVER,
@@ -53,10 +53,18 @@ error.mutate(RESET_ERROR, () => null);
 error.mutate(SET_ERROR);
 error.select(GET_ERROR);
 
-sread([questions, currentStep], IS_COMPLETED, {
-  transform: (questions, currentStep) => questions.length - 1 === currentStep,
-}).listen();
-sread([questions, currentStep], CURRENT_QUESTION, {
-  transform: (questions, currentStep) => questions[currentStep],
-}).listen();
-sread(ANSWER, RESET_ERROR).listen();
+sread(ANSWER, RESET_ERROR, { listen: true });
+sread(
+  [questions, currentStep],
+  ([Qs, step]) => {
+    sput(chan(CURRENT_QUESTION, buffer.memory()), Qs[step]);
+  },
+  { listen: true }
+);
+sread(
+  [questions, currentStep],
+  ([Qs, step]) => {
+    sput(chan(IS_COMPLETED, buffer.memory()), Qs.length - 1 === step);
+  },
+  { listen: true }
+);

@@ -68,4 +68,4 @@ todos.mutate(FILTER_CLEAR_COMPLETED, todos =>
 
 register('todos', todos);
 
-sread(todos, saveTodosData).listen();
+sread(todos, saveTodosData, { listen: true });

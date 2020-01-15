@@ -3,7 +3,7 @@
   "dependencies": {
     "react": "16.8.6",
     "react-dom": "16.8.6",
-    "riew": "1.24.0",
+    "riew": "2.1.0",
     "todomvc-app-css": "2.2.0",
     "todomvc-common": "1.0.5"
   },
