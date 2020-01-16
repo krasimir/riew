@@ -261,7 +261,10 @@ ops.go = function go(func, done = () => {}, ...args) {
       if (done) done(step.value);
       if (step.value && step.value['@go'] === true) {
         api.rerun();
-      } else logger.log(api, 'ROUTINE_END');
+      } else {
+        grid.remove(api);
+        logger.log(api, 'ROUTINE_END');
+      }
     } else if (isPromise(step.value)) {
       logger.log(api, 'ROUTINE_ASYNC_BEGIN');
       step.value

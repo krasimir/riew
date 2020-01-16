@@ -79,7 +79,7 @@ describe('Given the grid', () => {
         id: r.id,
       });
       await delay(20);
-      expect(grid.nodes()[0]).toMatchObject({ id: r.id });
+      expect(grid.nodes()).toHaveLength(0);
     });
   });
   describe('when we run a routine and stop it', () => {

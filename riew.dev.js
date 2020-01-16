@@ -723,7 +723,10 @@ ops.go = function go(func) {
       if (done) done(step.value);
       if (step.value && step.value['@go'] === true) {
         api.rerun();
-      } else _index.logger.log(api, 'ROUTINE_END');
+      } else {
+        _index.grid.remove(api);
+        _index.logger.log(api, 'ROUTINE_END');
+      }
     } else if ((0, _utils.isPromise)(step.value)) {
       _index.logger.log(api, 'ROUTINE_ASYNC_BEGIN');
       step.value.then(function () {
