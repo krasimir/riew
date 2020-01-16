@@ -13,6 +13,8 @@ import {
   put,
   sput,
   chan,
+  read,
+  go,
 } from '../index';
 
 function expectRiew(callback, delayInterval = 0) {
@@ -641,6 +643,29 @@ describe('Given the `riew` factory function', () => {
       await delay(10);
 
       expect(view).toBeCalledWithArgs([{ data: 'foo' }], [{ data: 'bar' }]);
+    });
+  });
+  describe('when we have a loop', () => {
+    it('should not end up in a maximum call stack problem', async () => {
+      const spy = jest.fn();
+      const fff = function*({ render }) {
+        spy(yield read('XXX'));
+        render({ a: 'b' });
+        return go;
+      };
+      const r = riew(spy, fff);
+
+      r.mount();
+      sput('XXX', 'foo');
+      await delay(20);
+      expect(spy).toBeCalledWithArgs(
+        ['foo'],
+        [
+          {
+            a: 'b',
+          },
+        ]
+      );
     });
   });
 });

@@ -3,7 +3,7 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 import riew from '../react/index';
-import { state, reset, register, sread, sput, put, sleep } from '../index';
+import { state, reset, register, sread, sput, put, sleep, logger } from '../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
@@ -17,6 +17,20 @@ describe('Given the React riew function', () => {
 
         await delay(10);
         exerciseHTML(container, '<p>Hello</p>');
+      }));
+    it('should properly set the name of the riew', () =>
+      act(async () => {
+        const routine = function * RRR() {}
+        const R = riew(function Hi() {
+          return <p>Hello</p>;
+        }, routine);
+        logger.enable();
+        const { container } = render(<R />);
+
+        await delay(10);
+        const log = logger.now();
+        expect(log.state[0].id.match(/^Hi_riew/)).toBeTruthy();
+        expect(log.state[0].children[2].id.match(/^routine_RRR/)).toBeTruthy();
       }));
     it(`should
       * run the routine function

@@ -149,6 +149,7 @@ export default function Logger() {
     return snapshot;
   };
   api.frames = () => frames;
+  api.now = () => frames.length > 0 ? frames[frames.length-1] : null
   api.reset = () => {
     frames = [];
     enabled = false;

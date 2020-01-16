@@ -2,115 +2,115 @@
   {
     "actions": [
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_CREATED",
         "meta": null
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_CREATED",
         "meta": null
       },
       {
-        "who": "riew_unknown_1",
+        "who": "MyVIew_riew_1",
         "what": "RIEW_CREATED",
         "meta": null
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "a": "b"
         }
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_TAKE_INITIATED",
         "meta": null
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": {
           "a": "b"
         }
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "a": "b"
         }
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_TAKE_INITIATED",
         "meta": null
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": {
           "a": "b"
         }
       },
       {
-        "who": "riew_unknown_1",
+        "who": "MyVIew_riew_1",
         "what": "RIEW_MOUNTED",
         "meta": {
           "a": "b"
         }
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "c": "d"
         }
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": {
           "c": "d"
         }
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "c": "d"
         }
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": {
           "c": "d"
         }
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
       {
-        "who": "riew_unknown_1",
+        "who": "MyVIew_riew_1",
         "what": "RIEW_UPDATED",
         "meta": {
           "c": "d"
@@ -119,8 +119,8 @@
     ],
     "state": [
       {
-        "id": "riew_unknown_1",
-        "name": "unknown",
+        "id": "MyVIew_riew_1",
+        "name": "MyVIew",
         "type": "RIEW",
         "viewData": {
           "a": "b",
@@ -128,7 +128,7 @@
         },
         "children": [
           {
-            "id": "channel_view_unknown_2",
+            "id": "MyVIew_view_2",
             "type": "CHANNEL",
             "value": [
               {
@@ -144,7 +144,7 @@
             ]
           },
           {
-            "id": "channel_props_unknown_3",
+            "id": "MyVIew_props_3",
             "type": "CHANNEL",
             "value": [
               {
@@ -166,7 +166,7 @@
   {
     "actions": [
       {
-        "who": "riew_unknown_1",
+        "who": "MyVIew_riew_1",
         "what": "RIEW_RENDERED",
         "meta": {
           "a": "b",
@@ -176,8 +176,8 @@
     ],
     "state": [
       {
-        "id": "riew_unknown_1",
-        "name": "unknown",
+        "id": "MyVIew_riew_1",
+        "name": "MyVIew",
         "type": "RIEW",
         "viewData": {
           "a": "b",
@@ -185,7 +185,7 @@
         },
         "children": [
           {
-            "id": "channel_view_unknown_2",
+            "id": "MyVIew_view_2",
             "type": "CHANNEL",
             "value": [
               {
@@ -201,7 +201,7 @@
             ]
           },
           {
-            "id": "channel_props_unknown_3",
+            "id": "MyVIew_props_3",
             "type": "CHANNEL",
             "value": [
               {
@@ -223,42 +223,42 @@
   {
     "actions": [
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": null
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": null
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": null
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
       {
-        "who": "channel_props_unknown_3",
+        "who": "MyVIew_props_3",
         "what": "CHANNEL_CLOSED",
         "meta": null
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": null
       },
       {
-        "who": "channel_view_unknown_2",
+        "who": "MyVIew_view_2",
         "what": "CHANNEL_CLOSED",
         "meta": null
       },
       {
-        "who": "riew_unknown_1",
+        "who": "MyVIew_riew_1",
         "what": "RIEW_UNMOUNTED",
         "meta": null
       }

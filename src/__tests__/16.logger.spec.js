@@ -128,7 +128,7 @@ describe('Given the logger', () => {
       * RIEW_UPDATED
       * RIEW_CREATED
       `, async () => {
-      const r = riew(() => {});
+      const r = riew(function MyVIew(){});
       r.mount({ a: 'b' });
       r.update({ c: 'd' });
       await delay();

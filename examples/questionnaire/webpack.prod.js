@@ -8,24 +8,24 @@ module.exports = {
       {
         test: /\.(js|jsx)$/,
         exclude: /node_modules/,
-        use: ['babel-loader']
-      }
-    ]
+        use: ['babel-loader'],
+      },
+    ],
   },
   resolve: {
-    extensions: ['*', '.js']
+    extensions: ['*', '.js'],
   },
   output: {
-    path: __dirname + '/js',
+    path: `${__dirname}/js`,
     publicPath: '/',
-    filename: 'app.js'
+    filename: 'app.js',
   },
   optimization: {
-    minimizer: [new TerserPlugin()]
+    minimizer: [new TerserPlugin()],
   },
   plugins: [
     new webpack.DefinePlugin({
-      __DEV__: true
-    })
-  ]
+      __DEV__: true,
+    }),
+  ],
 };

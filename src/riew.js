@@ -54,15 +54,18 @@ const Renderer = function(pushDataToView) {
     },
   };
 };
-
 export function riew(viewFunc, ...routines) {
   const name = getFuncName(viewFunc);
+  return namedRiew(name, viewFunc, ...routines);
+}
+
+export function namedRiew(name, viewFunc, ...routines) {
   const renderer = Renderer(value => {
     viewFunc(value);
     logger.log(api, 'RIEW_RENDERED', value);
   });
   const api = {
-    id: getId(`riew_${name}`),
+    id: getId(`${name}_riew`),
     name,
     '@riew': true,
     children: [],
@@ -82,8 +85,8 @@ export function riew(viewFunc, ...routines) {
       sread(to, func, { listen: true });
     }
   };
-  const VIEW_CHANNEL = getId(`channel_view_${name}`);
-  const PROPS_CHANNEL = getId(`channel_props_${name}`);
+  const VIEW_CHANNEL = getId(`${name}_view`);
+  const PROPS_CHANNEL = getId(`${name}_props`);
 
   api.children.push(Channel(VIEW_CHANNEL, buffer.memory()));
   api.children.push(Channel(PROPS_CHANNEL, buffer.memory()));

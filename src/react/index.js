@@ -1,9 +1,10 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
 import { getFuncName } from '../utils';
-import { riew as createRiew } from '../index';
+import { namedRiew } from '../index';
 
 export default function riew(View, ...routines) {
+  const name = getFuncName(View);
   const createBridge = function(externals = []) {
     const comp = function(outerProps) {
       let [instance, setInstance] = useState(null);
@@ -19,7 +20,7 @@ export default function riew(View, ...routines) {
 
       // mounting
       useEffect(() => {
-        instance = createRiew(props => {
+        instance = namedRiew(name, props => {
           if (!mounted) return;
           if (props === null) {
             setContent(null);
@@ -31,6 +32,7 @@ export default function riew(View, ...routines) {
         if (externals && externals.length > 0) {
           instance = instance.with(...externals);
         }
+        instance.name = name;
 
         setInstance(instance);
         instance.mount(outerProps);
@@ -45,7 +47,7 @@ export default function riew(View, ...routines) {
       return content === null ? null : React.createElement(View, content);
     };
 
-    comp.displayName = `Riew_${getFuncName(View)}`;
+    comp.displayName = `Riew_${name}`;
     comp.with = (...maps) => createBridge(maps);
 
     return comp;

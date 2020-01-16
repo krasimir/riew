@@ -13,7 +13,10 @@ import {
 } from './constants';
 import { nextStepRoutine, startOverRoutine } from './routines';
 
-export const Question = riew(({ step: { type, text }, giveAnswer }) => {
+export const Question = riew(function Question({
+  step: { type, text },
+  giveAnswer,
+}) {
   if (type === 'input') {
     return (
       <Fragment>
@@ -55,12 +58,12 @@ export const Question = riew(({ step: { type, text }, giveAnswer }) => {
   giveAnswer: value => sput(ANSWER, value),
 });
 
-export const Error = riew(({ error }) =>
-  error !== null ? <div className="error">Error: {error}</div> : null
-).with({ error: GET_ERROR });
+export const Error = riew(function Error({ error }) {
+  return error !== null ? <div className="error">Error: {error}</div> : null;
+}).with({ error: GET_ERROR });
 
 export const App = riew(
-  ({ completed, questions, startOver }) => {
+  function App({ completed, questions, startOver }) {
     if (completed) {
       return (
         <Fragment>

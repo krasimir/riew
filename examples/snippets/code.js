@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import {
   chan,
   buffer,
@@ -35,6 +36,8 @@ go(function*() {
   return go;
 });
 
-console.log(chan('FOO'));
+sput('FOO', '112');
 
-sput('FOO', 'NNN');
+setTimeout(() => {
+  console.log('END');
+}, 5000);

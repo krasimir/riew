@@ -12,6 +12,7 @@ import {
   call,
   fork,
   ONE_OF,
+  buffer,
 } from '../index';
 import { delay } from '../__helpers__';
 
