@@ -1387,6 +1387,9 @@ function Logger() {
   api.frames = function () {
     return frames;
   };
+  api.now = function () {
+    return frames.length > 0 ? frames[frames.length - 1] : null;
+  };
   api.reset = function () {
     frames = [];
     enabled = false;
@@ -1464,6 +1467,7 @@ function riew(View) {
     routines[_key - 1] = arguments[_key];
   }
 
+  var name = (0, _utils.getFuncName)(View);
   var createBridge = function createBridge() {
     var externals = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
 
@@ -1489,7 +1493,7 @@ function riew(View) {
 
       // mounting
       (0, _react.useEffect)(function () {
-        instance = _index.riew.apply(undefined, [function (props) {
+        instance = _index.namedRiew.apply(undefined, [name, function (props) {
           if (!mounted) return;
           if (props === null) {
             setContent(null);
@@ -1503,6 +1507,7 @@ function riew(View) {
 
           instance = (_instance = instance).with.apply(_instance, _toConsumableArray(externals));
         }
+        instance.name = name;
 
         setInstance(instance);
         instance.mount(outerProps);
@@ -1517,7 +1522,7 @@ function riew(View) {
       return content === null ? null : _react2.default.createElement(View, content);
     };
 
-    comp.displayName = 'Riew_' + (0, _utils.getFuncName)(View);
+    comp.displayName = 'Riew_' + name;
     comp.with = function () {
       for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
         maps[_key2] = arguments[_key2];
@@ -1602,6 +1607,7 @@ var _extends = Object.assign || function (target) {
 };
 
 exports.riew = riew;
+exports.namedRiew = namedRiew;
 
 var _index = require('./index');
 
@@ -1644,19 +1650,27 @@ var Renderer = function Renderer(pushDataToView) {
     }
   };
 };
-
 function riew(viewFunc) {
+  var name = (0, _utils.getFuncName)(viewFunc);
+
   for (var _len = arguments.length, routines = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
     routines[_key - 1] = arguments[_key];
   }
 
-  var name = (0, _utils.getFuncName)(viewFunc);
+  return namedRiew.apply(undefined, [name, viewFunc].concat(routines));
+}
+
+function namedRiew(name, viewFunc) {
+  for (var _len2 = arguments.length, routines = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
+    routines[_key2 - 2] = arguments[_key2];
+  }
+
   var renderer = Renderer(function (value) {
     viewFunc(value);
     _index.logger.log(api, 'RIEW_RENDERED', value);
   });
   var api = {
-    id: (0, _utils.getId)('riew_' + name),
+    id: (0, _utils.getId)(name + '_riew'),
     name: name,
     '@riew': true,
     children: [],
@@ -1676,8 +1690,8 @@ function riew(viewFunc) {
       (0, _index.sread)(to, func, { listen: true });
     }
   };
-  var VIEW_CHANNEL = (0, _utils.getId)('channel_view_' + name);
-  var PROPS_CHANNEL = (0, _utils.getId)('channel_props_' + name);
+  var VIEW_CHANNEL = (0, _utils.getId)(name + '_view');
+  var PROPS_CHANNEL = (0, _utils.getId)(name + '_props');
 
   api.children.push((0, _index.chan)(VIEW_CHANNEL, _index.buffer.memory()));
   api.children.push((0, _index.chan)(PROPS_CHANNEL, _index.buffer.memory()));
@@ -1763,8 +1777,8 @@ function riew(viewFunc) {
   };
 
   api.with = function () {
-    for (var _len2 = arguments.length, maps = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      maps[_key2] = arguments[_key2];
+    for (var _len3 = arguments.length, maps = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+      maps[_key3] = arguments[_key3];
     }
 
     api.__setExternals(maps);

@@ -25,10 +25,9 @@ export const nextStepRoutine = function*({ render }) {
   return go;
 };
 export const startOverRoutine = function* RR({ render }) {
-  const frames = logger.frames();
   console.log(
     'startOverRoutine',
-    frames.length > 0 ? frames[frames.length - 1].actions : []
+    logger.now()
   );
   yield read(START_OVER);
   render({ completed: false });
