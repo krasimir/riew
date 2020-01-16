@@ -741,8 +741,8 @@ ops.go = function go(func) {
     }
   }
 
-  next();
   _index.grid.add(api);
+  next();
   _index.logger.log(api, 'ROUTINE_STARTED');
 
   return api;

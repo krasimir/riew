@@ -1,6 +1,6 @@
 /* eslint-disable no-shadow */
 
-import { state, take, sread, sput, chan, buffer, read } from 'riew';
+import { state, take, sread, sput, chan, buffer } from 'riew';
 import {
   ANSWER,
   START_OVER,
@@ -39,7 +39,10 @@ const error = state(null);
 
 questions.select(GET_QUESTIONS);
 questions.mutate(ANSWER, function* mutateAnswer(questions, value) {
-  const currentStepIndex = yield read(currentStep);
+  const currentStepIndex = yield take(currentStep);
+  console.log(JSON.stringify(questions.map((question, i) =>
+  i === currentStepIndex ? { ...question, answer: value } : question
+), null, 2));
   return questions.map((question, i) =>
     i === currentStepIndex ? { ...question, answer: value } : question
   );

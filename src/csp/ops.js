@@ -281,8 +281,8 @@ ops.go = function go(func, done = () => {}, ...args) {
     }
   }
 
-  next();
   grid.add(api);
+  next();
   logger.log(api, 'ROUTINE_STARTED');
 
   return api;
