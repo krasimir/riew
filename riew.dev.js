@@ -33,7 +33,10 @@ function CSPBuffer() {
       beforeTake: [NOOP],
       afterTake: [NOOP]
     },
-    parent: null
+    parent: null,
+    dropping: dropping,
+    sliding: sliding,
+    memory: memory
   };
 
   function runHook(type, item, cb) {

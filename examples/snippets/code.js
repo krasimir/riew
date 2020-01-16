@@ -24,15 +24,17 @@ import {
   use,
 } from 'riew';
 
-register('config', { theme: 'dark' });
+const s = state('something');
 
-const view = function(props) {
-  console.log(`Selected theme: ${props.theme}`); // Selected theme: dark
-};
-const routine = function*({ render }) {
-  const config = use('config');
-  render({ theme: config.theme });
-};
-const r = riew(view, routine).with('config');
+s.mutate('FOO', v => v);
 
-r.mount();
+go(function*() {
+  console.log('routine');
+  const a = yield read('FOO');
+  console.log(a);
+  return go;
+});
+
+console.log(chan('FOO'));
+
+sput('FOO', 'NNN');

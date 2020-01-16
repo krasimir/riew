@@ -10,6 +10,7 @@ import {
 } from './constants';
 
 export const nextStepRoutine = function*({ render }) {
+  console.log('nextStepRoutine');
   yield take(NEXT_STEP_CLICK);
   yield put(RESET_ERROR);
   const question = yield take(CURRENT_QUESTION);
@@ -23,6 +24,7 @@ export const nextStepRoutine = function*({ render }) {
   return go;
 };
 export const startOverRoutine = function*({ render }) {
+  console.log('startOverRoutine');
   yield read(START_OVER);
   render({ completed: false });
   return go;

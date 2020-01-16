@@ -17,6 +17,9 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
       afterTake: [NOOP],
     },
     parent: null,
+    dropping,
+    sliding,
+    memory,
   };
 
   function runHook(type, item, cb) {
