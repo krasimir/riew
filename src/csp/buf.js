@@ -136,20 +136,22 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
 
   const take = (callback, options) => {
     // console.log('take', `puts=${api.puts.length}`, `value=${api.value.length}`);
+    const subscribe = () => {
+      api.takes.push({ callback, options });
+      return () => api.deleteReader(callback);
+    };
     options = normalizeOptions(options);
     if (api.value.length === 0) {
       if (api.puts.length > 0 && !options.read) {
         api.puts.shift().callback();
         callback(api.value.shift());
       } else {
-        api.takes.push({ callback, options });
-        return () => api.deleteReader(callback);
+        return subscribe();
       }
     } else if (memory) {
       callback(api.value[0]);
       if (options.listen) {
-        api.takes.push({ callback, options });
-        return () => api.deleteReader(callback);
+        return subscribe();
       }
     } else if (options.read) {
       callback(api.value[0]);

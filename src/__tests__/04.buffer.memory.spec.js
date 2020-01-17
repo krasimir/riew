@@ -1,7 +1,7 @@
 import { buffer } from '../index';
 
 describe('Given the memory buffer', () => {
-  describe('when we use it', () => {
+  describe('when we put', () => {
     it(`should have non-blocking puts`, () => {
       const buf = buffer.memory();
       const spy = jest.fn();
@@ -14,23 +14,6 @@ describe('Given the memory buffer', () => {
         ['put1', true],
         ['put2', true],
         ['put3', true]
-      );
-    });
-    it(`should have only the first take blocking`, () => {
-      const buf = buffer.memory();
-      const spy = jest.fn();
-
-      buf.take(v => spy('take1', v));
-      buf.put('foo', v => spy('put', v));
-      buf.take(v => spy('take2', v));
-      buf.take(v => spy('take3', v));
-
-      expect(buf.getValue()).toStrictEqual(['foo']);
-      expect(spy).toBeCalledWithArgs(
-        ['put', true],
-        ['take1', 'foo'],
-        ['take2', 'foo'],
-        ['take3', 'foo']
       );
     });
     it(`should remember the last put value`, () => {
@@ -50,6 +33,25 @@ describe('Given the memory buffer', () => {
         ['take2', 'foo'],
         ['put2', true],
         ['take3', 'bar']
+      );
+    });
+  });
+  describe('when we take', () => {
+    it(`should have only the first take blocking`, () => {
+      const buf = buffer.memory();
+      const spy = jest.fn();
+
+      buf.take(v => spy('take1', v));
+      buf.put('foo', v => spy('put', v));
+      buf.take(v => spy('take2', v));
+      buf.take(v => spy('take3', v));
+
+      expect(buf.getValue()).toStrictEqual(['foo']);
+      expect(spy).toBeCalledWithArgs(
+        ['put', true],
+        ['take1', 'foo'],
+        ['take2', 'foo'],
+        ['take3', 'foo']
       );
     });
   });

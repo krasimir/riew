@@ -13,6 +13,11 @@ import {
   GET_QUESTIONS,
 } from './constants';
 
+// START_OVER should be defined as a normal channel.
+// Otherwise when we use it in a loop it will resolve always
+// imediately (after the first push of a value).
+// chan(START_OVER);
+
 const initialValue = [
   {
     id: 'q1',
@@ -40,9 +45,6 @@ const error = state(null);
 questions.select(GET_QUESTIONS);
 questions.mutate(ANSWER, function* mutateAnswer(questions, value) {
   const currentStepIndex = yield take(currentStep);
-  console.log(JSON.stringify(questions.map((question, i) =>
-  i === currentStepIndex ? { ...question, answer: value } : question
-), null, 2));
   return questions.map((question, i) =>
     i === currentStepIndex ? { ...question, answer: value } : question
   );
