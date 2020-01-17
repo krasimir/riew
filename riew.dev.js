@@ -103,7 +103,7 @@ function CSPBuffer() {
     }
     takeObj.callback(value);
   };
-  api.deleteReader = function (cb) {
+  api.deleteTaker = function (cb) {
     var idx = api.takes.findIndex(function (_ref2) {
       var callback = _ref2.callback;
       return callback === cb;
@@ -112,10 +112,10 @@ function CSPBuffer() {
       api.takes.splice(idx, 1);
     }
   };
-  api.deleteReaders = function () {
+  api.deleteListeners = function () {
     api.takes = api.takes.filter(function (_ref3) {
       var options = _ref3.options;
-      return !options.read;
+      return !options.listen;
     });
   };
 
@@ -181,27 +181,31 @@ function CSPBuffer() {
 
   var take = function take(callback, options) {
     // console.log('take', `puts=${api.puts.length}`, `value=${api.value.length}`);
+    var subscribe = function subscribe() {
+      api.takes.push({ callback: callback, options: options });
+      return function () {
+        return api.deleteTaker(callback);
+      };
+    };
     options = (0, _utils.normalizeOptions)(options);
+    if (options.listen) {
+      options.read = true;
+      if (options.initialCall) {
+        callback(api.value[0]);
+      }
+      return subscribe();
+    }
+    if (memory || options.read) {
+      callback(api.value[0]);
+      return;
+    }
     if (api.value.length === 0) {
-      if (api.puts.length > 0 && !options.read) {
+      if (api.puts.length > 0) {
         api.puts.shift().callback();
         callback(api.value.shift());
       } else {
-        api.takes.push({ callback: callback, options: options });
-        return function () {
-          return api.deleteReader(callback);
-        };
+        return subscribe();
       }
-    } else if (memory) {
-      callback(api.value[0]);
-      if (options.listen) {
-        api.takes.push({ callback: callback, options: options });
-        return function () {
-          return api.deleteReader(callback);
-        };
-      }
-    } else if (options.read) {
-      callback(api.value[0]);
     } else {
       var v = api.value.shift();
       callback(v);
@@ -359,8 +363,7 @@ function chan() {
 
   var api = _index.CHANNELS.set(id, {
     id: id,
-    '@channel': true,
-    subscribers: []
+    '@channel': true
   });
 
   buff.parent = api.id;
@@ -543,7 +546,13 @@ ops.sread = function sread(channels, to, options) {
   return ops.stake(channels, to, _extends({}, options, { read: true }));
 };
 ops.unreadAll = function unreadAll(channel) {
-  channel.buff.deleteReaders();
+  channel.buff.deleteListeners();
+};
+
+// **************************************************** listen
+
+ops.listen = function listen(channels, to, options) {
+  return ops.stake(channels, to, _extends({}, options, { listen: true }));
 };
 
 // **************************************************** close, reset, call, fork, merge, timeout, isChannel
@@ -556,11 +565,11 @@ ops.close = function close(channels) {
     ch.buff.puts.forEach(function (p) {
       return p.callback(newState);
     });
+    ch.buff.deleteListeners();
     ch.buff.takes.forEach(function (t) {
       return t.callback(newState);
     });
     _index.grid.remove(ch);
-    ch.subscribers = [];
     _index.CHANNELS.del(ch.id);
     _index.logger.log(ch, 'CHANNEL_CLOSED');
   });
@@ -959,7 +968,7 @@ function normalizeChannels(channels) {
 
 var DEFAULT_OPTIONS = {
   onError: null,
-  initialCall: true
+  initialCall: false
 };
 
 function normalizeTo(to) {
@@ -1049,7 +1058,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.isChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
+exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.isChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -1183,6 +1192,7 @@ var stake = exports.stake = _ops2.default.stake;
 var take = exports.take = _ops2.default.take;
 var read = exports.read = _ops2.default.read;
 var sread = exports.sread = _ops2.default.sread;
+var listen = exports.listen = _ops2.default.listen;
 var unreadAll = exports.unreadAll = _ops2.default.unreadAll;
 var close = exports.close = _ops2.default.close;
 var sclose = exports.sclose = _ops2.default.sclose;
@@ -1689,8 +1699,7 @@ function namedRiew(name, viewFunc) {
   };
   var subscribe = function subscribe(to, func) {
     if (!(to in subscriptions)) {
-      subscriptions[to] = true;
-      (0, _index.sread)(to, func, { listen: true });
+      subscriptions[to] = (0, _index.listen)(to, func, { initialCall: true });
     }
   };
   var VIEW_CHANNEL = (0, _utils.getId)(name + '_view');
@@ -1756,6 +1765,10 @@ function namedRiew(name, viewFunc) {
       return c();
     });
     cleanups = [];
+    Object.keys(subscriptions).forEach(function (id) {
+      subscriptions[id]();
+    });
+    subscriptions = {};
     api.children.forEach(function (c) {
       if ((0, _index.isState)(c)) {
         c.destroy();
