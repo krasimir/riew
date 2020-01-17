@@ -3,7 +3,16 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 import riew from '../react/index';
-import { state, reset, register, sread, sput, put, sleep, logger } from '../index';
+import {
+  state,
+  reset,
+  register,
+  listen,
+  sput,
+  put,
+  sleep,
+  logger,
+} from '../index';
 
 describe('Given the React riew function', () => {
   beforeEach(() => {
@@ -20,12 +29,12 @@ describe('Given the React riew function', () => {
       }));
     it('should properly set the name of the riew', () =>
       act(async () => {
-        const routine = function * RRR() {}
+        const routine = function* RRR() {}; // eslint-disable-line
         const R = riew(function Hi() {
           return <p>Hello</p>;
         }, routine);
         logger.enable();
-        const { container } = render(<R />);
+        render(<R />);
 
         await delay(10);
         const log = logger.now();
@@ -118,7 +127,7 @@ describe('Given the React riew function', () => {
           const propsSpy = jest.fn();
           const view = jest.fn().mockImplementation(() => null);
           const I = riew(view, function*({ props }) {
-            sread(props, propsSpy, { listen: true });
+            listen(props, propsSpy, { initialCall: true });
           });
 
           const { rerender } = render(<I foo="bar" />);

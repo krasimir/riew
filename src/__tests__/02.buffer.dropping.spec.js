@@ -23,11 +23,31 @@ describe('Given we have a dropping buffer', () => {
         ['put 3', true]
       );
     });
-    it('should have same capabilities for reading and listening as the fixed buffer', () => {
+    it('should have same capabilities for reading', () => {
       const buf = buffer.dropping();
       const spy = jest.fn();
 
-      buf.take(v => spy('take', v), { read: true, listen: true });
+      buf.take(v => spy('take', v), { read: true });
+      buf.put('foo', r => spy('put 1', r));
+      buf.take(v => spy('take', v), { read: true });
+      buf.put('bar', r => spy('put 2', r));
+      buf.take(v => spy('take', v), { read: true });
+      buf.put('zar', r => spy('put 3', r));
+
+      expect(spy).toBeCalledWithArgs(
+        ['take', undefined],
+        ['put 1', true],
+        ['take', 'foo'],
+        ['put 2', false],
+        ['take', 'foo'],
+        ['put 3', false]
+      );
+    });
+    it('should have same capabilities for listening', () => {
+      const buf = buffer.dropping();
+      const spy = jest.fn();
+
+      buf.take(v => spy('take', v), { listen: true });
       buf.put('foo', r => spy('put 1', r));
       buf.put('bar', r => spy('put 2', r));
       buf.put('zar', r => spy('put 3', r));

@@ -32,7 +32,6 @@ export default function chan(...args) {
   const api = CHANNELS.set(id, {
     id,
     '@channel': true,
-    subscribers: [],
   });
 
   buff.parent = api.id;

@@ -26,11 +26,34 @@ describe('Given we have a sliding buffer', () => {
       );
       expect(buf.getValue()).toStrictEqual([]);
     });
-    it('should have same capabilities for reading and listening as the fixed buffer', () => {
+    it('should have same capabilities for reading', () => {
       const buf = buffer.sliding(2);
       const spy = jest.fn();
 
-      buf.take(v => spy('take', v), { read: true, listen: true });
+      buf.take(v => spy('take', v), { read: true });
+      buf.put('foo', r => spy('put 1', r));
+      buf.take(v => spy('take', v), { read: true });
+      buf.put('bar', r => spy('put 2', r));
+      buf.take(v => spy('take', v), { read: true });
+      buf.put('zar', r => spy('put 3', r));
+      buf.take(v => spy('take', v), { read: true });
+
+      expect(spy).toBeCalledWithArgs(
+        ['take', undefined],
+        ['put 1', true],
+        ['take', 'foo'],
+        ['put 2', true],
+        ['take', 'foo'],
+        ['put 3', true],
+        ['take', 'bar']
+      );
+      expect(buf.getValue()).toStrictEqual(['bar', 'zar']);
+    });
+    it('should have same capabilities for listening', () => {
+      const buf = buffer.sliding(2);
+      const spy = jest.fn();
+
+      buf.take(v => spy('take', v), { listen: true });
       buf.put('foo', r => spy('put 1', r));
       buf.put('bar', r => spy('put 2', r));
       buf.put('zar', r => spy('put 3', r));

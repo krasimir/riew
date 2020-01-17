@@ -76,6 +76,7 @@ export const stake = ops.stake;
 export const take = ops.take;
 export const read = ops.read;
 export const sread = ops.sread;
+export const listen = ops.listen;
 export const unreadAll = ops.unreadAll;
 export const close = ops.close;
 export const sclose = ops.sclose;

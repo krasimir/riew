@@ -6,14 +6,13 @@ import {
   reset,
   grid,
   state,
-  sread,
+  listen,
   CHANNELS,
   sleep,
   take,
   put,
   sput,
   chan,
-  read,
   go,
 } from '../index';
 
@@ -217,7 +216,7 @@ describe('Given the `riew` factory function', () => {
       };
       const r = riew(view, routine);
 
-      sread(s, spy, { listen: true });
+      listen(s, spy, { initialCall: true });
 
       r.mount();
       sput(s, 'baz');
@@ -277,7 +276,7 @@ describe('Given the `riew` factory function', () => {
     it('should deliver the riew input to the routine', async () => {
       const spy = jest.fn();
       const routine = function*({ props }) {
-        sread(props, spy, { listen: true });
+        listen(props, spy, { initialCall: true });
       };
       const r = riew(() => {}, routine);
 
@@ -292,13 +291,13 @@ describe('Given the `riew` factory function', () => {
         const spy = jest.fn();
         const propsSpy = jest.fn();
         const routine = function*({ props, render }) {
-          sread(
+          listen(
             props,
             ({ n }) => {
               render({ n: n + 5 });
               propsSpy(n);
             },
-            { listen: true }
+            { initialCall: true }
           );
           propsSpy(`initial=${(yield take(props)).n}`);
         };
@@ -362,7 +361,7 @@ describe('Given the `riew` factory function', () => {
         const view = jest.fn();
         const spy = jest.fn();
         const r = riew(view, function*() {
-          sread('firstName', spy, { listen: true });
+          listen('firstName', spy);
         }).with({ firstName: 'firstName' });
 
         r.mount();
@@ -590,13 +589,13 @@ describe('Given the `riew` factory function', () => {
         });
       });
 
-      sread(
+      listen(
         [s1, s2],
         ([arr, idx]) => {
           sput('current', arr[idx]);
         },
         {
-          listen: true,
+          initialCall: true,
         }
       );
 
@@ -649,7 +648,7 @@ describe('Given the `riew` factory function', () => {
     it('should not end up in a maximum call stack problem', async () => {
       const spy = jest.fn();
       const fff = function*({ render }) {
-        spy(yield read('XXX'));
+        spy(yield take('XXX'));
         render({ a: 'b' });
         return go;
       };

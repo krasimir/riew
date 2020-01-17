@@ -1,3 +1,4 @@
+
 [
   {
     "actions": [
@@ -224,32 +225,7 @@
     "actions": [
       {
         "who": "MyVIew_props_3",
-        "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": null
-      },
-      {
-        "who": "MyVIew_view_2",
-        "what": "CHANNEL_PUT_INITIATED",
-        "meta": null
-      },
-      {
-        "who": "MyVIew_view_2",
-        "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": null
-      },
-      {
-        "who": "MyVIew_view_2",
-        "what": "CHANNEL_PUT_RESOLVED",
-        "meta": true
-      },
-      {
-        "who": "MyVIew_props_3",
         "what": "CHANNEL_CLOSED",
-        "meta": null
-      },
-      {
-        "who": "MyVIew_view_2",
-        "what": "CHANNEL_TAKE_RESOLVED",
         "meta": null
       },
       {

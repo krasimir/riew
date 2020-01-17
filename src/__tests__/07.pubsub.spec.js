@@ -15,6 +15,7 @@ import {
   state,
   stake,
   unreadAll,
+  listen,
 } from '../index';
 import { Test, exercise } from '../__helpers__';
 
@@ -22,7 +23,7 @@ describe('Given a CSP pubsub extension', () => {
   beforeEach(() => {
     reset();
   });
-  describe('when we subscribe to a channel', () => {
+  describe('when we listen to a channel', () => {
     describe('and we put to the same channel', () => {
       it(`should
         * call our callbacks
@@ -33,8 +34,8 @@ describe('Given a CSP pubsub extension', () => {
         const spyB = jest.fn();
         const spyC = jest.fn();
 
-        sread('xxx', spyA, { listen: true });
-        sread('xxx', spyB, { listen: true });
+        listen('xxx', spyA);
+        listen('xxx', spyB);
 
         go(function*() {
           spyC(yield put('xxx', 'foo'));
@@ -55,12 +56,12 @@ describe('Given a CSP pubsub extension', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      const unread = sread('a', spyA, { listen: true });
-      sread('a', spyB, { listen: true });
+      const unsub = listen('a', spyA);
+      listen('a', spyB);
 
       go(function*() {
         yield put('a', 'foo');
-        unread('a', spyA);
+        unsub('a', spyA);
         yield put('a', 'bar');
       });
       go(function*() {
@@ -76,8 +77,8 @@ describe('Given a CSP pubsub extension', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
-      sread('topicA', spyA, { listen: true });
-      sread('topicB', spyB, { listen: true });
+      listen('topicA', spyA);
+      listen('topicB', spyB);
 
       go(function*() {
         yield put('topicA', 'foo');
@@ -108,19 +109,31 @@ describe('Given a CSP pubsub extension', () => {
         yield put('topic', 'foo');
       });
 
-      read('topic', spyA);
-      read('topic', spyB);
+      listen('topic', spyA);
+      listen('topic', spyB);
 
       expect(spyA).not.toBeCalled();
       expect(spyB).not.toBeCalled();
     });
   });
-  describe('when we pass a channel instead of a string to the read functions', () => {
+  describe('when we pass a channel instead of a string to the listen functions', () => {
     it('should still work', () => {
       const spy = jest.fn();
       const ch = chan();
 
-      sread(ch, spy);
+      listen(ch, spy);
+      sput(ch, 'foo');
+      sput(ch, 'bar');
+
+      expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
+    });
+  });
+  describe('when we have listeners and we close the channel', () => {
+    it('should remove the listeners', () => {
+      const spy = jest.fn();
+      const ch = chan();
+
+      listen(ch, spy);
       sput(ch, 'foo');
       close(ch);
       sput(ch, 'bar');
@@ -128,128 +141,26 @@ describe('Given a CSP pubsub extension', () => {
       expect(spy).toBeCalledWithArgs(['foo']);
     });
   });
-  describe('when we use read once (by default)', () => {
-    it('should subscribe only once', () => {
+  describe('when the subscriber is a channel', () => {
+    it('should pipe', () => {
       const spy = jest.fn();
-      const ch = chan();
+      const source = chan();
+      const subscriber = chan();
 
-      sread(ch, spy);
-
-      sput(ch, 'foo');
-      sput(ch, 'bar');
-      sput(ch, 'zar');
-
-      expect(spy).toBeCalledWithArgs(['foo']);
-    });
-    describe('and when we read once as part of another read once', () => {
-      it('should read once again', () => {
-        const spy = jest.fn();
-        const ch = chan();
-        const callback = v => {
-          sread(ch, callback);
-          spy(v);
-        };
-
-        sread(ch, callback);
-
-        sput(ch, 'foo');
-        sput(ch, 'bar');
-        sput(ch, 'zar');
-
-        expect(spy).toBeCalledWithArgs(['foo'], ['bar'], ['zar']);
-      });
-    });
-    describe('and when the subscriber is a channel', () => {
-      it('should read once again', () => {
-        const spy = jest.fn();
-        const source = chan();
-        const subscriber = chan();
-
-        sread(source, subscriber);
-
-        go(function*() {
-          spy(yield take(subscriber));
-          spy(yield take(subscriber));
-        });
-
-        sput(source, 'foo');
-        sput(source, 'bar');
-
-        expect(spy).toBeCalledWithArgs(['foo']);
-      });
-    });
-  });
-  describe('when we read inside a routine', () => {
-    it('should do read once', () => {
-      const spy = jest.fn();
-      const ch = chan();
+      listen(source, subscriber);
 
       go(function*() {
-        spy('start');
-        spy(yield read(ch));
-        spy('end');
+        spy(yield take(subscriber));
+        spy(yield take(subscriber));
       });
 
-      sput(ch, 'foo');
-      sput(ch, 'bar');
-      sput(ch, 'zar');
+      sput(source, 'foo');
+      sput(source, 'bar');
 
-      expect(spy).toBeCalledWithArgs(['start'], ['foo'], ['end']);
-    });
-    describe('and when there is already a value in the channel', () => {
-      it('should perform a non-blocking read', () => {
-        const ch = chan(buffer.fixed(1));
-        const spy = jest.fn();
-
-        go(function* A() {
-          spy('A starts');
-          yield put(ch, 42);
-          spy('A ends');
-        });
-        go(function* B() {
-          spy('B starts');
-          spy(yield read(ch));
-          spy('B ends');
-        });
-
-        expect(spy).toBeCalledWithArgs(
-          ['A starts'],
-          ['A ends'],
-          ['B starts'],
-          [42],
-          ['B ends']
-        );
-        expect(ch.value()).toStrictEqual([42]);
-      });
-    });
-    describe('and we want to make a loop inside the routine', () => {
-      it('should allow us to wait for the same channel many times', () => {
-        const spy = jest.fn();
-        let counter = 0;
-
-        go(function*() {
-          spy(yield read('XXX'));
-          counter += 1;
-          spy(`foo${counter}`);
-          return go;
-        });
-
-        sput('XXX', 'a');
-        sput('XXX', 'b');
-        sput('XXX', 'c');
-
-        expect(spy).toBeCalledWithArgs(
-          ['a'],
-          ['foo1'],
-          ['b'],
-          ['foo2'],
-          ['c'],
-          ['foo3']
-        );
-      });
+      expect(spy).toBeCalledWithArgs(['foo'], ['bar']);
     });
   });
-  describe('when we read and there is already a value in the channel', () => {
+  describe('when we listen and there is already a value in the channel and we use initialCall set to true', () => {
     it('should fire the callback at least once with the value', () => {
       const spy = jest.fn();
       const ch = chan(buffer.fixed(1));
@@ -259,22 +170,9 @@ describe('Given a CSP pubsub extension', () => {
         yield put(ch, 'bar'); // <-- here we stop
         spy('never');
       });
-      sread(ch, spy);
+      listen(ch, spy, { initialCall: true });
 
       expect(spy).toBeCalledWithArgs(['foo']);
-    });
-    it('should allow us to turn that behavior off', () => {
-      const spy = jest.fn();
-      const ch = chan(buffer.fixed(1));
-
-      go(function*() {
-        yield put(ch, 'foo');
-        yield put(ch, 'bar'); // <-- here we stop
-        spy('never');
-      });
-      read(ch, spy, { initialCall: false });
-
-      expect(spy).not.toBeCalled();
     });
   });
   describe('when we use ON_OFF strategy', () => {
@@ -284,32 +182,13 @@ describe('Given a CSP pubsub extension', () => {
         const ch2 = chan();
         const spy = jest.fn();
 
-        sread([ch1, ch2], spy, { strategy: ONE_OF, listen: true });
+        listen([ch1, ch2], spy, { strategy: ONE_OF });
 
         sput(ch1, 'foo');
         sput(ch2, 'bar');
         sput(ch1, 'zoo');
 
         expect(spy).toBeCalledWithArgs(['foo', 0], ['bar', 1], ['zoo', 0]);
-      });
-    });
-    describe('and we use `read` in a routine', () => {
-      it('should unblock when one of the channels receives value', () => {
-        const ch1 = chan();
-        const ch2 = chan();
-        const spy = jest.fn();
-
-        go(function*() {
-          const v = yield read([ch1, ch2], { strategy: ONE_OF });
-          spy(v);
-          return go;
-        });
-
-        sput(ch1, 'foo');
-        sput(ch1, 'bar');
-        sput(ch2, 'zar');
-
-        expect(spy).toBeCalledWithArgs(['foo'], ['bar'], ['zar']);
       });
     });
   });
@@ -319,7 +198,7 @@ describe('Given a CSP pubsub extension', () => {
       const c2 = chan();
       const spy = jest.fn();
 
-      sread(c1, c2, { listen: true });
+      listen(c1, c2);
 
       go(function*() {
         spy(`put1=${yield put(c1, 'foo')}`);
@@ -343,8 +222,8 @@ describe('Given a CSP pubsub extension', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      sread([c1, c2], c3, { listen: true });
-      sread(c3, spy, { listen: true });
+      listen([c1, c2], c3);
+      listen(c3, spy);
       sput(c1, 'foo');
       sput(c2, 'bar');
       sput(c1, 'baz');
@@ -357,7 +236,7 @@ describe('Given a CSP pubsub extension', () => {
       const c3 = chan();
       const spy = jest.fn();
 
-      sread(
+      listen(
         [c1, c2],
         ([a, b]) => {
           sput(c3, a.toUpperCase() + b.toUpperCase());
@@ -366,7 +245,7 @@ describe('Given a CSP pubsub extension', () => {
           listen: true,
         }
       );
-      sread(c3, spy, { listen: true });
+      listen(c3, spy);
       sput(c1, 'foo');
       sput(c2, 'bar');
       sput(c1, 'baz');
@@ -383,13 +262,13 @@ describe('Given a CSP pubsub extension', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        sread('app', spy, { listen: true });
-        sread(
+        listen('app', spy);
+        listen(
           [users, currentUser],
           ([us, currentUserIndex]) => {
             sput('app', us[currentUserIndex].name);
           },
-          { listen: true }
+          { initialCall: true }
         );
 
         sput(currentUser, 2);
@@ -407,12 +286,12 @@ describe('Given a CSP pubsub extension', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        sread(
+        listen(
           [users, currentUser],
           ([us, currentUserIndex]) => {
             sput('app', us[currentUserIndex].name);
           },
-          { listen: true }
+          { initialCall: true }
         );
 
         go(function*() {
@@ -426,8 +305,8 @@ describe('Given a CSP pubsub extension', () => {
         expect(spy).toBeCalledWithArgs(['Steve'], ['Rebeka'], [true]);
       });
     });
-    describe('when we use sread by passing a string for a channel', () => {
-      it('should create a channel with a MemoryBuffer', () => {
+    describe('when we combine two states and we put to a third channel', () => {
+      it('should work', () => {
         const users = state([
           { name: 'Joe' },
           { name: 'Steve' },
@@ -443,12 +322,12 @@ describe('Given a CSP pubsub extension', () => {
           })
         );
 
-        sread(
+        listen(
           [users, currentUser],
           ([us, currentUserIndex]) => {
             sput('app', us[currentUserIndex].name);
           },
-          { listen: true }
+          { initialCall: true }
         );
 
         go(function*() {
@@ -480,8 +359,8 @@ describe('Given a CSP pubsub extension', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      sread(ch1, ch2, { listen: true });
-      sread(ch2, ch3, { listen: true });
+      listen(ch1, ch2);
+      listen(ch2, ch3);
 
       exercise(
         Test(
@@ -504,9 +383,9 @@ describe('Given a CSP pubsub extension', () => {
       const ch3 = chan('ch3');
       const ch4 = chan('ch4');
 
-      sread(ch1, ch2, { listen: true });
-      sread(ch1, ch3, { listen: true });
-      sread(ch2, ch4, { listen: true });
+      listen(ch1, ch2);
+      listen(ch1, ch3);
+      listen(ch2, ch4);
 
       exercise(
         Test(
@@ -537,8 +416,8 @@ describe('Given a CSP pubsub extension', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      sread(ch1, ch2, { listen: true });
-      sread(ch1, ch3, { listen: true });
+      listen(ch1, ch2);
+      listen(ch1, ch3);
 
       exercise(
         Test(
@@ -578,8 +457,8 @@ describe('Given a CSP pubsub extension', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      sread(ch1, ch2, { listen: true });
-      const unread = sread(ch1, ch3, { listen: true });
+      listen(ch1, ch2);
+      const unread = listen(ch1, ch3);
 
       exercise(
         Test(
@@ -616,8 +495,8 @@ describe('Given a CSP pubsub extension', () => {
       const ch2 = chan();
       const ch3 = chan();
 
-      sread(ch1, ch2, { listen: true });
-      sread(ch1, ch3, { listen: true });
+      listen(ch1, ch2);
+      listen(ch1, ch3);
 
       exercise(
         Test(

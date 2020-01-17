@@ -11,7 +11,7 @@ import {
   go,
   sleep,
   stake,
-  sread,
+  listen,
   close,
   channelReset,
 } from '../index';
@@ -105,7 +105,7 @@ describe('Given the logger', () => {
       const ch = chan();
       const ch2 = chan();
 
-      sread(ch, () => {});
+      listen(ch, () => {});
       stake(ch, () => {});
       sput(ch, 'foo');
       close(ch);
@@ -128,7 +128,7 @@ describe('Given the logger', () => {
       * RIEW_UPDATED
       * RIEW_CREATED
       `, async () => {
-      const r = riew(function MyVIew(){});
+      const r = riew(function MyVIew() {});
       r.mount({ a: 'b' });
       r.update({ c: 'd' });
       await delay();

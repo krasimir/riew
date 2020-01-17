@@ -11,7 +11,7 @@ export function normalizeChannels(channels, stateOp = 'READ') {
 
 const DEFAULT_OPTIONS = {
   onError: null,
-  initialCall: true,
+  initialCall: false,
 };
 
 export function normalizeTo(to) {

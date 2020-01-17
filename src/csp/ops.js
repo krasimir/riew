@@ -121,7 +121,13 @@ ops.sread = function sread(channels, to, options) {
   return ops.stake(channels, to, { ...options, read: true });
 };
 ops.unreadAll = function unreadAll(channel) {
-  channel.buff.deleteReaders();
+  channel.buff.deleteListeners();
+};
+
+// **************************************************** listen
+
+ops.listen = function listen(channels, to, options) {
+  return ops.stake(channels, to, { ...options, listen: true });
 };
 
 // **************************************************** close, reset, call, fork, merge, timeout, isChannel
@@ -132,9 +138,9 @@ ops.close = function close(channels) {
     const newState = ch.buff.isEmpty() ? ENDED : CLOSED;
     ch.state(newState);
     ch.buff.puts.forEach(p => p.callback(newState));
+    ch.buff.deleteListeners();
     ch.buff.takes.forEach(t => t.callback(newState));
     grid.remove(ch);
-    ch.subscribers = [];
     CHANNELS.del(ch.id);
     logger.log(ch, 'CHANNEL_CLOSED');
   });

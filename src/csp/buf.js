@@ -72,14 +72,14 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
     }
     takeObj.callback(value);
   };
-  api.deleteReader = cb => {
+  api.deleteTaker = cb => {
     const idx = api.takes.findIndex(({ callback }) => callback === cb);
     if (idx >= 0) {
       api.takes.splice(idx, 1);
     }
   };
-  api.deleteReaders = () => {
-    api.takes = api.takes.filter(({ options }) => !options.read);
+  api.deleteListeners = () => {
+    api.takes = api.takes.filter(({ options }) => !options.listen);
   };
 
   api.setValue = v => (api.value = v);
@@ -138,23 +138,27 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
     // console.log('take', `puts=${api.puts.length}`, `value=${api.value.length}`);
     const subscribe = () => {
       api.takes.push({ callback, options });
-      return () => api.deleteReader(callback);
+      return () => api.deleteTaker(callback);
     };
     options = normalizeOptions(options);
+    if (options.listen) {
+      options.read = true;
+      if (options.initialCall) {
+        callback(api.value[0]);
+      }
+      return subscribe();
+    }
+    if (memory || options.read) {
+      callback(api.value[0]);
+      return;
+    }
     if (api.value.length === 0) {
-      if (api.puts.length > 0 && !options.read) {
+      if (api.puts.length > 0) {
         api.puts.shift().callback();
         callback(api.value.shift());
       } else {
         return subscribe();
       }
-    } else if (memory) {
-      callback(api.value[0]);
-      if (options.listen) {
-        return subscribe();
-      }
-    } else if (options.read) {
-      callback(api.value[0]);
     } else {
       const v = api.value.shift();
       callback(v);

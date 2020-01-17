@@ -2,7 +2,18 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
-import { reset, sread, react, state, sleep, sput } from '../index';
+import {
+  reset,
+  sread,
+  react,
+  state,
+  sleep,
+  sput,
+  go,
+  read,
+  take,
+  listen,
+} from '../index';
 
 const { riew } = react;
 const DummyComponent = ({ text }) => <p>{text}</p>;
@@ -217,6 +228,20 @@ describe('Given the Riew library', () => {
             [{ data: [120] }, {}]
           );
         }));
+    });
+  });
+  describe('when we define a mutation', () => {
+    it('should be possible to react on the mutation', () => {
+      const current = state('xxx');
+      const spy = jest.fn();
+
+      current.mutate('reset', () => 'foobar');
+      listen('reset', spy);
+
+      sput('reset', 12);
+      sput('reset', 22);
+
+      expect(spy).toBeCalledWithArgs([12], [22]);
     });
   });
 });

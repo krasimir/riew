@@ -6,7 +6,7 @@ import {
   state as State,
   isState,
   go,
-  sread,
+  listen,
   close,
   sput,
   stake,
@@ -73,7 +73,7 @@ export function namedRiew(name, viewFunc, ...routines) {
   };
   let cleanups = [];
   let externals = {};
-  const subscriptions = {};
+  let subscriptions = {};
   const state = function(...args) {
     const s = State(...args);
     api.children.push(s);
@@ -81,8 +81,7 @@ export function namedRiew(name, viewFunc, ...routines) {
   };
   const subscribe = function(to, func) {
     if (!(to in subscriptions)) {
-      subscriptions[to] = true;
-      sread(to, func, { listen: true });
+      subscriptions[to] = listen(to, func, { initialCall: true });
     }
   };
   const VIEW_CHANNEL = getId(`${name}_view`);
@@ -142,6 +141,10 @@ export function namedRiew(name, viewFunc, ...routines) {
   api.unmount = function() {
     cleanups.forEach(c => c());
     cleanups = [];
+    Object.keys(subscriptions).forEach(id => {
+      subscriptions[id]();
+    });
+    subscriptions = {};
     api.children.forEach(c => {
       if (isState(c)) {
         c.destroy();

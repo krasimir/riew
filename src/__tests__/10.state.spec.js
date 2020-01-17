@@ -3,7 +3,7 @@ import {
   take,
   put,
   read,
-  sread,
+  listen,
   reset,
   CHANNELS,
   go,
@@ -32,7 +32,7 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
 
       s.select('R', value => value.toUpperCase());
-      sread('R', spy, { listen: true });
+      listen('R', spy, { initialCall: true });
       s.set('bar');
       expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
     });
@@ -43,7 +43,7 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
       const spy2 = jest.fn();
 
-      sread(s, spy, { listen: true });
+      listen(s, spy, { initialCall: true });
       stake(s, spy2);
       sput(s, 'bar');
       stake(s, spy2);
@@ -61,7 +61,7 @@ describe('Given a CSP state extension', () => {
       s.mutate('W1', (current, newValue) => current + newValue);
       s.mutate('W2', (current, newValue) => current * newValue);
 
-      sread('R', spy1, { listen: true });
+      listen('R', spy1, { initialCall: true });
       sput('W1', 4);
       sput('W1', 12);
       sput('W2', 3);
@@ -98,15 +98,15 @@ describe('Given a CSP state extension', () => {
       * when no puts the take should resolve with the initial value`, () => {
       const s = state('foo');
       const spy = jest.fn();
-      const listen = jest.fn();
+      const listenSpy = jest.fn();
 
       s.select('R', value => value.toUpperCase());
       s.mutate('W', (a, b) => a + b);
 
-      sread(s, v => listen(`READ=${v}`), { listen: true });
-      sread('R', v => listen(`R=${v}`), { listen: true });
-      sread(s.WRITE, v => listen(`WRITE=${v}`), { listen: true });
-      sread('W', v => listen(`W=${v}`), { listen: true });
+      listen(s, v => listenSpy(`READ=${v}`), { initialCall: true });
+      listen('R', v => listenSpy(`R=${v}`), { initialCall: true });
+      listen(s.WRITE, v => listenSpy(`WRITE=${v}`));
+      listen('W', v => listenSpy(`W=${v}`));
 
       go(function*() {
         spy(yield take(s));
@@ -129,7 +129,7 @@ describe('Given a CSP state extension', () => {
         ['barhello world my friend'],
         ['BARHELLO WORLD MY FRIEND']
       );
-      expect(listen).toBeCalledWithArgs(
+      expect(listenSpy).toBeCalledWithArgs(
         ['READ=foo'],
         ['R=FOO'],
         ['READ=bar'],
@@ -152,7 +152,7 @@ describe('Given a CSP state extension', () => {
         return current + newOne + (yield take(s2));
       });
 
-      sread(s, spy, { listen: true });
+      listen(s, spy, { initialCall: true });
       sput('W', 'zoo');
 
       await delay(10);
@@ -185,7 +185,7 @@ describe('Given a CSP state extension', () => {
         return word;
       });
 
-      sread('IS', spy, { listen: true });
+      listen('IS', spy);
       sput(s, 'bar');
       sput(s, 'zar');
 
@@ -200,7 +200,7 @@ describe('Given a CSP state extension', () => {
       const s2 = state([{ name: 'A' }, { name: 'B' }]);
       const spy = jest.fn();
 
-      sread(ch, spy, { listen: true });
+      listen(ch, spy);
       s1.select(ch);
       s2.select(ch, items => items.map(({ name }) => name).join('-'));
       s2.mutate('add', (items, newItem) => [...items, newItem]);
@@ -217,7 +217,7 @@ describe('Given a CSP state extension', () => {
       const s = state('a');
       const spy = jest.fn();
 
-      sread(s, spy, { listen: true });
+      listen(s, spy, { initialCall: true });
       s.mutate(ch, (a, b) => a + b);
 
       sput(s, 'hello-');
@@ -232,35 +232,6 @@ describe('Given a CSP state extension', () => {
       );
     });
   });
-  describe('when we define a mutation', () => {
-    it('should be possible to react on a mutation from within multiple routines', () => {
-      const current = state('xxx');
-      const spy = jest.fn();
-
-      current.mutate('reset', () => 'foobar');
-
-      go(function*() {
-        yield read('reset');
-        spy(`r1=${yield take(current)}`);
-      });
-      go(function*() {
-        yield read('reset');
-        spy(`r2=${yield take(current)}`);
-      });
-      go(function*() {
-        yield read('reset');
-        spy(`r3=${yield take(current)}`);
-      });
-
-      sput('reset');
-
-      expect(spy).toBeCalledWithArgs(
-        ['r1=foobar'],
-        ['r2=foobar'],
-        ['r3=foobar']
-      );
-    });
-  });
   describe('when we pipe from one channel to two mutation channels', () => {
     it('should mutate both states', () => {
       const s1 = state('foo');
@@ -269,8 +240,8 @@ describe('Given a CSP state extension', () => {
       s1.mutate('X1', (value, payload) => value + payload);
       s2.mutate('X2', (value, payload) => value * payload);
 
-      sread('X', 'X1', { listen: true });
-      sread('X', 'X2', { listen: true });
+      listen('X', 'X1');
+      listen('X', 'X2');
 
       sput('X', 3);
       sput('X', 10);

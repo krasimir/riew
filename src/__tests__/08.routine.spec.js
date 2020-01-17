@@ -12,7 +12,6 @@ import {
   call,
   fork,
   ONE_OF,
-  buffer,
 } from '../index';
 import { delay } from '../__helpers__';
 
@@ -21,9 +20,7 @@ describe('Given a CSP', () => {
     reset();
   });
 
-  // Routines basics
-
-  describe('and we run a routine', () => {
+  describe('when we run a routine', () => {
     it('should put and take from channels', () => {
       const ch = chan();
       const spy = jest.fn();
@@ -184,7 +181,7 @@ describe('Given a CSP', () => {
         const spy = jest.fn();
 
         go(function*() {
-          spy(yield read(ch));
+          spy(yield take(ch));
           return go;
         });
 

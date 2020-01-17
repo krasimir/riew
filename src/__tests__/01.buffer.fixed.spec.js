@@ -8,6 +8,7 @@ import {
   put,
   sput,
   sleep,
+  stake,
   ONE_OF,
 } from '../index';
 import { Test, exercise } from '../__helpers__';
@@ -21,26 +22,6 @@ describe('Given the Fixed buffer', () => {
 
   // put
 
-  describe('when we try to put and there are readers', () => {
-    it(`should fire all the readers and remove those which are not listeners`, () => {
-      const buf = buffer.fixed();
-      const spy = jest.fn();
-
-      buf.take(v => spy('take1', v), { read: true });
-      buf.take(v => spy('take2', v), { read: true, listen: true });
-      buf.take(v => spy('take3', v), { read: true });
-
-      buf.put('foo');
-      buf.put('bar');
-
-      expect(spy).toBeCalledWithArgs(
-        ['take1', 'foo'],
-        ['take2', 'foo'],
-        ['take3', 'foo'],
-        ['take2', 'bar']
-      );
-    });
-  });
   describe('when there are pending takers', () => {
     it(`should
       * register the added value to the buffer
@@ -87,28 +68,26 @@ describe('Given the Fixed buffer', () => {
 
   describe('when we take but the buffer is empty', () => {
     describe('and there are pending puts', () => {
-      describe('and we are not reading', () => {
-        it('should resolve the first pending put and then the take', () => {
-          const buf = buffer.fixed();
-          const spy = jest.fn();
+      it('should resolve the first pending put and then the take', () => {
+        const buf = buffer.fixed();
+        const spy = jest.fn();
 
-          buf.put('foo', v => spy('put', v));
-          expect(buf.puts).toHaveLength(1);
-          buf.take(spy);
+        buf.put('foo', v => spy('put', v));
+        expect(buf.puts).toHaveLength(1);
+        buf.take(spy);
 
-          expect(spy).toBeCalledWithArgs(['put', true], ['foo']);
-        });
+        expect(spy).toBeCalledWithArgs(['put', true], ['foo']);
       });
       describe('and we are reading', () => {
-        it('should create a pending reader', () => {
+        it('should leave the pending put and read undefined', () => {
           const buf = buffer.fixed();
           const spy = jest.fn();
 
           buf.put('foo', v => spy('put', v));
           expect(buf.puts).toHaveLength(1);
           buf.take(spy, { read: true });
-          expect(spy).toBeCalledWithArgs();
-          expect(buf.takes).toHaveLength(1);
+          expect(spy).toBeCalledWithArgs([undefined]);
+          expect(buf.puts).toHaveLength(1);
         });
       });
     });
@@ -162,12 +141,12 @@ describe('Given the Fixed buffer', () => {
 
   // Other
 
-  describe('when we read and listen', () => {
-    it('should resolve the read multiple times without consuming the puts', () => {
+  describe('when we listen', () => {
+    it('should resolve the take multiple times without consuming the puts', () => {
       const buf = buffer.fixed();
       const spy = jest.fn();
 
-      buf.take(v => spy('take', v), { read: true, listen: true });
+      buf.take(v => spy('take', v), { listen: true });
       spy('waiting');
       buf.put('foo', v => spy('put1', v));
       buf.put('bar', v => spy('put2', v));
@@ -178,9 +157,27 @@ describe('Given the Fixed buffer', () => {
         ['take', 'bar']
       );
     });
+    describe('and we have `initialCall` set to true', () => {
+      it('should resolve the take once with the current buffer value', () => {
+        const buf = buffer.fixed();
+        const spy = jest.fn();
+
+        buf.take(v => spy('take', v), { listen: true, initialCall: true });
+        spy('waiting');
+        buf.put('foo', v => spy('put1', v));
+        buf.put('bar', v => spy('put2', v));
+
+        expect(spy).toBeCalledWithArgs(
+          ['take', undefined],
+          ['waiting'],
+          ['take', 'foo'],
+          ['take', 'bar']
+        );
+      });
+    });
   });
   describe('when we read after a put', () => {
-    it('should do nothing', () => {
+    it('should read undefined', () => {
       const buf = buffer.fixed();
       const spy = jest.fn();
 
@@ -188,15 +185,15 @@ describe('Given the Fixed buffer', () => {
       spy('waiting');
       buf.take(v => spy('take', v), { read: true });
 
-      expect(spy).toBeCalledWithArgs(['waiting']);
+      expect(spy).toBeCalledWithArgs(['waiting'], ['take', undefined]);
     });
   });
-  describe('when we have a mix type of readers and takers', () => {
-    it('should do nothing', () => {
+  describe('when we have a mix type of listeners and takers', () => {
+    it('should resolve them properly', () => {
       const buf = buffer.fixed();
       const spy = jest.fn();
 
-      buf.take(v => spy('read', v), { read: true, listen: true });
+      buf.take(v => spy('read', v), { listen: true });
       buf.take(v => spy('take', v));
       spy('waiting');
       buf.put('foo', v => spy('put1', v));
@@ -349,25 +346,25 @@ describe('Given we use take with options and a fixed buffer', () => {
     [
       'buffer size = 0',
       chan(),
-      ['>A', '>B', 'read1=foo', 'read2=bar', '<A', '<B'],
+      ['>B', '<B', '>A', 'read1=undefined', 'read2=undefined', '<A'],
     ],
     [
       'buffer size > 0',
       chan(buffer.fixed(2)),
-      ['>A', '>B', 'read1=foo', true, 'read2=bar', '<A', true, '<B'],
+      ['>B', true, true, '<B', '>A', 'read1=foo', 'read2=foo', '<A'],
     ],
   ])('when we _read_ from a channel via routine (%s)', (_, ch, expected) => {
     it('should just resolve the read but not consume the value and not resolve puts', () => {
       exercise(
         Test(
-          function* A(log) {
-            log(`read1=${(yield read(ch)).toString()}`);
-            log(`read2=${(yield read(ch)).toString()}`);
-          },
           function* B(log) {
             sput(ch, 'foo', log);
-            sput(ch, 'bar', log); // <- never resolve
+            sput(ch, 'bar', log);
             sput(ch, 'zar', log); // <- never resolve
+          },
+          function* A(log) {
+            log(`read1=${yield read(ch)}`);
+            log(`read2=${yield read(ch)}`);
           }
         ),
         expected
@@ -375,52 +372,52 @@ describe('Given we use take with options and a fixed buffer', () => {
     });
   });
   describe.each([
-    ['buffer size = 0', chan(), [['foo']]],
-    ['buffer size > 0', chan(buffer.fixed(2)), [['foo'], [true], [true]]],
+    ['buffer size = 0', chan(), [[undefined]]],
+    ['buffer size > 0', chan(buffer.fixed(2)), [[true], [true], ['foo']]],
   ])(
     'when we _read_ from a channel outside a routine (%s)',
     (_, ch, expected) => {
       it('should just resolve the read but not consume the value and not resolve puts', () => {
         const spy = jest.fn();
 
-        sread(ch, spy);
         sput(ch, 'foo', spy);
         sput(ch, 'bar', spy);
+        sread(ch, spy);
 
         expect(spy).toBeCalledWithArgs(...expected);
       });
     }
   );
   describe('when we _read_ from multiple channels via routine', () => {
-    it('should wait till both channels have something', () => {
-      const ch1 = chan();
-      const ch2 = chan();
+    it('should get the values of both channels', () => {
+      const ch1 = chan(buffer.fixed(1));
+      const ch2 = chan(buffer.fixed(1));
 
       exercise(
         Test(
           function* A(log) {
-            log(`read=${(yield read([ch1, ch2])).toString()}`);
-          },
-          function* B(log) {
             sput(ch1, 'foo', log);
             sput(ch2, 'bar', log);
+          },
+          function* B(log) {
+            log(`read=${(yield read([ch1, ch2])).toString()}`);
           }
         ),
-        ['>A', '>B', 'read=foo,bar', '<A', '<B']
+        ['>A', true, true, '<A', '>B', 'read=foo,bar', '<B']
       );
     });
   });
   describe('when we _read_ from multiple channels outside a routine', () => {
     it('should wait till both channels have something', () => {
-      const ch1 = chan();
-      const ch2 = chan();
+      const ch1 = chan(buffer.fixed(1));
+      const ch2 = chan(buffer.fixed(1));
       const spy = jest.fn();
 
-      sread([ch1, ch2], spy);
       sput(ch1, 'foo', spy);
       sput(ch2, 'bar', spy);
+      stake([ch1, ch2], spy);
 
-      expect(spy).toBeCalledWithArgs([['foo', 'bar']]);
+      expect(spy).toBeCalledWithArgs([true], [true], [['foo', 'bar']]);
     });
   });
   describe.each([
@@ -431,10 +428,10 @@ describe('Given we use take with options and a fixed buffer', () => {
       [['foo'], [true], ['bar'], [true]],
     ],
   ])('when we listen (%s)', (_, ch, expected) => {
-    it('should wait till both channels have something', () => {
+    it('should wait till the channel has something', () => {
       const spy = jest.fn();
 
-      sread(ch, spy, { listen: true });
+      stake(ch, spy, { listen: true });
       sput(ch, 'foo', spy);
       sput(ch, 'bar', spy);
 
@@ -447,7 +444,7 @@ describe('Given we use take with options and a fixed buffer', () => {
       const ch2 = chan();
       const spy = jest.fn();
 
-      sread([ch1, ch2], spy, { listen: true });
+      stake([ch1, ch2], spy, { listen: true });
       sput(ch1, 'foo', spy);
       sput(ch2, 'bar', spy);
       sput(ch2, 'xxx', spy);
@@ -461,36 +458,12 @@ describe('Given we use take with options and a fixed buffer', () => {
       const ch2 = chan();
       const spy = jest.fn();
 
-      sread([ch1, ch2], spy, { listen: true, strategy: ONE_OF });
+      stake([ch1, ch2], spy, { listen: true, strategy: ONE_OF });
       sput(ch1, 'foo', spy);
       sput(ch2, 'bar', spy);
       sput(ch2, 'xxx', spy);
 
       expect(spy).toBeCalledWithArgs(['foo', 0], ['bar', 1], ['xxx', 1]);
-    });
-  });
-  describe('when we read after we have puts to the channel', () => {
-    it('should do nothing', () => {
-      const ch = chan();
-      const spy = jest.fn();
-
-      sput(ch, 'foo', () => spy('first put'));
-      sput(ch, 'bar', () => spy('second put'));
-      sread(ch, spy);
-
-      expect(spy).toBeCalledWithArgs();
-    });
-  });
-  describe('when we read after we have puts to the channel but with a channel with size > 0', () => {
-    it('should resolve the read with the first put item', () => {
-      const ch = chan(buffer.fixed(2));
-      const spy = jest.fn();
-
-      sput(ch, 'foo', () => spy('first put'));
-      sput(ch, 'bar', () => spy('second put'));
-      sread(ch, spy);
-
-      expect(spy).toBeCalledWithArgs(['first put'], ['second put'], ['foo']);
     });
   });
 });
