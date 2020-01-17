@@ -22,7 +22,7 @@ export function normalizeTo(to) {
     return v => sput(to, v);
   }
   if (typeof to === 'string') {
-    const ch = chan(to, buffer.memory());
+    const ch = chan(to, buffer.sliding());
     return v => sput(ch, v);
   }
   throw new Error(

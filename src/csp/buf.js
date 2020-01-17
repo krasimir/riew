@@ -2,10 +2,10 @@
 import { normalizeOptions } from './utils';
 import { logger } from '../index';
 
-const DEFAULT_OPTIONS = { dropping: false, sliding: false, memory: false };
+const DEFAULT_OPTIONS = { dropping: false, sliding: false };
 const NOOP = (v, cb) => cb();
 
-function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
+function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
   const api = {
     value: [],
     puts: [],
@@ -19,7 +19,6 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
     parent: null,
     dropping,
     sliding,
-    memory,
   };
 
   function runHook(type, item, cb) {
@@ -97,14 +96,6 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
     readers.forEach(reader => api.consumeTake(reader, item));
 
     // resolving takers
-    if (memory) {
-      api.value = [item];
-      callback(true);
-      if (takers.length > 0) {
-        api.consumeTake(takers[0], item);
-      }
-      return;
-    }
     if (takers.length > 0) {
       api.consumeTake(takers[0], item);
       callback(true);
@@ -148,7 +139,7 @@ function CSPBuffer(size = 0, { dropping, sliding, memory } = DEFAULT_OPTIONS) {
       }
       return subscribe();
     }
-    if (memory || options.read) {
+    if (options.read) {
       callback(api.value[0]);
       return;
     }
@@ -220,7 +211,6 @@ const buffer = {
     }
     return CSPBuffer(size, { sliding: true });
   },
-  memory: () => CSPBuffer(0, { memory: true }),
 };
 
 export default buffer;

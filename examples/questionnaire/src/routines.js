@@ -1,4 +1,4 @@
-import { take, put, read, go } from 'riew';
+import { take, put, go } from 'riew';
 import {
   RESET_ERROR,
   SET_ERROR,
@@ -16,14 +16,14 @@ export const nextStepRoutine = function* nextStepRoutine({ render }) {
   if (question.answer === null) {
     yield put(SET_ERROR, `Ops, "${question.text}" has no answer.`);
   } else if (yield take(IS_COMPLETED)) {
-    render({ completed: true });  
+    render({ completed: true });
   } else {
     yield put(NEXT_STEP);
   }
   return go;
 };
 export const startOverRoutine = function* startOverRoutine({ render }) {
-  yield read(START_OVER);
+  yield take(START_OVER);
   render({ completed: false });
-  return go;
+  // return go;
 };

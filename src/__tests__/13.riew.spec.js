@@ -14,6 +14,7 @@ import {
   sput,
   chan,
   go,
+  buffer,
 } from '../index';
 
 function expectRiew(callback, delayInterval = 0) {
@@ -580,6 +581,8 @@ describe('Given the `riew` factory function', () => {
       const s1 = state(['a', 'b', 'c', 'd']);
       const s2 = state(1);
 
+      chan('current', buffer.sliding());
+
       s1.mutate('WWW', function*(arr) {
         return arr.map((value, i) => {
           if (i === 2) {
@@ -598,11 +601,10 @@ describe('Given the `riew` factory function', () => {
           initialCall: true,
         }
       );
-
       const r = riew(view).with({ data: 'current' });
 
       r.mount();
-      await delay();
+      await delay(2);
       sput(s2, 2);
       await delay();
       sput('WWW');
@@ -630,7 +632,7 @@ describe('Given the `riew` factory function', () => {
     it('should recognize it and subscribe to it', async () => {
       const view = jest.fn();
       const routine = function*({ render }) {
-        const ch = chan();
+        const ch = chan(buffer.sliding());
         render({ data: ch });
         yield put(ch, 'foo');
         yield sleep(2);

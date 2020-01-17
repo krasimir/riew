@@ -10,7 +10,7 @@ var _utils = require('./utils');
 var _index = require('../index');
 
 /* eslint-disable no-param-reassign */
-var DEFAULT_OPTIONS = { dropping: false, sliding: false, memory: false };
+var DEFAULT_OPTIONS = { dropping: false, sliding: false };
 var NOOP = function NOOP(v, cb) {
   return cb();
 };
@@ -20,8 +20,7 @@ function CSPBuffer() {
 
   var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_OPTIONS,
       dropping = _ref.dropping,
-      sliding = _ref.sliding,
-      memory = _ref.memory;
+      sliding = _ref.sliding;
 
   var api = {
     value: [],
@@ -35,8 +34,7 @@ function CSPBuffer() {
     },
     parent: null,
     dropping: dropping,
-    sliding: sliding,
-    memory: memory
+    sliding: sliding
   };
 
   function runHook(type, item, cb) {
@@ -142,14 +140,6 @@ function CSPBuffer() {
     });
 
     // resolving takers
-    if (memory) {
-      api.value = [item];
-      _callback(true);
-      if (takers.length > 0) {
-        api.consumeTake(takers[0], item);
-      }
-      return;
-    }
     if (takers.length > 0) {
       api.consumeTake(takers[0], item);
       _callback(true);
@@ -195,7 +185,7 @@ function CSPBuffer() {
       }
       return subscribe();
     }
-    if (memory || options.read) {
+    if (options.read) {
       callback(api.value[0]);
       return;
     }
@@ -263,9 +253,6 @@ var buffer = {
       throw new Error('The sliding buffer should have at least size of one.');
     }
     return CSPBuffer(size, { sliding: true });
-  },
-  memory: function memory() {
-    return CSPBuffer(0, { memory: true });
   }
 };
 
@@ -864,7 +851,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.memory());
+      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.sliding());
       ch['@statereadchannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
@@ -879,7 +866,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.memory());
+      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.sliding());
       ch['@statewritechannel'] = true;
       var writer = { ch: ch };
       writeChannels.push(writer);
@@ -981,7 +968,7 @@ function normalizeTo(to) {
     };
   }
   if (typeof to === 'string') {
-    var ch = (0, _index.chan)(to, _index.buffer.memory());
+    var ch = (0, _index.chan)(to, _index.buffer.sliding());
     return function (v) {
       return (0, _index.sput)(ch, v);
     };
@@ -1705,8 +1692,8 @@ function namedRiew(name, viewFunc) {
   var VIEW_CHANNEL = (0, _utils.getId)(name + '_view');
   var PROPS_CHANNEL = (0, _utils.getId)(name + '_props');
 
-  api.children.push((0, _index.chan)(VIEW_CHANNEL, _index.buffer.memory()));
-  api.children.push((0, _index.chan)(PROPS_CHANNEL, _index.buffer.memory()));
+  api.children.push((0, _index.chan)(VIEW_CHANNEL, _index.buffer.sliding()));
+  api.children.push((0, _index.chan)(PROPS_CHANNEL, _index.buffer.sliding()));
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
@@ -1714,16 +1701,12 @@ function namedRiew(name, viewFunc) {
         subscribe(value[key], function (v) {
           (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
-        (0, _index.stake)(value[key], function (v) {
-          return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
-        });
+        // stake(value[key], v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if ((0, _index.isState)(value[key])) {
         subscribe(value[key].READ, function (v) {
           return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
-        (0, _index.stake)(value[key].READ, function (v) {
-          return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
-        });
+        // stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else {
         obj[key] = value[key];
       }

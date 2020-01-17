@@ -3979,10 +3979,10 @@ ret@~0.1.10:
   resolved "https://registry.yarnpkg.com/ret/-/ret-0.1.15.tgz#b8a4825d5bdb1fc3f6f53c2bc33f81388681c7bc"
   integrity sha512-TTlYpa+OL+vMMNG24xSlQGEJ3B/RzEfUlLct7b5G/ytav+wPrplCpVMFuwzXbkecJrb6IYo1iFb0S9v37754mg==
 
-riew@2.1.1:
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/riew/-/riew-2.1.1.tgz#f01258ffd8db141149bee68b688f8cc33e37699a"
-  integrity sha512-scH/OBtX+rV20eCjDcdLqbdxLq9I0ygWUJXaTecxNkXa3JiOtlfCLy3VeaaZZRMhbK8gEqHcRb8qkJ826Bwwiw==
+riew@3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/riew/-/riew-3.0.0.tgz#2b63bc865ab87e1f79a52f5aabaa3876a4a8ca01"
+  integrity sha512-MTiRkjo/7CKLiMzNAHb4yQWeJhCdOwJRXEjDKPRHw9Q6vQR4qwBUQncl29yDsUDpOmGagjiMHjJD7faPYihlxA==
 
 rimraf@^2.2.8, rimraf@^2.5.4, rimraf@^2.6.1, rimraf@^2.6.2, rimraf@^2.6.3:
   version "2.6.3"

@@ -87,8 +87,8 @@ export function namedRiew(name, viewFunc, ...routines) {
   const VIEW_CHANNEL = getId(`${name}_view`);
   const PROPS_CHANNEL = getId(`${name}_props`);
 
-  api.children.push(Channel(VIEW_CHANNEL, buffer.memory()));
-  api.children.push(Channel(PROPS_CHANNEL, buffer.memory()));
+  api.children.push(Channel(VIEW_CHANNEL, buffer.sliding()));
+  api.children.push(Channel(PROPS_CHANNEL, buffer.sliding()));
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
@@ -96,10 +96,10 @@ export function namedRiew(name, viewFunc, ...routines) {
         subscribe(value[key], v => {
           sput(VIEW_CHANNEL, { [key]: v });
         });
-        stake(value[key], v => sput(VIEW_CHANNEL, { [key]: v }));
+        // stake(value[key], v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if (isState(value[key])) {
         subscribe(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
-        stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
+        // stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else {
         obj[key] = value[key];
       }

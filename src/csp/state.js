@@ -50,7 +50,7 @@ export default function state(...args) {
     READ: READ_CHANNEL,
     WRITE: WRITE_CHANNEL,
     select(c, selector = v => v, onError = null) {
-      const ch = isChannel(c) ? c : chan(c, buffer.memory());
+      const ch = isChannel(c) ? c : chan(c, buffer.sliding());
       ch['@statereadchannel'] = true;
       const reader = { ch, selector, onError };
       readChannels.push(reader);
@@ -60,7 +60,7 @@ export default function state(...args) {
       return this;
     },
     mutate(c, reducer = (_, v) => v, onError = null) {
-      const ch = isChannel(c) ? c : chan(c, buffer.memory());
+      const ch = isChannel(c) ? c : chan(c, buffer.sliding());
       ch['@statewritechannel'] = true;
       const writer = { ch };
       writeChannels.push(writer);

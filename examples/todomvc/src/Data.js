@@ -1,5 +1,5 @@
 /* eslint-disable no-shadow */
-import { state, register, sread } from 'riew';
+import { state, register, listen } from 'riew';
 import {
   TOGGLE_TODO,
   NEW_TODO,
@@ -68,4 +68,4 @@ todos.mutate(FILTER_CLEAR_COMPLETED, todos =>
 
 register('todos', todos);
 
-sread(todos, saveTodosData, { listen: true });
+listen(todos, saveTodosData);
