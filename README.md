@@ -107,17 +107,18 @@ As for the routines, we may `yield` all sort of things. We may `put`, `take`, `s
 The _riew_ is a combination between _view_ function and routine functions. It's materialized into an object that has `mount`, `update` and `unmount` methods. The routines get started when we mount the riew. They receive a `render` method so we can send data to the view function.
 
 ```js
-const view = function (props) {
+const ch = chan();
+const view = function(props) {
   console.log(props);
-}
-function * A() {
-  const name = yield take('MY_CHANNEL');
-  yield put('MY_CHANNEL', `Hey ${ name }, how are you?`);
-}
-function * B({ render }) {
-  yield put('MY_CHANNEL', 'Steve');
-  render({ message: yield take('MY_CHANNEL') });
 };
+function* A() {
+  const name = yield take(ch);
+  yield put(ch, `Hey ${name}, how are you?`);
+}
+function* B({ render }) {
+  yield put(ch, 'Steve');
+  render({ message: yield take(ch) });
+}
 
 const r = riew(view, A, B);
 
@@ -145,54 +146,56 @@ r.mount();
 
 The result here is `{ name: 'Martin' }`.
 
-_(There is a [React extension](https://github.com/krasimir/riew#react) bundled within the library so if you use React you'll probably never call `mount`, `update` or `unmount` manually. This is done by the library.)_
+_(There is a [React extension](https://github.com/krasimir/riew#react) bundled within the library so if you use React you'll probably never call `mount`, `update` and `unmount` manually. This is done by the library.)_
 
 ### Application state
 
-In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) paper there is no concept of a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed, changed and it is always available. The channels can keep values but they are consumed at some point. Or in other words taken and don't exists as such in the channels anymore.
+In the original [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) paper there is no concept of a _state_. At least not in the same way as we use it in JavaScript today. For us _state_ is a value that persist across time. It can be accessed, changed and it is always available. The channels can keep values but they are consumed at some point. Or in other words _taken_ and don't exists as such in the channels anymore.
 
-Riew brings the idea of a state by defining a value that is outside the channels. It can be however accessed and modified by using channels. Imagine the state as a black box with _value_ and two channels - one for reading and one for writing. Riew extends this idea by allowing the definition of many read channels called _selectors_ and many write channels called _mutators_. Let's see an example:
+Riew brings the idea of a state by defining a value that is outside the channels. It can be however accessed and modified by using channels. Imagine the state as a black box with a value and channels for writing and reading that value. Riew follows this idea by allowing the definition of multiple read channels called _selectors_ and multiple write channels called _mutators_. Let's see an example:
 
 ```js
 // A state which value is an empty array.
 const users = state([]);
 
 // Channel for updating the state value.
-users.mutate('ADD', function reducer(currentUsers, newUser) {
-  return [ ...currentUsers, newUser ];
+const add = users.mutate(function reducer(currentUsers, newUser) {
+  return [...currentUsers, newUser];
 });
 // Channel for reading the state value.
-users.select('GET_USERS', function mapping(users) {
+const getUsers = users.select(function mapping(users) {
   return users.map(({ name }) => name).join(', ');
-})
+});
 
-go(function * A() {
-  yield put('ADD', { name: 'Steve', age: 24 });
-  yield put('ADD', { name: 'Ana', age: 25 });
-  yield put('ADD', { name: 'Peter', age: 22 });
-  console.log(yield take('GET_USERS')); // Steve, Ana, Peter
+go(function* A() {
+  yield put(add, { name: 'Steve', age: 24 });
+  yield put(add, { name: 'Ana', age: 25 });
+  yield put(add, { name: 'Peter', age: 22 });
+  console.log(yield take(getUsers)); // Steve, Ana, Peter
 });
 ```
 
-The _mutator_ (`ADD`) accepts a channel (instance or ID) and a `reducer` function. That function is called against the current state value together with the item which is put into the channel. The _selector_ (`GET_USERS`) defines a channel which we can always read from and the value is whatever the `mapping` function returns. At the end the routine `A` runs a couple of `put`s that add users.
+The `mutate` method of the state accepts a `reducer` function and returns a channel. Let's say that we put "foo" in the channel. The reducer will be called with the current state value followed by "foo" string.
+
+The `select` method returns a channel which we can read from and the value is whatever the `mapping` function returns. That function receives the current state value and returns it. Or maybe just a portion of it. Or perhaps a different representation of the data. Like in our case we return a comma separated list of user names.
 
 A helpful pattern is to use a routine as a mutator. And because the routine may be asynchronous you may block until the mutation is done. Consider the trivial case where we have to get data from remote endpoint and show it to the user.
 
 ```js
 const cat = state(null);
-cat.mutate('KITTY_PLEASE', function * () {
+const getKitty = cat.mutate(function * () {
   const { file } = yield fetch('https://aws.random.cat/meow').then(res => res.json());
   return file;
 });
 
 go(function * A() {
-  console.log('I want a kitty!');
-  yield put('KITTY_PLEASE');
+  console.log('I want a kitty.');
+  yield put(getKitty);
   console.log(`Here we go ${ yield take(cat) }`);
 });
 ```
 
-The routine `A` is blocked on the put to `KITTY_PLEASE`. Our mutator is picked up and makes a request to `https://aws.random.cat/meow`. Once it finishes it mutates the state and replaces `null` with a URL. Then our routine is resumed and we can print that URL.
+The routine `A` is blocked on the put to `put(getKitty)`. Our mutator is picked up and makes a request to `https://aws.random.cat/meow`. Once it finishes it mutates the state and replaces `null` with a URL. Then our routine is resumed and we can print that URL.
 
 ```js
 > I want a kitty.

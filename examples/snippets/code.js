@@ -25,13 +25,21 @@ import {
   use,
 } from 'riew';
 
-const ch = chan();
+// A state which value is an empty array.
+const users = state([]);
+
+// Channel for updating the state value.
+const add = users.mutate(function reducer(currentUsers, newUser) {
+  return [...currentUsers, newUser];
+});
+// Channel for reading the state value.
+const getUsers = users.select(function mapping(users) {
+  return users.map(({ name }) => name).join(', ');
+});
 
 go(function* A() {
-  const name = yield take(ch);
-  yield put(ch, `Hey ${name}, how are you?`);
-});
-go(function* B() {
-  yield put(ch, 'Steve');
-  console.log(yield take(ch));
+  yield put(add, { name: 'Steve', age: 24 });
+  yield put(add, { name: 'Ana', age: 25 });
+  yield put(add, { name: 'Peter', age: 22 });
+  console.log(yield take(getUsers)); // Steve, Ana, Peter
 });
