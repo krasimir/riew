@@ -25,19 +25,13 @@ import {
   use,
 } from 'riew';
 
-const s = state('something');
+const ch = chan();
 
-s.mutate('FOO', v => v);
-
-go(function*() {
-  console.log('routine');
-  const a = yield read('FOO');
-  console.log(a);
-  return go;
+go(function* A() {
+  const name = yield take(ch);
+  yield put(ch, `Hey ${name}, how are you?`);
 });
-
-sput('FOO', '112');
-
-setTimeout(() => {
-  console.log('END');
-}, 5000);
+go(function* B() {
+  yield put(ch, 'Steve');
+  console.log(yield take(ch));
+});
