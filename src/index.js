@@ -48,8 +48,9 @@ export const CHANNELS = {
 
 export const buffer = b;
 export const chan = c;
-export const sliding = id => chan(id, buffer.sliding());
-export const dropping = id => chan(id, buffer.dropping());
+export const fixed = (id, size = 0) => chan(id, buffer.fixed(size));
+export const sliding = (id, size = 1) => chan(id, buffer.sliding(size));
+export const dropping = (id, size = 1) => chan(id, buffer.dropping(size));
 export const state = s;
 
 export * from './riew';
