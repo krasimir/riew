@@ -3,13 +3,7 @@ import React, { Fragment } from 'react';
 import riew from 'riew/react';
 import { sput } from 'riew';
 import { nextStepRoutine, startOverRoutine, NEXT_STEP_CLICK } from './routines';
-import {
-  CURRENT_QUESTION,
-  ANSWER,
-  GET_ERROR,
-  GET_QUESTIONS,
-  START_OVER,
-} from './state';
+import { CURRENT_QUESTION, ANSWER, GET_QUESTIONS, START_OVER } from './state';
 
 export const Question = riew(function Question({
   step: { type, text },
@@ -58,7 +52,7 @@ export const Question = riew(function Question({
 
 export const Error = riew(function Error({ error }) {
   return error !== null ? <div className="error">Error: {error}</div> : null;
-}).with({ error: GET_ERROR });
+}).with('error');
 
 export const App = riew(
   function App({ completed, questions, startOver }) {

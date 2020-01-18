@@ -299,6 +299,9 @@ function chan(id, buff) {
   api.afterPut = buff.afterPut;
   api.beforeTake = buff.beforeTake;
   api.afterTake = buff.afterTake;
+  api.exportAs = function (key) {
+    return (0, _index.register)(key, api);
+  };
   _index.grid.add(api);
   _index.logger.log(api, 'CHANNEL_CREATED');
 
@@ -963,18 +966,10 @@ function Grid() {
 },{}],7:[function(require,module,exports){
 'use strict';
 
-var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.stop = exports.sleep = exports.go = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.verifyChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
-
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
 
 var _riew = require('./riew');
 
@@ -1093,9 +1088,6 @@ var use = exports.use = function use(name) {
   return _registry2.default.produce.apply(_registry2.default, [name].concat(args));
 };
 var register = exports.register = function register(name, whatever) {
-  if ((typeof whatever === 'undefined' ? 'undefined' : _typeof(whatever)) === 'object' || typeof whatever === 'function') {
-    whatever.__registered = name;
-  }
   _registry2.default.defineProduct(name, function () {
     return whatever;
   });
@@ -1473,19 +1465,19 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 /* eslint-disable no-use-before-define */
-function Harvester() {
+function Registry() {
   var api = {};
   var products = {};
 
   api.defineProduct = function (type, func) {
     if (products[type]) {
-      throw new Error("A product with type \"" + type + "\" already exists.");
+      throw new Error("A resource with type \"" + type + "\" already exists.");
     }
     products[type] = func;
   };
   api.undefineProduct = function (type) {
     if (!products[type]) {
-      throw new Error("There is no product with type \"" + type + "\" to be removed.");
+      throw new Error("There is no resource with type \"" + type + "\" to be removed.");
     }
     delete products[type];
   };
@@ -1497,7 +1489,7 @@ function Harvester() {
     }
 
     if (!products[type]) {
-      throw new Error("There is no product with type \"" + type + "\".");
+      throw new Error("There is no resource with type \"" + type + "\".");
     }
     return (_products = products)[type].apply(_products, args);
   };
@@ -1513,9 +1505,9 @@ function Harvester() {
   return api;
 }
 
-var h = Harvester();
+var r = Registry();
 
-exports.default = h;
+exports.default = r;
 
 },{}],11:[function(require,module,exports){
 'use strict';

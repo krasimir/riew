@@ -11,7 +11,7 @@ describe('Given the registry', () => {
 
       expect(use('foo')()).toBe(42);
       expect(() => register('foo', 'bar')).toThrowError(
-        'A product with type "foo" already exists.'
+        'A resource with type "foo" already exists.'
       );
       expect(fff()).toBe(42);
     });

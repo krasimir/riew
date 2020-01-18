@@ -1,6 +1,6 @@
 /* eslint-disable no-shadow */
 
-import { state, read, listen, sput, sliding, fixed } from 'riew';
+import { state, read, listen, sput, sliding, fixed, register } from 'riew';
 
 const initialValue = [
   {
@@ -42,8 +42,6 @@ const RESET_QUESTIONS = questions.mutate(questions =>
 export const NEXT_STEP = currentStep.mutate(currentIndex => currentIndex + 1);
 const RESET_CURRENT_STEP = currentStep.mutate(() => 0);
 export const RESET_ERROR = error.mutate(() => null);
-export const SET_ERROR = error.mutate();
-export const GET_ERROR = error.select();
 export const CURRENT_QUESTION = sliding();
 export const IS_COMPLETED = sliding();
 export const START_OVER = fixed();
@@ -62,3 +60,5 @@ listen(START_OVER, () => {
   sput(RESET_CURRENT_STEP);
   sput(RESET_ERROR);
 });
+
+register('error', error);

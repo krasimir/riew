@@ -1,5 +1,5 @@
 import { getId } from '../utils';
-import { CHANNELS, logger, grid, OPEN } from '../index';
+import { CHANNELS, logger, grid, OPEN, register } from '../index';
 import buffer from './buf';
 
 export default function chan(id, buff) {
@@ -30,6 +30,7 @@ export default function chan(id, buff) {
   api.afterPut = buff.afterPut;
   api.beforeTake = buff.beforeTake;
   api.afterTake = buff.afterTake;
+  api.exportAs = key => register(key, api);
   grid.add(api);
   logger.log(api, 'CHANNEL_CREATED');
 

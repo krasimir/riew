@@ -15,6 +15,8 @@ import {
   verifyChannel,
   fixed,
   sliding,
+  use,
+  riew,
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -395,6 +397,47 @@ describe('Given a CSP', () => {
       go.with({ answer: 42 })(B);
 
       expect(spy).toBeCalledWithArgs(['a', 'b', 'dark', 'bar'], [42]);
+    });
+  });
+
+  // exporting
+
+  describe('when we export a channel', () => {
+    it('should be registered into the registry', () => {
+      const ch = sliding().exportAs('key');
+      const spy = jest.fn();
+
+      sput(ch, 'foo', spy);
+      stake(ch, spy);
+      sput(use('key'), 'bar', spy);
+      stake(use('key'), spy);
+      expect(spy).toBeCalledWithArgs([true], ['foo'], [true], ['bar']);
+    });
+    describe('and we have a riew', () => {
+      it('should be possible to just inject the channel by name', async () => {
+        const ch = sliding().exportAs('xxx');
+        sput(ch, 'foo');
+        const viewSpy = jest.fn();
+        const r = riew(viewSpy, function*({ xxx }) {
+          yield sleep(5);
+          yield put(xxx, 'bar');
+        }).with('xxx');
+
+        r.mount();
+        await delay(10);
+        expect(viewSpy).toBeCalledWithArgs(
+          [
+            {
+              xxx: 'foo',
+            },
+          ],
+          [
+            {
+              xxx: 'bar',
+            },
+          ]
+        );
+      });
     });
   });
 });

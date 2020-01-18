@@ -62,9 +62,6 @@ export const react = {
 };
 export const use = (name, ...args) => R.produce(name, ...args);
 export const register = (name, whatever) => {
-  if (typeof whatever === 'object' || typeof whatever === 'function') {
-    whatever.__registered = name;
-  }
   R.defineProduct(name, () => whatever);
   return whatever;
 };
