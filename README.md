@@ -206,37 +206,37 @@ Further more we can handle the request error inside the mutator and put somethin
 
 ### PubSub
 
-The [PubSub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) pattern is widely used in JavaScript. There are tons of libraries that are using it and it's de-facto a standard these days. I (the author of this library) however think that this pattern doesn't play well with the [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) concepts. I've made couple of tests and tried implementing it with pure CSP patterns but it simply doesn't work as expected. That's because in the PubSub pattern we have a broadcasting system. A system in which the dispatcher of the message doesn't care what happens with the dispatched message. The act of message sending is not a blocking operation. In CSP is quite opposite. When we put something into the channel we are blocked until someone takes it. Also in PubSub we have one-to-many relationship and all the subscribers receive the same message. While in CSP if we hook multiple takers to a channel they'll all receive different messages because once the message is consumed it disappears from the channel and the next taker will read the next message. CSP and PubSub are kind of similar concepts. They both follow the push model and could be used to write code in a reactive way. However, they act differently.
+The [PubSub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) pattern is widely used in JavaScript. There are tons of libraries that are using it and it's a de-facto standard these days. I (the author of this library) however think that this pattern doesn't play well with the [CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes) concepts. I've made couple of tests and tried implementing it with pure CSP concepts but it simply doesn't work as expected. That's because in the PubSub pattern we have a broadcasting system. A system in which the dispatcher of the message doesn't care what happens with the dispatched message. The act of message sending is not a blocking operation. In CSP is quite opposite. When we put something into the channel we are blocked until someone takes it. Also in PubSub we have one-to-many relationship and all the subscribers receive the same message. While in CSP if we hook multiple takers to a channel they'll all receive different messages because once the message is consumed it disappears from the channel and the next taker will read the next message. CSP and PubSub are kind of similar concepts. They both follow the push model and could be used to write code in a reactive way. However, they act differently.
 
 Riew offers PubSub pattern capabilities. They are however added next to the core CSP processes and the developer needs to make a clear separation between the two. Consider the following example:
 
 ```js
-const ch = chan();
-
-sread(ch, value => {
-  console.log(`Value: ${ value }`);
+go(function* A() {
+  console.log(`Value: ${yield read(ch)}`);
 });
-go(function * A() {
+go(function* B() {
   yield put(ch, 'Foo');
   console.log('Bar');
 });
 ```
 
-The result of this snippet is only `"Value: Foo"`. The [sread](https://github.com/krasimir/riew#sread) (standalone _read_) reads the value but doesn't consume it from the channel. The routine `A` is still blocked because there is no [taker](https://github.com/krasimir/riew#take) for the channel.
+The result of this snippet is only `"Value: undefined"`. The [read](https://github.com/krasimir/riew#read) function only **reads** the value but doesn't consume it from the channel. It also resoloves with whatever the channel contains at this exact moment. Above we are getting `undefined` because there is nothing in the channel yet. Also routine `B` stays blocked because there is no [taker](https://github.com/krasimir/riew#take) for the `ch` channel.
 
-By default `sread` are one-shot operation. This means that the passed callback will be fired only once when a new value arrives into the channel. However, we may use the `listen` option and effectively subscribe for values passed to the channel.
+By default `read` (and its standalone version `sread`) is one-shot operation. This means that we aread and move forward. However, we may use the `listen` method and effectively subscribe for values passed to the channel.
 
 ```js
 const ch = chan();
 
-sread(ch, value => {
-  console.log(`Value: ${ value }`);
-}, { listen: true });
+listen(ch, value => {
+  console.log(`Value: ${value}`);
+});
 
 sput(ch, 'foo'); // Value: foo
 sput(ch, 'bar'); // Value: bar
 sput(ch, 'moo'); // Value: moo
 ```
+
+So, there is a way to use the PubSub pattern. It's just the difference between _reading_ and _taking_.
 
 ## API
 
