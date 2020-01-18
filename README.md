@@ -57,6 +57,7 @@
   - [sclose](#sclose)
   - [read](#read)
   - [sread](#sread)
+  - [listen](#listen)
   - [unsubscribing](#unsubscribing)
   - [unreadAll](#unreadall)
   - [call](#call)
@@ -768,38 +769,62 @@ If we run this code we'll see `"undefined"` followed by `"done"`. The second put
 Same as [read](#read) but it's meant to be used outside of a routine. 
 
 * `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option below.
-* `to` (`Channel`, `ID` of a channel, or a function, required) - the values from the `sourceChannels` are piped to the passed channel. If a function, that function is called with the values.
+* `to` (`Channel`, or a function, required) - the values from the `sourceChannels` are piped to the passed channel. If a function, that function is called with the values.
 * `options` (`Object`, optional) - additional options for the reading
   * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not. If set to `ONE_OF` it will resolve the read as soon as some of the sources receives a value.
 
 Example:
+
+```js
+const ch = sliding();
+
+sput(ch, 'foo');
+sread(ch, value => {
+  console.log(value); // foo
+});
+stake(ch, value => {
+  console.log(value);
+});
+```
+
+`stake` is successfully resolved because `sread` is not consuming the value of the `ch` channel.
+
+### listen
+
+> `listen(sourceChannels, to, options)`
+
+Meant to be used outside of a routine. It subscribes for `sourceChannels` and runs the `to` function (or pushes to `to` channel) every time when there is an input.
+
+* `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option below.
+* `to` (`Channel`, or a function, required) - the values from the `sourceChannels` are piped to the passed channel. If a function, that function is called with the values.
+* `options` (`Object`, optional) - additional options for the reading
+  * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not. If set to `ONE_OF` it will resolve the read as soon as some of the sources receives a value.
+  * `initialCall` (`Boolean`, optional, `false` by default) - by default the subscription doesn't apply until there is a new value to the `sourceChannels`. If we set this to `true` we will get one initial call.
 
 The most basic example is when we want to get values pushed to a channel into a regular JavaScript function.
 
 ```js
 const ch = chan();
 
-sread(ch, value => {
+listen(ch, value => {
   console.log(value);
-}, { listen: true });
-
-go(function * A() {
-  yield put(ch, 'foo');
-  yield put(ch, 'bar'); // <-- never happens
 });
+
+sput(ch, 'foo');
+sput(ch, 'bar');
 ```
 
-The second `put` of the `A` routine doesn't happen because the first one is pausing the routine. In the console we only see `"foo"`.
+The result is `foo` followed by `bar`.
 
-We can read from more then one channel. `sread` waits by default to all of the channels to be filled with values. Then it calls the callback.
+We can listen to more then one channel. By default `listen` waits by default to all of the channels to be filled with values. Then it calls the callback.
 
 ```js
 const ch1 = chan();
 const ch2 = chan();
 
-sread([ch1, ch2], function subscriber(value) {
+listen([ch1, ch2], function subscriber(value) {
   console.log(value);
-}, { listen: true });
+});
 
 sput(ch1, 'foo');
 sput(ch2, 'bar');
@@ -809,22 +834,22 @@ sput(ch1, 'zoo');
 
 The first `sput` doesn't trigger the `subscriber`. After the second one we get `["foo", "bar"]` as a value. Then we get `["foo", "moo"]` and at the end `["zoo", "moo"]`. The third and the fourth `sput` trigger the subscriber because then both channels have received values. Also notice that if we have more then one channel the value in the subscriber comes as an array.
 
-Another interesting use case for `sread` is when we use a `ONE_OF` strategy and receive the input from each of the source channels:
+Another interesting use case for `listen` is when we use a `ONE_OF` strategy and receive the input from each of the source channels:
 
 ```js
 const chA = chan();
 const chB = chan();
 
-sread([chA, chB], v => {
-  console.log(v);
-}, { strategy: ONE_OF, listen: true });
+listen([chA, chB], (v, idx) => {
+  console.log(v, idx);
+}, { strategy: ONE_OF });
 
 sput(chA, 'foo');
 sput(chB, 'bar');
 sput(chA, 'moo');
 ```
 
-The result of this script will be `"foo"` followed by `"bar"` followed by `"moo"`. It's because the library is not waiting for all the channels to have values but triggers the callback immediately when it receives a value.
+The result of this script will be `"foo 0"` followed by `"bar 1"` followed by `"moo 0"`. It's because the library is not waiting for all the channels to have values but triggers the callback immediately when it receives a value.
 
 ### unsubscribing
 

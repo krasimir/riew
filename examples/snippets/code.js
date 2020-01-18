@@ -24,15 +24,20 @@ import {
   merge,
   use,
   listen,
+  sliding,
 } from 'riew';
 
-const ch = chan();
+const chA = chan();
+const chB = chan();
 
-sread(ch, value => {
-  console.log(value);
-});
+listen(
+  [chA, chB],
+  (v, idx) => {
+    console.log(v, idx);
+  },
+  { strategy: ONE_OF }
+);
 
-go(function* A() {
-  yield put(ch, 'foo');
-  yield put(ch, 'bar'); // <-- never happens
-});
+sput(chA, 'foo');
+sput(chB, 'bar');
+sput(chA, 'moo');
