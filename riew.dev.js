@@ -12,7 +12,7 @@ var _index = require('../index');
 /* eslint-disable no-param-reassign */
 var DEFAULT_OPTIONS = { dropping: false, sliding: false };
 var NOOP = function NOOP(v, cb) {
-  return cb();
+  return cb(v);
 };
 
 function CSPBuffer() {
@@ -27,41 +27,27 @@ function CSPBuffer() {
     puts: [],
     takes: [],
     hooks: {
-      beforePut: [NOOP],
-      afterPut: [NOOP],
-      beforeTake: [NOOP],
-      afterTake: [NOOP]
+      beforePut: NOOP,
+      afterPut: NOOP,
+      beforeTake: NOOP,
+      afterTake: NOOP
     },
     parent: null,
     dropping: dropping,
     sliding: sliding
   };
 
-  function runHook(type, item, cb) {
-    var hooks = api.hooks[type];
-    var numOfHooksDone = 0;
-    var hookDone = function hookDone() {
-      numOfHooksDone += 1;
-      if (numOfHooksDone === hooks.length) {
-        cb();
-      }
-    };
-    hooks.forEach(function (h) {
-      return h(item, hookDone);
-    });
-  }
-
   api.beforePut = function (hook) {
-    return api.hooks.beforePut.push(hook);
+    return api.hooks.beforePut = hook;
   };
   api.afterPut = function (hook) {
-    return api.hooks.afterPut.push(hook);
+    return api.hooks.afterPut = hook;
   };
   api.beforeTake = function (hook) {
-    return api.hooks.beforeTake.push(hook);
+    return api.hooks.beforeTake = hook;
   };
   api.afterTake = function (hook) {
-    return api.hooks.afterTake.push(hook);
+    return api.hooks.afterTake = hook;
   };
   api.isEmpty = function () {
     return api.value.length === 0;
@@ -71,10 +57,10 @@ function CSPBuffer() {
     api.puts = [];
     api.takes = [];
     api.hooks = {
-      beforePut: [NOOP],
-      afterPut: [NOOP],
-      beforeTake: [NOOP],
-      afterTake: [NOOP]
+      beforePut: NOOP,
+      afterPut: NOOP,
+      beforeTake: NOOP,
+      afterTake: NOOP
     };
   };
   api.setValue = function (v) {
@@ -208,11 +194,11 @@ function CSPBuffer() {
 
   api.put = function (item, callback) {
     _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
-    runHook('beforePut', item, function () {
-      put(item, function (putOpRes) {
-        return runHook('afterPut', putOpRes, function () {
-          _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', putOpRes);
-          callback(putOpRes);
+    api.hooks.beforePut(item, function (beforePutItem) {
+      put(beforePutItem, function (putOpRes) {
+        return api.hooks.afterPut(putOpRes, function (afterPutItem) {
+          _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', afterPutItem);
+          callback(afterPutItem);
         });
       });
     });
@@ -220,11 +206,11 @@ function CSPBuffer() {
   api.take = function (callback, options) {
     var unsubscribe = function unsubscribe() {};
     _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
-    runHook('beforeTake', undefined, function () {
+    api.hooks.beforeTake(undefined, function () {
       return unsubscribe = take(function (takeOpRes) {
-        return runHook('afterTake', takeOpRes, function () {
-          _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', takeOpRes);
-          callback(takeOpRes);
+        return api.hooks.afterTake(takeOpRes, function (afterTakeItem) {
+          _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', afterTakeItem);
+          callback(afterTakeItem);
         });
       }, options);
     });
@@ -377,7 +363,7 @@ ops.sput = function sput(channels) {
   var item = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
   var callback = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : noop;
 
-  channels = (0, _utils2.normalizeChannels)(channels, 'WRITE');
+  channels = (0, _utils2.normalizeChannels)(channels);
   var result = channels.map(function () {
     return _index.NOTHING;
   });
@@ -579,12 +565,6 @@ ops.isState = function (s) {
 ops.isRoutine = function (r) {
   return r && r['@routine'] === true;
 };
-ops.isStateReadChannel = function (s) {
-  return s && s['@statereadchannel'] === true;
-};
-ops.isStateWriteChannel = function (s) {
-  return s && s['@statewritechannel'] === true;
-};
 ops.verifyChannel = function verifyChannel(ch) {
   var throwError = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
@@ -746,122 +726,107 @@ exports.default = ops;
 },{"../index":7,"../utils":15,"./utils":5}],4:[function(require,module,exports){
 'use strict';
 
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
+
 exports.default = state;
 
 var _index = require('../index');
 
 var _utils = require('../utils');
 
+var DEFAULT_SELECTOR = function DEFAULT_SELECTOR(v) {
+  return v;
+};
+var DEFAULT_REDUCER = function DEFAULT_REDUCER(_, v) {
+  return v;
+};
+var DEFAULT_ERROR = function DEFAULT_ERROR(e) {
+  throw e;
+};
+
 function state() {
   var value = arguments.length <= 0 ? undefined : arguments[0];
   var id = (0, _utils.getId)('state');
-  var readChannels = [];
-  var writeChannels = [];
-  var isThereInitialValue = arguments.length > 0;
-  var READ_CHANNEL = id + '_read';
-  var WRITE_CHANNEL = id + '_write';
+  var _children = [];
 
-  function handleError(onError) {
-    return function (e) {
-      if (onError === null) {
-        throw e;
+  function syncChildren(initiator) {
+    _children.forEach(function (c) {
+      if (c.id !== initiator.id) {
+        (0, _index.sput)(c, { value: value, syncing: true });
       }
-      onError(e);
-    };
-  }
-  function runReader(_ref, v) {
-    var ch = _ref.ch,
-        selector = _ref.selector,
-        onError = _ref.onError;
-
-    try {
-      if ((0, _utils.isGeneratorFunction)(selector)) {
-        (0, _index.go)(selector, function (routineRes) {
-          return (0, _index.sput)(ch, routineRes);
-        }, value);
-        return;
-      }
-      (0, _index.sput)(ch, selector(v));
-    } catch (e) {
-      handleError(onError)(e);
-    }
+    });
   }
 
   var api = {
     id: id,
     '@state': true,
     children: function children() {
-      return readChannels.map(function (_ref2) {
-        var ch = _ref2.ch;
-        return ch;
-      }).concat(writeChannels.map(function (_ref3) {
-        var ch = _ref3.ch;
-        return ch;
-      }));
+      return _children;
     },
+    chan: function chan() {
+      var selector = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : DEFAULT_SELECTOR;
+      var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_REDUCER;
+      var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_ERROR;
 
-    READ: (0, _index.sliding)(READ_CHANNEL),
-    WRITE: (0, _index.sliding)(WRITE_CHANNEL),
-    select: function select(c) {
-      var selector = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (v) {
-        return v;
-      };
-      var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-
-      var ch = (0, _index.verifyChannel)(c);
-      ch['@statereadchannel'] = true;
-      var reader = { ch: ch, selector: selector, onError: onError };
-      readChannels.push(reader);
-      if (isThereInitialValue) {
-        runReader(reader, value);
-      }
-      return this;
-    },
-    mutate: function mutate(c) {
-      var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (_, v) {
-        return v;
-      };
-      var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-
-      var ch = (0, _index.verifyChannel)(c);
-      ch['@statewritechannel'] = true;
-      var writer = { ch: ch };
-      writeChannels.push(writer);
-      ch.beforePut(function (payload, resolveBeforePutHook) {
+      var ch = (0, _index.sliding)();
+      (0, _index.sput)(ch, value);
+      ch.afterTake(function (item, cb) {
+        try {
+          if ((0, _utils.isGeneratorFunction)(selector)) {
+            (0, _index.go)(selector, function (routineRes) {
+              return cb(routineRes);
+            }, item);
+            return;
+          }
+          cb(selector(item));
+        } catch (e) {
+          onError(e);
+        }
+      });
+      ch.beforePut(function (payload, cb) {
+        if (payload !== null && (typeof payload === 'undefined' ? 'undefined' : _typeof(payload)) === 'object' && 'syncing' in payload && payload.syncing) {
+          cb(payload.value);
+          return;
+        }
         try {
           if ((0, _utils.isGeneratorFunction)(reducer)) {
             (0, _index.go)(reducer, function (genResult) {
               value = genResult;
-              readChannels.forEach(function (r) {
-                return runReader(r, value);
-              });
-              resolveBeforePutHook(value);
+              syncChildren(ch);
+              cb(value);
               _index.logger.log(api, 'STATE_VALUE_SET', value);
             }, value, payload);
             return;
           }
           value = reducer(value, payload);
-          readChannels.forEach(function (r) {
-            return runReader(r, value);
-          });
-          resolveBeforePutHook(value);
+          syncChildren(ch);
+          cb(value);
           _index.logger.log(api, 'STATE_VALUE_SET', value);
         } catch (e) {
-          handleError(onError)(e);
+          onError(e);
         }
       });
-      return this;
+      _children.push(ch);
+      return ch;
+    },
+    select: function select(selector, onError) {
+      return this.chan(selector, DEFAULT_REDUCER, onError);
+    },
+    mutate: function mutate(reducer, onError) {
+      return this.chan(DEFAULT_SELECTOR, reducer, onError);
     },
     destroy: function destroy() {
-      readChannels.forEach(function (_ref4) {
-        var ch = _ref4.ch;
-        return (0, _index.sclose)(ch);
-      });
-      writeChannels.forEach(function (_ref5) {
-        var ch = _ref5.ch;
+      _children.forEach(function (ch) {
         return (0, _index.sclose)(ch);
       });
       value = undefined;
@@ -874,16 +839,13 @@ function state() {
     },
     set: function set(newValue) {
       value = newValue;
-      readChannels.forEach(function (r) {
-        runReader(r, value);
-      });
+      syncChildren({});
       _index.logger.log(api, 'STATE_VALUE_SET', newValue);
       return newValue;
     }
   };
 
-  api.select(api.READ);
-  api.mutate(api.WRITE);
+  api.DEFAULT = api.chan();
 
   _index.grid.add(api);
   _index.logger.log(api, 'STATE_CREATED');
@@ -913,11 +875,9 @@ exports.normalizeOptions = normalizeOptions;
 var _index = require('../index');
 
 function normalizeChannels(channels) {
-  var stateOp = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'READ';
-
   if (!Array.isArray(channels)) channels = [channels];
   return channels.map(function (ch) {
-    if ((0, _index.isState)(ch)) return ch[stateOp];
+    if ((0, _index.isState)(ch)) return ch.DEFAULT;
     return (0, _index.verifyChannel)(ch);
   });
 }
@@ -1008,7 +968,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.verifyChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
+exports.stop = exports.sleep = exports.go = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.verifyChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -1169,8 +1129,6 @@ var getChannel = exports.getChannel = _ops2.default.getChannel;
 var isRiew = exports.isRiew = _ops2.default.isRiew;
 var isState = exports.isState = _ops2.default.isState;
 var isRoutine = exports.isRoutine = _ops2.default.isRoutine;
-var isStateReadChannel = exports.isStateReadChannel = _ops2.default.isStateReadChannel;
-var isStateWriteChannel = exports.isStateWriteChannel = _ops2.default.isStateWriteChannel;
 var go = exports.go = _ops2.default.go;
 var sleep = exports.sleep = _ops2.default.sleep;
 var stop = exports.stop = _ops2.default.stop;
@@ -1259,12 +1217,6 @@ function normalizeChannel(c) {
       };
     })
   };
-  if ((0, _index.isStateWriteChannel)(c)) {
-    o.stateWrite = true;
-  }
-  if ((0, _index.isStateReadChannel)(c)) {
-    o.stateRead = true;
-  }
   return o;
 }
 function normalizeRoutine(r) {
@@ -1679,7 +1631,7 @@ function namedRiew(name, viewFunc) {
           return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
       } else if ((0, _index.isState)(value[key])) {
-        subscribe(value[key].READ, function (v) {
+        subscribe(value[key].DEFAULT, function (v) {
           return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
       } else {
