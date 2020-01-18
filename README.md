@@ -41,7 +41,7 @@
     - [buffer.fixed(n)](#bufferfixedn)
     - [buffer.sliding(n)](#bufferslidingn)
     - [buffer.dropping(n)](#bufferdroppingn)
-    - [buffer.memory()](#buffermemory)
+  - [fixed(n)](#fixedn)
   - [go](#go)
     - [Stopping a routine](#stopping-a-routine)
     - [Restarting the routine](#restarting-the-routine)
@@ -299,17 +299,17 @@ It creates a fixed buffer with size `n`. `n` number of puts are non-blocking and
 Example:
 
 ```js
-const ch = chan(buffer.fixed(2));
+const ch = chan('MYCHANNEL', buffer.fixed(2));
 
-go(function * A() {
+go(function* A() {
   yield put(ch, 'foo');
-  console.log('a')
+  console.log('a');
   yield put(ch, 'bar');
-  console.log('b')
+  console.log('b');
   yield put(ch, 'moo');
-  console.log('c')
+  console.log('c');
 });
-go(function * B() {
+go(function* B() {
   yield sleep(2000);
   console.log(yield take(ch));
   console.log(yield take(ch));
@@ -328,7 +328,7 @@ Similar to the fixed buffer except that the `put`s are never blocking. If the bu
 Example:
 
 ```js
-const ch = chan(buffer.sliding(2));
+const ch = chan('MYCHANNEL', buffer.sliding(2));
 
 go(function * A() {
   yield put(ch, 'foo');
@@ -354,7 +354,7 @@ Similar to the fixed buffer except that every `put` outside of the buffer range 
 Example:
 
 ```js
-const ch = chan(buffer.dropping(2));
+const ch = chan('MYCHANNEL', buffer.dropping(2));
 
 go(function * A() {
   yield put(ch, 'foo');
@@ -373,29 +373,9 @@ go(function * B() {
 2. Routine B starts and in the channel we have `["foo", "bar"]`.
 3. Routine B ends and in the console we see `"foo"` followed by `"bar"`.
 
-#### buffer.memory()
+### fixed(n)
 
-This type of buffer is not following the CSP concepts. It's here because it serves a specific use case. The `put`s and `take`s to the channel with such buffer are always non-blocking. They resolve immediately. The `take`s resolve with the latest value that was in the channel.
 
-Example:
-
-```js
-const ch = chan(buffer.memory());
-
-go(function * A() {
-  yield put(ch, 'foo');
-  yield put(ch, 'bar');
-  yield put(ch, 'moo');
-});
-go(function * B() {
-  console.log(yield take(ch));
-  console.log(yield take(ch));
-});
-```
-
-1. Routine `A` starts and all the `put`'s are resolved with true. Routine `A` ends.
-2. Routine `B` starts and both `take`s are resolved with `"moo"`. The latest set value.
-3. Routine `B` ends.
 
 ### go
 

@@ -26,12 +26,16 @@ import {
   listen,
 } from 'riew';
 
-const ch = chan();
+const ch = chan('MYCHANNEL', buffer.dropping(2));
 
-listen(ch, value => {
-  console.log(`Value: ${value}`);
+go(function* A() {
+  yield put(ch, 'foo');
+  yield put(ch, 'bar');
+  yield put(ch, 'moo');
+  yield put(ch, 'zoo');
 });
-
-sput(ch, 'foo'); // Value: foo
-sput(ch, 'bar'); // Value: bar
-sput(ch, 'moo'); // Value: moo
+go(function* B() {
+  yield sleep(2000);
+  console.log(yield take(ch));
+  console.log(yield take(ch));
+});
