@@ -2,16 +2,14 @@
 import React, { Fragment } from 'react';
 import riew from 'riew/react';
 import { sput } from 'riew';
-
+import { nextStepRoutine, startOverRoutine, NEXT_STEP_CLICK } from './routines';
 import {
   CURRENT_QUESTION,
   ANSWER,
   GET_ERROR,
-  START_OVER,
   GET_QUESTIONS,
-  NEXT_STEP_CLICK,
-} from './constants';
-import { nextStepRoutine, startOverRoutine } from './routines';
+  START_OVER,
+} from './state';
 
 export const Question = riew(function Question({
   step: { type, text },
@@ -64,7 +62,6 @@ export const Error = riew(function Error({ error }) {
 
 export const App = riew(
   function App({ completed, questions, startOver }) {
-    console.log(questions.map(({ answer }) => answer));
     if (completed) {
       return (
         <Fragment>

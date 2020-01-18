@@ -1,17 +1,6 @@
 /* eslint-disable no-shadow */
 
-import { state, take, listen, sput } from 'riew';
-import {
-  ANSWER,
-  START_OVER,
-  NEXT_STEP,
-  RESET_ERROR,
-  SET_ERROR,
-  IS_COMPLETED,
-  CURRENT_QUESTION,
-  GET_ERROR,
-  GET_QUESTIONS,
-} from './constants';
+import { state, read, listen, sput, sliding, fixed } from 'riew';
 
 const initialValue = [
   {
@@ -37,35 +26,39 @@ const questions = state(initialValue);
 const currentStep = state(0);
 const error = state(null);
 
-questions.select(GET_QUESTIONS);
-questions.mutate(ANSWER, function* mutateAnswer(questions, value) {
-  const currentStepIndex = yield take(currentStep);
+export const GET_QUESTIONS = questions.select();
+export const ANSWER = questions.mutate(function* mutateAnswer(
+  questions,
+  value
+) {
+  const currentStepIndex = yield read(currentStep);
   return questions.map((question, i) =>
     i === currentStepIndex ? { ...question, answer: value } : question
   );
 });
-questions.mutate(START_OVER, questions =>
+const RESET_QUESTIONS = questions.mutate(questions =>
   questions.map(q => ({ ...q, answer: null }))
 );
-currentStep.mutate(NEXT_STEP, currentIndex => currentIndex + 1);
-currentStep.mutate(START_OVER, () => 0);
-error.mutate(RESET_ERROR, () => null);
-error.mutate(SET_ERROR);
-error.select(GET_ERROR);
+export const NEXT_STEP = currentStep.mutate(currentIndex => currentIndex + 1);
+const RESET_CURRENT_STEP = currentStep.mutate(() => 0);
+export const RESET_ERROR = error.mutate(() => null);
+export const SET_ERROR = error.mutate();
+export const GET_ERROR = error.select();
+export const CURRENT_QUESTION = sliding();
+export const IS_COMPLETED = sliding();
+export const START_OVER = fixed();
 
 listen(ANSWER, RESET_ERROR);
 listen(
   [questions, currentStep],
   ([Qs, step]) => {
-    console.log(step);
     sput(CURRENT_QUESTION, Qs[step]);
-  },
-  { initialCall: true }
-);
-listen(
-  [questions, currentStep],
-  ([Qs, step]) => {
     sput(IS_COMPLETED, Qs.length - 1 === step);
   },
   { initialCall: true }
 );
+listen(START_OVER, () => {
+  sput(RESET_QUESTIONS);
+  sput(RESET_CURRENT_STEP);
+  sput(RESET_ERROR);
+});
