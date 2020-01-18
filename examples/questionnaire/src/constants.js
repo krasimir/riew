@@ -1,18 +1,12 @@
-import { chan, buffer, sliding } from 'riew';
+import { sliding, fixed } from 'riew';
 
-export const ANSWER = 'ANSWER';
-export const START_OVER = 'START_OVER';
-export const NEXT_STEP = 'NEXT_STEP';
-export const RESET_ERROR = 'RESET_ERROR';
-export const SET_ERROR = 'SET_ERROR';
-export const IS_COMPLETED = 'IS_COMPLETED';
-export const CURRENT_QUESTION = 'CURRENT_QUESTION';
-export const GET_ERROR = 'GET_ERROR';
-export const GET_QUESTIONS = 'GET_QUESTIONS';
-export const NEXT_STEP_CLICK = 'NEXT_STEP_CLICK';
-
-sliding(ANSWER);
-chan(START_OVER);
-chan(CURRENT_QUESTION, buffer.sliding());
-chan(IS_COMPLETED, buffer.sliding());
-chan(NEXT_STEP_CLICK);
+export const ANSWER = fixed();
+export const START_OVER = fixed();
+export const NEXT_STEP = sliding();
+export const RESET_ERROR = sliding();
+export const SET_ERROR = sliding();
+export const IS_COMPLETED = sliding();
+export const CURRENT_QUESTION = sliding();
+export const GET_ERROR = sliding();
+export const GET_QUESTIONS = sliding();
+export const NEXT_STEP_CLICK = fixed();

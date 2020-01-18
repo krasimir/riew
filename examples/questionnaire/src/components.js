@@ -64,6 +64,7 @@ export const Error = riew(function Error({ error }) {
 
 export const App = riew(
   function App({ completed, questions, startOver }) {
+    console.log(questions.map(({ answer }) => answer));
     if (completed) {
       return (
         <Fragment>

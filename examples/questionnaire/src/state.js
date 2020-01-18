@@ -57,6 +57,7 @@ listen(ANSWER, RESET_ERROR);
 listen(
   [questions, currentStep],
   ([Qs, step]) => {
+    console.log(step);
     sput(CURRENT_QUESTION, Qs[step]);
   },
   { initialCall: true }
