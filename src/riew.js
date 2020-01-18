@@ -95,7 +95,7 @@ export function namedRiew(name, viewFunc, ...routines) {
       if (ch !== null) {
         subscribe(ch, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if (isState(value[key])) {
-        subscribe(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
+        subscribe(value[key].DEFAULT, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else {
         obj[key] = value[key];
       }

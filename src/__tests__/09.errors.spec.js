@@ -1,4 +1,15 @@
-import { go, state, sput, reset, put, stake, sliding, fixed } from '../index';
+import {
+  go,
+  state,
+  sput,
+  reset,
+  put,
+  stake,
+  sliding,
+  fixed,
+  sread,
+  listen,
+} from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given csp features', () => {
@@ -38,22 +49,16 @@ describe('Given csp features', () => {
   describe('when we have an error inside the state selectors', () => {
     it('should allow us to catch the error', () => {
       const s = state('foo');
-
-      s.select(sliding('R'), function(value) {
-        if (value === 'a-ha') {
-          throw new Error('foo');
-        }
-        return value;
+      const R = s.select(function() {
+        throw new Error('foo');
       });
 
-      expect(() => sput(s, 'a-ha')).toThrowError('foo');
+      expect(() => sread(R, () => {})).toThrowError('foo');
     });
     it('should allow us to catch the error with a callback', done => {
       const s = state('foo');
       const error = new Error('foo');
-
-      s.select(
-        sliding('R'),
+      const R = s.select(
         function(value) {
           if (value === 'a-ha') {
             throw error;
@@ -66,27 +71,22 @@ describe('Given csp features', () => {
         }
       );
 
+      listen(R, () => {});
       sput(s, 'a-ha');
     });
     describe('and we use a routine', () => {
       it('should allow us to catch the error', () => {
         const s = state('foo');
-
-        s.select(sliding('R'), function*(value) {
-          if (value === 'a-ha') {
-            throw new Error('foo');
-          }
-          return value;
+        const R = s.select(function*() {
+          throw new Error('foo');
         });
 
-        expect(() => sput(s, 'a-ha')).toThrowError('foo');
+        expect(() => sread(R, () => {})).toThrowError('foo');
       });
       it('should allow us to catch the error with a callback', done => {
         const s = state('foo');
         const error = new Error('foo');
-
-        s.select(
-          sliding('R'),
+        const R = s.select(
           function*(value) {
             if (value === 'a-ha') {
               throw error;
@@ -99,6 +99,7 @@ describe('Given csp features', () => {
           }
         );
 
+        listen(R, () => {});
         sput(s, 'a-ha');
       });
     });
@@ -107,21 +108,16 @@ describe('Given csp features', () => {
     it('should allow us to catch the error', async () => {
       const s = state('foo');
       const error = new Error('ops');
-      const ch = sliding();
-
-      s.mutate(ch, function() {
+      const M = s.mutate(function() {
         throw error;
       });
 
-      expect(() => sput(ch, 'zoo')).toThrowError(error);
+      expect(() => sput(M, 'zoo')).toThrowError(error);
     });
     it('should allow us to catch the error with a callback', done => {
       const s = state('foo');
       const error = new Error('ops');
-      const ch = sliding();
-
-      s.mutate(
-        ch,
+      const M = s.mutate(
         function() {
           throw error;
         },
@@ -131,27 +127,22 @@ describe('Given csp features', () => {
         }
       );
 
-      sput(ch, 'zoo');
+      sput(M, 'zoo');
     });
     describe('and we use a routine', () => {
       it('should allow us to catch the error', async () => {
         const s = state('foo');
         const error = new Error('ops');
-        const ch = sliding();
-
-        s.mutate(ch, function*() {
+        const M = s.mutate(function*() {
           throw error;
         });
 
-        expect(() => sput(ch, 'zoo')).toThrowError(error);
+        expect(() => sput(M, 'zoo')).toThrowError(error);
       });
       it('should allow us to catch the error with a callback', done => {
         const s = state('foo');
         const error = new Error('ops');
-        const ch = sliding();
-
-        s.mutate(
-          ch,
+        const M = s.mutate(
           function*() {
             throw error;
           },
@@ -161,7 +152,7 @@ describe('Given csp features', () => {
           }
         );
 
-        sput(ch, 'zoo');
+        sput(M, 'zoo');
       });
     });
   });

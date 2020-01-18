@@ -31,10 +31,10 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
     api.puts = [];
     api.takes = [];
     api.hooks = {
-      beforePut: [NOOP],
-      afterPut: [NOOP],
-      beforeTake: [NOOP],
-      afterTake: [NOOP],
+      beforePut: NOOP,
+      afterPut: NOOP,
+      beforeTake: NOOP,
+      afterTake: NOOP,
     };
   };
   api.setValue = v => {

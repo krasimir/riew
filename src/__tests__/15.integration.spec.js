@@ -156,9 +156,7 @@ describe('Given the Riew library', () => {
           { id: 'a', selected: false },
           { id: 'b', selected: true },
         ]);
-        const update = sliding();
-        const selector = sliding();
-        repos.mutate(update, (list, id) =>
+        const update = repos.mutate((list, id) =>
           list.map(repo => {
             if (repo.id === id) {
               return {
@@ -169,7 +167,9 @@ describe('Given the Riew library', () => {
             return repo;
           })
         );
-        repos.select(selector, list => list.filter(({ selected }) => selected));
+        const selector = repos.select(list =>
+          list.filter(({ selected }) => selected)
+        );
 
         const change = id => sput(update, id);
         const View = ({ selector }) => (
@@ -213,8 +213,7 @@ describe('Given the Riew library', () => {
       it('should re-render the react component with the correct data', () =>
         act(async () => {
           const s = state([15, 4, 12]);
-          const moreThen10 = sliding();
-          s.select(moreThen10, nums => nums.filter(n => n > 10));
+          const moreThen10 = s.select(nums => nums.filter(n => n > 10));
           const Component = jest.fn().mockImplementation(() => null);
           const R = riew(Component).with({ data: moreThen10 });
 

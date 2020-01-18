@@ -167,8 +167,7 @@ describe('Given the React riew function', () => {
             { value: 2, selected: true },
             { value: 67, selected: true },
           ]);
-          const select = sliding();
-          s.mutate(select, (current = [], payload) =>
+          const select = s.mutate((current = [], payload) =>
             current.map(item => ({
               ...item,
               selected: item.value === payload ? false : item.selected,

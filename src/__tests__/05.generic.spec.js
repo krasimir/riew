@@ -1,5 +1,4 @@
 import {
-  buffer,
   timeout,
   go,
   merge,
@@ -102,7 +101,7 @@ describe('Given a CSP', () => {
         ch.beforePut((item, cb) => {
           setTimeout(() => {
             spy('beforePut', item);
-            cb();
+            cb(item);
           }, 10);
         });
         sput(ch, 'foo', v => spy('put', v));
@@ -139,7 +138,7 @@ describe('Given a CSP', () => {
         ch.afterPut((item, cb) => {
           setTimeout(() => {
             spy('afterPut', item);
-            cb();
+            cb(item);
           }, 10);
         });
         sput(ch, 'foo', v => spy('put', v));
@@ -208,7 +207,7 @@ describe('Given a CSP', () => {
         ch.afterTake((item, cb) => {
           setTimeout(() => {
             spy('afterTake', item);
-            cb();
+            cb(item);
           }, 10);
         });
         stake(ch, spy);

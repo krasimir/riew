@@ -322,9 +322,8 @@ describe('Given a CSP pubsub extension', () => {
         const currentUser = state(1);
         const spy = jest.fn();
         const ch = chan('app');
-        const www = sliding('WWW');
 
-        users.mutate(www, arr =>
+        const www = users.mutate(arr =>
           arr.map((user, i) => {
             if (i === 2) return { name: 'Batman' };
             return user;

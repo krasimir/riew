@@ -123,9 +123,7 @@ describe('Given the grid', () => {
       const s2 = state('bar');
       const getRoutineGridNode = () =>
         grid.nodes().find(({ id }) => id.match(/^routine_R/));
-      const XXX = sliding();
-
-      s.mutate(XXX, function* R() {
+      const XXX = s.mutate(function* R() {
         yield sleep(10);
         return (yield take(s2)).toUpperCase();
       });

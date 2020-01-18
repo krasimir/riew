@@ -11,12 +11,12 @@ export default function state(...args) {
   let value = args[0];
   const id = getId('state');
   const children = [];
-  const READ_CHANNEL = `${id}_read`;
-  const WRITE_CHANNEL = `${id}_write`;
 
   function syncChildren(initiator) {
     children.forEach(c => {
-      if (c.id !== initiator.id) sput(c, { value, syncing: true });
+      if (c.id !== initiator.id) {
+        sput(c, { value, syncing: true });
+      }
     });
   }
 
@@ -26,8 +26,6 @@ export default function state(...args) {
     children() {
       return children;
     },
-    READ: sliding(READ_CHANNEL),
-    WRITE: sliding(WRITE_CHANNEL),
     chan(
       selector = DEFAULT_SELECTOR,
       reducer = DEFAULT_REDUCER,
@@ -62,8 +60,8 @@ export default function state(...args) {
               reducer,
               genResult => {
                 value = genResult;
-                cb(value);
                 syncChildren(ch);
+                cb(value);
                 logger.log(api, 'STATE_VALUE_SET', value);
               },
               value,
@@ -72,8 +70,8 @@ export default function state(...args) {
             return;
           }
           value = reducer(value, payload);
-          cb(value);
           syncChildren(ch);
+          cb(value);
           logger.log(api, 'STATE_VALUE_SET', value);
         } catch (e) {
           onError(e);

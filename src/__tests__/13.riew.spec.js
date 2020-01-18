@@ -13,7 +13,6 @@ import {
   put,
   sput,
   go,
-  buffer,
   sliding,
   fixed,
 } from '../index';
@@ -152,7 +151,7 @@ describe('Given the `riew` factory function', () => {
         render({ s });
         yield sleep(4);
         yield put(s, 'bar');
-        expect(s.READ.buff.takes).toHaveLength(1);
+        expect(s.DEFAULT.buff.takes).toHaveLength(1);
       };
       const r = riew(view, se);
 
@@ -165,10 +164,8 @@ describe('Given the `riew` factory function', () => {
         const view = jest.fn();
         const routine = function*({ state, render }) {
           const message = state('foo');
-          const up = sliding();
-          const lower = sliding();
-          message.select(up, v => v.toUpperCase());
-          message.select(lower, v => v.toLowerCase());
+          const up = message.select(v => v.toUpperCase());
+          const lower = message.select(v => v.toLowerCase());
 
           render({ up, lower });
           yield sleep(2);
@@ -242,8 +239,7 @@ describe('Given the `riew` factory function', () => {
       });
       const routine = function*({ render, state }) {
         const s = state('foo');
-        const up = sliding();
-        s.select(up, v => v.toUpperCase());
+        const up = s.select(v => v.toUpperCase());
         const change = () => {
           sput(s, 'bar');
         };
@@ -366,8 +362,12 @@ describe('Given the `riew` factory function', () => {
     describe('and when we pass something else', () => {
       it(`should pass the thing to the routine and view`, async () => {
         const s = state();
-        const firstName = sliding();
-        s.select(firstName, ({ firstName }) => firstName);
+        const firstName = s.select(user => {
+          if (user) {
+            return user.firstName;
+          }
+          return null;
+        });
         const view = jest.fn();
         const spy = jest.fn();
         const r = riew(view, function*() {
@@ -554,8 +554,7 @@ describe('Given the `riew` factory function', () => {
       it('should accept a state via the `render` method', async () => {
         const routine = function*({ state, render }) {
           const counter = state(1);
-          const increment = sliding();
-          counter.mutate(increment, current => current + 1);
+          const increment = counter.mutate(current => current + 1);
 
           render({ counter });
           yield sleep(2);
@@ -572,8 +571,7 @@ describe('Given the `riew` factory function', () => {
         const counter = state(12);
         register('counter', counter);
         const routine = function*({ counter }) {
-          const increment = sliding();
-          counter.mutate(increment, current => current + 1);
+          const increment = counter.mutate(current => current + 1);
           yield sleep(2);
           yield put(increment);
         };
@@ -592,9 +590,7 @@ describe('Given the `riew` factory function', () => {
       const s1 = state(['a', 'b', 'c', 'd']);
       const s2 = state(1);
       const current = sliding();
-      const WWW = sliding();
-
-      s1.mutate(WWW, function*(arr) {
+      const WWW = s1.mutate(function*(arr) {
         return arr.map((value, i) => {
           if (i === 2) {
             return 'X';
