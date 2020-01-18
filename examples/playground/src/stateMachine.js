@@ -1,16 +1,4 @@
-import { go, sleep, put, take, stake, sput, ONE_OF } from 'riew';
-
-function simulateAsync() {
-  return new Promise((done, reject) =>
-    setTimeout(() => {
-      if (Math.random() >= 0.5) {
-        done('foo');
-      } else {
-        reject(new Error("Sorry, it didn't work"));
-      }
-    }, 1000)
-  );
-}
+import { go, sleep, put, take, sput, sliding } from 'riew';
 
 const transitions = {
   idle: {
@@ -28,50 +16,29 @@ const transitions = {
   },
 };
 
+const machine = sliding();
+
+sput(machine, 'idle');
+
 go(function*() {
-  yield take('idle');
-  yield put('fetch');
-});
-go(function*() {
-  yield take('loading');
-  try {
-    const value = yield simulateAsync();
-    yield put('resolve', value);
-  } catch (error) {
-    yield put('reject', error);
+  const state = yield take(machine);
+  const currentState = transitions[state];
+  const possibleActions = Object.keys(currentState);
+  console.log(`Current state: ${state}`);
+  console.log(`  actions: ${possibleActions.join(', ')}`);
+  const action = yield take(machine);
+  if (possibleActions.includes(action)) {
+    const newState = transitions[state][action];
+    console.log(`Transition to ${newState}`);
+    yield put(machine, newState);
+    return go;
   }
-  return go;
-});
-go(function*() {
-  const value = yield take('success');
-  yield put('print', value);
-});
-go(function*() {
-  const value = yield take('print');
-  console.log(`value is ${value}`);
-});
-go(function*() {
-  const error = yield take('failure');
-  console.log(error);
-  yield sleep(1000);
-  yield put('retry');
-  return go;
+  console.log(`Ops! The machine can not react on "${action}" action.`);
 });
 
-const machine = (channel, value) => {
-  const channels = Object.keys(transitions[channel]);
-  console.log(
-    `Machine in "${channel}" state. Waiting for ${channels.join(', ')}`
-  );
-  stake(
-    channels,
-    (v, idx) => {
-      console.log(`> ${channels[idx]}`);
-      machine(transitions[channel][channels[idx]], v);
-    },
-    { strategy: ONE_OF }
-  );
-  sput(channel, value);
-};
-
-machine('idle');
+go(function*() {
+  yield sleep(20);
+  yield put(machine, 'fetch');
+  yield put(machine, 'resolve');
+  yield put(machine, 'print');
+});
