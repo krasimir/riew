@@ -26,19 +26,19 @@ describe('Given a CSP', () => {
   describe('when we try to get a channel out of a string', () => {
     it("should throw an error if the channel doesn't exist", () => {
       expect(() => getChannel()).toThrowError(
-        'undefined is not a channel or an ID of existing channel.'
+        'Channel or ID of an existing channel expected. Instead undefined given.'
       );
       expect(() => getChannel(42)).toThrowError(
-        '42 is not a channel or an ID of existing channel.'
+        'Channel or ID of an existing channel expected. Instead 42 (number) given.'
       );
       expect(() => getChannel('FOO')).toThrowError(
-        'FOO is not a channel or an ID of existing channel.'
+        'Channel or ID of an existing channel expected. Instead FOO (string) given. Did you forget to define it? Example `chan(FOO)`.'
       );
       expect(() => getChannel(['a', 'b'])).toThrowError(
-        'a,b is not a channel or an ID of existing channel.'
+        'Channel or ID of an existing channel expected. Instead a,b (object) given.'
       );
       expect(() => getChannel({})).toThrowError(
-        '[object Object] is not a channel or an ID of existing channel.'
+        'Channel or ID of an existing channel expected. Instead [object Object] (object) given.'
       );
     });
   });

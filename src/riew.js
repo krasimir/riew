@@ -2,20 +2,19 @@
 
 import {
   use,
-  chan,
   state as State,
   isState,
   go,
   listen,
   close,
   sput,
-  buffer,
   grid,
   logger,
   isRoutine,
   CLOSED,
   ENDED,
   getChannel,
+  sliding,
 } from './index';
 import {
   isObjectEmpty,
@@ -84,8 +83,8 @@ export function namedRiew(name, viewFunc, ...routines) {
       subscriptions[to.id] = listen(to, func, { initialCall: true });
     }
   };
-  const VIEW_CHANNEL = chan(getId(`${name}_view`), buffer.sliding());
-  const PROPS_CHANNEL = chan(getId(`${name}_props`), buffer.sliding());
+  const VIEW_CHANNEL = sliding(getId(`${name}_view`));
+  const PROPS_CHANNEL = sliding(getId(`${name}_props`));
 
   api.children.push(VIEW_CHANNEL);
   api.children.push(PROPS_CHANNEL);

@@ -3,15 +3,13 @@ import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import { delay, exerciseHTML } from '../__helpers__';
 import {
+  sliding,
   reset,
   sread,
   react,
   state,
   sleep,
   sput,
-  go,
-  read,
-  take,
   listen,
 } from '../index';
 
@@ -158,7 +156,7 @@ describe('Given the Riew library', () => {
           { id: 'a', selected: false },
           { id: 'b', selected: true },
         ]);
-        repos.mutate('update', (list, id) =>
+        repos.mutate(sliding('update'), (list, id) =>
           list.map(repo => {
             if (repo.id === id) {
               return {
@@ -169,7 +167,7 @@ describe('Given the Riew library', () => {
             return repo;
           })
         );
-        repos.select('selector', list =>
+        repos.select(sliding('selector'), list =>
           list.filter(({ selected }) => selected)
         );
 
@@ -215,7 +213,7 @@ describe('Given the Riew library', () => {
       it('should re-render the react component with the correct data', () =>
         act(async () => {
           const s = state([15, 4, 12]);
-          s.select('moreThen10', nums => nums.filter(n => n > 10));
+          s.select(sliding('moreThen10'), nums => nums.filter(n => n > 10));
           const Component = jest.fn().mockImplementation(() => null);
           const R = riew(Component).with({ data: 'moreThen10' });
 
@@ -235,7 +233,7 @@ describe('Given the Riew library', () => {
       const current = state('xxx');
       const spy = jest.fn();
 
-      current.mutate('reset', () => 'foobar');
+      current.mutate(sliding('reset'), () => 'foobar');
       listen('reset', spy);
 
       sput('reset', 12);

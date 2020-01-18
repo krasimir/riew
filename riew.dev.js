@@ -653,7 +653,7 @@ ops.getChannel = function getChannel(ch) {
     return _index.CHANNELS.get(ch);
   }
   if (throwError) {
-    throw new Error(ch + ' is not a channel or an ID of existing channel.');
+    throw new Error('Channel or ID of an existing channel expected. Instead ' + ch + (typeof ch !== 'undefined' ? ' (' + (typeof ch === 'undefined' ? 'undefined' : _typeof(ch)) + ')' : '') + ' given.' + (typeof ch === 'string' ? ' Did you forget to define it? Example `chan(' + ch + ')`.' : ''));
   }
   return null;
 };
@@ -866,15 +866,15 @@ function state() {
       }));
     },
 
-    READ: (0, _index.chan)(READ_CHANNEL, _index.buffer.sliding()),
-    WRITE: (0, _index.chan)(WRITE_CHANNEL, _index.buffer.sliding()),
+    READ: (0, _index.sliding)(READ_CHANNEL),
+    WRITE: (0, _index.sliding)(WRITE_CHANNEL),
     select: function select(c) {
       var selector = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (v) {
         return v;
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.sliding());
+      var ch = (0, _index.getChannel)(c);
       ch['@statereadchannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
@@ -889,7 +889,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.isChannel)(c) ? c : (0, _index.chan)(c, _index.buffer.sliding());
+      var ch = (0, _index.getChannel)(c);
       ch['@statewritechannel'] = true;
       var writer = { ch: ch };
       writeChannels.push(writer);
@@ -1068,7 +1068,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
+exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -1166,6 +1166,12 @@ var CHANNELS = exports.CHANNELS = {
 
 var buffer = exports.buffer = _buf2.default;
 var chan = exports.chan = _channel2.default;
+var sliding = exports.sliding = function sliding(id) {
+  return chan(id, buffer.sliding());
+};
+var dropping = exports.dropping = function dropping(id) {
+  return chan(id, buffer.dropping());
+};
 var state = exports.state = _state2.default;
 
 var react = exports.react = {
@@ -1195,7 +1201,6 @@ var reset = exports.reset = function reset() {
   return (0, _utils.resetIds)(), grid.reset(), _registry2.default.reset(), CHANNELS.reset(), logger.reset();
 };
 var registry = exports.registry = _registry2.default;
-
 var sput = exports.sput = _ops2.default.sput;
 var put = exports.put = _ops2.default.put;
 var stake = exports.stake = _ops2.default.stake;
@@ -1713,8 +1718,8 @@ function namedRiew(name, viewFunc) {
       subscriptions[to.id] = (0, _index.listen)(to, func, { initialCall: true });
     }
   };
-  var VIEW_CHANNEL = (0, _index.chan)((0, _utils.getId)(name + '_view'), _index.buffer.sliding());
-  var PROPS_CHANNEL = (0, _index.chan)((0, _utils.getId)(name + '_props'), _index.buffer.sliding());
+  var VIEW_CHANNEL = (0, _index.sliding)((0, _utils.getId)(name + '_view'));
+  var PROPS_CHANNEL = (0, _index.sliding)((0, _utils.getId)(name + '_props'));
 
   api.children.push(VIEW_CHANNEL);
   api.children.push(PROPS_CHANNEL);

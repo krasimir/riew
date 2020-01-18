@@ -48,6 +48,8 @@ export const CHANNELS = {
 
 export const buffer = b;
 export const chan = c;
+export const sliding = id => chan(id, buffer.sliding());
+export const dropping = id => chan(id, buffer.dropping());
 export const state = s;
 
 export * from './riew';
@@ -69,7 +71,6 @@ export const reset = () => (
   resetIds(), grid.reset(), R.reset(), CHANNELS.reset(), logger.reset()
 );
 export const registry = R;
-
 export const sput = ops.sput;
 export const put = ops.put;
 export const stake = ops.stake;

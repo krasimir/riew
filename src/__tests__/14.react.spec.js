@@ -12,6 +12,7 @@ import {
   put,
   sleep,
   logger,
+  sliding,
 } from '../index';
 
 describe('Given the React riew function', () => {
@@ -166,7 +167,7 @@ describe('Given the React riew function', () => {
             { value: 2, selected: true },
             { value: 67, selected: true },
           ]);
-          s.mutate('select', (current = [], payload) =>
+          s.mutate(sliding('select'), (current = [], payload) =>
             current.map(item => ({
               ...item,
               selected: item.value === payload ? false : item.selected,

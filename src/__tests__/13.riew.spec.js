@@ -15,6 +15,7 @@ import {
   chan,
   go,
   buffer,
+  sliding,
 } from '../index';
 
 function expectRiew(callback, delayInterval = 0) {
@@ -164,8 +165,8 @@ describe('Given the `riew` factory function', () => {
         const view = jest.fn();
         const routine = function*({ state, render }) {
           const message = state('foo');
-          message.select('up', v => v.toUpperCase());
-          message.select('lower', v => v.toLowerCase());
+          message.select(sliding('up'), v => v.toUpperCase());
+          message.select(sliding('lower'), v => v.toLowerCase());
 
           render({ up: 'up', lower: 'lower' });
           yield sleep(2);
@@ -239,7 +240,7 @@ describe('Given the `riew` factory function', () => {
       });
       const routine = function*({ render, state }) {
         const s = state('foo');
-        s.select('up', v => v.toUpperCase());
+        s.select(sliding('up'), v => v.toUpperCase());
         const change = () => {
           sput(s, 'bar');
         };
@@ -362,7 +363,7 @@ describe('Given the `riew` factory function', () => {
     describe('and when we pass something else', () => {
       it(`should pass the thing to the routine and view`, async () => {
         const s = state();
-        s.select('firstName', ({ firstName }) => firstName);
+        s.select(sliding('firstName'), ({ firstName }) => firstName);
         const view = jest.fn();
         const spy = jest.fn();
         const r = riew(view, function*() {
@@ -549,7 +550,7 @@ describe('Given the `riew` factory function', () => {
       it('should accept a state via the `render` method', async () => {
         const routine = function*({ state, render }) {
           const counter = state(1);
-          counter.mutate('increment', current => current + 1);
+          counter.mutate(sliding('increment'), current => current + 1);
 
           render({ counter });
           yield sleep(2);
@@ -566,7 +567,7 @@ describe('Given the `riew` factory function', () => {
         const counter = state(12);
         register('counter', counter);
         const routine = function*({ counter }) {
-          counter.mutate('increment', current => current + 1);
+          counter.mutate(sliding('increment'), current => current + 1);
           yield sleep(2);
           yield put('increment');
         };
@@ -587,7 +588,7 @@ describe('Given the `riew` factory function', () => {
 
       chan('current', buffer.sliding());
 
-      s1.mutate('WWW', function*(arr) {
+      s1.mutate(sliding('WWW'), function*(arr) {
         return arr.map((value, i) => {
           if (i === 2) {
             return 'X';

@@ -198,7 +198,15 @@ ops.getChannel = function getChannel(ch, throwError = true) {
     return CHANNELS.get(ch);
   }
   if (throwError) {
-    throw new Error(`${ch} is not a channel or an ID of existing channel.`);
+    throw new Error(
+      `Channel or ID of an existing channel expected. Instead ${ch}${
+        typeof ch !== 'undefined' ? ` (${typeof ch})` : ''
+      } given.${
+        typeof ch === 'string'
+          ? ` Did you forget to define it? Example \`chan(${ch})\`.`
+          : ''
+      }`
+    );
   }
   return null;
 };

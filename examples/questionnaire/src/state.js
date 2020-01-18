@@ -1,6 +1,6 @@
 /* eslint-disable no-shadow */
 
-import { state, take, listen, sput, chan, buffer } from 'riew';
+import { state, take, listen, sput } from 'riew';
 import {
   ANSWER,
   START_OVER,
@@ -12,11 +12,6 @@ import {
   GET_ERROR,
   GET_QUESTIONS,
 } from './constants';
-
-// START_OVER should be defined as a normal channel.
-// Otherwise when we use it in a loop it will resolve always
-// imediately (after the first push of a value).
-// chan(START_OVER);
 
 const initialValue = [
   {
@@ -41,8 +36,6 @@ const initialValue = [
 const questions = state(initialValue);
 const currentStep = state(0);
 const error = state(null);
-
-chan(CURRENT_QUESTION, buffer.sliding());
 
 questions.select(GET_QUESTIONS);
 questions.mutate(ANSWER, function* mutateAnswer(questions, value) {

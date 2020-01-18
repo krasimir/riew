@@ -1,8 +1,6 @@
 import {
   chan,
   buffer,
-  read,
-  sread,
   CHANNELS,
   go,
   reset,
@@ -16,6 +14,7 @@ import {
   stake,
   unreadAll,
   listen,
+  sliding,
 } from '../index';
 import { Test, exercise } from '../__helpers__';
 
@@ -322,7 +321,7 @@ describe('Given a CSP pubsub extension', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
-        users.mutate('WWW', arr =>
+        users.mutate(sliding('WWW'), arr =>
           arr.map((user, i) => {
             if (i === 2) return { name: 'Batman' };
             return user;

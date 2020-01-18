@@ -11,6 +11,7 @@ import {
   reset,
   take,
   sput,
+  sliding,
 } from '../index';
 import { delay } from '../__helpers__';
 
@@ -118,22 +119,22 @@ describe('Given the grid', () => {
   });
   describe('when we have a routine as a mutator for a state', () => {
     it('should add an item to the grid and remove it', async () => {
-      const spy = jest.fn();
       const s = state('foo');
       const s2 = state('bar');
-      const getRoutineGridNode = () => grid.nodes().find(({ id }) => id.match(/^routine_R/));
+      const getRoutineGridNode = () =>
+        grid.nodes().find(({ id }) => id.match(/^routine_R/));
 
-      s.mutate('XXX', function * R() {
+      s.mutate(sliding('XXX'), function* R() {
         yield sleep(10);
         return (yield take(s2)).toUpperCase();
       });
-      
+
       sput('XXX');
       expect(getRoutineGridNode()).toBeDefined();
       expect(s.get()).toBe('foo');
       await delay(20);
       expect(getRoutineGridNode()).toBeUndefined();
-      expect(s.get()).toBe('BAR');      
+      expect(s.get()).toBe('BAR');
     });
   });
 });

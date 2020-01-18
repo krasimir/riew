@@ -1,13 +1,4 @@
-import {
-  go,
-  chan,
-  sput,
-  sclose,
-  buffer,
-  isChannel,
-  grid,
-  logger,
-} from '../index';
+import { go, sput, sclose, grid, logger, getChannel, sliding } from '../index';
 import { getId, isGeneratorFunction } from '../utils';
 
 export default function state(...args) {
@@ -47,10 +38,10 @@ export default function state(...args) {
         .map(({ ch }) => ch)
         .concat(writeChannels.map(({ ch }) => ch));
     },
-    READ: chan(READ_CHANNEL, buffer.sliding()),
-    WRITE: chan(WRITE_CHANNEL, buffer.sliding()),
+    READ: sliding(READ_CHANNEL),
+    WRITE: sliding(WRITE_CHANNEL),
     select(c, selector = v => v, onError = null) {
-      const ch = isChannel(c) ? c : chan(c, buffer.sliding());
+      const ch = getChannel(c);
       ch['@statereadchannel'] = true;
       const reader = { ch, selector, onError };
       readChannels.push(reader);
@@ -60,7 +51,7 @@ export default function state(...args) {
       return this;
     },
     mutate(c, reducer = (_, v) => v, onError = null) {
-      const ch = isChannel(c) ? c : chan(c, buffer.sliding());
+      const ch = getChannel(c);
       ch['@statewritechannel'] = true;
       const writer = { ch };
       writeChannels.push(writer);

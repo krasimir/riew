@@ -1,4 +1,4 @@
-import { go, state, sput, reset, chan, put, stake } from '../index';
+import { go, state, sput, reset, chan, put, stake, sliding } from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given csp features', () => {
@@ -39,7 +39,7 @@ describe('Given csp features', () => {
     it('should allow us to catch the error', () => {
       const s = state('foo');
 
-      s.select('R', function(value) {
+      s.select(sliding('R'), function(value) {
         if (value === 'a-ha') {
           throw new Error('foo');
         }
@@ -53,7 +53,7 @@ describe('Given csp features', () => {
       const error = new Error('foo');
 
       s.select(
-        'R',
+        sliding('R'),
         function(value) {
           if (value === 'a-ha') {
             throw error;
@@ -72,7 +72,7 @@ describe('Given csp features', () => {
       it('should allow us to catch the error', () => {
         const s = state('foo');
 
-        s.select('R', function*(value) {
+        s.select(sliding('R'), function*(value) {
           if (value === 'a-ha') {
             throw new Error('foo');
           }
@@ -86,7 +86,7 @@ describe('Given csp features', () => {
         const error = new Error('foo');
 
         s.select(
-          'R',
+          sliding('R'),
           function*(value) {
             if (value === 'a-ha') {
               throw error;
@@ -108,7 +108,7 @@ describe('Given csp features', () => {
       const s = state('foo');
       const error = new Error('ops');
 
-      s.mutate('W', function() {
+      s.mutate(sliding('W'), function() {
         throw error;
       });
 
@@ -119,7 +119,7 @@ describe('Given csp features', () => {
       const error = new Error('ops');
 
       s.mutate(
-        'W',
+        sliding('W'),
         function() {
           throw error;
         },
@@ -136,7 +136,7 @@ describe('Given csp features', () => {
         const s = state('foo');
         const error = new Error('ops');
 
-        s.mutate('W', function*() {
+        s.mutate(sliding('W'), function*() {
           throw error;
         });
 
@@ -147,7 +147,7 @@ describe('Given csp features', () => {
         const error = new Error('ops');
 
         s.mutate(
-          'W',
+          sliding('W'),
           function*() {
             throw error;
           },
