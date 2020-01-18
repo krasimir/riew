@@ -1,13 +1,5 @@
 /* eslint-disable no-use-before-define */
-import {
-  grid,
-  isChannel,
-  isRiew,
-  isState,
-  isStateWriteChannel,
-  isStateReadChannel,
-  isRoutine,
-} from './index';
+import { grid, isChannel, isRiew, isState, isRoutine } from './index';
 import sanitize from './sanitize';
 
 const MAX_SNAPSHOTS = 100;
@@ -60,12 +52,6 @@ function normalizeChannel(c) {
       listen: options.listen,
     })),
   };
-  if (isStateWriteChannel(c)) {
-    o.stateWrite = true;
-  }
-  if (isStateReadChannel(c)) {
-    o.stateRead = true;
-  }
   return o;
 }
 function normalizeRoutine(r) {
@@ -149,7 +135,7 @@ export default function Logger() {
     return snapshot;
   };
   api.frames = () => frames;
-  api.now = () => frames.length > 0 ? frames[frames.length-1] : null
+  api.now = () => (frames.length > 0 ? frames[frames.length - 1] : null);
   api.reset = () => {
     frames = [];
     enabled = false;

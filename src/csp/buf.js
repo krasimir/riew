@@ -3,7 +3,7 @@ import { normalizeOptions } from './utils';
 import { logger } from '../index';
 
 const DEFAULT_OPTIONS = { dropping: false, sliding: false };
-const NOOP = (v, cb) => cb();
+const NOOP = (v, cb) => cb(v);
 
 function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
   const api = {
@@ -11,32 +11,20 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
     puts: [],
     takes: [],
     hooks: {
-      beforePut: [NOOP],
-      afterPut: [NOOP],
-      beforeTake: [NOOP],
-      afterTake: [NOOP],
+      beforePut: NOOP,
+      afterPut: NOOP,
+      beforeTake: NOOP,
+      afterTake: NOOP,
     },
     parent: null,
     dropping,
     sliding,
   };
 
-  function runHook(type, item, cb) {
-    const hooks = api.hooks[type];
-    let numOfHooksDone = 0;
-    const hookDone = () => {
-      numOfHooksDone += 1;
-      if (numOfHooksDone === hooks.length) {
-        cb();
-      }
-    };
-    hooks.forEach(h => h(item, hookDone));
-  }
-
-  api.beforePut = hook => api.hooks.beforePut.push(hook);
-  api.afterPut = hook => api.hooks.afterPut.push(hook);
-  api.beforeTake = hook => api.hooks.beforeTake.push(hook);
-  api.afterTake = hook => api.hooks.afterTake.push(hook);
+  api.beforePut = hook => (api.hooks.beforePut = hook);
+  api.afterPut = hook => (api.hooks.afterPut = hook);
+  api.beforeTake = hook => (api.hooks.beforeTake = hook);
+  api.afterTake = hook => (api.hooks.afterTake = hook);
   api.isEmpty = () => api.value.length === 0;
   api.reset = () => {
     api.value = [];
@@ -162,11 +150,11 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
 
   api.put = (item, callback) => {
     logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
-    runHook('beforePut', item, () => {
-      put(item, putOpRes =>
-        runHook('afterPut', putOpRes, () => {
-          logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', putOpRes);
-          callback(putOpRes);
+    api.hooks.beforePut(item, beforePutItem => {
+      put(beforePutItem, putOpRes =>
+        api.hooks.afterPut(putOpRes, afterPutItem => {
+          logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', afterPutItem);
+          callback(afterPutItem);
         })
       );
     });
@@ -174,19 +162,18 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
   api.take = (callback, options) => {
     let unsubscribe = () => {};
     logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
-    runHook(
-      'beforeTake',
+    api.hooks.beforeTake(
       undefined,
       () =>
         (unsubscribe = take(
           takeOpRes =>
-            runHook('afterTake', takeOpRes, () => {
+            api.hooks.afterTake(takeOpRes, afterTakeItem => {
               logger.log(
                 { id: api.parent },
                 'CHANNEL_TAKE_RESOLVED',
-                takeOpRes
+                afterTakeItem
               );
-              callback(takeOpRes);
+              callback(afterTakeItem);
             }),
           options
         ))

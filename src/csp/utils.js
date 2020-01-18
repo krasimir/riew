@@ -7,10 +7,10 @@ import {
   verifyChannel,
 } from '../index';
 
-export function normalizeChannels(channels, stateOp = 'READ') {
+export function normalizeChannels(channels) {
   if (!Array.isArray(channels)) channels = [channels];
   return channels.map(ch => {
-    if (isState(ch)) return ch[stateOp];
+    if (isState(ch)) return ch.DEFAULT;
     return verifyChannel(ch);
   });
 }

@@ -29,7 +29,7 @@ const ops = {};
 // **************************************************** put
 
 ops.sput = function sput(channels, item = null, callback = noop) {
-  channels = normalizeChannels(channels, 'WRITE');
+  channels = normalizeChannels(channels);
   const result = channels.map(() => NOTHING);
   const setResult = (idx, value) => {
     result[idx] = value;
@@ -190,8 +190,6 @@ ops.isChannel = ch => ch && ch['@channel'] === true;
 ops.isRiew = r => r && r['@riew'] === true;
 ops.isState = s => s && s['@state'] === true;
 ops.isRoutine = r => r && r['@routine'] === true;
-ops.isStateReadChannel = s => s && s['@statereadchannel'] === true;
-ops.isStateWriteChannel = s => s && s['@statewritechannel'] === true;
 ops.verifyChannel = function verifyChannel(ch, throwError = true) {
   if (ops.isChannel(ch)) return ch;
   if (throwError) {

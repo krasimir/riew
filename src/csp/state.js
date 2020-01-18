@@ -1,77 +1,69 @@
-import {
-  go,
-  sput,
-  sclose,
-  grid,
-  logger,
-  verifyChannel,
-  sliding,
-} from '../index';
+import { go, sput, sclose, grid, logger, sliding } from '../index';
 import { getId, isGeneratorFunction } from '../utils';
+
+const DEFAULT_SELECTOR = v => v;
+const DEFAULT_REDUCER = (_, v) => v;
+const DEFAULT_ERROR = e => {
+  throw e;
+};
 
 export default function state(...args) {
   let value = args[0];
   const id = getId('state');
-  const readChannels = [];
-  const writeChannels = [];
-  const isThereInitialValue = args.length > 0;
+  const children = [];
   const READ_CHANNEL = `${id}_read`;
   const WRITE_CHANNEL = `${id}_write`;
 
-  function handleError(onError) {
-    return e => {
-      if (onError === null) {
-        throw e;
-      }
-      onError(e);
-    };
-  }
-  function runReader({ ch, selector, onError }, v) {
-    try {
-      if (isGeneratorFunction(selector)) {
-        go(selector, routineRes => sput(ch, routineRes), value);
-        return;
-      }
-      sput(ch, selector(v));
-    } catch (e) {
-      handleError(onError)(e);
-    }
+  function syncChildren(initiator) {
+    children.forEach(c => {
+      if (c.id !== initiator.id) sput(c, { value, syncing: true });
+    });
   }
 
   const api = {
     id,
     '@state': true,
     children() {
-      return readChannels
-        .map(({ ch }) => ch)
-        .concat(writeChannels.map(({ ch }) => ch));
+      return children;
     },
     READ: sliding(READ_CHANNEL),
     WRITE: sliding(WRITE_CHANNEL),
-    select(c, selector = v => v, onError = null) {
-      const ch = verifyChannel(c);
-      ch['@statereadchannel'] = true;
-      const reader = { ch, selector, onError };
-      readChannels.push(reader);
-      if (isThereInitialValue) {
-        runReader(reader, value);
-      }
-      return this;
-    },
-    mutate(c, reducer = (_, v) => v, onError = null) {
-      const ch = verifyChannel(c);
-      ch['@statewritechannel'] = true;
-      const writer = { ch };
-      writeChannels.push(writer);
-      ch.beforePut((payload, resolveBeforePutHook) => {
+    chan(
+      selector = DEFAULT_SELECTOR,
+      reducer = DEFAULT_REDUCER,
+      onError = DEFAULT_ERROR
+    ) {
+      const ch = sliding();
+      sput(ch, value);
+      ch.afterTake((item, cb) => {
+        try {
+          if (isGeneratorFunction(selector)) {
+            go(selector, routineRes => cb(routineRes), item);
+            return;
+          }
+          cb(selector(item));
+        } catch (e) {
+          onError(e);
+        }
+      });
+      ch.beforePut((payload, cb) => {
+        if (
+          payload !== null &&
+          typeof payload === 'object' &&
+          'syncing' in payload &&
+          payload.syncing
+        ) {
+          cb(payload.value);
+          return;
+        }
         try {
           if (isGeneratorFunction(reducer)) {
             go(
               reducer,
               genResult => {
                 value = genResult;
-                readChannels.forEach(r => runReader(r, value));
-                resolveBeforePutHook(value);
+                cb(value);
+                syncChildren(ch);
                 logger.log(api, 'STATE_VALUE_SET', value);
               },
               value,
@@ -80,18 +72,24 @@ export default function state(...args) {
             return;
           }
           value = reducer(value, payload);
-          readChannels.forEach(r => runReader(r, value));
-          resolveBeforePutHook(value);
+          cb(value);
+          syncChildren(ch);
           logger.log(api, 'STATE_VALUE_SET', value);
         } catch (e) {
-          handleError(onError)(e);
+          onError(e);
         }
       });
-      return this;
+      children.push(ch);
+      return ch;
+    },
+    select(selector, onError) {
+      return this.chan(selector, DEFAULT_REDUCER, onError);
+    },
+    mutate(reducer, onError) {
+      return this.chan(DEFAULT_SELECTOR, reducer, onError);
     },
     destroy() {
-      readChannels.forEach(({ ch }) => sclose(ch));
-      writeChannels.forEach(({ ch }) => sclose(ch));
+      children.forEach(ch => sclose(ch));
       value = undefined;
       grid.remove(api);
       logger.log(api, 'STATE_DESTROYED');
@@ -102,16 +100,13 @@ export default function state(...args) {
     },
     set(newValue) {
       value = newValue;
-      readChannels.forEach(r => {
-        runReader(r, value);
-      });
+      syncChildren({});
       logger.log(api, 'STATE_VALUE_SET', newValue);
       return newValue;
     },
   };
 
-  api.select(api.READ);
-  api.mutate(api.WRITE);
+  api.DEFAULT = api.chan();
 
   grid.add(api);
   logger.log(api, 'STATE_CREATED');
