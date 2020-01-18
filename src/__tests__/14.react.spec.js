@@ -167,14 +167,15 @@ describe('Given the React riew function', () => {
             { value: 2, selected: true },
             { value: 67, selected: true },
           ]);
-          s.mutate(sliding('select'), (current = [], payload) =>
+          const select = sliding();
+          s.mutate(select, (current = [], payload) =>
             current.map(item => ({
               ...item,
               selected: item.value === payload ? false : item.selected,
             }))
           );
           const change = payload => {
-            sput('select', payload);
+            sput(select, payload);
           };
 
           render({ value: s, change });

@@ -1,4 +1,12 @@
-import { go, sput, sclose, grid, logger, getChannel, sliding } from '../index';
+import {
+  go,
+  sput,
+  sclose,
+  grid,
+  logger,
+  verifyChannel,
+  sliding,
+} from '../index';
 import { getId, isGeneratorFunction } from '../utils';
 
 export default function state(...args) {
@@ -41,7 +49,7 @@ export default function state(...args) {
     READ: sliding(READ_CHANNEL),
     WRITE: sliding(WRITE_CHANNEL),
     select(c, selector = v => v, onError = null) {
-      const ch = getChannel(c);
+      const ch = verifyChannel(c);
       ch['@statereadchannel'] = true;
       const reader = { ch, selector, onError };
       readChannels.push(reader);
@@ -51,7 +59,7 @@ export default function state(...args) {
       return this;
     },
     mutate(c, reducer = (_, v) => v, onError = null) {
-      const ch = getChannel(c);
+      const ch = verifyChannel(c);
       ch['@statewritechannel'] = true;
       const writer = { ch };
       writeChannels.push(writer);

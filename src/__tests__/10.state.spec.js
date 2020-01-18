@@ -9,8 +9,8 @@ import {
   sput,
   stake,
   sleep,
-  chan,
   sliding,
+  fixed,
 } from '../index';
 import { delay } from '../__helpers__';
 
@@ -30,9 +30,10 @@ describe('Given a CSP state extension', () => {
     it('should trigger the defined selectors', () => {
       const s = state('foo');
       const spy = jest.fn();
+      const r = sliding();
 
-      s.select(sliding('R'), value => value.toUpperCase());
-      listen('R', spy, { initialCall: true });
+      s.select(r, value => value.toUpperCase());
+      listen(r, spy, { initialCall: true });
       s.set('bar');
       expect(spy).toBeCalledWithArgs(['FOO'], ['BAR']);
     });
@@ -56,15 +57,18 @@ describe('Given a CSP state extension', () => {
     it('should retrieve and change the state value', () => {
       const s = state(10);
       const spy1 = jest.fn();
+      const R = sliding();
+      const W1 = sliding();
+      const W2 = sliding();
 
-      s.select(sliding('R'), value => `value is ${value}`);
-      s.mutate(sliding('W1'), (current, newValue) => current + newValue);
-      s.mutate(sliding('W2'), (current, newValue) => current * newValue);
+      s.select(R, value => `value is ${value}`);
+      s.mutate(W1, (current, newValue) => current + newValue);
+      s.mutate(W2, (current, newValue) => current * newValue);
 
-      listen('R', spy1, { initialCall: true });
-      sput('W1', 4);
-      sput('W1', 12);
-      sput('W2', 3);
+      listen(R, spy1, { initialCall: true });
+      sput(W1, 4);
+      sput(W1, 12);
+      sput(W2, 3);
 
       expect(spy1).toBeCalledWithArgs(
         ['value is 10'],
@@ -77,15 +81,17 @@ describe('Given a CSP state extension', () => {
   describe('when we destroy the state', () => {
     it('should close the created channels', () => {
       const s = state('foo');
+      const RR = sliding();
+      const WW = sliding();
 
-      s.select(sliding('RR'));
-      s.select(sliding('WW'));
+      s.select(RR);
+      s.select(WW);
 
       expect(Object.keys(CHANNELS.getAll())).toStrictEqual([
         s.READ.id,
         s.WRITE.id,
-        'RR',
-        'WW',
+        RR.id,
+        WW.id,
       ]);
       s.destroy();
       expect(Object.keys(CHANNELS.getAll())).toStrictEqual([]);
@@ -99,24 +105,26 @@ describe('Given a CSP state extension', () => {
       const s = state('foo');
       const spy = jest.fn();
       const listenSpy = jest.fn();
+      const R = sliding();
+      const W = sliding();
 
-      s.select(sliding('R'), value => value.toUpperCase());
-      s.mutate(sliding('W'), (a, b) => a + b);
+      s.select(R, value => value.toUpperCase());
+      s.mutate(W, (a, b) => a + b);
 
       listen(s, v => listenSpy(`READ=${v}`), { initialCall: true });
-      listen('R', v => listenSpy(`R=${v}`), { initialCall: true });
+      listen(R, v => listenSpy(`R=${v}`), { initialCall: true });
       listen(s.WRITE, v => listenSpy(`WRITE=${v}`));
-      listen('W', v => listenSpy(`W=${v}`));
+      listen(W, v => listenSpy(`W=${v}`));
 
       go(function*() {
         spy(yield take(s));
-        spy(yield take('R'));
+        spy(yield take(R));
         spy(yield put(s, 'bar'));
         spy(yield take(s));
-        spy(yield take('R'));
-        spy(yield put('W', 'hello world my friend'));
+        spy(yield take(R));
+        spy(yield put(W, 'hello world my friend'));
         spy(yield take(s));
-        spy(yield take('R'));
+        spy(yield take(R));
       });
 
       expect(spy).toBeCalledWithArgs(
@@ -146,14 +154,15 @@ describe('Given a CSP state extension', () => {
       const spy = jest.fn();
       const s = state('foo');
       const s2 = state('bar');
+      const W = sliding();
 
-      s.mutate(sliding('W'), function*(current, newOne) {
+      s.mutate(W, function*(current, newOne) {
         yield sleep(5);
         return current + newOne + (yield take(s2));
       });
 
       listen(s, spy, { initialCall: true });
-      sput('W', 'zoo');
+      sput(W, 'zoo');
 
       await delay(10);
       expect(spy).toBeCalledWithArgs(['foo'], ['foozoobar']);
@@ -161,14 +170,15 @@ describe('Given a CSP state extension', () => {
     it('should block the put till the mutator is done', async () => {
       const spy = jest.fn();
       const s = state('foo');
+      const W = sliding();
 
-      s.mutate(sliding('W'), function*(current, newOne) {
+      s.mutate(W, function*(current, newOne) {
         yield sleep(5);
         return current + newOne;
       });
 
       go(function*() {
-        yield put('W', 'bar');
+        yield put(W, 'bar');
         spy(yield take(s));
       });
 
@@ -180,12 +190,13 @@ describe('Given a CSP state extension', () => {
     it('should wait till the routine is gone', async () => {
       const spy = jest.fn();
       const s = state();
+      const IS = sliding();
 
-      s.select(sliding('IS'), function*(word) {
+      s.select(IS, function*(word) {
         return word;
       });
 
-      listen('IS', spy);
+      listen(IS, spy);
       sput(s, 'bar');
       sput(s, 'zar');
 
@@ -195,25 +206,26 @@ describe('Given a CSP state extension', () => {
   });
   describe('when we pass an already existing channel as a selector', () => {
     it('should put selected values to that channel', () => {
-      const ch = chan('XXX');
+      const ch = fixed();
       const s1 = state('foo');
       const s2 = state([{ name: 'A' }, { name: 'B' }]);
       const spy = jest.fn();
+      const add = sliding('add');
 
       listen(ch, spy);
       s1.select(ch);
       s2.select(ch, items => items.map(({ name }) => name).join('-'));
-      s2.mutate(sliding('add'), (items, newItem) => [...items, newItem]);
+      s2.mutate(add, (items, newItem) => [...items, newItem]);
 
       sput(s1, 'bar');
-      sput('add', { name: 'C' });
+      sput(add, { name: 'C' });
 
       expect(spy).toBeCalledWithArgs(['foo'], ['A-B'], ['bar'], ['A-B-C']);
     });
   });
   describe('when we pass an already existing channel as a mutator', () => {
     it('should mutate every time when we put to that channel', () => {
-      const ch = chan();
+      const ch = fixed();
       const s = state('a');
       const spy = jest.fn();
 
@@ -236,16 +248,18 @@ describe('Given a CSP state extension', () => {
     it('should mutate both states', () => {
       const s1 = state('foo');
       const s2 = state(12);
-      chan('X');
+      const X = fixed();
+      const X1 = sliding();
+      const X2 = sliding();
 
-      s1.mutate(sliding('X1'), (value, payload) => value + payload);
-      s2.mutate(sliding('X2'), (value, payload) => value * payload);
+      s1.mutate(X1, (value, payload) => value + payload);
+      s2.mutate(X2, (value, payload) => value * payload);
 
-      listen('X', 'X1');
-      listen('X', 'X2');
+      listen(X, X1);
+      listen(X, X2);
 
-      sput('X', 3);
-      sput('X', 10);
+      sput(X, 3);
+      sput(X, 10);
 
       expect(s1.get()).toBe('foo310');
       expect(s2.get()).toBe(360);

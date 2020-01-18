@@ -264,44 +264,9 @@ exports.default = buffer;
 },{"../index":7,"./utils":5}],2:[function(require,module,exports){
 'use strict';
 
-var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _slicedToArray = function () {
-  function sliceIterator(arr, i) {
-    var _arr = [];var _n = true;var _d = false;var _e = undefined;try {
-      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-        _arr.push(_s.value);if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;_e = err;
-    } finally {
-      try {
-        if (!_n && _i["return"]) _i["return"]();
-      } finally {
-        if (_d) throw _e;
-      }
-    }return _arr;
-  }return function (arr, i) {
-    if (Array.isArray(arr)) {
-      return arr;
-    } else if (Symbol.iterator in Object(arr)) {
-      return sliceIterator(arr, i);
-    } else {
-      throw new TypeError("Invalid attempt to destructure non-iterable instance");
-    }
-  };
-}();
-
-var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
-  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
-};
-
 exports.default = chan;
 
 var _utils = require('../utils');
@@ -316,39 +281,14 @@ function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
 
-function normalizeChannelArguments(args) {
-  var id = void 0;
-  var buff = void 0;
-  if (args.length === 2) {
-    id = args[0];
-    buff = args[1];
-  } else if (args.length === 1 && typeof args[0] === 'string') {
-    id = args[0];
-    buff = _buf2.default.fixed();
-  } else if (args.length === 1 && _typeof(args[0]) === 'object') {
-    id = (0, _utils.getId)('ch');
-    buff = args[0];
-  } else {
-    id = (0, _utils.getId)('ch');
-    buff = _buf2.default.fixed();
-  }
-  return [id, buff];
-}
-
-function chan() {
+function chan(id, buff) {
   var state = _index.OPEN;
 
-  for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-    args[_key] = arguments[_key];
-  }
-
-  var _normalizeChannelArgu = normalizeChannelArguments(args),
-      _normalizeChannelArgu2 = _slicedToArray(_normalizeChannelArgu, 2),
-      id = _normalizeChannelArgu2[0],
-      buff = _normalizeChannelArgu2[1];
+  id = id || (0, _utils.getId)('ch');
+  buff = buff || _buf2.default.fixed();
 
   if (_index.CHANNELS.exists(id)) {
-    return _index.CHANNELS.get(id);
+    throw new Error('Channel with id "' + id + '" already exists.');
   }
 
   var api = _index.CHANNELS.set(id, {
@@ -645,15 +585,12 @@ ops.isStateReadChannel = function (s) {
 ops.isStateWriteChannel = function (s) {
   return s && s['@statewritechannel'] === true;
 };
-ops.getChannel = function getChannel(ch) {
+ops.verifyChannel = function verifyChannel(ch) {
   var throwError = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
 
-  if ((typeof ch === 'undefined' ? 'undefined' : _typeof(ch)) === 'object' && ops.isChannel(ch)) return ch;
-  if (typeof ch === 'string' && _index.CHANNELS.exists(ch)) {
-    return _index.CHANNELS.get(ch);
-  }
+  if (ops.isChannel(ch)) return ch;
   if (throwError) {
-    throw new Error('Channel or ID of an existing channel expected. Instead ' + ch + (typeof ch !== 'undefined' ? ' (' + (typeof ch === 'undefined' ? 'undefined' : _typeof(ch)) + ')' : '') + ' given.' + (typeof ch === 'string' ? ' Did you forget to define it? Example `chan(' + ch + ')`.' : ''));
+    throw new Error('' + ch + (typeof ch !== 'undefined' ? ' (' + (typeof ch === 'undefined' ? 'undefined' : _typeof(ch)) + ')' : '') + ' is not a channel.' + (typeof ch === 'string' ? ' Did you forget to define it?\nExample: chan("' + ch + '")' : ''));
   }
   return null;
 };
@@ -874,7 +811,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.getChannel)(c);
+      var ch = (0, _index.verifyChannel)(c);
       ch['@statereadchannel'] = true;
       var reader = { ch: ch, selector: selector, onError: onError };
       readChannels.push(reader);
@@ -889,7 +826,7 @@ function state() {
       };
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var ch = (0, _index.getChannel)(c);
+      var ch = (0, _index.verifyChannel)(c);
       ch['@statewritechannel'] = true;
       var writer = { ch: ch };
       writeChannels.push(writer);
@@ -957,9 +894,18 @@ function state() {
 },{"../index":7,"../utils":15}],5:[function(require,module,exports){
 'use strict';
 
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+}; /* eslint-disable no-param-reassign, no-multi-assign */
+
 exports.normalizeChannels = normalizeChannels;
 exports.normalizeTo = normalizeTo;
 exports.normalizeOptions = normalizeOptions;
@@ -972,9 +918,9 @@ function normalizeChannels(channels) {
   if (!Array.isArray(channels)) channels = [channels];
   return channels.map(function (ch) {
     if ((0, _index.isState)(ch)) return ch[stateOp];
-    return (0, _index.getChannel)(ch);
+    return (0, _index.verifyChannel)(ch);
   });
-} /* eslint-disable no-param-reassign, no-multi-assign */
+}
 
 var DEFAULT_OPTIONS = {
   onError: null,
@@ -990,13 +936,7 @@ function normalizeTo(to) {
       return (0, _index.sput)(to, v);
     };
   }
-  if (_index.CHANNELS.exists(to)) {
-    var ch = _index.CHANNELS.get(to);
-    return function (v) {
-      return (0, _index.sput)(ch, v);
-    };
-  }
-  throw new Error('Channel or a function as a second argument expected. ' + JSON.stringify(to) + ' given.');
+  throw new Error('' + to + (typeof to !== 'undefined' ? ' (' + (typeof to === 'undefined' ? 'undefined' : _typeof(to)) + ')' : '') + ' is not a channel.' + (typeof ch === 'string' ? ' Did you forget to define it?\nExample: chan("' + to + '")' : ''));
 }
 function normalizeOptions(options) {
   options = options || DEFAULT_OPTIONS;
@@ -1068,7 +1008,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
+exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.verifyChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -1166,17 +1106,17 @@ var CHANNELS = exports.CHANNELS = {
 
 var buffer = exports.buffer = _buf2.default;
 var chan = exports.chan = _channel2.default;
-var fixed = exports.fixed = function fixed(id) {
-  var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-  return chan(id, buffer.fixed(size));
+var fixed = exports.fixed = function fixed() {
+  var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+  return chan((0, _utils.getId)('fixed'), buffer.fixed(size));
 };
-var sliding = exports.sliding = function sliding(id) {
-  var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-  return chan(id, buffer.sliding(size));
+var sliding = exports.sliding = function sliding() {
+  var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+  return chan((0, _utils.getId)('sliding'), buffer.sliding(size));
 };
-var dropping = exports.dropping = function dropping(id) {
-  var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
-  return chan(id, buffer.dropping(size));
+var dropping = exports.dropping = function dropping() {
+  var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+  return chan((0, _utils.getId)('dropping'), buffer.dropping(size));
 };
 var state = exports.state = _state2.default;
 
@@ -1223,6 +1163,7 @@ var call = exports.call = _ops2.default.call;
 var fork = exports.fork = _ops2.default.fork;
 var merge = exports.merge = _ops2.default.merge;
 var timeout = exports.timeout = _ops2.default.timeout;
+var verifyChannel = exports.verifyChannel = _ops2.default.verifyChannel;
 var isChannel = exports.isChannel = _ops2.default.isChannel;
 var getChannel = exports.getChannel = _ops2.default.getChannel;
 var isRiew = exports.isRiew = _ops2.default.isRiew;
@@ -1732,7 +1673,7 @@ function namedRiew(name, viewFunc) {
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
-      var ch = (0, _index.getChannel)(value[key], false);
+      var ch = (0, _index.verifyChannel)(value[key], false);
       if (ch !== null) {
         subscribe(ch, function (v) {
           return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));

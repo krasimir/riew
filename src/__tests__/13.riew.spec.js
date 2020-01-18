@@ -12,10 +12,10 @@ import {
   take,
   put,
   sput,
-  chan,
   go,
   buffer,
   sliding,
+  fixed,
 } from '../index';
 
 function expectRiew(callback, delayInterval = 0) {
@@ -165,10 +165,12 @@ describe('Given the `riew` factory function', () => {
         const view = jest.fn();
         const routine = function*({ state, render }) {
           const message = state('foo');
-          message.select(sliding('up'), v => v.toUpperCase());
-          message.select(sliding('lower'), v => v.toLowerCase());
+          const up = sliding();
+          const lower = sliding();
+          message.select(up, v => v.toUpperCase());
+          message.select(lower, v => v.toLowerCase());
 
-          render({ up: 'up', lower: 'lower' });
+          render({ up, lower });
           yield sleep(2);
           yield put(message, 'Hello World');
           yield sleep(2);
@@ -240,14 +242,15 @@ describe('Given the `riew` factory function', () => {
       });
       const routine = function*({ render, state }) {
         const s = state('foo');
-        s.select(sliding('up'), v => v.toUpperCase());
+        const up = sliding();
+        s.select(up, v => v.toUpperCase());
         const change = () => {
           sput(s, 'bar');
         };
 
-        render({ s11: 'up', change });
-        render({ s11: 'up', change });
-        render({ s11: 'up', change });
+        render({ s11: up, change });
+        render({ s11: up, change });
+        render({ s11: up, change });
       };
       const r = riew(view, routine);
 
@@ -363,12 +366,13 @@ describe('Given the `riew` factory function', () => {
     describe('and when we pass something else', () => {
       it(`should pass the thing to the routine and view`, async () => {
         const s = state();
-        s.select(sliding('firstName'), ({ firstName }) => firstName);
+        const firstName = sliding();
+        s.select(firstName, ({ firstName }) => firstName);
         const view = jest.fn();
         const spy = jest.fn();
         const r = riew(view, function*() {
-          listen('firstName', spy);
-        }).with({ firstName: 'firstName' });
+          listen(firstName, spy);
+        }).with({ firstName });
 
         r.mount();
         sput(s, { firstName: 'John', lastName: 'Doe' });
@@ -550,11 +554,12 @@ describe('Given the `riew` factory function', () => {
       it('should accept a state via the `render` method', async () => {
         const routine = function*({ state, render }) {
           const counter = state(1);
-          counter.mutate(sliding('increment'), current => current + 1);
+          const increment = sliding();
+          counter.mutate(increment, current => current + 1);
 
           render({ counter });
           yield sleep(2);
-          yield put('increment');
+          yield put(increment);
         };
         const view = jest.fn();
         const r = riew(view, routine);
@@ -567,9 +572,10 @@ describe('Given the `riew` factory function', () => {
         const counter = state(12);
         register('counter', counter);
         const routine = function*({ counter }) {
-          counter.mutate(sliding('increment'), current => current + 1);
+          const increment = sliding();
+          counter.mutate(increment, current => current + 1);
           yield sleep(2);
-          yield put('increment');
+          yield put(increment);
         };
         const view = jest.fn();
         const r = riew(view, routine).with('counter');
@@ -585,10 +591,10 @@ describe('Given the `riew` factory function', () => {
       const view = jest.fn();
       const s1 = state(['a', 'b', 'c', 'd']);
       const s2 = state(1);
+      const current = sliding();
+      const WWW = sliding();
 
-      chan('current', buffer.sliding());
-
-      s1.mutate(sliding('WWW'), function*(arr) {
+      s1.mutate(WWW, function*(arr) {
         return arr.map((value, i) => {
           if (i === 2) {
             return 'X';
@@ -600,19 +606,19 @@ describe('Given the `riew` factory function', () => {
       listen(
         [s1, s2],
         ([arr, idx]) => {
-          sput('current', arr[idx]);
+          sput(current, arr[idx]);
         },
         {
           initialCall: true,
         }
       );
-      const r = riew(view).with({ data: 'current' });
+      const r = riew(view).with({ data: current });
 
       r.mount();
       await delay(2);
       sput(s2, 2);
       await delay();
-      sput('WWW');
+      sput(WWW);
       await delay(5);
       expect(view).toBeCalledWithArgs(
         [{ data: 'b' }],
@@ -637,7 +643,7 @@ describe('Given the `riew` factory function', () => {
     it('should recognize it and subscribe to it', async () => {
       const view = jest.fn();
       const routine = function*({ render }) {
-        const ch = chan(buffer.sliding());
+        const ch = sliding();
         render({ data: ch });
         yield put(ch, 'foo');
         yield sleep(2);
@@ -654,16 +660,16 @@ describe('Given the `riew` factory function', () => {
   describe('when we have a loop', () => {
     it('should not end up in a maximum call stack problem', async () => {
       const spy = jest.fn();
-      chan('XXX');
+      const XXX = fixed();
       const fff = function*({ render }) {
-        spy(yield take('XXX'));
+        spy(yield take(XXX));
         render({ a: 'b' });
         return go;
       };
       const r = riew(spy, fff);
 
       r.mount();
-      sput('XXX', 'foo');
+      sput(XXX, 'foo');
       await delay(20);
       expect(spy).toBeCalledWithArgs(
         ['foo'],

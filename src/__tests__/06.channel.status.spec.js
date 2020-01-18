@@ -1,4 +1,4 @@
-import { chan, buffer, reset, put, sput, take, sleep, close } from '../index';
+import { buffer, reset, put, sput, take, sleep, close, fixed } from '../index';
 import { Test, exercise } from '../__helpers__';
 
 describe('Given a CSP', () => {
@@ -11,7 +11,7 @@ describe('Given a CSP', () => {
       * allow writing and reading
       * should block the put until take
       * should block the take until put`, () => {
-      const ch = chan();
+      const ch = fixed();
 
       exercise(
         Test(
@@ -29,7 +29,7 @@ describe('Given a CSP', () => {
   });
   describe('and we put without waiting', () => {
     it('should end the first routine and allow consuming from the channel in the second', () => {
-      const ch = chan();
+      const ch = fixed();
 
       exercise(
         Test(
@@ -54,7 +54,7 @@ describe('Given a CSP', () => {
       - resolve the future puts with ENDED
       - allow takes if the buffer is not empty
       - resolve the future takes with ENDED`, () => {
-      const ch = chan();
+      const ch = fixed();
 
       exercise(
         Test(
@@ -85,7 +85,7 @@ describe('Given a CSP', () => {
       );
     });
     it('should resolve the pending takes with ENDED', () => {
-      const ch = chan();
+      const ch = fixed();
 
       exercise(
         Test(
@@ -107,7 +107,7 @@ describe('Given a CSP', () => {
       - resolve the future puts with ENDED if the buffer is empty
       - allow takes if the buffer is not empty
       - resolve the future takes with ENDED`, () => {
-      const ch = chan(buffer.fixed(1));
+      const ch = fixed(1);
 
       return exercise(
         Test(
@@ -145,7 +145,7 @@ describe('Given a CSP', () => {
       );
     });
     it('should resolve the pending takes with ENDED', () => {
-      const ch = chan();
+      const ch = fixed();
 
       exercise(
         Test(

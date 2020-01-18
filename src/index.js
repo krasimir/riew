@@ -1,7 +1,7 @@
 import R from './registry';
 import Grid from './grid';
 import Logger from './logger';
-import { resetIds } from './utils';
+import { resetIds, getId } from './utils';
 import reactRiew from './react';
 import b from './csp/buf';
 import c from './csp/channel';
@@ -48,9 +48,11 @@ export const CHANNELS = {
 
 export const buffer = b;
 export const chan = c;
-export const fixed = (id, size = 0) => chan(id, buffer.fixed(size));
-export const sliding = (id, size = 1) => chan(id, buffer.sliding(size));
-export const dropping = (id, size = 1) => chan(id, buffer.dropping(size));
+export const fixed = (size = 0) => chan(getId('fixed'), buffer.fixed(size));
+export const sliding = (size = 1) =>
+  chan(getId('sliding'), buffer.sliding(size));
+export const dropping = (size = 1) =>
+  chan(getId('dropping'), buffer.dropping(size));
 export const state = s;
 
 export * from './riew';
@@ -88,6 +90,7 @@ export const call = ops.call;
 export const fork = ops.fork;
 export const merge = ops.merge;
 export const timeout = ops.timeout;
+export const verifyChannel = ops.verifyChannel;
 export const isChannel = ops.isChannel;
 export const getChannel = ops.getChannel;
 export const isRiew = ops.isRiew;

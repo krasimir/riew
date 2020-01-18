@@ -2,7 +2,6 @@ import Grid from '../grid';
 import {
   grid,
   riew,
-  chan,
   close,
   state,
   sleep,
@@ -12,6 +11,7 @@ import {
   take,
   sput,
   sliding,
+  fixed,
 } from '../index';
 import { delay } from '../__helpers__';
 
@@ -52,7 +52,7 @@ describe('Given the grid', () => {
   });
   describe('when we create and close a channel', () => {
     it('should add an item to the grid and remove it', () => {
-      const c = chan();
+      const c = fixed();
 
       expect(grid.nodes().find(({ id }) => c.id === id)).toMatchObject({
         id: c.id,
@@ -123,13 +123,14 @@ describe('Given the grid', () => {
       const s2 = state('bar');
       const getRoutineGridNode = () =>
         grid.nodes().find(({ id }) => id.match(/^routine_R/));
+      const XXX = sliding();
 
-      s.mutate(sliding('XXX'), function* R() {
+      s.mutate(XXX, function* R() {
         yield sleep(10);
         return (yield take(s2)).toUpperCase();
       });
 
-      sput('XXX');
+      sput(XXX);
       expect(getRoutineGridNode()).toBeDefined();
       expect(s.get()).toBe('foo');
       await delay(20);

@@ -4,15 +4,14 @@ import {
   isChannel,
   isState,
   sput,
-  getChannel,
-  CHANNELS,
+  verifyChannel,
 } from '../index';
 
 export function normalizeChannels(channels, stateOp = 'READ') {
   if (!Array.isArray(channels)) channels = [channels];
   return channels.map(ch => {
     if (isState(ch)) return ch[stateOp];
-    return getChannel(ch);
+    return verifyChannel(ch);
   });
 }
 
@@ -28,14 +27,14 @@ export function normalizeTo(to) {
   if (isChannel(to)) {
     return v => sput(to, v);
   }
-  if (CHANNELS.exists(to)) {
-    const ch = CHANNELS.get(to);
-    return v => sput(ch, v);
-  }
   throw new Error(
-    `Channel or a function as a second argument expected. ${JSON.stringify(
-      to
-    )} given.`
+    `${to}${
+      typeof to !== 'undefined' ? ` (${typeof to})` : ''
+    } is not a channel.${
+      typeof ch === 'string'
+        ? ` Did you forget to define it?\nExample: chan("${to}")`
+        : ''
+    }`
   );
 }
 export function normalizeOptions(options) {

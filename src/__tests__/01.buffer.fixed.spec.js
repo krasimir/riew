@@ -1,5 +1,4 @@
 import {
-  chan,
   buffer,
   read,
   sread,
@@ -10,6 +9,7 @@ import {
   sleep,
   stake,
   ONE_OF,
+  fixed,
 } from '../index';
 import { Test, exercise } from '../__helpers__';
 
@@ -228,7 +228,7 @@ describe('Given the Fixed buffer', () => {
   });
   describe('when using inside a routine', () => {
     it('should block the channel if there is no puts but we want to take', () => {
-      const ch = chan();
+      const ch = fixed();
 
       exercise(
         Test(
@@ -254,7 +254,7 @@ describe('Given the Fixed buffer', () => {
       );
     });
     it('should block the channel if there is no takers but we want to put', () => {
-      const ch = chan();
+      const ch = fixed();
 
       exercise(
         Test(
@@ -282,7 +282,7 @@ describe('Given the Fixed buffer', () => {
   });
   describe('when buffer size > 0', () => {
     it('should allow as many puts as we have space', () => {
-      const ch = chan(buffer.fixed(2));
+      const ch = fixed(2);
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       return exercise(
@@ -345,12 +345,12 @@ describe('Given we use take with options and a fixed buffer', () => {
   describe.each([
     [
       'buffer size = 0',
-      chan(),
+      fixed(),
       ['>B', '<B', '>A', 'read1=undefined', 'read2=undefined', '<A'],
     ],
     [
       'buffer size > 0',
-      chan(buffer.fixed(2)),
+      fixed(2),
       ['>B', true, true, '<B', '>A', 'read1=foo', 'read2=foo', '<A'],
     ],
   ])('when we _read_ from a channel via routine (%s)', (_, ch, expected) => {
@@ -372,8 +372,8 @@ describe('Given we use take with options and a fixed buffer', () => {
     });
   });
   describe.each([
-    ['buffer size = 0', chan(), [[undefined]]],
-    ['buffer size > 0', chan(buffer.fixed(2)), [[true], [true], ['foo']]],
+    ['buffer size = 0', fixed(), [[undefined]]],
+    ['buffer size > 0', fixed(2), [[true], [true], ['foo']]],
   ])(
     'when we _read_ from a channel outside a routine (%s)',
     (_, ch, expected) => {
@@ -390,8 +390,8 @@ describe('Given we use take with options and a fixed buffer', () => {
   );
   describe('when we _read_ from multiple channels via routine', () => {
     it('should get the values of both channels', () => {
-      const ch1 = chan(buffer.fixed(1));
-      const ch2 = chan(buffer.fixed(1));
+      const ch1 = fixed(1);
+      const ch2 = fixed(1);
 
       exercise(
         Test(
@@ -409,8 +409,8 @@ describe('Given we use take with options and a fixed buffer', () => {
   });
   describe('when we _read_ from multiple channels outside a routine', () => {
     it('should wait till both channels have something', () => {
-      const ch1 = chan(buffer.fixed(1));
-      const ch2 = chan(buffer.fixed(1));
+      const ch1 = fixed(1);
+      const ch2 = fixed(1);
       const spy = jest.fn();
 
       sput(ch1, 'foo', spy);
@@ -421,12 +421,8 @@ describe('Given we use take with options and a fixed buffer', () => {
     });
   });
   describe.each([
-    ['buffer size = 0', chan(), [['foo'], ['bar']]],
-    [
-      'buffer size > 0',
-      chan(buffer.fixed(2)),
-      [['foo'], [true], ['bar'], [true]],
-    ],
+    ['buffer size = 0', fixed(), [['foo'], ['bar']]],
+    ['buffer size > 0', fixed(2), [['foo'], [true], ['bar'], [true]]],
   ])('when we listen (%s)', (_, ch, expected) => {
     it('should wait till the channel has something', () => {
       const spy = jest.fn();
@@ -440,8 +436,8 @@ describe('Given we use take with options and a fixed buffer', () => {
   });
   describe('when we listen from multiple channels', () => {
     it('should wait till both channels have something', () => {
-      const ch1 = chan();
-      const ch2 = chan();
+      const ch1 = fixed();
+      const ch2 = fixed();
       const spy = jest.fn();
 
       stake([ch1, ch2], spy, { listen: true });
@@ -454,8 +450,8 @@ describe('Given we use take with options and a fixed buffer', () => {
   });
   describe('when we listen from multiple channels using the ONE_OF strategy', () => {
     it('should fire the callback as soon as there is a value', () => {
-      const ch1 = chan();
-      const ch2 = chan();
+      const ch1 = fixed();
+      const ch2 = fixed();
       const spy = jest.fn();
 
       stake([ch1, ch2], spy, { listen: true, strategy: ONE_OF });

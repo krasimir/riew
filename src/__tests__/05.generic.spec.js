@@ -1,5 +1,4 @@
 import {
-  chan,
   buffer,
   timeout,
   go,
@@ -14,7 +13,9 @@ import {
   CHANNELS,
   ONE_OF,
   register,
-  getChannel,
+  verifyChannel,
+  fixed,
+  sliding,
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -25,41 +26,38 @@ describe('Given a CSP', () => {
 
   describe('when we try to get a channel out of a string', () => {
     it("should throw an error if the channel doesn't exist", () => {
-      expect(() => getChannel()).toThrowError(
-        'Channel or ID of an existing channel expected. Instead undefined given.'
+      expect(() => verifyChannel()).toThrowError('undefined is not a channel');
+      expect(() => verifyChannel(42)).toThrowError(
+        '42 (number) is not a channel.'
       );
-      expect(() => getChannel(42)).toThrowError(
-        'Channel or ID of an existing channel expected. Instead 42 (number) given.'
+      expect(() => verifyChannel('FOO')).toThrowError(
+        'FOO (string) is not a channel'
       );
-      expect(() => getChannel('FOO')).toThrowError(
-        'Channel or ID of an existing channel expected. Instead FOO (string) given. Did you forget to define it? Example `chan(FOO)`.'
+      expect(() => verifyChannel(['a', 'b'])).toThrowError(
+        'a,b (object) is not a channel.'
       );
-      expect(() => getChannel(['a', 'b'])).toThrowError(
-        'Channel or ID of an existing channel expected. Instead a,b (object) given.'
-      );
-      expect(() => getChannel({})).toThrowError(
-        'Channel or ID of an existing channel expected. Instead [object Object] (object) given.'
+      expect(() => verifyChannel({})).toThrowError(
+        '[object Object] (object) is not a channel'
       );
     });
   });
   describe('when we have a channel', () => {
     it('should allow us to put and take from it', () => {
       const spy = jest.fn();
+      const ch = fixed();
 
-      chan('X');
+      stake(ch, spy);
+      sput(ch, 'foo', spy);
 
-      stake('X', spy);
-      sput('X', 'foo', spy);
-
-      sput('X', 'bar', spy);
-      stake('X', spy);
+      sput(ch, 'bar', spy);
+      stake(ch, spy);
 
       expect(spy).toBeCalledWithArgs(['foo'], [true], [true], ['bar']);
     });
     it('should allow us to wait a take from multiple channels (ALL_REQUIRED strategy)', () => {
       const spy = jest.fn();
-      const ch1 = chan();
-      const ch2 = chan();
+      const ch1 = fixed();
+      const ch2 = fixed();
 
       sput(ch1, 'foo');
       stake([ch1, ch2], spy);
@@ -69,8 +67,8 @@ describe('Given a CSP', () => {
     });
     it('should allow us to wait a take from multiple channels (ONE_OF strategy)', () => {
       const spy = jest.fn();
-      const ch1 = chan();
-      const ch2 = chan();
+      const ch1 = fixed();
+      const ch2 = fixed();
 
       stake([ch1, ch2], spy, { strategy: ONE_OF });
       sput(ch2, 'foo');
@@ -83,7 +81,7 @@ describe('Given a CSP', () => {
 
   describe('when adding a before put hook', () => {
     it('should fire the hook before performing the actual put', () => {
-      const ch = chan();
+      const ch = fixed();
       const spy = jest.fn();
 
       stake(ch, spy);
@@ -97,7 +95,7 @@ describe('Given a CSP', () => {
     });
     describe('and when the before put hook is async', () => {
       it('should delay the put till the hook is completed', async () => {
-        const ch = chan();
+        const ch = fixed();
         const spy = jest.fn();
 
         stake(ch, spy);
@@ -120,7 +118,7 @@ describe('Given a CSP', () => {
   });
   describe('when adding an after put hook', () => {
     it('should fire the hook after performing the actual put', () => {
-      const ch = chan();
+      const ch = fixed();
       const spy = jest.fn();
 
       stake(ch, spy);
@@ -134,7 +132,7 @@ describe('Given a CSP', () => {
     });
     describe('and when the after put hook is async', () => {
       it('should delay the put till the hook is completed', async () => {
-        const ch = chan();
+        const ch = fixed();
         const spy = jest.fn();
 
         stake(ch, spy);
@@ -157,7 +155,7 @@ describe('Given a CSP', () => {
   });
   describe('when adding a before take hook', () => {
     it('should fire the hook before performing the actual take', () => {
-      const ch = chan();
+      const ch = fixed();
       const spy = jest.fn();
 
       ch.beforeTake((_, cb) => {
@@ -171,7 +169,7 @@ describe('Given a CSP', () => {
     });
     describe('and when the before take hook is async', () => {
       it('should delay the take till the hook is completed', async () => {
-        const ch = chan();
+        const ch = fixed();
         const spy = jest.fn();
 
         ch.beforeTake((_, cb) => {
@@ -190,7 +188,7 @@ describe('Given a CSP', () => {
   });
   describe('when adding an after take hook', () => {
     it('should fire the hook after performing the actual take but before calling the user callback', () => {
-      const ch = chan();
+      const ch = fixed();
       const spy = jest.fn();
 
       ch.afterTake((item, cb) => {
@@ -204,7 +202,7 @@ describe('Given a CSP', () => {
     });
     describe('and when the after take hook is async', () => {
       it('should delay the take till the hook is completed', async () => {
-        const ch = chan();
+        const ch = fixed();
         const spy = jest.fn();
 
         ch.afterTake((item, cb) => {
@@ -230,9 +228,9 @@ describe('Given a CSP', () => {
 
   describe('when we merge channels', () => {
     it('should merge two and more into a single channel', () => {
-      const ch1 = chan();
-      const ch2 = chan();
-      const ch3 = chan();
+      const ch1 = fixed();
+      const ch2 = fixed();
+      const ch3 = fixed();
       const ch4 = merge(ch1, ch2, ch3);
 
       exercise(
@@ -306,7 +304,7 @@ describe('Given a CSP', () => {
 
   describe('when we use the `reset` method', () => {
     it('should put the channel in its initial state', () => {
-      const ch = chan(buffer.sliding(2));
+      const ch = sliding(2);
       const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       return exercise(
@@ -352,25 +350,25 @@ describe('Given a CSP', () => {
   });
   describe('when we check if a channel exists', () => {
     it('should return true or false', () => {
-      chan('AAA');
-      expect(CHANNELS.exists('AAA')).toBe(true);
+      const ch = fixed();
+      expect(CHANNELS.exists(ch.id)).toBe(true);
       expect(CHANNELS.exists('BBB')).toBe(false);
     });
   });
   describe('when we put to multiple channels', () => {
     it('should resolve the put only if all the channels values are consumed', async () => {
       const spy = jest.fn();
-      chan('save');
-      chan('saving-done');
+      const save = fixed();
+      const savingDone = fixed();
       go(function*() {
-        yield put(['save', 'saving-done'], ['foo', 'bar']);
+        yield put([save, savingDone], ['foo', 'bar']);
         spy('Save successful!');
       });
       go(function*() {
-        spy(`xxx=${yield take('save')}`);
+        spy(`xxx=${yield take(save)}`);
         spy('OOO');
         yield sleep(10);
-        spy(`yyy=${yield take('saving-done')}`);
+        spy(`yyy=${yield take(savingDone)}`);
       });
 
       await delay(20);

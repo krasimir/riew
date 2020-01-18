@@ -1,14 +1,13 @@
-
 [
   {
     "actions": [
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_CREATED",
         "meta": null
       },
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_CREATED",
         "meta": null
       },
@@ -18,48 +17,48 @@
         "meta": null
       },
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "a": "b"
         }
       },
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_TAKE_INITIATED",
         "meta": null
       },
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": {
           "a": "b"
         }
       },
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "a": "b"
         }
       },
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_TAKE_INITIATED",
         "meta": null
       },
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": {
           "a": "b"
@@ -73,40 +72,40 @@
         }
       },
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "c": "d"
         }
       },
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": {
           "c": "d"
         }
       },
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_PUT_INITIATED",
         "meta": {
           "c": "d"
         }
       },
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_TAKE_RESOLVED",
         "meta": {
           "c": "d"
         }
       },
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_PUT_RESOLVED",
         "meta": true
       },
@@ -129,7 +128,7 @@
         },
         "children": [
           {
-            "id": "MyVIew_view_2",
+            "id": "sliding_3",
             "type": "CHANNEL",
             "value": [
               {
@@ -145,7 +144,7 @@
             ]
           },
           {
-            "id": "MyVIew_props_3",
+            "id": "sliding_5",
             "type": "CHANNEL",
             "value": [
               {
@@ -186,7 +185,7 @@
         },
         "children": [
           {
-            "id": "MyVIew_view_2",
+            "id": "sliding_3",
             "type": "CHANNEL",
             "value": [
               {
@@ -202,7 +201,7 @@
             ]
           },
           {
-            "id": "MyVIew_props_3",
+            "id": "sliding_5",
             "type": "CHANNEL",
             "value": [
               {
@@ -224,12 +223,12 @@
   {
     "actions": [
       {
-        "who": "MyVIew_props_3",
+        "who": "sliding_5",
         "what": "CHANNEL_CLOSED",
         "meta": null
       },
       {
-        "who": "MyVIew_view_2",
+        "who": "sliding_3",
         "what": "CHANNEL_CLOSED",
         "meta": null
       },

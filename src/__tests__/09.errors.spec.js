@@ -1,4 +1,4 @@
-import { go, state, sput, reset, chan, put, stake, sliding } from '../index';
+import { go, state, sput, reset, put, stake, sliding, fixed } from '../index';
 import { delay } from '../__helpers__';
 
 describe('Given csp features', () => {
@@ -17,7 +17,7 @@ describe('Given csp features', () => {
   describe('when we yield a promise and it gets rejected', () => {
     it('should pass back the error to the routine and should allow us to continue yielding', async () => {
       const error = new Error('ops');
-      const ch = chan();
+      const ch = fixed();
       const spy = jest.fn();
 
       go(function*() {
@@ -107,19 +107,21 @@ describe('Given csp features', () => {
     it('should allow us to catch the error', async () => {
       const s = state('foo');
       const error = new Error('ops');
+      const ch = sliding();
 
-      s.mutate(sliding('W'), function() {
+      s.mutate(ch, function() {
         throw error;
       });
 
-      expect(() => sput('W', 'zoo')).toThrowError(error);
+      expect(() => sput(ch, 'zoo')).toThrowError(error);
     });
     it('should allow us to catch the error with a callback', done => {
       const s = state('foo');
       const error = new Error('ops');
+      const ch = sliding();
 
       s.mutate(
-        sliding('W'),
+        ch,
         function() {
           throw error;
         },
@@ -129,25 +131,27 @@ describe('Given csp features', () => {
         }
       );
 
-      sput('W', 'zoo');
+      sput(ch, 'zoo');
     });
     describe('and we use a routine', () => {
       it('should allow us to catch the error', async () => {
         const s = state('foo');
         const error = new Error('ops');
+        const ch = sliding();
 
-        s.mutate(sliding('W'), function*() {
+        s.mutate(ch, function*() {
           throw error;
         });
 
-        expect(() => sput('W', 'zoo')).toThrowError(error);
+        expect(() => sput(ch, 'zoo')).toThrowError(error);
       });
       it('should allow us to catch the error with a callback', done => {
         const s = state('foo');
         const error = new Error('ops');
+        const ch = sliding();
 
         s.mutate(
-          sliding('W'),
+          ch,
           function*() {
             throw error;
           },
@@ -157,7 +161,7 @@ describe('Given csp features', () => {
           }
         );
 
-        sput('W', 'zoo');
+        sput(ch, 'zoo');
       });
     });
   });

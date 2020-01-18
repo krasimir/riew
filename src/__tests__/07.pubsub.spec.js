@@ -15,6 +15,7 @@ import {
   unreadAll,
   listen,
   sliding,
+  fixed,
 } from '../index';
 import { Test, exercise } from '../__helpers__';
 
@@ -32,17 +33,17 @@ describe('Given a CSP pubsub extension', () => {
         const spyA = jest.fn();
         const spyB = jest.fn();
         const spyC = jest.fn();
+        const ch = chan('xxx');
 
-        chan('xxx');
-        listen('xxx', spyA);
-        listen('xxx', spyB);
+        listen(ch, spyA);
+        listen(ch, spyB);
 
         go(function*() {
-          spyC(yield put('xxx', 'foo'));
-          spyC(yield put('xxx', 'bar'));
+          spyC(yield put(ch, 'foo'));
+          spyC(yield put(ch, 'bar'));
         });
         go(function*() {
-          yield take('xxx');
+          yield take(ch);
         });
 
         expect(spyA).toBeCalledWithArgs(['foo'], ['bar']);
@@ -55,18 +56,18 @@ describe('Given a CSP pubsub extension', () => {
 
       const spyA = jest.fn();
       const spyB = jest.fn();
-      chan('a');
+      const ch = chan('a');
 
-      const unsub = listen('a', spyA);
-      listen('a', spyB);
+      const unsub = listen(ch, spyA);
+      listen(ch, spyB);
 
       go(function*() {
-        yield put('a', 'foo');
-        unsub('a', spyA);
-        yield put('a', 'bar');
+        yield put(ch, 'foo');
+        unsub(ch, spyA);
+        yield put(ch, 'bar');
       });
       go(function*() {
-        yield take('a');
+        yield take(ch);
       });
 
       expect(spyA).toBeCalledWithArgs(['foo']);
@@ -77,26 +78,26 @@ describe('Given a CSP pubsub extension', () => {
 
       const spyA = jest.fn();
       const spyB = jest.fn();
+      const topicA = fixed();
+      const topicB = fixed();
 
-      chan('topicA');
-      chan('topicB');
-      listen('topicA', spyA);
-      listen('topicB', spyB);
+      listen(topicA, spyA);
+      listen(topicB, spyB);
 
       go(function*() {
-        yield put('topicA', 'foo');
-        yield put('topicA', 'bar');
-        yield put('topicB', 'baz');
+        yield put(topicA, 'foo');
+        yield put(topicA, 'bar');
+        yield put(topicB, 'baz');
       });
       go(function*() {
-        yield take('topicA');
-        yield take('topicA');
+        yield take(topicA);
+        yield take(topicA);
       });
 
       const gridNodes = grid.nodes().map(({ id }) => id);
 
-      expect(gridNodes.includes('topicA')).toBe(true);
-      expect(gridNodes.includes('topicB')).toBe(true);
+      expect(gridNodes.includes(topicA.id)).toBe(true);
+      expect(gridNodes.includes(topicB.id)).toBe(true);
       expect(spyA).toBeCalledWithArgs(['foo'], ['bar']);
       expect(spyB).toBeCalledWithArgs(['baz']);
     });
@@ -107,14 +108,14 @@ describe('Given a CSP pubsub extension', () => {
 
       const spyA = jest.fn();
       const spyB = jest.fn();
+      const topic = fixed();
 
-      chan('topic');
       go(function*() {
-        yield put('topic', 'foo');
+        yield put(topic, 'foo');
       });
 
-      listen('topic', spyA);
-      listen('topic', spyB);
+      listen(topic, spyA);
+      listen(topic, spyB);
 
       expect(spyA).not.toBeCalled();
       expect(spyB).not.toBeCalled();
@@ -167,7 +168,7 @@ describe('Given a CSP pubsub extension', () => {
   describe('when we listen and there is already a value in the channel and we use initialCall set to true', () => {
     it('should fire the callback at least once with the value', () => {
       const spy = jest.fn();
-      const ch = chan(buffer.fixed(1));
+      const ch = fixed(1);
 
       go(function*() {
         yield put(ch, 'foo');
@@ -265,13 +266,13 @@ describe('Given a CSP pubsub extension', () => {
         ]);
         const currentUser = state(1);
         const spy = jest.fn();
+        const ch = chan('app');
 
-        chan('app');
-        listen('app', spy);
+        listen(ch, spy);
         listen(
           [users, currentUser],
           ([us, currentUserIndex]) => {
-            sput('app', us[currentUserIndex].name);
+            sput(ch, us[currentUserIndex].name);
           },
           { initialCall: true }
         );
@@ -290,19 +291,19 @@ describe('Given a CSP pubsub extension', () => {
         ]);
         const currentUser = state(1);
         const spy = jest.fn();
+        const ch = chan('app');
 
-        chan('app');
         listen(
           [users, currentUser],
           ([us, currentUserIndex]) => {
-            sput('app', us[currentUserIndex].name);
+            sput(ch, us[currentUserIndex].name);
           },
           { initialCall: true }
         );
 
         go(function*() {
-          spy(yield take('app'));
-          spy(yield take('app'));
+          spy(yield take(ch));
+          spy(yield take(ch));
         });
         go(function*() {
           spy(yield put(currentUser, 2));
@@ -320,29 +321,30 @@ describe('Given a CSP pubsub extension', () => {
         ]);
         const currentUser = state(1);
         const spy = jest.fn();
+        const ch = chan('app');
+        const www = sliding('WWW');
 
-        users.mutate(sliding('WWW'), arr =>
+        users.mutate(www, arr =>
           arr.map((user, i) => {
             if (i === 2) return { name: 'Batman' };
             return user;
           })
         );
 
-        chan('app');
         listen(
           [users, currentUser],
           ([us, currentUserIndex]) => {
-            sput('app', us[currentUserIndex].name);
+            sput(ch, us[currentUserIndex].name);
           },
           { initialCall: true }
         );
 
         go(function*() {
-          spy(yield take('app'));
+          spy(yield take(ch));
           spy(yield put(currentUser, 2));
-          spy(yield take('app'));
-          spy(yield put('WWW'));
-          spy(yield take('app'));
+          spy(yield take(ch));
+          spy(yield put(www));
+          spy(yield take(ch));
         });
 
         expect(spy).toBeCalledWithArgs(

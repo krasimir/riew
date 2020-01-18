@@ -13,7 +13,7 @@ import {
   isRoutine,
   CLOSED,
   ENDED,
-  getChannel,
+  verifyChannel,
   sliding,
 } from './index';
 import {
@@ -91,7 +91,7 @@ export function namedRiew(name, viewFunc, ...routines) {
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
-      const ch = getChannel(value[key], false);
+      const ch = verifyChannel(value[key], false);
       if (ch !== null) {
         subscribe(ch, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if (isState(value[key])) {

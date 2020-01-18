@@ -156,7 +156,9 @@ describe('Given the Riew library', () => {
           { id: 'a', selected: false },
           { id: 'b', selected: true },
         ]);
-        repos.mutate(sliding('update'), (list, id) =>
+        const update = sliding();
+        const selector = sliding();
+        repos.mutate(update, (list, id) =>
           list.map(repo => {
             if (repo.id === id) {
               return {
@@ -167,11 +169,9 @@ describe('Given the Riew library', () => {
             return repo;
           })
         );
-        repos.select(sliding('selector'), list =>
-          list.filter(({ selected }) => selected)
-        );
+        repos.select(selector, list => list.filter(({ selected }) => selected));
 
-        const change = id => sput('update', id);
+        const change = id => sput(update, id);
         const View = ({ selector }) => (
           <div>
             {selector.map(({ id, prs }) => (
@@ -185,7 +185,7 @@ describe('Given the Riew library', () => {
           yield sleep(2);
           change('b');
         };
-        const R = riew(View, routine).with({ selector: 'selector', change });
+        const R = riew(View, routine).with({ selector, change });
         const { container } = render(<R />);
 
         await delay();
@@ -213,9 +213,10 @@ describe('Given the Riew library', () => {
       it('should re-render the react component with the correct data', () =>
         act(async () => {
           const s = state([15, 4, 12]);
-          s.select(sliding('moreThen10'), nums => nums.filter(n => n > 10));
+          const moreThen10 = sliding();
+          s.select(moreThen10, nums => nums.filter(n => n > 10));
           const Component = jest.fn().mockImplementation(() => null);
-          const R = riew(Component).with({ data: 'moreThen10' });
+          const R = riew(Component).with({ data: moreThen10 });
 
           render(<R />);
           await delay(3);
@@ -232,12 +233,13 @@ describe('Given the Riew library', () => {
     it('should be possible to react on the mutation', () => {
       const current = state('xxx');
       const spy = jest.fn();
+      const reset = sliding();
 
-      current.mutate(sliding('reset'), () => 'foobar');
-      listen('reset', spy);
+      current.mutate(reset, () => 'foobar');
+      listen(reset, spy);
 
-      sput('reset', 12);
-      sput('reset', 22);
+      sput(reset, 12);
+      sput(reset, 22);
 
       expect(spy).toBeCalledWithArgs([12], [22]);
     });

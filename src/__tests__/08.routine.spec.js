@@ -1,5 +1,4 @@
 import {
-  chan,
   go,
   reset,
   put,
@@ -11,6 +10,7 @@ import {
   call,
   fork,
   ONE_OF,
+  fixed,
 } from '../index';
 import { delay } from '../__helpers__';
 
@@ -21,7 +21,7 @@ describe('Given a CSP', () => {
 
   describe('when we run a routine', () => {
     it('should put and take from channels', () => {
-      const ch = chan();
+      const ch = fixed();
       const spy = jest.fn();
       const cleanup1 = jest.fn();
       const cleanup2 = jest.fn();
@@ -49,8 +49,8 @@ describe('Given a CSP', () => {
       expect(cleanup2).toBeCalledWithArgs(['b']);
     });
     it('should allow us to take from multiple channels (ALL_REQUIRED)', () => {
-      const ch1 = chan();
-      const ch2 = chan();
+      const ch1 = fixed();
+      const ch2 = fixed();
       const spy = jest.fn();
 
       go(function*() {
@@ -63,8 +63,8 @@ describe('Given a CSP', () => {
       expect(spy).toBeCalledWithArgs([['bar', 'foo']]);
     });
     it('should allow us to take using the ONE_OF strategy', () => {
-      const ch1 = chan();
-      const ch2 = chan();
+      const ch1 = fixed();
+      const ch2 = fixed();
       const spy = jest.fn();
 
       go(function*() {
@@ -102,14 +102,14 @@ describe('Given a CSP', () => {
     describe('and we use channels to control flow', () => {
       it('should work', async () => {
         const spy = jest.fn();
-        chan('xxx');
+        const ch = fixed();
         go(function*() {
-          const value = yield take('xxx');
+          const value = yield take(ch);
           spy(`foo${value}`);
         });
         go(function*() {
           yield sleep(10);
-          yield put('xxx', 10);
+          yield put(ch, 10);
           spy('done');
         });
         await delay(15);
@@ -133,22 +133,22 @@ describe('Given a CSP', () => {
     describe('and when we yield `stop`', () => {
       it('should stop the routine', async () => {
         const spy = jest.fn();
-        chan('XXX');
+        const ch = fixed();
         sread(
-          'XXX',
+          ch,
           value => {
             spy(value);
           },
           { listen: true }
         );
         go(function*() {
-          yield put('XXX', 'foo');
+          yield put(ch, 'foo');
           yield stop();
-          yield put('XXX', 'bar');
+          yield put(ch, 'bar');
         });
         go(function*() {
-          yield take('XXX');
-          yield take('XXX');
+          yield take(ch);
+          yield take(ch);
         });
         expect(spy).toBeCalledWithArgs(['foo']);
       });
@@ -157,10 +157,9 @@ describe('Given a CSP', () => {
       it('should re-run the routine', async () => {
         const spy = jest.fn();
         let counter = 0;
-
-        chan('XXX');
+        const ch = fixed();
         go(function*() {
-          const value = yield take('XXX');
+          const value = yield take(ch);
           if (value > 10) {
             counter += 1;
           }
@@ -168,18 +167,18 @@ describe('Given a CSP', () => {
           return go;
         });
         go(function*() {
-          yield put('XXX', 2);
-          yield put('XXX', 12);
-          yield put('XXX', 22);
-          yield put('XXX', 4);
-          yield put('XXX', 9);
-          yield put('XXX', 39);
+          yield put(ch, 2);
+          yield put(ch, 12);
+          yield put(ch, 22);
+          yield put(ch, 4);
+          yield put(ch, 9);
+          yield put(ch, 39);
         });
         expect(spy).toBeCalledWithArgs([0], [1], [2], [2], [2], [3]);
         expect(counter).toBe(3);
       });
       it('should stop the current routine before running it again', () => {
-        const ch = chan();
+        const ch = fixed();
         const spy = jest.fn();
 
         go(function*() {
@@ -270,14 +269,14 @@ describe('Given a CSP', () => {
   describe('when we put to multiple channels', () => {
     it('should resolve the put only if we take from all the channels', () => {
       const spy = jest.fn();
-      chan('ChannelA');
-      chan('ChannelB');
+      const channelA = fixed();
+      const channelB = fixed();
       go(function*() {
-        spy(yield take('ChannelA'));
-        spy(yield take('ChannelB'));
+        spy(yield take(channelA));
+        spy(yield take(channelB));
       });
       go(function*() {
-        spy(yield put(['ChannelA', 'ChannelB'], 'foo'));
+        spy(yield put([channelA, channelB], 'foo'));
       });
 
       expect(spy).toBeCalledWithArgs(['foo'], ['foo'], [[true, true]]);
