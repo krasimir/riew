@@ -42,6 +42,8 @@
     - [buffer.sliding(n)](#bufferslidingn)
     - [buffer.dropping(n)](#bufferdroppingn)
   - [fixed(n)](#fixedn)
+  - [sliding(n)](#slidingn)
+  - [dropping(n)](#droppingn)
   - [go](#go)
     - [Stopping a routine](#stopping-a-routine)
     - [Restarting the routine](#restarting-the-routine)
@@ -375,7 +377,15 @@ go(function * B() {
 
 ### fixed(n)
 
+Alias to `chan(<id>, buffer.fixed(n))`. The `id` is auto-generated.
 
+### sliding(n)
+
+Alias to `chan(<id>, buffer.sliding(n))`. The `id` is auto-generated.
+
+### dropping(n)
+
+Alias to `chan(<id>, buffer.dropping(n))`. The `id` is auto-generated.
 
 ### go
 
