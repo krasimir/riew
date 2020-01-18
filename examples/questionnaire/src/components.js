@@ -3,7 +3,7 @@ import React, { Fragment } from 'react';
 import riew from 'riew/react';
 import { sput } from 'riew';
 import { nextStepRoutine, startOverRoutine, NEXT_STEP_CLICK } from './routines';
-import { CURRENT_QUESTION, ANSWER, GET_QUESTIONS, START_OVER } from './state';
+import { ANSWER, START_OVER } from './state';
 
 export const Question = riew(function Question({
   step: { type, text },
@@ -45,8 +45,7 @@ export const Question = riew(function Question({
     );
   }
   return null;
-}).with({
-  step: CURRENT_QUESTION,
+}).with('step', {
   giveAnswer: value => sput(ANSWER, value),
 });
 
@@ -85,7 +84,6 @@ export const App = riew(
   },
   nextStepRoutine,
   startOverRoutine
-).with({
-  questions: GET_QUESTIONS,
+).with('step', 'questions', {
   startOver: () => sput(START_OVER),
 });

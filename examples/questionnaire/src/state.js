@@ -26,7 +26,8 @@ const questions = state(initialValue);
 const currentStep = state(0);
 const error = state(null);
 
-export const GET_QUESTIONS = questions.select();
+questions.select().exportAs('questions');
+
 export const ANSWER = questions.mutate(function* mutateAnswer(
   questions,
   value
@@ -42,7 +43,7 @@ const RESET_QUESTIONS = questions.mutate(questions =>
 export const NEXT_STEP = currentStep.mutate(currentIndex => currentIndex + 1);
 const RESET_CURRENT_STEP = currentStep.mutate(() => 0);
 export const RESET_ERROR = error.mutate(() => null);
-export const CURRENT_QUESTION = sliding();
+const CURRENT_QUESTION = sliding().exportAs('step');
 export const IS_COMPLETED = sliding();
 export const START_OVER = fixed();
 
