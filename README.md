@@ -256,6 +256,7 @@ The function returns a channel object with the following methods/fields:
 * `channel.id` - the ID of the channel.
 * `channel.isActive()` - returns `true` if the channel is in an `OPEN` state.
 * `channel.state()` - returns one of the following: `OPEN`, `CLOSED` or `ENDED`. When the `channel` is `OPEN` we can put and take from it. When it is `CLOSED` every put gets resolved with `CLOSED`. The `take` on a `CLOSED` channel consumes the values left in the channel. If no values the `take` will be resolved with `CLOSED`. When a channel is `ENDED` both `put` and `take` are resolved with `ENDED`.
+* `exportAs(key)` - this is useful when we want to share this channel with the rest of the application without passing the instance around. Check [this](#externals) section for more information.
 
 Example:
 
@@ -560,12 +561,15 @@ go(function * () {
 Putting to multiple channels:
 
 ```js
+const channelA = chan();
+const channelB = chan();
+
 go(function*() {
-  console.log(yield take('ChannelA')); // "foo"
-  console.log(yield take('ChannelB')); // "foo"
+  console.log(yield take(channelA)); // "foo"
+  console.log(yield take(channelB)); // "foo"
 });
 go(function*() {
-  yield put(['ChannelA', 'ChannelB'], 'foo');
+  yield put([channelA, channelB], 'foo');
 });
 ```
 
@@ -709,9 +713,9 @@ In the console we'll see `"foo"` followed by two `Symbol(ENDED)`. The routine is
 
 > `sclose(channel)`
 
-This function is the same as [close](https://github.com/krasimir/riew#close) but it's meant to be used outside of a routine.
+This function is the same as [close](#close) but it's meant to be used outside of a routine.
 
-* `channel` (`String` or a [channel object](https://github.com/krasimir/riew#chan), required) - the channel that we want to close.
+* `channel` (`String` or a [channel object](#chan), required) - the channel that we want to close.
 
 Example:
 
@@ -734,12 +738,10 @@ In the console we'll see `"foo"` followed by two `Symbol(ENDED)`. The routine is
 
 > `read(sourceChannels, options)`
 
-It's meant to be used only inside a routine and it _reads_ from a channel/s. `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value.
+It's meant to be used only inside a routine and it _reads_ from a channel/s. `yield read(channel)` is not blocking the [put](https://github.com/krasimir/riew#put) on the other side of the channel and it's not consuming the value. It is always resolved no mather if the channel has value or not.
 
 * `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option below.
 * `options` (`Object`, optional) - additional options for the reading
-  * `onError` (`Function`, optional) - in case the `transform` throws an error.
-  * `initialCall` (`Boolean`, optional, default to `true`) - resolves the `read` if there is already a value in the source/s.
   * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not. If set to `ONE_OF` it will resolve the read as soon as some of the sources receives a value.
 
 Example:
@@ -748,30 +750,27 @@ Example:
 const ch = chan();
 
 go(function * A() {
-  console.log(yield read(ch)); // foo
+  console.log(yield read(ch)); // undefined
   console.log('done'); // done
 });
 go(function * B() {
-  yield put(ch, 'foo');
+  yield put(ch, 'foo'); // <-- never resolved
   yield put(ch, 'bar'); // <-- never called
 });
 ```
 
-If we run this code we'll see `"foo"` followed by `"done"`. The second put in routine `B` never happens because the first put is blocking. We need a [take](https://github.com/krasimir/riew#take) to release it. The `read` in routine `A` doesn't consume the value of the channel, just reads it so can't unblock `B`.
+If we run this code we'll see `"undefined"` followed by `"done"`. The second put in routine `B` never happens because the first put is blocked. We need a [take](https://github.com/krasimir/riew#take) to release it. The `read` in routine `A` doesn't consume the value of the channel, just reads it so can't unblock `B`. And because routine `A` starts first we still have nothing (`undefined`) in the channel.
 
 ### sread
 
 > `sread(sourceChannels, to, options)`
 
-Same as [read](https://github.com/krasimir/riew#read) but it's meant to be used outside of a routine. 
+Same as [read](#read) but it's meant to be used outside of a routine. 
 
 * `sourceChannels` (array of channels or a single channel, required) - the source channel which we will be subscribed to. In case of multiple channels the default behavior is that the subscriber is notified only when all the source channels have values. Check out the `strategy` option below.
 * `to` (`Channel`, `ID` of a channel, or a function, required) - the values from the `sourceChannels` are piped to the passed channel. If a function, that function is called with the values.
 * `options` (`Object`, optional) - additional options for the reading
-  * `onError` (`Function`, optional) - in case the `transform` throws an error.
-  * `initialCall` (`Boolean`, optional, default to `true`) - resolves the `read` if there is already a value in the source/s.
   * `strategy` (`ONE_OF` or `ALL_REQUIRED`, default to `ALL_REQUIRED`) - base on that the library decided wether to wait for all the source channels or not. If set to `ONE_OF` it will resolve the read as soon as some of the sources receives a value.
-  * `listen` (`Boolean`, optional, default to `false`) - set it to `true` if you want to receive values from the sources in a continues fashion. Or in other words to have a listener of values delivered by the `sourceChannels`.
 
 Example:
 
