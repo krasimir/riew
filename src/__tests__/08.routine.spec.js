@@ -7,7 +7,6 @@ import {
   take,
   sleep,
   stop,
-  read,
   sread,
   call,
   fork,
@@ -103,6 +102,7 @@ describe('Given a CSP', () => {
     describe('and we use channels to control flow', () => {
       it('should work', async () => {
         const spy = jest.fn();
+        chan('xxx');
         go(function*() {
           const value = yield take('xxx');
           spy(`foo${value}`);
@@ -133,6 +133,7 @@ describe('Given a CSP', () => {
     describe('and when we yield `stop`', () => {
       it('should stop the routine', async () => {
         const spy = jest.fn();
+        chan('XXX');
         sread(
           'XXX',
           value => {
@@ -157,6 +158,7 @@ describe('Given a CSP', () => {
         const spy = jest.fn();
         let counter = 0;
 
+        chan('XXX');
         go(function*() {
           const value = yield take('XXX');
           if (value > 10) {
@@ -268,6 +270,8 @@ describe('Given a CSP', () => {
   describe('when we put to multiple channels', () => {
     it('should resolve the put only if we take from all the channels', () => {
       const spy = jest.fn();
+      chan('ChannelA');
+      chan('ChannelB');
       go(function*() {
         spy(yield take('ChannelA'));
         spy(yield take('ChannelB'));

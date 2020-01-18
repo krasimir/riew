@@ -34,6 +34,7 @@ describe('Given a CSP pubsub extension', () => {
         const spyB = jest.fn();
         const spyC = jest.fn();
 
+        chan('xxx');
         listen('xxx', spyA);
         listen('xxx', spyB);
 
@@ -55,6 +56,7 @@ describe('Given a CSP pubsub extension', () => {
 
       const spyA = jest.fn();
       const spyB = jest.fn();
+      chan('a');
 
       const unsub = listen('a', spyA);
       listen('a', spyB);
@@ -77,6 +79,8 @@ describe('Given a CSP pubsub extension', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
+      chan('topicA');
+      chan('topicB');
       listen('topicA', spyA);
       listen('topicB', spyB);
 
@@ -105,6 +109,7 @@ describe('Given a CSP pubsub extension', () => {
       const spyA = jest.fn();
       const spyB = jest.fn();
 
+      chan('topic');
       go(function*() {
         yield put('topic', 'foo');
       });
@@ -262,6 +267,7 @@ describe('Given a CSP pubsub extension', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
+        chan('app');
         listen('app', spy);
         listen(
           [users, currentUser],
@@ -286,6 +292,7 @@ describe('Given a CSP pubsub extension', () => {
         const currentUser = state(1);
         const spy = jest.fn();
 
+        chan('app');
         listen(
           [users, currentUser],
           ([us, currentUserIndex]) => {
@@ -322,6 +329,7 @@ describe('Given a CSP pubsub extension', () => {
           })
         );
 
+        chan('app');
         listen(
           [users, currentUser],
           ([us, currentUserIndex]) => {

@@ -2,20 +2,20 @@
 
 import {
   use,
-  chan as Channel,
+  chan,
   state as State,
   isState,
   go,
   listen,
   close,
   sput,
-  stake,
-  CHANNELS,
-  isChannel,
   buffer,
   grid,
   logger,
   isRoutine,
+  CLOSED,
+  ENDED,
+  getChannel,
 } from './index';
 import {
   isObjectEmpty,
@@ -32,7 +32,7 @@ const Renderer = function(pushDataToView) {
 
   return {
     push(newData) {
-      if (newData === Channel.CLOSED || newData === Channel.ENDED) {
+      if (newData === CLOSED || newData === ENDED) {
         return;
       }
       data = accumulate(data, newData);
@@ -80,26 +80,23 @@ export function namedRiew(name, viewFunc, ...routines) {
     return s;
   };
   const subscribe = function(to, func) {
-    if (!(to in subscriptions)) {
-      subscriptions[to] = listen(to, func, { initialCall: true });
+    if (!(to.id in subscriptions)) {
+      subscriptions[to.id] = listen(to, func, { initialCall: true });
     }
   };
-  const VIEW_CHANNEL = getId(`${name}_view`);
-  const PROPS_CHANNEL = getId(`${name}_props`);
+  const VIEW_CHANNEL = chan(getId(`${name}_view`), buffer.sliding());
+  const PROPS_CHANNEL = chan(getId(`${name}_props`), buffer.sliding());
 
-  api.children.push(Channel(VIEW_CHANNEL, buffer.sliding()));
-  api.children.push(Channel(PROPS_CHANNEL, buffer.sliding()));
+  api.children.push(VIEW_CHANNEL);
+  api.children.push(PROPS_CHANNEL);
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
-      if (CHANNELS.exists(value[key]) || isChannel(value[key])) {
-        subscribe(value[key], v => {
-          sput(VIEW_CHANNEL, { [key]: v });
-        });
-        // stake(value[key], v => sput(VIEW_CHANNEL, { [key]: v }));
+      const ch = getChannel(value[key], false);
+      if (ch !== null) {
+        subscribe(ch, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if (isState(value[key])) {
         subscribe(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
-        // stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else {
         obj[key] = value[key];
       }
@@ -109,7 +106,9 @@ export function namedRiew(name, viewFunc, ...routines) {
   api.mount = function(props = {}) {
     requireObject(props);
     sput(PROPS_CHANNEL, props);
-    subscribe(PROPS_CHANNEL, newProps => sput(VIEW_CHANNEL, newProps));
+    subscribe(PROPS_CHANNEL, newProps => {
+      sput(VIEW_CHANNEL, newProps);
+    });
     subscribe(VIEW_CHANNEL, renderer.push);
     api.children = api.children.concat(
       routines.map(r =>

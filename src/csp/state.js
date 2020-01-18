@@ -47,8 +47,8 @@ export default function state(...args) {
         .map(({ ch }) => ch)
         .concat(writeChannels.map(({ ch }) => ch));
     },
-    READ: READ_CHANNEL,
-    WRITE: WRITE_CHANNEL,
+    READ: chan(READ_CHANNEL, buffer.sliding()),
+    WRITE: chan(WRITE_CHANNEL, buffer.sliding()),
     select(c, selector = v => v, onError = null) {
       const ch = isChannel(c) ? c : chan(c, buffer.sliding());
       ch['@statereadchannel'] = true;

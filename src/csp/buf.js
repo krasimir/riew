@@ -198,18 +198,18 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
 }
 
 const buffer = {
-  fixed: CSPBuffer,
+  fixed: (size = 0) => CSPBuffer(size, { dropping: false, sliding: false }),
   dropping: (size = 1) => {
     if (size < 1) {
       throw new Error('The dropping buffer should have at least size of one.');
     }
-    return CSPBuffer(size, { dropping: true });
+    return CSPBuffer(size, { dropping: true, sliding: false });
   },
   sliding: (size = 1) => {
     if (size < 1) {
       throw new Error('The sliding buffer should have at least size of one.');
     }
-    return CSPBuffer(size, { sliding: true });
+    return CSPBuffer(size, { dropping: false, sliding: true });
   },
 };
 

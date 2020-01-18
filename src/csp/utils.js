@@ -1,11 +1,18 @@
 /* eslint-disable no-param-reassign, no-multi-assign */
-import { ALL_REQUIRED, chan, isChannel, isState, sput, buffer } from '../index';
+import {
+  ALL_REQUIRED,
+  isChannel,
+  isState,
+  sput,
+  getChannel,
+  CHANNELS,
+} from '../index';
 
 export function normalizeChannels(channels, stateOp = 'READ') {
   if (!Array.isArray(channels)) channels = [channels];
   return channels.map(ch => {
-    if (isState(ch)) ch = ch[stateOp];
-    return isChannel(ch) ? ch : chan(ch);
+    if (isState(ch)) return ch[stateOp];
+    return getChannel(ch);
   });
 }
 
@@ -21,12 +28,14 @@ export function normalizeTo(to) {
   if (isChannel(to)) {
     return v => sput(to, v);
   }
-  if (typeof to === 'string') {
-    const ch = chan(to, buffer.sliding());
+  if (CHANNELS.exists(to)) {
+    const ch = CHANNELS.get(to);
     return v => sput(ch, v);
   }
   throw new Error(
-    `'read' accepts string, channel or a function as a second argument. ${to} given.`
+    `Channel or a function as a second argument expected. ${JSON.stringify(
+      to
+    )} given.`
   );
 }
 export function normalizeOptions(options) {

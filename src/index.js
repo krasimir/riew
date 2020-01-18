@@ -87,6 +87,7 @@ export const fork = ops.fork;
 export const merge = ops.merge;
 export const timeout = ops.timeout;
 export const isChannel = ops.isChannel;
+export const getChannel = ops.getChannel;
 export const isRiew = ops.isRiew;
 export const isState = ops.isState;
 export const isRoutine = ops.isRoutine;

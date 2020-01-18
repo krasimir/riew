@@ -42,6 +42,8 @@ const questions = state(initialValue);
 const currentStep = state(0);
 const error = state(null);
 
+chan(CURRENT_QUESTION, buffer.sliding());
+
 questions.select(GET_QUESTIONS);
 questions.mutate(ANSWER, function* mutateAnswer(questions, value) {
   const currentStepIndex = yield take(currentStep);

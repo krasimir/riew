@@ -192,6 +192,16 @@ ops.isState = s => s && s['@state'] === true;
 ops.isRoutine = r => r && r['@routine'] === true;
 ops.isStateReadChannel = s => s && s['@statereadchannel'] === true;
 ops.isStateWriteChannel = s => s && s['@statewritechannel'] === true;
+ops.getChannel = function getChannel(ch, throwError = true) {
+  if (typeof ch === 'object' && ops.isChannel(ch)) return ch;
+  if (typeof ch === 'string' && CHANNELS.exists(ch)) {
+    return CHANNELS.get(ch);
+  }
+  if (throwError) {
+    throw new Error(`${ch} is not a channel or an ID of existing channel.`);
+  }
+  return null;
+};
 
 // **************************************************** go/routine
 

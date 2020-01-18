@@ -14,6 +14,7 @@ import {
   CHANNELS,
   ONE_OF,
   register,
+  getChannel,
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -22,9 +23,30 @@ describe('Given a CSP', () => {
     reset();
   });
 
+  describe('when we try to get a channel out of a string', () => {
+    it("should throw an error if the channel doesn't exist", () => {
+      expect(() => getChannel()).toThrowError(
+        'undefined is not a channel or an ID of existing channel.'
+      );
+      expect(() => getChannel(42)).toThrowError(
+        '42 is not a channel or an ID of existing channel.'
+      );
+      expect(() => getChannel('FOO')).toThrowError(
+        'FOO is not a channel or an ID of existing channel.'
+      );
+      expect(() => getChannel(['a', 'b'])).toThrowError(
+        'a,b is not a channel or an ID of existing channel.'
+      );
+      expect(() => getChannel({})).toThrowError(
+        '[object Object] is not a channel or an ID of existing channel.'
+      );
+    });
+  });
   describe('when we have a channel', () => {
     it('should allow us to put and take from it', () => {
       const spy = jest.fn();
+
+      chan('X');
 
       stake('X', spy);
       sput('X', 'foo', spy);
@@ -338,7 +360,8 @@ describe('Given a CSP', () => {
   describe('when we put to multiple channels', () => {
     it('should resolve the put only if all the channels values are consumed', async () => {
       const spy = jest.fn();
-
+      chan('save');
+      chan('saving-done');
       go(function*() {
         yield put(['save', 'saving-done'], ['foo', 'bar']);
         spy('Save successful!');

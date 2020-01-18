@@ -151,7 +151,7 @@ describe('Given the `riew` factory function', () => {
         render({ s });
         yield sleep(4);
         yield put(s, 'bar');
-        expect(chan(s.READ).buff.takes).toHaveLength(1);
+        expect(s.READ.buff.takes).toHaveLength(1);
       };
       const r = riew(view, se);
 
@@ -240,26 +240,30 @@ describe('Given the `riew` factory function', () => {
       const routine = function*({ render, state }) {
         const s = state('foo');
         s.select('up', v => v.toUpperCase());
-        const change = () => sput(s, 'bar');
+        const change = () => {
+          sput(s, 'bar');
+        };
 
-        render({ s: 'up', change });
-        render({ s: 'up', change });
-        render({ s: 'up', change });
+        render({ s11: 'up', change });
+        render({ s11: 'up', change });
+        render({ s11: 'up', change });
       };
       const r = riew(view, routine);
 
       r.mount();
       await delay(20);
       expect(view).toBeCalledWithArgs(
-        [{ s: 'FOO', change: expect.any(Function) }],
-        [{ s: 'BAR', change: expect.any(Function) }]
+        [{ s11: 'FOO', change: expect.any(Function) }],
+        [{ s11: 'BAR', change: expect.any(Function) }]
       );
     });
   });
   describe('when we update the riew', () => {
     it('should render the view with accumulated props', async () => {
       const view = jest.fn();
-      const r = riew(view);
+      const r = riew(function VVV(p) {
+        view(p);
+      });
 
       r.mount({ foo: 'bar' });
       await delay();
@@ -649,6 +653,7 @@ describe('Given the `riew` factory function', () => {
   describe('when we have a loop', () => {
     it('should not end up in a maximum call stack problem', async () => {
       const spy = jest.fn();
+      chan('XXX');
       const fff = function*({ render }) {
         spy(yield take('XXX'));
         render({ a: 'b' });

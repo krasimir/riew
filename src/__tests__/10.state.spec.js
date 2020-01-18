@@ -82,8 +82,8 @@ describe('Given a CSP state extension', () => {
       s.select('WW');
 
       expect(Object.keys(CHANNELS.getAll())).toStrictEqual([
-        s.READ,
-        s.WRITE,
+        s.READ.id,
+        s.WRITE.id,
         'RR',
         'WW',
       ]);
@@ -236,6 +236,7 @@ describe('Given a CSP state extension', () => {
     it('should mutate both states', () => {
       const s1 = state('foo');
       const s2 = state(12);
+      chan('X');
 
       s1.mutate('X1', (value, payload) => value + payload);
       s2.mutate('X2', (value, payload) => value * payload);

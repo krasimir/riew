@@ -237,14 +237,17 @@ function CSPBuffer() {
 }
 
 var buffer = {
-  fixed: CSPBuffer,
+  fixed: function fixed() {
+    var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+    return CSPBuffer(size, { dropping: false, sliding: false });
+  },
   dropping: function dropping() {
     var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
 
     if (size < 1) {
       throw new Error('The dropping buffer should have at least size of one.');
     }
-    return CSPBuffer(size, { dropping: true });
+    return CSPBuffer(size, { dropping: true, sliding: false });
   },
   sliding: function sliding() {
     var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
@@ -252,7 +255,7 @@ var buffer = {
     if (size < 1) {
       throw new Error('The sliding buffer should have at least size of one.');
     }
-    return CSPBuffer(size, { sliding: true });
+    return CSPBuffer(size, { dropping: false, sliding: true });
   }
 };
 
@@ -379,9 +382,17 @@ function chan() {
 },{"../index":7,"../utils":15,"./buf":1}],3:[function(require,module,exports){
 'use strict';
 
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+};
 
 var _extends = Object.assign || function (target) {
   for (var i = 1; i < arguments.length; i++) {
@@ -634,6 +645,18 @@ ops.isStateReadChannel = function (s) {
 ops.isStateWriteChannel = function (s) {
   return s && s['@statewritechannel'] === true;
 };
+ops.getChannel = function getChannel(ch) {
+  var throwError = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+  if ((typeof ch === 'undefined' ? 'undefined' : _typeof(ch)) === 'object' && ops.isChannel(ch)) return ch;
+  if (typeof ch === 'string' && _index.CHANNELS.exists(ch)) {
+    return _index.CHANNELS.get(ch);
+  }
+  if (throwError) {
+    throw new Error(ch + ' is not a channel or an ID of existing channel.');
+  }
+  return null;
+};
 
 // **************************************************** go/routine
 
@@ -843,8 +866,8 @@ function state() {
       }));
     },
 
-    READ: READ_CHANNEL,
-    WRITE: WRITE_CHANNEL,
+    READ: (0, _index.chan)(READ_CHANNEL, _index.buffer.sliding()),
+    WRITE: (0, _index.chan)(WRITE_CHANNEL, _index.buffer.sliding()),
     select: function select(c) {
       var selector = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function (v) {
         return v;
@@ -948,8 +971,8 @@ function normalizeChannels(channels) {
 
   if (!Array.isArray(channels)) channels = [channels];
   return channels.map(function (ch) {
-    if ((0, _index.isState)(ch)) ch = ch[stateOp];
-    return (0, _index.isChannel)(ch) ? ch : (0, _index.chan)(ch);
+    if ((0, _index.isState)(ch)) return ch[stateOp];
+    return (0, _index.getChannel)(ch);
   });
 } /* eslint-disable no-param-reassign, no-multi-assign */
 
@@ -967,13 +990,13 @@ function normalizeTo(to) {
       return (0, _index.sput)(to, v);
     };
   }
-  if (typeof to === 'string') {
-    var ch = (0, _index.chan)(to, _index.buffer.sliding());
+  if (_index.CHANNELS.exists(to)) {
+    var ch = _index.CHANNELS.get(to);
     return function (v) {
       return (0, _index.sput)(ch, v);
     };
   }
-  throw new Error('\'read\' accepts string, channel or a function as a second argument. ' + to + ' given.');
+  throw new Error('Channel or a function as a second argument expected. ' + JSON.stringify(to) + ' given.');
 }
 function normalizeOptions(options) {
   options = options || DEFAULT_OPTIONS;
@@ -1045,7 +1068,7 @@ var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbo
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.isChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
+exports.stop = exports.sleep = exports.go = exports.isStateWriteChannel = exports.isStateReadChannel = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
 
 var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
   return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
@@ -1190,6 +1213,7 @@ var fork = exports.fork = _ops2.default.fork;
 var merge = exports.merge = _ops2.default.merge;
 var timeout = exports.timeout = _ops2.default.timeout;
 var isChannel = exports.isChannel = _ops2.default.isChannel;
+var getChannel = exports.getChannel = _ops2.default.getChannel;
 var isRiew = exports.isRiew = _ops2.default.isRiew;
 var isState = exports.isState = _ops2.default.isState;
 var isRoutine = exports.isRoutine = _ops2.default.isRoutine;
@@ -1628,7 +1652,7 @@ var Renderer = function Renderer(pushDataToView) {
 
   return {
     push: function push(newData) {
-      if (newData === _index.chan.CLOSED || newData === _index.chan.ENDED) {
+      if (newData === _index.CLOSED || newData === _index.ENDED) {
         return;
       }
       _data = (0, _utils.accumulate)(_data, newData);
@@ -1685,28 +1709,27 @@ function namedRiew(name, viewFunc) {
     return s;
   };
   var subscribe = function subscribe(to, func) {
-    if (!(to in subscriptions)) {
-      subscriptions[to] = (0, _index.listen)(to, func, { initialCall: true });
+    if (!(to.id in subscriptions)) {
+      subscriptions[to.id] = (0, _index.listen)(to, func, { initialCall: true });
     }
   };
-  var VIEW_CHANNEL = (0, _utils.getId)(name + '_view');
-  var PROPS_CHANNEL = (0, _utils.getId)(name + '_props');
+  var VIEW_CHANNEL = (0, _index.chan)((0, _utils.getId)(name + '_view'), _index.buffer.sliding());
+  var PROPS_CHANNEL = (0, _index.chan)((0, _utils.getId)(name + '_props'), _index.buffer.sliding());
 
-  api.children.push((0, _index.chan)(VIEW_CHANNEL, _index.buffer.sliding()));
-  api.children.push((0, _index.chan)(PROPS_CHANNEL, _index.buffer.sliding()));
+  api.children.push(VIEW_CHANNEL);
+  api.children.push(PROPS_CHANNEL);
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
-      if (_index.CHANNELS.exists(value[key]) || (0, _index.isChannel)(value[key])) {
-        subscribe(value[key], function (v) {
-          (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
+      var ch = (0, _index.getChannel)(value[key], false);
+      if (ch !== null) {
+        subscribe(ch, function (v) {
+          return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
-        // stake(value[key], v => sput(VIEW_CHANNEL, { [key]: v }));
       } else if ((0, _index.isState)(value[key])) {
         subscribe(value[key].READ, function (v) {
           return (0, _index.sput)(VIEW_CHANNEL, _defineProperty({}, key, v));
         });
-        // stake(value[key].READ, v => sput(VIEW_CHANNEL, { [key]: v }));
       } else {
         obj[key] = value[key];
       }
@@ -1720,7 +1743,7 @@ function namedRiew(name, viewFunc) {
     (0, _utils.requireObject)(props);
     (0, _index.sput)(PROPS_CHANNEL, props);
     subscribe(PROPS_CHANNEL, function (newProps) {
-      return (0, _index.sput)(VIEW_CHANNEL, newProps);
+      (0, _index.sput)(VIEW_CHANNEL, newProps);
     });
     subscribe(VIEW_CHANNEL, renderer.push);
     api.children = api.children.concat(routines.map(function (r) {
