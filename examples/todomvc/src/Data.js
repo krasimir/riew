@@ -1,13 +1,5 @@
 /* eslint-disable no-shadow */
 import { state, register, listen } from 'riew';
-import {
-  TOGGLE_TODO,
-  NEW_TODO,
-  DELETE_TODO,
-  EDIT_TODO,
-  UPDATE_TODO,
-  FILTER_CLEAR_COMPLETED,
-} from './constants';
 
 export const ToDo = label => ({ label, completed: false, editing: false });
 
@@ -24,7 +16,7 @@ export const todos = state(
   JSON.parse(localStorage.getItem('todos') || initialValue)
 );
 
-todos.mutate(TOGGLE_TODO, (todos, payload) =>
+export const TOGGLE_TODO = todos.mutate((todos, payload) =>
   todos.map((todo, i) => {
     if (i === payload) {
       return {
@@ -35,11 +27,14 @@ todos.mutate(TOGGLE_TODO, (todos, payload) =>
     return todo;
   })
 );
-todos.mutate(NEW_TODO, (todos, payload) => [...todos, ToDo(payload)]);
-todos.mutate(DELETE_TODO, (todos, payload) =>
+export const NEW_TODO = todos.mutate((todos, payload) => [
+  ...todos,
+  ToDo(payload),
+]);
+export const DELETE_TODO = todos.mutate((todos, payload) =>
   todos.filter((todo, i) => i !== payload)
 );
-todos.mutate(EDIT_TODO, (todos, payload) =>
+export const EDIT_TODO = todos.mutate((todos, payload) =>
   todos.map((todo, i) => {
     if (i === payload.index) {
       return {
@@ -50,7 +45,7 @@ todos.mutate(EDIT_TODO, (todos, payload) =>
     return todo;
   })
 );
-todos.mutate(UPDATE_TODO, (todos, payload) =>
+export const UPDATE_TODO = todos.mutate((todos, payload) =>
   todos.map((todo, i) => {
     if (i === payload.index) {
       return {
@@ -62,7 +57,7 @@ todos.mutate(UPDATE_TODO, (todos, payload) =>
     return todo;
   })
 );
-todos.mutate(FILTER_CLEAR_COMPLETED, todos =>
+export const FILTER_CLEAR_COMPLETED = todos.mutate(todos =>
   todos.filter(todo => !todo.completed)
 );
 

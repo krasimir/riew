@@ -1,8 +1,8 @@
-import React from "react";
-import PropTypes from "prop-types";
-import riew from "riew/react";
+import React from 'react';
+import PropTypes from 'prop-types';
+import riew from 'riew/react';
 
-import { ALL, ACTIVE, COMPLETED } from "./constants";
+import { ALL, ACTIVE, COMPLETED } from './constants';
 
 function Footer({ todos, filter, all, active, completed, clearCompleted }) {
   const incomplete = todos.filter(({ completed }) => !completed);
@@ -16,7 +16,7 @@ function Footer({ todos, filter, all, active, completed, clearCompleted }) {
         <strong>{incomplete.length}</strong> items left
       </React.Fragment>
     );
-  const selectedIf = value => (filter === value ? "selected" : "");
+  const selectedIf = value => (filter === value ? 'selected' : '');
 
   return (
     <footer className="footer">
@@ -42,7 +42,11 @@ function Footer({ todos, filter, all, active, completed, clearCompleted }) {
           </a>
         </li>
       </ul>
-      <button className="clear-completed" onClick={clearCompleted}>
+      <button
+        className="clear-completed"
+        onClick={clearCompleted}
+        type="button"
+      >
         Clear completed
       </button>
     </footer>
@@ -55,7 +59,7 @@ Footer.propTypes = {
   active: PropTypes.func.isRequired,
   completed: PropTypes.func.isRequired,
   clearCompleted: PropTypes.func.isRequired,
-  filter: PropTypes.string.isRequired
+  filter: PropTypes.string.isRequired,
 };
 
-export default riew(Footer).with("todos");
+export default riew(Footer).with('todos');

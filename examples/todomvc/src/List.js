@@ -1,8 +1,8 @@
-import React, { useRef, useEffect } from "react";
-import PropTypes from "prop-types";
-import riew from "riew/react";
+import React, { useRef, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import riew from 'riew/react';
 
-import { ESC, ENTER, ALL, COMPLETED, ACTIVE } from "./constants";
+import { ESC, ENTER, ALL, COMPLETED, ACTIVE } from './constants';
 
 const EditTodo = ({ index, todo, onUpdateCancel, onUpdate }) => {
   const inputEl = useRef(null);
@@ -36,7 +36,7 @@ EditTodo.propTypes = {
   index: PropTypes.number.isRequired,
   todo: PropTypes.object.isRequired,
   onUpdate: PropTypes.func.isRequired,
-  onUpdateCancel: PropTypes.func.isRequired
+  onUpdateCancel: PropTypes.func.isRequired,
 };
 
 function List({
@@ -46,7 +46,7 @@ function List({
   onDelete,
   onEdit,
   onUpdate,
-  onUpdateCancel
+  onUpdateCancel,
 }) {
   return (
     <ul className="todo-list">
@@ -59,10 +59,10 @@ function List({
         })
         .map((todo, i) => {
           const liClass = todo.editing
-            ? "editing"
+            ? 'editing'
             : todo.completed
-            ? "completed"
-            : "";
+            ? 'completed'
+            : '';
 
           return (
             <li className={liClass} key={i}>
@@ -102,7 +102,7 @@ List.propTypes = {
   onEdit: PropTypes.func.isRequired,
   onUpdate: PropTypes.func.isRequired,
   onUpdateCancel: PropTypes.func.isRequired,
-  filter: PropTypes.string.isRequired
+  filter: PropTypes.string.isRequired,
 };
 
-export default riew(List).with("todos");
+export default riew(List).with('todos');

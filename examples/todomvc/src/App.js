@@ -1,9 +1,9 @@
-import React from "react";
+import React from 'react';
 
-import List from "./List";
-import Footer from "./Footer";
+import List from './List';
+import Footer from './Footer';
 
-import { ENTER } from "./constants";
+import { ENTER } from './constants';
 
 export default function App({
   filter,
@@ -15,7 +15,7 @@ export default function App({
   editingTodo,
   updateTodo,
   deleteTodo,
-  clearCompleted
+  clearCompleted,
 }) {
   return (
     <React.Fragment>
@@ -29,7 +29,7 @@ export default function App({
             onKeyUp={e => {
               if (e.keyCode === ENTER) {
                 newTodo(e.target.value);
-                e.target.value = "";
+                e.target.value = '';
               }
             }}
           />
