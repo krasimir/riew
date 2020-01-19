@@ -29,8 +29,13 @@ import {
 
 register('config', { theme: 'dark' });
 
-const r = riew(function(props) {
-  console.log(`Selected theme: ${props.config.theme}`); // Selected theme: dark
-}).with('config');
+const view = function(props) {
+  console.log(`Selected theme: ${props.theme}`); // Selected theme: dark
+};
+const routine = function*({ render }) {
+  const config = use('config');
+  render({ theme: config.theme });
+};
+const r = riew(view, routine).with('config');
 
 r.mount();

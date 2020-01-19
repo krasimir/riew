@@ -1352,17 +1352,17 @@ r.mount();
 
 > `reset()`
 
-It resets all the internal structures of the library. This function is useful while writing tests for our riews or routines. Riew for example keeps track of all the channels that we are creating. And in the unit tests we don't want to have conflicts of channel IDs. So we call the `reset` function before each test.
+It resets all the internal structures of the library. This function is useful while writing unit tests for your riews or routines. Riew for example keeps track of all the channels that we are creating. And in the unit tests we don't want to have conflicts of channel IDs. So we call the `reset` function before each test.
 
 ### constants
 
-We have three constants which we can use together with the [state](https://github.com/krasimir/riew#chan) method of the channel to identify what's the current state.
+We have three constants which we can use together with the [state](#chan) method of the channel to identify what's the current state.
 
 * `OPEN` - channel is open
 * `CLOSED` - channel is closed but we it still has items in it.
 * `ENDED` - channel is closed and empty
 
-The two options for [subscription](https://github.com/krasimir/riew#sread) strategies (when we set `listen` option to `true`):
+The two options for [subscription](#listen) strategies:
 
 * `ALL_REQUIRED` - notify the subscriber only if all the source channels have value.
 * `ONE_OF` - notify the subscriber if at least one of the source channels have value.

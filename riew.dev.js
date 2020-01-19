@@ -472,7 +472,7 @@ ops.read = function read(channels, options) {
 ops.sread = function sread(channels, to, options) {
   return ops.stake(channels, to, _extends({}, options, { read: true }));
 };
-ops.unreadAll = function unreadAll(channel) {
+ops.unsubAll = function unsubAll(channel) {
   channel.buff.deleteListeners();
 };
 
@@ -969,7 +969,7 @@ function Grid() {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stop = exports.sleep = exports.go = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.verifyChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unreadAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
+exports.stop = exports.sleep = exports.go = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.verifyChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unsubAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
 
 var _riew = require('./riew');
 
@@ -1106,7 +1106,7 @@ var take = exports.take = _ops2.default.take;
 var read = exports.read = _ops2.default.read;
 var sread = exports.sread = _ops2.default.sread;
 var listen = exports.listen = _ops2.default.listen;
-var unreadAll = exports.unreadAll = _ops2.default.unreadAll;
+var unsubAll = exports.unsubAll = _ops2.default.unsubAll;
 var close = exports.close = _ops2.default.close;
 var sclose = exports.sclose = _ops2.default.sclose;
 var channelReset = exports.channelReset = _ops2.default.channelReset;
