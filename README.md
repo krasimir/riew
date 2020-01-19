@@ -379,15 +379,15 @@ go(function * B() {
 
 ### fixed(n)
 
-Alias to `chan(<id>, buffer.fixed(n))`. The `id` is auto-generated.
+Alias to `chan(<id>, buffer.fixed(n))`. The `id` is auto-generated. See [here](#bufferfixedn).
 
 ### sliding(n)
 
-Alias to `chan(<id>, buffer.sliding(n))`. The `id` is auto-generated.
+Alias to `chan(<id>, buffer.sliding(n))`. The `id` is auto-generated. See [here](#bufferslidingn).
 
 ### dropping(n)
 
-Alias to `chan(<id>, buffer.dropping(n))`. The `id` is auto-generated.
+Alias to `chan(<id>, buffer.dropping(n))`. The `id` is auto-generated. See [here](#bufferdroppingn).
 
 ### go
 
