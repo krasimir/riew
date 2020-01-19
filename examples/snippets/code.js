@@ -27,15 +27,19 @@ import {
   sliding,
 } from 'riew';
 
-register('config', { theme: 'dark' });
-
-const view = function(props) {
-  console.log(`Selected theme: ${props.theme}`); // Selected theme: dark
-};
-const routine = function*({ render }) {
-  const config = use('config');
-  render({ theme: config.theme });
-};
-const r = riew(view, routine).with('config');
-
-r.mount();
+function* delegation() {
+  yield sleep(1000);
+  console.log('Wait for me');
+}
+function* parallel() {
+  yield sleep(1000);
+  console.log('I run in parallel');
+}
+function* main() {
+  console.log('A');
+  yield call(delegation);
+  console.log('B');
+  yield fork(parallel);
+  console.log('C');
+}
+go(main);

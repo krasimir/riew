@@ -278,7 +278,7 @@ It creates a fixed buffer with size 0. The `put` to the channel is blocked until
 Example:
 
 ```js
-const ch = chan(buffer.fixed());
+const ch = chan('MYCHANNEL', buffer.fixed());
 
 go(function * A() {
   yield put(ch, 'foo');
