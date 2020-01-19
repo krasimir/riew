@@ -3,13 +3,10 @@
 var riew = require('riew');
 
 /* eslint-disable no-unused-vars */
-var chA = riew.chan();
-var chB = riew.chan();
-riew.listen([chA, chB], function (v, idx) {
-  console.log(v, idx);
-}, {
-  strategy: riew.ONE_OF
+riew.register('config', {
+  theme: 'dark'
 });
-riew.sput(chA, 'foo');
-riew.sput(chB, 'bar');
-riew.sput(chA, 'moo');
+var r = riew.riew(function (props) {
+  console.log("Selected theme: ".concat(props.config.theme)); // Selected theme: dark
+})["with"]('config');
+r.mount();

@@ -120,7 +120,7 @@ ops.read = function read(channels, options) {
 ops.sread = function sread(channels, to, options) {
   return ops.stake(channels, to, { ...options, read: true });
 };
-ops.unreadAll = function unreadAll(channel) {
+ops.unsubAll = function unsubAll(channel) {
   channel.buff.deleteListeners();
 };
 

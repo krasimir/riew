@@ -27,17 +27,10 @@ import {
   sliding,
 } from 'riew';
 
-const chA = chan();
-const chB = chan();
+register('config', { theme: 'dark' });
 
-listen(
-  [chA, chB],
-  (v, idx) => {
-    console.log(v, idx);
-  },
-  { strategy: ONE_OF }
-);
+const r = riew(function(props) {
+  console.log(`Selected theme: ${props.config.theme}`); // Selected theme: dark
+}).with('config');
 
-sput(chA, 'foo');
-sput(chB, 'bar');
-sput(chA, 'moo');
+r.mount();

@@ -59,7 +59,7 @@
   - [sread](#sread)
   - [listen](#listen)
   - [unsubscribing](#unsubscribing)
-  - [unreadAll](#unreadall)
+  - [unsubAll](#unsuball)
   - [call](#call)
   - [fork](#fork)
   - [sleep](#sleep)
@@ -853,14 +853,14 @@ The result of this script will be `"foo 0"` followed by `"bar 1"` followed by `"
 
 ### unsubscribing
 
-If we have used `sread` to subscribe to channel values we may want to unsubscribe. In this case we may use the function returned by `sread`. For example:
+If we have used `listen` to subscribe to channel values we may want to unsubscribe. In this case we may use the function returned by `listen`. For example:
 
 Example:
 
 ```js
 const source = chan();
 const subscriber = chan();
-const unsubscribe = sread(source, subscriber, { listen: true });
+const unsubscribe = listen(source, subscriber);
 
 go(function * () {
   console.log(yield take(subscriber));
@@ -874,11 +874,11 @@ sput(source, 'bar');
 
 We see only `"foo"` because after the first `take` we remove the subscription. Then there is no one to `put` into the `subscriber` channel.
 
-### unreadAll
+### unsubAll
 
-> `unreadAll(sourceChannel)`
+> `unsubAll(sourceChannel)`
 
-Removes all the subscriptions made to the `sourceChannel`. If we use [sread](https://github.com/krasimir/riew#sread) with a `listen` option set to `true` we effectively create a subscription. We may want to stop it.
+Removes all the subscriptions made to the `sourceChannel`. If we use [listen](https://github.com/krasimir/riew#listen) we effectively create a subscription. We may want to stop it.
 
 * `sourceChannel` (`Channel`, required) - the source channel that we subscribed to.
 
@@ -888,11 +888,11 @@ Example:
 const source = chan();
 const subscriber = chan();
 
-sread(source, subscriber, { listen: true });
+listen(source, subscriber);
 
 go(function * () {
   console.log(yield take(subscriber));
-  unreadAll(source);
+  unsubAll(source);
   console.log(yield take(subscriber));
 });
 
@@ -1047,7 +1047,7 @@ go(function * () {
 });
 ```
 
-The behavior of this function could be replicated by using [sread](https://github.com/krasimir/riew#sread) with a `listen` option set to `true`. The difference between these two variants is that `merge` consumes values from channels while `sread` is just reading from them.
+The behavior of this function could be replicated by using [listen](https://github.com/krasimir/riew#listen). The difference between these two variants is that `merge` consumes values from channels while `listen` is just reading from them.
 
 ### state
 
@@ -1059,12 +1059,11 @@ As we mentioned in the [Application state](https://github.com/krasimir/riew#appl
 
 Returns a state object with the following fields:
 
-* `READ` - an id of the default _read_ (selector) channel of the state.
-* `WRITE` - an id of the default _write_ (mutator) channel of the state.
-* `select(channel, selector, onError)` - creates or uses `channel` for reading. `selector` is a function or a routine that receives the current value and must return value too. `onError` is here to handle errors coming from the `selector` function.
-* `mutate(channel, reducer, onError)` - creates or uses `channel` for writing. `reducer` is a function or a routine that receives the current state value and an item that is put to the channel. It must return the new version of the state. `onError` is here to handle errors produced by the `reducer`.
-* `destroy` - closes all the _read_ and _write_ channels
-* `set(value)` - a synchronous way to set the value of the state without involving channels.
+* `DEFAULT` - a [sliding](#bufferslidingn) channel. When we read from it, we will receive the value of the state. When we put to it will update the state value.
+* `select(selector, onError)` - creates a [sliding](#bufferslidingn) channel for reading. `selector` is a function or a routine that receives the current value and must return another value. `onError` is here to handle errors coming from the `selector` function.
+* `mutate(reducer, onError)` - creates a [sliding](#bufferslidingn) channel for writing. `reducer` is a function or a routine that receives the current state value and an item that is put to the channel. It must return a new version of the state. `onError` is here to handle errors produced by the `reducer`.
+* `destroy` - closes all the created channels
+* `set(value)` - a synchronous way to set the value of the state. It puts the new value to all sliding channels created from the state.
 * `get()` - a synchronous way to get the value of the state without involving channels.
 
 Example:
@@ -1084,50 +1083,51 @@ go(function * () {
 ```js
 const counter = state(0);
 
-go(function * () {
-  console.log(yield take(counter)) // 0
-  yield put(counter, 42);
-  console.log(yield take(counter)) // 42
+go(function*() {
+  console.log(yield read(counter.DEFAULT)); // 0
+  yield put(counter.DEFAULT, 42);
+  console.log(yield read(counter.DEFAULT)); // 42
 });
 ```
 
+Notice that we are using `read` and not `take` to get the value out of the default channel. If we use `take` the value will be consumed and every next `take` will be blocking. This though doesn't mean that the value disappears. It is still in the `counter` object and we can get it via `counter.get()`. Also notice that all the channels created out of a state are using a [sliding](#bufferslidingn) buffer. This is to have non-blocking puts.
+
 #### selectors
 
-> `state.select(channel, selector, onError)`
+> `state.select(selector, onError)`
 
 The read channels are called selectors and are defined by using the `select` method of the state.
 
 ```js
 const name = state('Samantha');
-const ch = chan();
 
-name.select('UP', str => str.toUpperCase())
-name.select('LOWER', str => str.toLowerCase());
-name.select(ch, str => `My name is ${ str }`);
+const up = name.select(str => str.toUpperCase());
+const lower = name.select(str => str.toLowerCase());
+const message = name.select(str => `My name is ${str}`);
 
-go(function * () {
-  console.log(yield take('UP')); // SAMANTHA
-  console.log(yield take('LOWER')); // samantha
-  console.log(yield take(ch)); // My name is Samantha
+go(function*() {
+  console.log(yield read(up)); // SAMANTHA
+  console.log(yield read(lower)); // samantha
+  console.log(yield read(message)); // My name is Samantha
 });
 ```
 
 #### mutators
 
-> `state.mutate(channel, reducer, onError)`
+> `state.mutate(reducer, onError)`
 
 The write channels are called mutators and are defined by using the `mutate` method of the state.
 
 ```js
 const counter = state(0);
 
-counter.mutate('ADD', (current, n) => current + n);
-counter.mutate('DOUBLE', (current) => current * 2)
+const add = counter.mutate((current, n) => current + n);
+const double = counter.mutate(current => current * 2);
 
-go(function * () {
-  yield put('ADD', 10);
-  yield put('DOUBLE');
-  console.log(yield take(counter)); // 20
+go(function*() {
+  yield put(add, 10);
+  yield put(double);
+  console.log(yield read(counter)); // 20
 });
 ```
 
@@ -1175,14 +1175,14 @@ The Riew routines that are passed to the `riew` function receive an object with 
 
 * `render` - must be called with an object. That object reaches the `view`. Have in mind that multiple `render` calls are batched into a single `view` call via micro task. This `render` function is the main tool for updating the view.
 * `state` - alias to [state](https://github.com/krasimir/riew#state). All the states created with this alias will be destroyed when the riew is unmounted. It's recommended if you have local for the riew state to created it via this function so it gets cleaned up when the riew is unmounted.
-* `props` - an ID of the props channel of the riew
+* `props` - a props channel of the riew. It gives you access to the object that is passed to `mount` and `updated` methods.
 * the Riew routines also receive the [externals](https://github.com/krasimir/riew#externals) injected into the riew (if any)
 
 We have to clarify what we mean by "object that reaches the `view`". It's a JavaScript object literal that contains keys and values. This may be raw data but may be also a Riew [channel](https://github.com/krasimir/riew#chan) or a [state](https://github.com/krasimir/riew#state). In this cases the view gets whatever is the data in the channel or whatever is the value of the state. Keep reading, there're more examples in the [Channels and state](https://github.com/krasimir/riew#channels-and-state) section.
 
 #### Externals
 
-Very often we'll need _services_ and configuration to reach our Riew routines. The library provides a mechanism for dealing with such dependencies. We'll better understand it by checking the following example:
+Very often we'll need _services_ and configuration to reach our riews. The library provides a mechanism for dealing with such dependencies. We'll better understand it by checking the following example:
 
 ```js
 const answerService = {
@@ -1215,65 +1215,66 @@ r.mount();
 
 The `answerService` reaches the `view` and the routine as it is because Riew have no idea what it is. However the `answer` is treated differently. The library sees that this is a channel and subscribes the `view` to items coming from that channel. The routine receives the channel as it is and we can `put` to it. At the end of the snippet the riew is mounted, the routine starts, we get the async call happening and we push the number to the channel.
 
-The `with` method is one of the ways to subscribe our views to channels. As we said in some sections above we don't need to have direct access to a channel instance in order to use it. We need to know only its ID. So, imagine how powerful this pattern is. We may have our channels and our riews in completely different places:
+The `with` method is one of the ways to subscribe our views to channels. Every channel has an `exportAs` method which saves a reference to the channel in a global registry. We may then use the `with` method to access that same channel:
 
 ```js
 // At the top level of your application.
-sput('MY_NAME_CHANNEL', 'Simon')
+const ch = chan().exportAs('my-channel');
 
 // Somewhere in the UI layer.
-const view = function (data) {
+const view = function(data) {
   console.log(data);
-}
-const r = riew(view).with({ name: 'MY_NAME_CHANNEL' });
+};
+const r = riew(view).with('my-channel');
 
 r.mount();
+
+// At some point we put data to the channel.
+sput(ch, 'Simon');
 ```
+The result of this snippet is `{ name: "Simon" }` in the console. It works like that because our riew gets subscribed for new values coming to the channel.
 
-See how we are not using [chan](https://github.com/krasimir/riew#chan) function at all. The library automatically creates our channel behind the scenes when we do [sput](https://github.com/krasimir/riew#sput). Then later when the riew is mounted we get a subscription to the same channel because the ID `MY_NAME_CHANNEL` matches. The result is `{ name: "Simon" }` in the console.
-
-The `with` helper could be also used to inject stuff that are pushed to a [global registry](https://github.com/krasimir/riew#register).
+The `with` helper could be also used to inject stuff that are pushed to a [global registry](https://github.com/krasimir/riew#register) directly.
 
 ```js
 register('config', { theme: 'dark' });
 
 const r = riew(function (props) {
-  console.log(`Selected theme: ${ props.config.theme }`);
+  console.log(`Selected theme: ${ props.config.theme }`); // Selected theme: dark
 }).with('config');
 
 r.mount();
 ```
 
-Instead of an object we just have to pass the key of the dependency.
+Same as in `exportAs` instead of an object we just have to pass the key of the dependency.
 
 #### Channels and state
 
 The channels and state are integral part of the riew concept. We use them to push data to the view, synchronize processes and communicate events. Our riews internally check what is behind the data before passing it to the view.
 
-* If we have a channel the riew creates a subscription using [sread](https://github.com/krasimir/riew#sread) (with `listen` option set to `true`) and re-renders the view with the value send to the channel.
-* If we have a state the riew again create a subscription but to the default read channel of the state.
+* If we have a channel the riew creates a subscription using [listen](https://github.com/krasimir/riew#listen) and re-renders the view with the value send to the channel.
+* If we have a state the riew again creates a subscription but to the default read channel of the state.
 
 ```js
-const view = function (data) {
+const view = function(data) {
   console.log(data);
-}
-const routine = function * ({ render }) {
+};
+const routine = function*({ render }) {
   const counter = state(0);
-  const value = chan();
-  
-  counter.mutate('INCREMENT', n => n + 1);
-  counter.select(value, n => `value is ${ n }`)
-  setInterval(() => sput('INCREMENT', 1), 1000);
-  render({ counter, value });
-}
+
+  const inc = counter.mutate(n => n + 1);
+  const sel = counter.select(n => `value is ${n}`);
+  setInterval(() => sput(inc, 1), 1000);
+  render({ counter, message: sel });
+};
 const r = riew(view, routine);
 
 r.mount();
 ```
 
-In this example we are creating a state that keeps a number. We also have two channels one of which is created by the state's `mutate` method - `INCREMENT`. What we send to the view is the state `counter` and the channel `value` (check the [state](https://github.com/krasimir/riew#state) section to see what `select` and `mutate` mean). The result of this code is that our `view` is called every second with `{counter: <number>, value: "value is <number>"}`.
+In this example we are creating a state that keeps a number. We also have two channels one of which is created by the state's `mutate` method - `inc`. What we send to the view is the state `counter` and a message (check the [state](https://github.com/krasimir/riew#state) section to see what `select` and `mutate` mean in details). The result of this code is that our `view` is called every second with `{counter: <number>, value: "value is <number>"}`.
 
-The takeaway from this section is that our riews are bound to channels and we control what the view renders by putting data to those channels.
+Our riews are bound to channels and we control what the view renders by putting data to those channels.
 
 ### react
 
@@ -1307,7 +1308,7 @@ The `Component` constant here is indeed a React component but it is also a [riew
 
 > `register(key, dependency)`
 
-Together with [use](https://github.com/krasimir/riew#use) this function implements a mechanism for dealing with dependencies. `register` defines an entry in  a _globally_ available registry and [use](https://github.com/krasimir/riew#use) is accessing that entry. Once we define something with `register` we may inject it into our riews with the [with](https://github.com/krasimir/riew#externals) method.
+Together with [use](#use) and [with](#injecting-external-dependencies) this function implements a mechanism for dealing with dependencies. `register` defines an entry in  a _globally_ available registry and [use](#use) is accessing that entry. Once we define something with `register` we may inject it into our riews with the [with](#externals) method.
 
 * `key` (`String`, required) - a string the uniquely identifies the dependency
 * `dependency` (`Any`, required) - this could be a primitive like string or a number but could be also instance of a service or a state object.
@@ -1328,7 +1329,7 @@ r.mount();
 
 > `use(key)`
 
-It gives you access to the dependency registered using the [register](https://github.com/krasimir/riew#register) function. This function is useful if we want to use something in our routines.
+It gives you access to the dependency registered using the [register](#register) function. This function is useful if we want to use something in our routines.
 
 * `key` (`String`, required) - the key identifier of the dependency.
 

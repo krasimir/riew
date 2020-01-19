@@ -1,6 +1,5 @@
 import {
   chan,
-  buffer,
   CHANNELS,
   go,
   reset,
@@ -12,9 +11,8 @@ import {
   ONE_OF,
   state,
   stake,
-  unreadAll,
+  unsubAll,
   listen,
-  sliding,
   fixed,
 } from '../index';
 import { Test, exercise } from '../__helpers__';
@@ -514,7 +512,7 @@ describe('Given a CSP pubsub extension', () => {
             stake(ch2, v => log(`take_ch2=${v}`));
             stake(ch3, v => {
               log(`take_ch3=${v}`);
-              unreadAll(ch1);
+              unsubAll(ch1);
             });
             stake(ch3, v => log(`take_ch3=${v.toString()}`));
           },
