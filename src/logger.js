@@ -68,7 +68,9 @@ export default function Logger() {
   let data = [];
   let inProgress = false;
   let enabled = false;
+  const listeners = [];
 
+  api.on = listener => listeners.push(listener);
   api.log = (who, what, meta) => {
     if (!enabled) return null;
     data.push({
@@ -79,9 +81,10 @@ export default function Logger() {
     if (!inProgress) {
       inProgress = true;
       Promise.resolve().then(() => {
-        api.snapshot(data);
+        const s = api.snapshot(data);
         inProgress = false;
         data = [];
+        listeners.forEach(l => l(s));
       });
     }
   };

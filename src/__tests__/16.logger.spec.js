@@ -14,6 +14,7 @@ import {
   listen,
   close,
   channelReset,
+  inspector,
 } from '../index';
 import expectationRiew from './data/logger.spec.riew.json';
 import expectationChannel from './data/logger.spec.channel.json';
@@ -136,6 +137,26 @@ describe('Given the logger', () => {
       await delay();
       // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationRiew);
+    });
+  });
+
+  // inspector
+
+  describe('when we the inspector', async () => {
+    it(`should log events`, async () => {
+      const spy = jest.fn();
+      inspector(spy);
+      const r = riew(function MyVIew() {});
+      r.mount({ a: 'b' });
+      r.update({ c: 'd' });
+      await delay();
+      r.unmount();
+      await delay();
+      expect(spy).toBeCalledWithArgs(
+        expect.any(Object),
+        expect.any(Object),
+        expect.any(Object)
+      );
     });
   });
 });

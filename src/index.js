@@ -7,6 +7,7 @@ import b from './csp/buf';
 import c from './csp/channel';
 import ops from './csp/ops';
 import s from './csp/state';
+import insp from './inspector';
 
 export const OPEN = Symbol('OPEN');
 export const CLOSED = Symbol('CLOSED');
@@ -96,3 +97,4 @@ export const isRoutine = ops.isRoutine;
 export const go = ops.go;
 export const sleep = ops.sleep;
 export const stop = ops.stop;
+export const inspector = insp(logger);

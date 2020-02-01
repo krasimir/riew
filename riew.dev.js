@@ -308,7 +308,7 @@ function chan(id, buff) {
   return api;
 }
 
-},{"../index":7,"../utils":15,"./buf":1}],3:[function(require,module,exports){
+},{"../index":7,"../utils":16,"./buf":1}],3:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -726,7 +726,7 @@ ops.stop = function stop() {
 
 exports.default = ops;
 
-},{"../index":7,"../utils":15,"./utils":5}],4:[function(require,module,exports){
+},{"../index":7,"../utils":16,"./utils":5}],4:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -856,7 +856,7 @@ function state() {
   return api;
 }
 
-},{"../index":7,"../utils":15}],5:[function(require,module,exports){
+},{"../index":7,"../utils":16}],5:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -969,7 +969,7 @@ function Grid() {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.stop = exports.sleep = exports.go = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.verifyChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unsubAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
+exports.inspector = exports.stop = exports.sleep = exports.go = exports.isRoutine = exports.isState = exports.isRiew = exports.getChannel = exports.isChannel = exports.verifyChannel = exports.timeout = exports.merge = exports.fork = exports.call = exports.schannelReset = exports.channelReset = exports.sclose = exports.close = exports.unsubAll = exports.listen = exports.sread = exports.read = exports.take = exports.stake = exports.put = exports.sput = exports.registry = exports.reset = exports.grid = exports.logger = exports.register = exports.use = exports.react = exports.state = exports.dropping = exports.sliding = exports.fixed = exports.chan = exports.buffer = exports.CHANNELS = exports.ONE_OF = exports.ALL_REQUIRED = exports.NOTHING = exports.FORK_ROUTINE = exports.CALL_ROUTINE = exports.READ = exports.STOP = exports.SLEEP = exports.NOOP = exports.TAKE = exports.PUT = exports.ENDED = exports.CLOSED = exports.OPEN = undefined;
 
 var _riew = require('./riew');
 
@@ -1016,6 +1016,10 @@ var _ops2 = _interopRequireDefault(_ops);
 var _state = require('./csp/state');
 
 var _state2 = _interopRequireDefault(_state);
+
+var _inspector = require('./inspector');
+
+var _inspector2 = _interopRequireDefault(_inspector);
 
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
@@ -1124,8 +1128,50 @@ var isRoutine = exports.isRoutine = _ops2.default.isRoutine;
 var go = exports.go = _ops2.default.go;
 var sleep = exports.sleep = _ops2.default.sleep;
 var stop = exports.stop = _ops2.default.stop;
+var inspector = exports.inspector = (0, _inspector2.default)(logger);
 
-},{"./csp/buf":1,"./csp/channel":2,"./csp/ops":3,"./csp/state":4,"./grid":6,"./logger":8,"./react":9,"./registry":10,"./riew":11,"./utils":15}],8:[function(require,module,exports){
+},{"./csp/buf":1,"./csp/channel":2,"./csp/ops":3,"./csp/state":4,"./grid":6,"./inspector":8,"./logger":9,"./react":10,"./registry":11,"./riew":12,"./utils":16}],8:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = inspector;
+/* eslint-disable no-restricted-globals */
+var isDefined = function isDefined(what) {
+  return typeof what !== 'undefined';
+};
+function getOrigin() {
+  if (isDefined(location) && isDefined(location.protocol) && isDefined(location.host)) {
+    return location.protocol + '//' + location.host;
+  }
+  return 'unknown';
+}
+
+function inspector(logger) {
+  return function () {
+    var callback = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+    var logSnapshotsToConsole = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+    logger.enable();
+    logger.on(function (snapshot) {
+      if (logSnapshotsToConsole) {
+        console.log(snapshot);
+      }
+      callback(snapshot);
+      if (typeof window !== 'undefined') {
+        window.postMessage({
+          type: 'RIEW_SNAPSHOT',
+          origin: getOrigin(),
+          snapshot: snapshot,
+          time: new Date().getTime()
+        }, '*');
+      }
+    });
+  };
+}
+
+},{}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1225,7 +1271,11 @@ function Logger() {
   var data = [];
   var inProgress = false;
   var enabled = false;
+  var listeners = [];
 
+  api.on = function (listener) {
+    return listeners.push(listener);
+  };
   api.log = function (who, what, meta) {
     if (!enabled) return null;
     data.push({
@@ -1236,9 +1286,12 @@ function Logger() {
     if (!inProgress) {
       inProgress = true;
       Promise.resolve().then(function () {
-        api.snapshot(data);
+        var s = api.snapshot(data);
         inProgress = false;
         data = [];
+        listeners.forEach(function (l) {
+          return l(s);
+        });
       });
     }
   };
@@ -1324,7 +1377,7 @@ function Logger() {
   return api;
 }
 
-},{"./index":7,"./sanitize":12}],9:[function(require,module,exports){
+},{"./index":7,"./sanitize":13}],10:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1458,7 +1511,7 @@ function riew(View) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../index":7,"../utils":15}],10:[function(require,module,exports){
+},{"../index":7,"../utils":16}],11:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1509,7 +1562,7 @@ var r = Registry();
 
 exports.default = r;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1728,7 +1781,7 @@ function namedRiew(name, viewFunc) {
   return api;
 }
 
-},{"./index":7,"./utils":15}],12:[function(require,module,exports){
+},{"./index":7,"./utils":16}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1772,7 +1825,7 @@ function sanitize(something) {
   return result;
 }
 
-},{"./vendors/CircularJSON":13,"./vendors/SerializeError":14}],13:[function(require,module,exports){
+},{"./vendors/CircularJSON":14,"./vendors/SerializeError":15}],14:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -1958,7 +2011,7 @@ exports.default = {
   parse: parseRecursion
 };
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 /* eslint-disable */
 // Credits: https://github.com/sindresorhus/serialize-error
 
@@ -2049,7 +2102,7 @@ function destroyCircular(from, seen) {
 	return to;
 }
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };

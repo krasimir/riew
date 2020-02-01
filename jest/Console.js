@@ -1,10 +1,10 @@
 const assert = require('assert');
-const {format} = require('util');
-const {Console} = require('console');
+const { format } = require('util');
+const { Console } = require('console');
 
 function simpleFormatter() {
   const TITLE_INDENT = '    ';
-  const CONSOLE_INDENT = TITLE_INDENT + '  ';
+  const CONSOLE_INDENT = `${TITLE_INDENT}  `;
 
   return (type, message) => {
     message = message
@@ -14,7 +14,7 @@ function simpleFormatter() {
 
     return message;
   };
-};
+}
 
 class SimpleConsole extends Console {
   constructor(stdout, stderr, formatBuffer) {
@@ -34,7 +34,7 @@ class SimpleConsole extends Console {
       this._stdout.write('\x1b[999D\x1b[K');
     }
     this._logToParentConsole(
-      this._formatBuffer(type, '  '.repeat(this._groupDepth) + message),
+      this._formatBuffer(type, '  '.repeat(this._groupDepth) + message)
     );
   }
 
