@@ -1155,13 +1155,14 @@ function inspector(logger) {
 
     logger.enable();
     logger.on(function (snapshot) {
-      if (logSnapshotsToConsole) {
-        console.log(snapshot);
-      }
-      callback(snapshot);
       if (typeof window !== 'undefined') {
+        if (logSnapshotsToConsole) {
+          console.log('Riew:inspector', snapshot);
+        }
+        callback(snapshot);
         window.postMessage({
           type: 'RIEW_SNAPSHOT',
+          source: 'riew',
           origin: getOrigin(),
           snapshot: snapshot,
           time: new Date().getTime()

@@ -1,4 +1,6 @@
-import { go, sleep, put, take, sput, sliding } from 'riew';
+import { go, sleep, put, take, sput, sliding, inspector } from 'riew';
+
+inspector(() => {}, true);
 
 const transitions = {
   idle: {
@@ -24,16 +26,16 @@ go(function*() {
   const state = yield take(machine);
   const currentState = transitions[state];
   const possibleActions = Object.keys(currentState);
-  console.log(`Current state: ${state}`);
-  console.log(`  actions: ${possibleActions.join(', ')}`);
+  // console.log(`Current state: ${state}`);
+  // console.log(`  actions: ${possibleActions.join(', ')}`);
   const action = yield take(machine);
   if (possibleActions.includes(action)) {
     const newState = transitions[state][action];
-    console.log(`Transition to ${newState}`);
+    // console.log(`Transition to ${newState}`);
     yield put(machine, newState);
     return go;
   }
-  console.log(`Ops! The machine can not react on "${action}" action.`);
+  // console.log(`Ops! The machine can not react on "${action}" action.`);
 });
 
 go(function*() {
