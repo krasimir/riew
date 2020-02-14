@@ -149,11 +149,11 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
   };
 
   api.put = (item, callback) => {
-    logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
+    logger.log(api.parent, 'CHANNEL_PUT_INITIATED', item);
     api.hooks.beforePut(item, beforePutItem => {
       put(beforePutItem, putOpRes =>
         api.hooks.afterPut(putOpRes, afterPutItem => {
-          logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', afterPutItem);
+          logger.log(api.parent, 'CHANNEL_PUT_RESOLVED', afterPutItem);
           callback(afterPutItem);
         })
       );
@@ -161,18 +161,14 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
   };
   api.take = (callback, options) => {
     let unsubscribe = () => {};
-    logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
+    logger.log(api.parent, 'CHANNEL_TAKE_INITIATED');
     api.hooks.beforeTake(
       undefined,
       () =>
         (unsubscribe = take(
           takeOpRes =>
             api.hooks.afterTake(takeOpRes, afterTakeItem => {
-              logger.log(
-                { id: api.parent },
-                'CHANNEL_TAKE_RESOLVED',
-                afterTakeItem
-              );
+              logger.log(api.parent, 'CHANNEL_TAKE_RESOLVED', afterTakeItem);
               callback(afterTakeItem);
             }),
           options

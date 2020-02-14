@@ -193,11 +193,11 @@ function CSPBuffer() {
   };
 
   api.put = function (item, callback) {
-    _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_INITIATED', item);
+    _index.logger.log(api.parent, 'CHANNEL_PUT_INITIATED', item);
     api.hooks.beforePut(item, function (beforePutItem) {
       put(beforePutItem, function (putOpRes) {
         return api.hooks.afterPut(putOpRes, function (afterPutItem) {
-          _index.logger.log({ id: api.parent }, 'CHANNEL_PUT_RESOLVED', afterPutItem);
+          _index.logger.log(api.parent, 'CHANNEL_PUT_RESOLVED', afterPutItem);
           callback(afterPutItem);
         });
       });
@@ -205,11 +205,11 @@ function CSPBuffer() {
   };
   api.take = function (callback, options) {
     var unsubscribe = function unsubscribe() {};
-    _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_INITIATED');
+    _index.logger.log(api.parent, 'CHANNEL_TAKE_INITIATED');
     api.hooks.beforeTake(undefined, function () {
       return unsubscribe = take(function (takeOpRes) {
         return api.hooks.afterTake(takeOpRes, function (afterTakeItem) {
-          _index.logger.log({ id: api.parent }, 'CHANNEL_TAKE_RESOLVED', afterTakeItem);
+          _index.logger.log(api.parent, 'CHANNEL_TAKE_RESOLVED', afterTakeItem);
           callback(afterTakeItem);
         });
       }, options);
@@ -282,7 +282,7 @@ function chan(id, buff) {
     '@channel': true
   });
 
-  buff.parent = api.id;
+  buff.parent = api;
 
   api.isActive = function () {
     return api.state() === _index.OPEN;
@@ -1279,8 +1279,19 @@ function Logger() {
   };
   api.log = function (who, what, meta) {
     if (!enabled) return null;
+    if ((0, _index.isRiew)(who)) {
+      who = normalizeRiew(who);
+    } else if ((0, _index.isState)(who)) {
+      who = normalizeState(who);
+    } else if ((0, _index.isChannel)(who)) {
+      who = normalizeChannel(who);
+    } else if ((0, _index.isRoutine)(who)) {
+      who = normalizeRoutine(who);
+    } else {
+      console.warn('Riew logger: unrecognized who', who, what);
+    }
     data.push({
-      who: who.id,
+      who: who,
       what: what,
       meta: (0, _sanitize2.default)(meta)
     });

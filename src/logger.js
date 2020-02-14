@@ -73,8 +73,19 @@ export default function Logger() {
   api.on = listener => listeners.push(listener);
   api.log = (who, what, meta) => {
     if (!enabled) return null;
+    if (isRiew(who)) {
+      who = normalizeRiew(who);
+    } else if (isState(who)) {
+      who = normalizeState(who);
+    } else if (isChannel(who)) {
+      who = normalizeChannel(who);
+    } else if (isRoutine(who)) {
+      who = normalizeRoutine(who);
+    } else {
+      console.warn('Riew logger: unrecognized who', who, what);
+    }
     data.push({
-      who: who.id,
+      who,
       what,
       meta: sanitize(meta),
     });

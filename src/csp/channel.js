@@ -17,7 +17,7 @@ export default function chan(id, buff) {
     '@channel': true,
   });
 
-  buff.parent = api.id;
+  buff.parent = api;
 
   api.isActive = () => api.state() === OPEN;
   api.buff = buff;
