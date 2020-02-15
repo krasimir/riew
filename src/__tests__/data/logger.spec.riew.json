@@ -3,7 +3,7 @@
     "actions": [
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [],
           "puts": [],
@@ -14,7 +14,7 @@
       },
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [],
           "puts": [],
@@ -31,14 +31,14 @@
           "viewData": {},
           "children": [
             {
-              "id": "sliding_3",
+              "id": "sliding_MyVIew_view_2",
               "type": "CHANNEL",
               "value": [],
               "puts": [],
               "takes": []
             },
             {
-              "id": "sliding_5",
+              "id": "sliding_MyVIew_props_3",
               "type": "CHANNEL",
               "value": [],
               "puts": [],
@@ -51,7 +51,7 @@
       },
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [],
           "puts": [],
@@ -64,7 +64,7 @@
       },
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [
             {
@@ -79,7 +79,7 @@
       },
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [
             {
@@ -94,7 +94,7 @@
       },
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [
             {
@@ -111,7 +111,7 @@
       },
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [],
           "puts": [],
@@ -124,7 +124,7 @@
       },
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [
             {
@@ -139,7 +139,7 @@
       },
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [
             {
@@ -154,7 +154,7 @@
       },
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [
             {
@@ -179,7 +179,7 @@
           },
           "children": [
             {
-              "id": "sliding_3",
+              "id": "sliding_MyVIew_view_2",
               "type": "CHANNEL",
               "value": [
                 {
@@ -195,7 +195,7 @@
               ]
             },
             {
-              "id": "sliding_5",
+              "id": "sliding_MyVIew_props_3",
               "type": "CHANNEL",
               "value": [
                 {
@@ -219,7 +219,7 @@
       },
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [
             {
@@ -241,7 +241,7 @@
       },
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [
             {
@@ -263,7 +263,7 @@
       },
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [
             {
@@ -285,7 +285,7 @@
       },
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [
             {
@@ -307,7 +307,7 @@
       },
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [
             {
@@ -327,7 +327,7 @@
       },
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [
             {
@@ -356,7 +356,7 @@
           },
           "children": [
             {
-              "id": "sliding_3",
+              "id": "sliding_MyVIew_view_2",
               "type": "CHANNEL",
               "value": [
                 {
@@ -372,7 +372,7 @@
               ]
             },
             {
-              "id": "sliding_5",
+              "id": "sliding_MyVIew_props_3",
               "type": "CHANNEL",
               "value": [
                 {
@@ -406,7 +406,7 @@
         },
         "children": [
           {
-            "id": "sliding_3",
+            "id": "sliding_MyVIew_view_2",
             "type": "CHANNEL",
             "value": [
               {
@@ -422,7 +422,7 @@
             ]
           },
           {
-            "id": "sliding_5",
+            "id": "sliding_MyVIew_props_3",
             "type": "CHANNEL",
             "value": [
               {
@@ -454,7 +454,7 @@
           },
           "children": [
             {
-              "id": "sliding_3",
+              "id": "sliding_MyVIew_view_2",
               "type": "CHANNEL",
               "value": [
                 {
@@ -470,7 +470,7 @@
               ]
             },
             {
-              "id": "sliding_5",
+              "id": "sliding_MyVIew_props_3",
               "type": "CHANNEL",
               "value": [
                 {
@@ -505,7 +505,7 @@
         },
         "children": [
           {
-            "id": "sliding_3",
+            "id": "sliding_MyVIew_view_2",
             "type": "CHANNEL",
             "value": [
               {
@@ -521,7 +521,7 @@
             ]
           },
           {
-            "id": "sliding_5",
+            "id": "sliding_MyVIew_props_3",
             "type": "CHANNEL",
             "value": [
               {
@@ -544,7 +544,7 @@
     "actions": [
       {
         "who": {
-          "id": "sliding_5",
+          "id": "sliding_MyVIew_props_3",
           "type": "CHANNEL",
           "value": [
             {
@@ -559,7 +559,7 @@
       },
       {
         "who": {
-          "id": "sliding_3",
+          "id": "sliding_MyVIew_view_2",
           "type": "CHANNEL",
           "value": [
             {

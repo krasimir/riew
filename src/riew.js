@@ -83,8 +83,8 @@ export function namedRiew(name, viewFunc, ...routines) {
       subscriptions[to.id] = listen(to, func, { initialCall: true });
     }
   };
-  const VIEW_CHANNEL = sliding(getId(`${name}_view`));
-  const PROPS_CHANNEL = sliding(getId(`${name}_props`));
+  const VIEW_CHANNEL = sliding(1, getId(`sliding_${name}_view`));
+  const PROPS_CHANNEL = sliding(1, getId(`sliding_${name}_props`));
 
   api.children.push(VIEW_CHANNEL);
   api.children.push(PROPS_CHANNEL);

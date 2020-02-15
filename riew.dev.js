@@ -1071,11 +1071,13 @@ var fixed = exports.fixed = function fixed() {
 };
 var sliding = exports.sliding = function sliding() {
   var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-  return chan((0, _utils.getId)('sliding'), buffer.sliding(size));
+  var id = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+  return chan(id || (0, _utils.getId)('sliding'), buffer.sliding(size));
 };
 var dropping = exports.dropping = function dropping() {
   var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
-  return chan((0, _utils.getId)('dropping'), buffer.dropping(size));
+  var id = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+  return chan(id || (0, _utils.getId)('dropping'), buffer.dropping(size));
 };
 var state = exports.state = _state2.default;
 
@@ -1674,8 +1676,8 @@ function namedRiew(name, viewFunc) {
       subscriptions[to.id] = (0, _index.listen)(to, func, { initialCall: true });
     }
   };
-  var VIEW_CHANNEL = (0, _index.sliding)((0, _utils.getId)(name + '_view'));
-  var PROPS_CHANNEL = (0, _index.sliding)((0, _utils.getId)(name + '_props'));
+  var VIEW_CHANNEL = (0, _index.sliding)(1, (0, _utils.getId)('sliding_' + name + '_view'));
+  var PROPS_CHANNEL = (0, _index.sliding)(1, (0, _utils.getId)('sliding_' + name + '_props'));
 
   api.children.push(VIEW_CHANNEL);
   api.children.push(PROPS_CHANNEL);
