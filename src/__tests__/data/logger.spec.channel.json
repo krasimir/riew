@@ -1,150 +1,147 @@
 [
-  {
-    "actions": [
-      {
-        "who": {
-          "id": "ch_1",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_CREATED",
-        "meta": null
+  [
+    {
+      "who": {
+        "id": "ch_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
       },
-      {
-        "who": {
-          "id": "ch_2",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_CREATED",
-        "meta": null
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "ch_2",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
       },
-      {
-        "who": {
-          "id": "ch_1",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_TAKE_INITIATED",
-        "meta": null
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "ch_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
       },
-      {
-        "who": {
-          "id": "ch_1",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
-        },
-        "what": "CHANNEL_TAKE_INITIATED",
-        "meta": null
+      "what": "CHANNEL_TAKE_INITIATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "ch_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
       },
-      {
-        "who": {
-          "id": "ch_1",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            },
-            {
-              "read": false,
-              "listen": false
-            }
-          ]
-        },
-        "what": "CHANNEL_PUT_INITIATED",
-        "meta": "foo"
+      "what": "CHANNEL_TAKE_INITIATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "ch_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          },
+          {
+            "read": false,
+            "listen": false
+          }
+        ]
       },
-      {
-        "who": {
-          "id": "ch_1",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            },
-            {
-              "read": false,
-              "listen": false
-            }
-          ]
-        },
-        "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": "foo"
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": "foo"
+    },
+    {
+      "who": {
+        "id": "ch_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          },
+          {
+            "read": false,
+            "listen": false
+          }
+        ]
       },
-      {
-        "who": {
-          "id": "ch_1",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
-        },
-        "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": "foo"
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": "foo"
+    },
+    {
+      "who": {
+        "id": "ch_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
       },
-      {
-        "who": {
-          "id": "ch_1",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
-        },
-        "what": "CHANNEL_PUT_RESOLVED",
-        "meta": true
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": "foo"
+    },
+    {
+      "who": {
+        "id": "ch_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
       },
-      {
-        "who": {
-          "id": "ch_1",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_CLOSED",
-        "meta": null
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "ch_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
       },
-      {
-        "who": {
-          "id": "ch_2",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_RESET",
-        "meta": null
-      }
-    ],
-    "state": []
-  }
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "ch_2",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_RESET",
+      "meta": null
+    }
+  ]
 ]

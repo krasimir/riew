@@ -12,7 +12,6 @@ import {
   put,
   sleep,
   logger,
-  sliding,
 } from '../index';
 
 describe('Given the React riew function', () => {
@@ -38,9 +37,12 @@ describe('Given the React riew function', () => {
         render(<R />);
 
         await delay(10);
-        const log = logger.now();
-        expect(log.state[0].id.match(/^Hi_riew/)).toBeTruthy();
-        expect(log.state[0].children[2].id.match(/^routine_RRR/)).toBeTruthy();
+        const frame = logger.now();
+        const loggedItem = frame.find(({ who }) => who.id.match(/^Hi_riew/));
+        expect(loggedItem).toBeDefined();
+        expect(
+          loggedItem.who.children[2].id.match(/^routine_RRR/)
+        ).toBeTruthy();
       }));
     it(`should
       * run the routine function

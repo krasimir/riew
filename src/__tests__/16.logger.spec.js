@@ -22,8 +22,7 @@ import expectationChannel from './data/logger.spec.channel.json';
 function findItemAllFrames(itemId) {
   const filteredFrames = logger
     .frames()
-    .filter(({ state }) => state.find(({ id }) => id === itemId))
-    .map(({ state }) => state.find(({ id }) => id === itemId));
+    .filter(actions => actions.find(({ who }) => who.id === itemId));
 
   if (filteredFrames.length > 0) {
     return filteredFrames;
@@ -33,7 +32,7 @@ function findItemAllFrames(itemId) {
 function findItem(itemId) {
   const allFrames = findItemAllFrames(itemId);
   if (allFrames && allFrames.length > 0) {
-    return allFrames.pop();
+    return allFrames.pop().find(({ who }) => who.id === itemId).who;
   }
   return null;
 }
@@ -114,7 +113,7 @@ describe('Given the logger', () => {
       logger.enable();
       channelReset(ch2);
       await delay();
-      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationChannel);
     });
   });
@@ -135,7 +134,7 @@ describe('Given the logger', () => {
       await delay();
       r.unmount();
       await delay();
-      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationRiew);
     });
   });

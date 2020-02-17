@@ -1,402 +1,351 @@
 [
-  {
-    "actions": [
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_CREATED",
-        "meta": null
+  [
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
       },
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_CREATED",
-        "meta": null
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
       },
-      {
-        "who": {
-          "id": "MyVIew_riew_1",
-          "name": "MyVIew",
-          "type": "RIEW",
-          "viewData": {},
-          "children": [
-            {
-              "id": "sliding_MyVIew_view_2",
-              "type": "CHANNEL",
-              "value": [],
-              "puts": [],
-              "takes": []
-            },
-            {
-              "id": "sliding_MyVIew_props_3",
-              "type": "CHANNEL",
-              "value": [],
-              "puts": [],
-              "takes": []
-            }
-          ]
-        },
-        "what": "RIEW_CREATED",
-        "meta": null
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "MyVIew_riew_1",
+        "name": "MyVIew",
+        "type": "RIEW",
+        "viewData": {},
+        "children": [
+          {
+            "id": "sliding_MyVIew_view_2",
+            "type": "CHANNEL",
+            "value": [],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "sliding_MyVIew_props_3",
+            "type": "CHANNEL",
+            "value": [],
+            "puts": [],
+            "takes": []
+          }
+        ]
       },
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_PUT_INITIATED",
-        "meta": {
-          "a": "b"
-        }
+      "what": "RIEW_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
       },
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_PUT_RESOLVED",
-        "meta": true
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_TAKE_INITIATED",
-        "meta": null
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": {
-          "a": "b"
-        }
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_PUT_INITIATED",
-        "meta": {
-          "a": "b"
-        }
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_PUT_RESOLVED",
-        "meta": true
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_TAKE_INITIATED",
-        "meta": null
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": {
-          "a": "b"
-        }
-      },
-      {
-        "who": {
-          "id": "MyVIew_riew_1",
-          "name": "MyVIew",
-          "type": "RIEW",
-          "viewData": {
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": {
+        "a": "b"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [
+          {
             "a": "b"
-          },
-          "children": [
-            {
-              "id": "sliding_MyVIew_view_2",
-              "type": "CHANNEL",
-              "value": [
-                {
-                  "a": "b"
-                }
-              ],
-              "puts": [],
-              "takes": [
-                {
-                  "read": true,
-                  "listen": true
-                }
-              ]
-            },
-            {
-              "id": "sliding_MyVIew_props_3",
-              "type": "CHANNEL",
-              "value": [
-                {
-                  "a": "b"
-                }
-              ],
-              "puts": [],
-              "takes": [
-                {
-                  "read": true,
-                  "listen": true
-                }
-              ]
-            }
-          ]
-        },
-        "what": "RIEW_MOUNTED",
-        "meta": {
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_TAKE_INITIATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": {
+        "a": "b"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": {
+        "a": "b"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_TAKE_INITIATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": {
+        "a": "b"
+      }
+    },
+    {
+      "who": {
+        "id": "MyVIew_riew_1",
+        "name": "MyVIew",
+        "type": "RIEW",
+        "viewData": {
           "a": "b"
-        }
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
         },
-        "what": "CHANNEL_PUT_INITIATED",
-        "meta": {
-          "c": "d"
-        }
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
-        },
-        "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": {
-          "c": "d"
-        }
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
-        },
-        "what": "CHANNEL_PUT_INITIATED",
-        "meta": {
-          "c": "d"
-        }
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "a": "b"
-            }
-          ],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
-        },
-        "what": "CHANNEL_TAKE_RESOLVED",
-        "meta": {
-          "c": "d"
-        }
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "c": "d"
-            }
-          ],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
-        },
-        "what": "CHANNEL_PUT_RESOLVED",
-        "meta": true
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "c": "d"
-            }
-          ],
-          "puts": [],
-          "takes": [
-            {
-              "read": true,
-              "listen": true
-            }
-          ]
-        },
-        "what": "CHANNEL_PUT_RESOLVED",
-        "meta": true
-      },
-      {
-        "who": {
-          "id": "MyVIew_riew_1",
-          "name": "MyVIew",
-          "type": "RIEW",
-          "viewData": {
-            "a": "b",
-            "c": "d"
+        "children": [
+          {
+            "id": "sliding_MyVIew_view_2",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "a": "b"
+              }
+            ],
+            "puts": [],
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
           },
-          "children": [
-            {
-              "id": "sliding_MyVIew_view_2",
-              "type": "CHANNEL",
-              "value": [
-                {
-                  "c": "d"
-                }
-              ],
-              "puts": [],
-              "takes": [
-                {
-                  "read": true,
-                  "listen": true
-                }
-              ]
-            },
-            {
-              "id": "sliding_MyVIew_props_3",
-              "type": "CHANNEL",
-              "value": [
-                {
-                  "c": "d"
-                }
-              ],
-              "puts": [],
-              "takes": [
-                {
-                  "read": true,
-                  "listen": true
-                }
-              ]
-            }
-          ]
-        },
-        "what": "RIEW_UPDATED",
-        "meta": {
-          "c": "d"
-        }
+          {
+            "id": "sliding_MyVIew_props_3",
+            "type": "CHANNEL",
+            "value": [
+              {
+                "a": "b"
+              }
+            ],
+            "puts": [],
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
+          }
+        ]
+      },
+      "what": "RIEW_MOUNTED",
+      "meta": {
+        "a": "b"
       }
-    ],
-    "state": [
-      {
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": {
+        "c": "d"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": {
+        "c": "d"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": {
+        "c": "d"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": {
+        "c": "d"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "c": "d"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "c": "d"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
         "id": "MyVIew_riew_1",
         "name": "MyVIew",
         "type": "RIEW",
@@ -438,64 +387,16 @@
             ]
           }
         ]
+      },
+      "what": "RIEW_UPDATED",
+      "meta": {
+        "c": "d"
       }
-    ]
-  },
-  {
-    "actions": [
-      {
-        "who": {
-          "id": "MyVIew_riew_1",
-          "name": "MyVIew",
-          "type": "RIEW",
-          "viewData": {
-            "a": "b",
-            "c": "d"
-          },
-          "children": [
-            {
-              "id": "sliding_MyVIew_view_2",
-              "type": "CHANNEL",
-              "value": [
-                {
-                  "c": "d"
-                }
-              ],
-              "puts": [],
-              "takes": [
-                {
-                  "read": true,
-                  "listen": true
-                }
-              ]
-            },
-            {
-              "id": "sliding_MyVIew_props_3",
-              "type": "CHANNEL",
-              "value": [
-                {
-                  "c": "d"
-                }
-              ],
-              "puts": [],
-              "takes": [
-                {
-                  "read": true,
-                  "listen": true
-                }
-              ]
-            }
-          ]
-        },
-        "what": "RIEW_RENDERED",
-        "meta": {
-          "a": "b",
-          "c": "d"
-        }
-      }
-    ],
-    "state": [
-      {
+    }
+  ],
+  [
+    {
+      "who": {
         "id": "MyVIew_riew_1",
         "name": "MyVIew",
         "type": "RIEW",
@@ -537,56 +438,58 @@
             ]
           }
         ]
+      },
+      "what": "RIEW_RENDERED",
+      "meta": {
+        "a": "b",
+        "c": "d"
       }
-    ]
-  },
-  {
-    "actions": [
-      {
-        "who": {
-          "id": "sliding_MyVIew_props_3",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "c": "d"
-            }
-          ],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_CLOSED",
-        "meta": null
-      },
-      {
-        "who": {
-          "id": "sliding_MyVIew_view_2",
-          "type": "CHANNEL",
-          "value": [
-            {
-              "c": "d"
-            }
-          ],
-          "puts": [],
-          "takes": []
-        },
-        "what": "CHANNEL_CLOSED",
-        "meta": null
-      },
-      {
-        "who": {
-          "id": "MyVIew_riew_1",
-          "name": "MyVIew",
-          "type": "RIEW",
-          "viewData": {
-            "a": "b",
+    }
+  ],
+  [
+    {
+      "who": {
+        "id": "sliding_MyVIew_props_3",
+        "type": "CHANNEL",
+        "value": [
+          {
             "c": "d"
-          },
-          "children": []
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "c": "d"
+          }
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "MyVIew_riew_1",
+        "name": "MyVIew",
+        "type": "RIEW",
+        "viewData": {
+          "a": "b",
+          "c": "d"
         },
-        "what": "RIEW_UNMOUNTED",
-        "meta": null
-      }
-    ],
-    "state": []
-  }
+        "children": []
+      },
+      "what": "RIEW_UNMOUNTED",
+      "meta": null
+    }
+  ]
 ]

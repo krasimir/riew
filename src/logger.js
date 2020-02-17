@@ -2,7 +2,6 @@
 import { grid, isChannel, isRiew, isState, isRoutine } from './index';
 import sanitize from './sanitize';
 
-const MAX_SNAPSHOTS = 100;
 const RIEW = 'RIEW';
 const STATE = 'STATE';
 const CHANNEL = 'CHANNEL';
@@ -92,64 +91,21 @@ export default function Logger() {
     if (!inProgress) {
       inProgress = true;
       Promise.resolve().then(() => {
-        const s = api.snapshot(data);
+        const s = api.frame(data);
         inProgress = false;
         data = [];
         listeners.forEach(l => l(s));
       });
     }
   };
-  api.snapshot = actions => {
+  api.frame = actions => {
     if (!enabled) return null;
-    if (frames.length >= MAX_SNAPSHOTS) {
-      frames.shift();
-    }
-    const riews = [];
-    const states = [];
-    let filteredStates = [];
-    const channels = [];
-    let filteredRoutines = [];
-    const routines = [];
-    let filteredChannels = [];
-
-    grid.nodes().forEach(node => {
-      if (isRiew(node)) {
-        riews.push(normalizeRiew(node));
-      } else if (isState(node)) {
-        states.push(normalizeState(node));
-      } else if (isChannel(node)) {
-        channels.push(normalizeChannel(node));
-      } else if (isRoutine(node)) {
-        routines.push(normalizeRoutine(node));
-      } else {
-        console.warn('Riew logger: unrecognized entity type', node);
-      }
-    });
-    filteredStates = states.filter(
-      s => !riews.find(r => r.children.find(({ id }) => s.id === id))
-    );
-    filteredChannels = channels.filter(
-      c =>
-        !riews.find(r => r.children.find(({ id }) => c.id === id)) &&
-        !states.find(s => s.children.find(({ id }) => c.id === id))
-    );
-    filteredRoutines = routines.filter(
-      ro => !riews.find(r => r.children.find(({ id }) => ro.id === id))
-    );
-    const snapshot = sanitize({
-      actions,
-      state: [
-        ...riews,
-        ...filteredStates,
-        ...filteredChannels,
-        ...filteredRoutines,
-      ],
-    });
-    frames.push(snapshot);
-    return snapshot;
+    const frame = sanitize(actions);
+    frames.push(frame);
+    return frame;
   };
-  api.frames = () => frames;
   api.now = () => (frames.length > 0 ? frames[frames.length - 1] : null);
+  api.frames = () => frames;
   api.reset = () => {
     frames = [];
     enabled = false;
