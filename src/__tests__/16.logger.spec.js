@@ -128,13 +128,19 @@ describe('Given the logger', () => {
       * RIEW_UPDATED
       * RIEW_CREATED
       `, async () => {
-      const r = riew(function MyVIew() {});
+      const f = function*({ fixed, state, render }) {
+        const c = fixed(1);
+        sput(c, 'foo');
+        const s = state('bar');
+        render({ c, s });
+      };
+      const r = riew(function MyVIew() {}, f);
       r.mount({ a: 'b' });
       r.update({ c: 'd' });
       await delay();
       r.unmount();
       await delay();
-      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationRiew);
     });
   });

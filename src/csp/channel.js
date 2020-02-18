@@ -2,7 +2,7 @@ import { getId } from '../utils';
 import { CHANNELS, logger, grid, OPEN, register } from '../index';
 import buffer from './buf';
 
-export default function chan(id, buff) {
+export default function chan(id, buff, parent = null) {
   let state = OPEN;
 
   id = id || getId('ch');
@@ -15,6 +15,7 @@ export default function chan(id, buff) {
   const api = CHANNELS.set(id, {
     id,
     '@channel': true,
+    parent,
   });
 
   buff.parent = api;

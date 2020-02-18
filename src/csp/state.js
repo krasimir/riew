@@ -7,8 +7,8 @@ const DEFAULT_ERROR = e => {
   throw e;
 };
 
-export default function state(...args) {
-  let value = args[0];
+export default function state(initialValue, parent = null) {
+  let value = initialValue;
   const id = getId('state');
   const children = [];
 
@@ -23,6 +23,7 @@ export default function state(...args) {
   const api = {
     id,
     '@state': true,
+    parent,
     children() {
       return children;
     },
@@ -31,7 +32,7 @@ export default function state(...args) {
       reducer = DEFAULT_REDUCER,
       onError = DEFAULT_ERROR
     ) {
-      const ch = sliding();
+      const ch = sliding(1, getId(`sliding_State`), id);
       sput(ch, value);
       ch.afterTake((item, cb) => {
         try {

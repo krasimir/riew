@@ -3,6 +3,7 @@
     {
       "who": {
         "id": "ch_1",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -14,6 +15,7 @@
     {
       "who": {
         "id": "ch_2",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -25,6 +27,7 @@
     {
       "who": {
         "id": "ch_1",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -36,6 +39,7 @@
     {
       "who": {
         "id": "ch_1",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -52,6 +56,7 @@
     {
       "who": {
         "id": "ch_1",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -72,6 +77,7 @@
     {
       "who": {
         "id": "ch_1",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -92,6 +98,7 @@
     {
       "who": {
         "id": "ch_1",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -108,6 +115,7 @@
     {
       "who": {
         "id": "ch_1",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -124,6 +132,7 @@
     {
       "who": {
         "id": "ch_1",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -135,6 +144,7 @@
     {
       "who": {
         "id": "ch_2",
+        "parent": null,
         "type": "CHANNEL",
         "value": [],
         "puts": [],

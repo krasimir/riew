@@ -12,3 +12,7 @@ input, button {
   font-size: 0.8em;
   margin-bottom: 1em;
 }
+p {
+  margin: 0 0 1em 0;
+  padding: 0;
+}

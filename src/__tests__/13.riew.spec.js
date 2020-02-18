@@ -677,4 +677,45 @@ describe('Given the `riew` factory function', () => {
       );
     });
   });
+  describe("when we create channels by using riew's proxies", () => {
+    it('should attach the channels as children and kill them when the riew is unmounted', async () => {
+      const children = [];
+      const fff = function*({ render, fixed, sliding, dropping, state }) {
+        const c1 = fixed(1);
+        sput(c1, 'foo');
+        const c2 = sliding(1);
+        sput(c2, 'a');
+        sput(c2, 'b');
+        sput(c2, 'c');
+        const c3 = dropping(1);
+        sput(c3, '1');
+        sput(c3, '2');
+        sput(c3, '3');
+        const s = state('XXX');
+        children.push(c1, c2, c3, s);
+        render({ c1, c2, c3, s });
+      };
+      const spy = jest.fn();
+      const r = riew(spy, fff);
+
+      r.mount();
+      await delay();
+      expect(spy).toBeCalledWithArgs([
+        {
+          c1: 'foo',
+          c2: 'c',
+          c3: '1',
+          s: 'XXX',
+        },
+      ]);
+      const nodes = grid.nodes();
+      children.forEach(c => {
+        expect(
+          nodes.find(node => node.id === c.id && node.parent === r.id)
+        ).toMatchObject(expect.objectContaining({ id: c.id }));
+      });
+      r.unmount();
+      expect(grid.nodes()).toStrictEqual([]);
+    });
+  });
 });

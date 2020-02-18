@@ -3,6 +3,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -14,6 +15,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -31,6 +33,7 @@
         "children": [
           {
             "id": "sliding_MyVIew_view_2",
+            "parent": "MyVIew_riew_1",
             "type": "CHANNEL",
             "value": [],
             "puts": [],
@@ -38,6 +41,7 @@
           },
           {
             "id": "sliding_MyVIew_props_3",
+            "parent": "MyVIew_riew_1",
             "type": "CHANNEL",
             "value": [],
             "puts": [],
@@ -51,6 +55,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -64,6 +69,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -79,6 +85,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -94,6 +101,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -111,6 +119,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [],
         "puts": [],
@@ -124,6 +133,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -139,6 +149,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -154,6 +165,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -167,6 +179,373 @@
       "meta": {
         "a": "b"
       }
+    },
+    {
+      "who": {
+        "id": "fixed_MyVIew_5",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "fixed_MyVIew_5",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": "foo"
+    },
+    {
+      "who": {
+        "id": "fixed_MyVIew_5",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          "foo"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "sliding_State_7",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_State_7",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": "bar"
+    },
+    {
+      "who": {
+        "id": "sliding_State_7",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [
+          "bar"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "state_6",
+        "parent": "MyVIew_riew_1",
+        "type": "STATE",
+        "value": "bar",
+        "children": [
+          {
+            "id": "sliding_State_7",
+            "parent": "state_6",
+            "type": "CHANNEL",
+            "value": [
+              "bar"
+            ],
+            "puts": [],
+            "takes": []
+          }
+        ]
+      },
+      "what": "STATE_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "fixed_MyVIew_5",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          "foo"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_TAKE_INITIATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "fixed_MyVIew_5",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          "foo"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": "foo"
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": {
+        "c": "foo"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "a": "b"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": {
+        "c": "foo"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "c": "foo"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "sliding_State_7",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [
+          "bar"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_TAKE_INITIATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_State_7",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [
+          "bar"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": "bar"
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "c": "foo"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": {
+        "s": "bar"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "c": "foo"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": {
+        "s": "bar"
+      }
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "s": "bar"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "s": "bar"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": {}
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {
+            "s": "bar"
+          }
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_TAKE_RESOLVED",
+      "meta": {}
+    },
+    {
+      "who": {
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          {}
+        ],
+        "puts": [],
+        "takes": [
+          {
+            "read": true,
+            "listen": true
+          }
+        ]
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "routine_f_4",
+        "type": "ROUTINE",
+        "name": "f"
+      },
+      "what": "ROUTINE_END",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "routine_f_4",
+        "type": "ROUTINE",
+        "name": "f"
+      },
+      "what": "ROUTINE_STARTED",
+      "meta": null
     },
     {
       "who": {
@@ -174,11 +553,29 @@
         "name": "MyVIew",
         "type": "RIEW",
         "viewData": {
-          "a": "b"
+          "a": "b",
+          "c": "foo",
+          "s": "bar"
         },
         "children": [
           {
             "id": "sliding_MyVIew_view_2",
+            "parent": "MyVIew_riew_1",
+            "type": "CHANNEL",
+            "value": [
+              {}
+            ],
+            "puts": [],
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
+          },
+          {
+            "id": "sliding_MyVIew_props_3",
+            "parent": "MyVIew_riew_1",
             "type": "CHANNEL",
             "value": [
               {
@@ -194,12 +591,11 @@
             ]
           },
           {
-            "id": "sliding_MyVIew_props_3",
+            "id": "fixed_MyVIew_5",
+            "parent": "MyVIew_riew_1",
             "type": "CHANNEL",
             "value": [
-              {
-                "a": "b"
-              }
+              "foo"
             ],
             "puts": [],
             "takes": [
@@ -208,6 +604,34 @@
                 "listen": true
               }
             ]
+          },
+          {
+            "id": "state_6",
+            "parent": "MyVIew_riew_1",
+            "type": "STATE",
+            "value": "bar",
+            "children": [
+              {
+                "id": "sliding_State_7",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": [
+                  {
+                    "read": true,
+                    "listen": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "routine_f_4",
+            "type": "ROUTINE",
+            "name": "f"
           }
         ]
       },
@@ -219,6 +643,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -241,6 +666,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -263,11 +689,10 @@
     {
       "who": {
         "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
-          {
-            "a": "b"
-          }
+          {}
         ],
         "puts": [],
         "takes": [
@@ -285,11 +710,10 @@
     {
       "who": {
         "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
-          {
-            "a": "b"
-          }
+          {}
         ],
         "puts": [],
         "takes": [
@@ -307,6 +731,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -327,6 +752,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -351,11 +777,13 @@
         "type": "RIEW",
         "viewData": {
           "a": "b",
-          "c": "d"
+          "c": "d",
+          "s": "bar"
         },
         "children": [
           {
             "id": "sliding_MyVIew_view_2",
+            "parent": "MyVIew_riew_1",
             "type": "CHANNEL",
             "value": [
               {
@@ -372,6 +800,7 @@
           },
           {
             "id": "sliding_MyVIew_props_3",
+            "parent": "MyVIew_riew_1",
             "type": "CHANNEL",
             "value": [
               {
@@ -385,6 +814,49 @@
                 "listen": true
               }
             ]
+          },
+          {
+            "id": "fixed_MyVIew_5",
+            "parent": "MyVIew_riew_1",
+            "type": "CHANNEL",
+            "value": [
+              "foo"
+            ],
+            "puts": [],
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
+          },
+          {
+            "id": "state_6",
+            "parent": "MyVIew_riew_1",
+            "type": "STATE",
+            "value": "bar",
+            "children": [
+              {
+                "id": "sliding_State_7",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": [
+                  {
+                    "read": true,
+                    "listen": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "routine_f_4",
+            "type": "ROUTINE",
+            "name": "f"
           }
         ]
       },
@@ -402,11 +874,13 @@
         "type": "RIEW",
         "viewData": {
           "a": "b",
-          "c": "d"
+          "c": "d",
+          "s": "bar"
         },
         "children": [
           {
             "id": "sliding_MyVIew_view_2",
+            "parent": "MyVIew_riew_1",
             "type": "CHANNEL",
             "value": [
               {
@@ -423,6 +897,7 @@
           },
           {
             "id": "sliding_MyVIew_props_3",
+            "parent": "MyVIew_riew_1",
             "type": "CHANNEL",
             "value": [
               {
@@ -436,20 +911,65 @@
                 "listen": true
               }
             ]
+          },
+          {
+            "id": "fixed_MyVIew_5",
+            "parent": "MyVIew_riew_1",
+            "type": "CHANNEL",
+            "value": [
+              "foo"
+            ],
+            "puts": [],
+            "takes": [
+              {
+                "read": true,
+                "listen": true
+              }
+            ]
+          },
+          {
+            "id": "state_6",
+            "parent": "MyVIew_riew_1",
+            "type": "STATE",
+            "value": "bar",
+            "children": [
+              {
+                "id": "sliding_State_7",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": [
+                  {
+                    "read": true,
+                    "listen": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "routine_f_4",
+            "type": "ROUTINE",
+            "name": "f"
           }
         ]
       },
       "what": "RIEW_RENDERED",
       "meta": {
         "a": "b",
-        "c": "d"
+        "c": "d",
+        "s": "bar"
       }
     }
   ],
   [
     {
       "who": {
-        "id": "sliding_MyVIew_props_3",
+        "id": "sliding_MyVIew_view_2",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -464,7 +984,8 @@
     },
     {
       "who": {
-        "id": "sliding_MyVIew_view_2",
+        "id": "sliding_MyVIew_props_3",
+        "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [
           {
@@ -475,6 +996,65 @@
         "takes": []
       },
       "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "fixed_MyVIew_5",
+        "parent": "MyVIew_riew_1",
+        "type": "CHANNEL",
+        "value": [
+          "foo"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_State_7",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [
+          "bar"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "state_6",
+        "parent": "MyVIew_riew_1",
+        "type": "STATE",
+        "value": null,
+        "children": [
+          {
+            "id": "sliding_State_7",
+            "parent": "state_6",
+            "type": "CHANNEL",
+            "value": [
+              "bar"
+            ],
+            "puts": [],
+            "takes": []
+          }
+        ]
+      },
+      "what": "STATE_DESTROYED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "routine_f_4",
+        "type": "ROUTINE",
+        "name": "f"
+      },
+      "what": "ROUTINE_STOPPED",
       "meta": null
     },
     {
@@ -484,7 +1064,8 @@
         "type": "RIEW",
         "viewData": {
           "a": "b",
-          "c": "d"
+          "c": "d",
+          "s": "bar"
         },
         "children": []
       },

@@ -1175,6 +1175,7 @@ The Riew routines that are passed to the `riew` function receive an object with 
 
 * `render` - must be called with an object. That object reaches the `view`. Have in mind that multiple `render` calls are batched into a single `view` call via micro task. This `render` function is the main tool for updating the view.
 * `state` - alias to [state](https://github.com/krasimir/riew#state). All the states created with this alias will be destroyed when the riew is unmounted. It's recommended if you have local for the riew state to created it via this function so it gets cleaned up when the riew is unmounted.
+* `fixed`, `sliding`, `dropping` - alias to [channel methods](https://github.com/krasimir/riew#fixedn). All the channels created with this aliases will be destroyed when the riew is unmounted. It's recommended if you have local for the riew channel to created it via this functions so it gets cleaned up when the riew is unmounted.
 * `props` - a props channel of the riew. It gives you access to the object that is passed to `mount` and `updated` methods.
 * the Riew routines also receive the [externals](https://github.com/krasimir/riew#externals) injected into the riew (if any)
 

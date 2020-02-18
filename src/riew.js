@@ -14,7 +14,10 @@ import {
   CLOSED,
   ENDED,
   verifyChannel,
-  sliding,
+  sliding as Sliding,
+  fixed as Fixed,
+  dropping as Dropping,
+  isChannel,
 } from './index';
 import {
   isObjectEmpty,
@@ -63,8 +66,9 @@ export function namedRiew(name, viewFunc, ...routines) {
     viewFunc(value);
     logger.log(api, 'RIEW_RENDERED', value);
   });
+  const id = getId(`${name}_riew`);
   const api = {
-    id: getId(`${name}_riew`),
+    id,
     name,
     '@riew': true,
     children: [],
@@ -73,21 +77,22 @@ export function namedRiew(name, viewFunc, ...routines) {
   let cleanups = [];
   let externals = {};
   let subscriptions = {};
-  const state = function(...args) {
-    const s = State(...args);
-    api.children.push(s);
-    return s;
+  const addChild = function(o) {
+    api.children.push(o);
+    return o;
   };
+  const state = initialValue => addChild(State(initialValue, id));
+  const sliding = (n, internalId = null) =>
+    addChild(Sliding(n, internalId || getId(`sliding_${name}`), id));
+  const fixed = n => addChild(Fixed(n, getId(`fixed_${name}`), id));
+  const dropping = n => addChild(Dropping(n, getId(`dropping_${name}`), id));
   const subscribe = function(to, func) {
     if (!(to.id in subscriptions)) {
       subscriptions[to.id] = listen(to, func, { initialCall: true });
     }
   };
-  const VIEW_CHANNEL = sliding(1, getId(`sliding_${name}_view`));
-  const PROPS_CHANNEL = sliding(1, getId(`sliding_${name}_props`));
-
-  api.children.push(VIEW_CHANNEL);
-  api.children.push(PROPS_CHANNEL);
+  const VIEW_CHANNEL = sliding(1, getId(`sliding_${name}_view`), id);
+  const PROPS_CHANNEL = sliding(1, getId(`sliding_${name}_props`), id);
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {
@@ -124,6 +129,9 @@ export function namedRiew(name, viewFunc, ...routines) {
               sput(VIEW_CHANNEL, normalizeRenderData(value));
             },
             state,
+            fixed,
+            sliding,
+            dropping,
             props: PROPS_CHANNEL,
             ...externals,
           }
@@ -148,12 +156,12 @@ export function namedRiew(name, viewFunc, ...routines) {
         c.destroy();
       } else if (isRoutine(c)) {
         c.stop();
+      } else if (isChannel(c)) {
+        close(c);
       }
     });
     api.children = [];
     renderer.destroy();
-    close(PROPS_CHANNEL);
-    close(VIEW_CHANNEL);
     grid.remove(api);
     logger.log(api, 'RIEW_UNMOUNTED');
   };

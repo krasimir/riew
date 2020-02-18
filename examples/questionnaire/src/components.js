@@ -1,17 +1,34 @@
 /* eslint-disable no-nested-ternary */
 import React, { Fragment } from 'react';
 import riew from 'riew/react';
-import { sput } from 'riew';
+import { sput, listen } from 'riew';
 import { nextStepRoutine, startOverRoutine, NEXT_STEP_CLICK } from './routines';
 import { ANSWER, START_OVER } from './state';
+
+function* progress({ state, render, step, questions }) {
+  const progressValue = state(0);
+  listen(
+    [step, questions],
+    ([currentStep, allQuestions]) => {
+      const idx = allQuestions.findIndex(({ id }) => currentStep.id === id);
+      sput(progressValue, Math.ceil((idx / allQuestions.length) * 100));
+    },
+    { initialCall: true }
+  );
+  render({ progressValue });
+}
 
 export const Question = riew(function Question({
   step: { type, text },
   giveAnswer,
+  progressValue,
 }) {
   if (type === 'input') {
     return (
       <Fragment>
+        <p>
+          <small>{progressValue}% done</small>
+        </p>
         <div>
           {text}
           <input type="text" onChange={e => giveAnswer(e.target.value)} />
@@ -22,6 +39,9 @@ export const Question = riew(function Question({
   if (type === 'boolean') {
     return (
       <Fragment>
+        <p>
+          <small>{progressValue}% done</small>
+        </p>
         <div>{text}</div>
         <div>
           <input
@@ -45,7 +65,8 @@ export const Question = riew(function Question({
     );
   }
   return null;
-}).with('step', {
+},
+progress).with('step', 'questions', {
   giveAnswer: value => sput(ANSWER, value),
 });
 

@@ -268,6 +268,8 @@ function _interopRequireDefault(obj) {
 }
 
 function chan(id, buff) {
+  var parent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+
   var state = _index.OPEN;
 
   id = id || (0, _utils.getId)('ch');
@@ -279,7 +281,8 @@ function chan(id, buff) {
 
   var api = _index.CHANNELS.set(id, {
     id: id,
-    '@channel': true
+    '@channel': true,
+    parent: parent
   });
 
   buff.parent = api;
@@ -757,8 +760,10 @@ var DEFAULT_ERROR = function DEFAULT_ERROR(e) {
   throw e;
 };
 
-function state() {
-  var value = arguments.length <= 0 ? undefined : arguments[0];
+function state(initialValue) {
+  var parent = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+
+  var value = initialValue;
   var id = (0, _utils.getId)('state');
   var _children = [];
 
@@ -773,6 +778,7 @@ function state() {
   var api = {
     id: id,
     '@state': true,
+    parent: parent,
     children: function children() {
       return _children;
     },
@@ -781,7 +787,7 @@ function state() {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_REDUCER;
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_ERROR;
 
-      var ch = (0, _index.sliding)();
+      var ch = (0, _index.sliding)(1, (0, _utils.getId)('sliding_State'), id);
       (0, _index.sput)(ch, value);
       ch.afterTake(function (item, cb) {
         try {
@@ -1067,17 +1073,21 @@ var buffer = exports.buffer = _buf2.default;
 var chan = exports.chan = _channel2.default;
 var fixed = exports.fixed = function fixed() {
   var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-  return chan((0, _utils.getId)('fixed'), buffer.fixed(size));
+  var id = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+  var parent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+  return chan(id || (0, _utils.getId)('fixed'), buffer.fixed(size), parent);
 };
 var sliding = exports.sliding = function sliding() {
   var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
   var id = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-  return chan(id || (0, _utils.getId)('sliding'), buffer.sliding(size));
+  var parent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+  return chan(id || (0, _utils.getId)('sliding'), buffer.sliding(size), parent);
 };
 var dropping = exports.dropping = function dropping() {
   var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
   var id = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-  return chan(id || (0, _utils.getId)('dropping'), buffer.dropping(size));
+  var parent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+  return chan(id || (0, _utils.getId)('dropping'), buffer.dropping(size), parent);
 };
 var state = exports.state = _state2.default;
 
@@ -1221,6 +1231,7 @@ function normalizeRiew(r) {
 function normalizeState(s) {
   return {
     id: s.id,
+    parent: s.parent,
     type: STATE,
     value: (0, _sanitize2.default)(s.get()),
     children: s.children().map(function (child) {
@@ -1234,6 +1245,7 @@ function normalizeState(s) {
 function normalizeChannel(c) {
   var o = {
     id: c.id,
+    parent: c.parent,
     type: CHANNEL,
     value: (0, _sanitize2.default)(c.value()),
     puts: c.buff.puts.map(function (_ref) {
@@ -1590,8 +1602,9 @@ function namedRiew(name, viewFunc) {
     viewFunc(value);
     _index.logger.log(api, 'RIEW_RENDERED', value);
   });
+  var id = (0, _utils.getId)(name + '_riew');
   var api = {
-    id: (0, _utils.getId)(name + '_riew'),
+    id: id,
     name: name,
     '@riew': true,
     children: [],
@@ -1600,21 +1613,30 @@ function namedRiew(name, viewFunc) {
   var cleanups = [];
   var externals = {};
   var subscriptions = {};
-  var state = function state() {
-    var s = _index.state.apply(undefined, arguments);
-    api.children.push(s);
-    return s;
+  var addChild = function addChild(o) {
+    api.children.push(o);
+    return o;
+  };
+  var state = function state(initialValue) {
+    return addChild((0, _index.state)(initialValue, id));
+  };
+  var sliding = function sliding(n) {
+    var internalId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+    return addChild((0, _index.sliding)(n, internalId || (0, _utils.getId)('sliding_' + name), id));
+  };
+  var fixed = function fixed(n) {
+    return addChild((0, _index.fixed)(n, (0, _utils.getId)('fixed_' + name), id));
+  };
+  var dropping = function dropping(n) {
+    return addChild((0, _index.dropping)(n, (0, _utils.getId)('dropping_' + name), id));
   };
   var subscribe = function subscribe(to, func) {
     if (!(to.id in subscriptions)) {
       subscriptions[to.id] = (0, _index.listen)(to, func, { initialCall: true });
     }
   };
-  var VIEW_CHANNEL = (0, _index.sliding)(1, (0, _utils.getId)('sliding_' + name + '_view'));
-  var PROPS_CHANNEL = (0, _index.sliding)(1, (0, _utils.getId)('sliding_' + name + '_props'));
-
-  api.children.push(VIEW_CHANNEL);
-  api.children.push(PROPS_CHANNEL);
+  var VIEW_CHANNEL = sliding(1, (0, _utils.getId)('sliding_' + name + '_view'), id);
+  var PROPS_CHANNEL = sliding(1, (0, _utils.getId)('sliding_' + name + '_props'), id);
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
@@ -1654,6 +1676,9 @@ function namedRiew(name, viewFunc) {
           (0, _index.sput)(VIEW_CHANNEL, normalizeRenderData(value));
         },
         state: state,
+        fixed: fixed,
+        sliding: sliding,
+        dropping: dropping,
         props: PROPS_CHANNEL
       }, externals));
     }));
@@ -1677,12 +1702,12 @@ function namedRiew(name, viewFunc) {
         c.destroy();
       } else if ((0, _index.isRoutine)(c)) {
         c.stop();
+      } else if ((0, _index.isChannel)(c)) {
+        (0, _index.close)(c);
       }
     });
     api.children = [];
     renderer.destroy();
-    (0, _index.close)(PROPS_CHANNEL);
-    (0, _index.close)(VIEW_CHANNEL);
     _index.grid.remove(api);
     _index.logger.log(api, 'RIEW_UNMOUNTED');
   };

@@ -30,6 +30,7 @@ function normalizeRiew(r) {
 function normalizeState(s) {
   return {
     id: s.id,
+    parent: s.parent,
     type: STATE,
     value: sanitize(s.get()),
     children: s.children().map(child => {
@@ -43,6 +44,7 @@ function normalizeState(s) {
 function normalizeChannel(c) {
   const o = {
     id: c.id,
+    parent: c.parent,
     type: CHANNEL,
     value: sanitize(c.value()),
     puts: c.buff.puts.map(({ item }) => ({ item })),
