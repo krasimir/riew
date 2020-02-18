@@ -20,7 +20,7 @@ export function Test(...routines) {
     const rName = getFuncName(routine);
     const logSomething = str => log.push(str);
     log.push(`>${rName}`);
-    go(routine, () => log.push(`<${rName}`), logSomething);
+    go(routine, () => log.push(`<${rName}`), [logSomething]);
   });
   return log;
 }

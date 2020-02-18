@@ -37,7 +37,7 @@ export default function state(initialValue, parent = null) {
       ch.afterTake((item, cb) => {
         try {
           if (isGeneratorFunction(selector)) {
-            go(selector, routineRes => cb(routineRes), item);
+            go(selector, routineRes => cb(routineRes), [item], id);
             return;
           }
           cb(selector(item));
@@ -65,8 +65,8 @@ export default function state(initialValue, parent = null) {
                 cb(value);
                 logger.log(api, 'STATE_VALUE_SET', value);
               },
-              value,
-              payload
+              [value, payload],
+              id
             );
             return;
           }

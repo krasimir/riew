@@ -123,18 +123,21 @@ export function namedRiew(name, viewFunc, ...routines) {
               cleanups.push(result);
             }
           },
-          {
-            render: value => {
-              requireObject(value);
-              sput(VIEW_CHANNEL, normalizeRenderData(value));
+          [
+            {
+              render: value => {
+                requireObject(value);
+                sput(VIEW_CHANNEL, normalizeRenderData(value));
+              },
+              state,
+              fixed,
+              sliding,
+              dropping,
+              props: PROPS_CHANNEL,
+              ...externals,
             },
-            state,
-            fixed,
-            sliding,
-            dropping,
-            props: PROPS_CHANNEL,
-            ...externals,
-          }
+          ],
+          id
         )
       )
     );

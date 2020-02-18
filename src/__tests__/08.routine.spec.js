@@ -33,7 +33,7 @@ describe('Given a CSP', () => {
           return 'a';
         },
         cleanup1,
-        'pong'
+        ['pong']
       );
       go(
         function*(what) {
@@ -42,7 +42,7 @@ describe('Given a CSP', () => {
           return 'b';
         },
         cleanup2,
-        'ping'
+        ['ping']
       );
       expect(spy).toBeCalledWithArgs(['ping'], ['pong']);
       expect(cleanup1).toBeCalledWithArgs(['a']);
@@ -205,7 +205,7 @@ describe('Given a CSP', () => {
           spy(`<r2 ${a} ${b}`);
         };
 
-        go(r2, () => spy('done'), 1, 2);
+        go(r2, () => spy('done'), [1, 2]);
 
         await delay(10);
         expect(spy).toBeCalledWithArgs(
@@ -229,7 +229,7 @@ describe('Given a CSP', () => {
           spy(`<r2 ${a} ${b}`);
         };
 
-        go(r2, () => spy('done'), 1, 2);
+        go(r2, () => spy('done'), [1, 2]);
 
         await delay(10);
         expect(spy).toBeCalledWithArgs(

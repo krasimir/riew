@@ -208,7 +208,7 @@ ops.verifyChannel = function verifyChannel(ch, throwError = true) {
 
 // **************************************************** go/routine
 
-ops.go = function go(func, done = () => {}, ...args) {
+ops.go = function go(func, done = () => {}, args = [], parent = null) {
   const RUNNING = 'RUNNING';
   const STOPPED = 'STOPPED';
   let state = RUNNING;
@@ -217,6 +217,7 @@ ops.go = function go(func, done = () => {}, ...args) {
   const api = {
     id: getId(`routine_${name}`),
     '@routine': true,
+    parent,
     name,
     children: [],
     stop() {
@@ -262,10 +263,10 @@ ops.go = function go(func, done = () => {}, ...args) {
         ops.sread(i.value.channels, next, i.value.options);
         break;
       case CALL_ROUTINE:
-        addSubRoutine(ops.go(i.value.routine, next, ...i.value.args));
+        addSubRoutine(ops.go(i.value.routine, next, i.value.args));
         break;
       case FORK_ROUTINE:
-        addSubRoutine(ops.go(i.value.routine, () => {}, ...i.value.args));
+        addSubRoutine(ops.go(i.value.routine, () => {}, i.value.args));
         next();
         break;
       default:
@@ -318,7 +319,7 @@ ops.go.with = (...maps) => {
   }, {});
   return (func, done = () => {}, ...args) => {
     args.push(reducedMaps);
-    return ops.go(func, done, ...args);
+    return ops.go(func, done, args);
   };
 };
 

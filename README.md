@@ -391,13 +391,13 @@ Alias to `chan(<id>, buffer.dropping(n))`. The `id` is auto-generated. See [here
 
 ### go
 
-> `go(routine, done, ...routineArgs)`
+> `go(routine, done, routineArgs)`
 
 Runs a routine.
 
 * `routine` (`Generator`, required) - a generator function
 * `done` (`Function`, optional) - a callback function which is fired when the routine ends.
-* `routineArgs` (`Any`, optional) - any optional arguments that come as arguments to our generator.
+* `routineArgs` (`Array<Any>`, optional) - any optional arguments that come as arguments to our generator.
 
 Example:
 
@@ -412,7 +412,7 @@ go(
   (v) => {
     console.log(v);
   },
-  'Hey'
+  ['Hey']
 );
 go(function * B() {
   yield put(ch, 'Pablo')

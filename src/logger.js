@@ -60,6 +60,7 @@ function normalizeRoutine(r) {
     id: r.id,
     type: ROUTINE,
     name: r.name,
+    parent: r.parent,
   };
 }
 
