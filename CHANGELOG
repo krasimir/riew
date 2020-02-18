@@ -1,2 +1,5 @@
+# 5.0.0
+Changing the API of the `go` function. It now accepts its args as an array.
+
 # 4.3.0
 Adding the inspector.

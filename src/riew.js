@@ -150,8 +150,8 @@ export function namedRiew(name, viewFunc, ...routines) {
   api.unmount = function() {
     cleanups.forEach(c => c());
     cleanups = [];
-    Object.keys(subscriptions).forEach(id => {
-      subscriptions[id]();
+    Object.keys(subscriptions).forEach(subId => {
+      subscriptions[subId]();
     });
     subscriptions = {};
     api.children.forEach(c => {

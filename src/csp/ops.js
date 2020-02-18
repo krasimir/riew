@@ -263,10 +263,10 @@ ops.go = function go(func, done = () => {}, args = [], parent = null) {
         ops.sread(i.value.channels, next, i.value.options);
         break;
       case CALL_ROUTINE:
-        addSubRoutine(ops.go(i.value.routine, next, i.value.args));
+        addSubRoutine(ops.go(i.value.routine, next, i.value.args, api.id));
         break;
       case FORK_ROUTINE:
-        addSubRoutine(ops.go(i.value.routine, () => {}, i.value.args));
+        addSubRoutine(ops.go(i.value.routine, () => {}, i.value.args, api.id));
         next();
         break;
       default:

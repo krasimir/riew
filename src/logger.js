@@ -1,5 +1,5 @@
 /* eslint-disable no-use-before-define */
-import { grid, isChannel, isRiew, isState, isRoutine } from './index';
+import { isChannel, isRiew, isState, isRoutine } from './index';
 import sanitize from './sanitize';
 
 const RIEW = 'RIEW';

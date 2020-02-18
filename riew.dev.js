@@ -584,11 +584,9 @@ ops.verifyChannel = function verifyChannel(ch) {
 // **************************************************** go/routine
 
 ops.go = function go(func) {
-  for (var _len4 = arguments.length, args = Array(_len4 > 2 ? _len4 - 2 : 0), _key4 = 2; _key4 < _len4; _key4++) {
-    args[_key4 - 2] = arguments[_key4];
-  }
-
   var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
+  var args = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+  var parent = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
   var RUNNING = 'RUNNING';
   var STOPPED = 'STOPPED';
@@ -598,6 +596,7 @@ ops.go = function go(func) {
   var api = {
     id: (0, _utils.getId)('routine_' + name),
     '@routine': true,
+    parent: parent,
     name: name,
     children: [],
     stop: function stop() {
@@ -609,7 +608,7 @@ ops.go = function go(func) {
       _index.logger.log(api, 'ROUTINE_STOPPED');
     },
     rerun: function rerun() {
-      gen = func.apply(undefined, args);
+      gen = func.apply(undefined, _toConsumableArray(args));
       next();
       _index.logger.log(this, 'ROUTINE_RERUN');
     }
@@ -618,7 +617,7 @@ ops.go = function go(func) {
     return api.children.push(r);
   };
 
-  var gen = func.apply(undefined, args);
+  var gen = func.apply(undefined, _toConsumableArray(args));
 
   function processGeneratorStep(i) {
     switch (i.value.op) {
@@ -627,8 +626,8 @@ ops.go = function go(func) {
         break;
       case _index.TAKE:
         ops.stake(i.value.channels, function () {
-          for (var _len5 = arguments.length, nextArgs = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
-            nextArgs[_key5] = arguments[_key5];
+          for (var _len4 = arguments.length, nextArgs = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+            nextArgs[_key4] = arguments[_key4];
           }
 
           next(nextArgs.length === 1 ? nextArgs[0] : nextArgs);
@@ -647,10 +646,10 @@ ops.go = function go(func) {
         ops.sread(i.value.channels, next, i.value.options);
         break;
       case _index.CALL_ROUTINE:
-        addSubRoutine(ops.go.apply(ops, [i.value.routine, next].concat(_toConsumableArray(i.value.args))));
+        addSubRoutine(ops.go(i.value.routine, next, i.value.args, api.id));
         break;
       case _index.FORK_ROUTINE:
-        addSubRoutine(ops.go.apply(ops, [i.value.routine, function () {}].concat(_toConsumableArray(i.value.args))));
+        addSubRoutine(ops.go(i.value.routine, function () {}, i.value.args, api.id));
         next();
         break;
       default:
@@ -691,8 +690,8 @@ ops.go = function go(func) {
 };
 ops.go['@go'] = true;
 ops.go.with = function () {
-  for (var _len6 = arguments.length, maps = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
-    maps[_key6] = arguments[_key6];
+  for (var _len5 = arguments.length, maps = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+    maps[_key5] = arguments[_key5];
   }
 
   var reducedMaps = maps.reduce(function (res, item) {
@@ -704,14 +703,14 @@ ops.go.with = function () {
     return res;
   }, {});
   return function (func) {
-    for (var _len7 = arguments.length, args = Array(_len7 > 2 ? _len7 - 2 : 0), _key7 = 2; _key7 < _len7; _key7++) {
-      args[_key7 - 2] = arguments[_key7];
+    for (var _len6 = arguments.length, args = Array(_len6 > 2 ? _len6 - 2 : 0), _key6 = 2; _key6 < _len6; _key6++) {
+      args[_key6 - 2] = arguments[_key6];
     }
 
     var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
     args.push(reducedMaps);
-    return ops.go.apply(ops, [func, done].concat(args));
+    return ops.go(func, done, args);
   };
 };
 
@@ -794,7 +793,7 @@ function state(initialValue) {
           if ((0, _utils.isGeneratorFunction)(selector)) {
             (0, _index.go)(selector, function (routineRes) {
               return cb(routineRes);
-            }, item);
+            }, [item], id);
             return;
           }
           cb(selector(item));
@@ -814,7 +813,7 @@ function state(initialValue) {
               syncChildren(ch);
               cb(value);
               _index.logger.log(api, 'STATE_VALUE_SET', value);
-            }, value, payload);
+            }, [value, payload], id);
             return;
           }
           value = reducer(value, payload);
@@ -1266,7 +1265,8 @@ function normalizeRoutine(r) {
   return {
     id: r.id,
     type: ROUTINE,
-    name: r.name
+    name: r.name,
+    parent: r.parent
   };
 }
 
@@ -1670,7 +1670,7 @@ function namedRiew(name, viewFunc) {
         if (typeof result === 'function') {
           cleanups.push(result);
         }
-      }, _extends({
+      }, [_extends({
         render: function render(value) {
           (0, _utils.requireObject)(value);
           (0, _index.sput)(VIEW_CHANNEL, normalizeRenderData(value));
@@ -1680,7 +1680,7 @@ function namedRiew(name, viewFunc) {
         sliding: sliding,
         dropping: dropping,
         props: PROPS_CHANNEL
-      }, externals));
+      }, externals)], id);
     }));
     if (!(0, _utils.isObjectEmpty)(externals)) {
       (0, _index.sput)(VIEW_CHANNEL, normalizeRenderData(externals));
@@ -1693,8 +1693,8 @@ function namedRiew(name, viewFunc) {
       return c();
     });
     cleanups = [];
-    Object.keys(subscriptions).forEach(function (id) {
-      subscriptions[id]();
+    Object.keys(subscriptions).forEach(function (subId) {
+      subscriptions[subId]();
     });
     subscriptions = {};
     api.children.forEach(function (c) {
