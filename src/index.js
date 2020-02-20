@@ -1,7 +1,7 @@
 import R from './registry';
 import Grid from './grid';
 import Logger from './logger';
-import { resetIds, getId } from './utils';
+import { resetIds } from './utils';
 import reactRiew from './react';
 import b from './csp/buf';
 import c from './csp/channel';
@@ -50,11 +50,11 @@ export const CHANNELS = {
 export const buffer = b;
 export const chan = c;
 export const fixed = (size = 0, id = null, parent = null) =>
-  chan(id || getId('fixed'), buffer.fixed(size), parent);
+  chan(id || 'fixed', buffer.fixed(size), parent);
 export const sliding = (size = 1, id = null, parent = null) =>
-  chan(id || getId('sliding'), buffer.sliding(size), parent);
+  chan(id || 'sliding', buffer.sliding(size), parent);
 export const dropping = (size = 1, id = null, parent = null) =>
-  chan(id || getId('dropping'), buffer.dropping(size), parent);
+  chan(id || 'dropping', buffer.dropping(size), parent);
 export const state = s;
 
 export * from './riew';
