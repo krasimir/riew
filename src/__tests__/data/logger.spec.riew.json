@@ -182,6 +182,16 @@
     },
     {
       "who": {
+        "id": "routine_f_4",
+        "type": "ROUTINE",
+        "name": "f",
+        "parent": "MyVIew_riew_1"
+      },
+      "what": "ROUTINE_STARTED",
+      "meta": null
+    },
+    {
+      "who": {
         "id": "fixed_MyVIew_5",
         "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
@@ -220,6 +230,17 @@
     },
     {
       "who": {
+        "id": "state_6",
+        "parent": "MyVIew_riew_1",
+        "type": "STATE",
+        "value": "bar",
+        "children": []
+      },
+      "what": "STATE_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
         "id": "sliding_State_7",
         "parent": "state_6",
         "type": "CHANNEL",
@@ -255,28 +276,6 @@
       },
       "what": "CHANNEL_PUT_RESOLVED",
       "meta": true
-    },
-    {
-      "who": {
-        "id": "state_6",
-        "parent": "MyVIew_riew_1",
-        "type": "STATE",
-        "value": "bar",
-        "children": [
-          {
-            "id": "sliding_State_7",
-            "parent": "state_6",
-            "type": "CHANNEL",
-            "value": [
-              "bar"
-            ],
-            "puts": [],
-            "takes": []
-          }
-        ]
-      },
-      "what": "STATE_CREATED",
-      "meta": null
     },
     {
       "who": {
@@ -537,16 +536,6 @@
         "parent": "MyVIew_riew_1"
       },
       "what": "ROUTINE_END",
-      "meta": null
-    },
-    {
-      "who": {
-        "id": "routine_f_4",
-        "type": "ROUTINE",
-        "name": "f",
-        "parent": "MyVIew_riew_1"
-      },
-      "what": "ROUTINE_STARTED",
       "meta": null
     },
     {

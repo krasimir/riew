@@ -617,6 +617,7 @@ ops.go = function go(func) {
     return api.children.push(r);
   };
 
+  _index.logger.log(api, 'ROUTINE_STARTED');
   var gen = func.apply(undefined, _toConsumableArray(args));
 
   function processGeneratorStep(i) {
@@ -684,7 +685,6 @@ ops.go = function go(func) {
 
   _index.grid.add(api);
   next();
-  _index.logger.log(api, 'ROUTINE_STARTED');
 
   return api;
 };
@@ -852,11 +852,11 @@ function state(initialValue) {
       return newValue;
     }
   };
+  _index.logger.log(api, 'STATE_CREATED');
 
   api.DEFAULT = api.chan();
 
   _index.grid.add(api);
-  _index.logger.log(api, 'STATE_CREATED');
 
   return api;
 }

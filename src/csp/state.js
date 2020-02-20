@@ -104,11 +104,11 @@ export default function state(initialValue, parent = null) {
       return newValue;
     },
   };
+  logger.log(api, 'STATE_CREATED');
 
   api.DEFAULT = api.chan();
 
   grid.add(api);
-  logger.log(api, 'STATE_CREATED');
 
   return api;
 }

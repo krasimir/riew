@@ -234,6 +234,7 @@ ops.go = function go(func, done = () => {}, args = [], parent = null) {
   };
   const addSubRoutine = r => api.children.push(r);
 
+  logger.log(api, 'ROUTINE_STARTED');
   let gen = func(...args);
 
   function processGeneratorStep(i) {
@@ -303,7 +304,6 @@ ops.go = function go(func, done = () => {}, args = [], parent = null) {
 
   grid.add(api);
   next();
-  logger.log(api, 'ROUTINE_STARTED');
 
   return api;
 };
