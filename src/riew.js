@@ -83,16 +83,16 @@ export function namedRiew(name, viewFunc, ...routines) {
   };
   const state = initialValue => addChild(State(initialValue, id));
   const sliding = (n, internalId = null) =>
-    addChild(Sliding(n, internalId || getId(`sliding_${name}`), id));
-  const fixed = n => addChild(Fixed(n, getId(`fixed_${name}`), id));
-  const dropping = n => addChild(Dropping(n, getId(`dropping_${name}`), id));
+    addChild(Sliding(n, internalId || `sliding_${name}`, id));
+  const fixed = n => addChild(Fixed(n, `fixed_${name}`, id));
+  const dropping = n => addChild(Dropping(n, `dropping_${name}`, id));
   const subscribe = function(to, func) {
     if (!(to.id in subscriptions)) {
       subscriptions[to.id] = listen(to, func, { initialCall: true });
     }
   };
-  const VIEW_CHANNEL = sliding(1, getId(`sliding_${name}_view`), id);
-  const PROPS_CHANNEL = sliding(1, getId(`sliding_${name}_props`), id);
+  const VIEW_CHANNEL = sliding(1, `sliding_${name}_view`, id);
+  const PROPS_CHANNEL = sliding(1, `sliding_${name}_props`, id);
 
   const normalizeRenderData = value =>
     Object.keys(value).reduce((obj, key) => {

@@ -1,6 +1,17 @@
 /* eslint-disable no-shadow */
 
-import { state, read, listen, sput, sliding, fixed, register } from 'riew';
+import {
+  state,
+  read,
+  listen,
+  sput,
+  sliding,
+  fixed,
+  register,
+  inspector,
+} from 'riew';
+
+inspector();
 
 const initialValue = [
   {

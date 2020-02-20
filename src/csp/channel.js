@@ -5,7 +5,7 @@ import buffer from './buf';
 export default function chan(id, buff, parent = null) {
   let state = OPEN;
 
-  id = id || getId('ch');
+  id = id ? getId(id) : getId('ch');
   buff = buff || buffer.fixed();
 
   if (CHANNELS.exists(id)) {

@@ -272,7 +272,7 @@ function chan(id, buff) {
 
   var state = _index.OPEN;
 
-  id = id || (0, _utils.getId)('ch');
+  id = id ? (0, _utils.getId)(id) : (0, _utils.getId)('ch');
   buff = buff || _buf2.default.fixed();
 
   if (_index.CHANNELS.exists(id)) {
@@ -786,7 +786,13 @@ function state(initialValue) {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_REDUCER;
       var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_ERROR;
 
-      var ch = (0, _index.sliding)(1, (0, _utils.getId)('sliding_State'), id);
+      var channelId = 'sliding_default';
+      if (selector !== DEFAULT_SELECTOR) {
+        channelId = 'sliding_' + (0, _utils.getFuncName)(selector);
+      } else if (reducer !== DEFAULT_REDUCER) {
+        channelId = 'sliding_' + (0, _utils.getFuncName)(reducer);
+      }
+      var ch = (0, _index.sliding)(1, channelId, id);
       (0, _index.sput)(ch, value);
       ch.afterTake(function (item, cb) {
         try {
@@ -1622,21 +1628,21 @@ function namedRiew(name, viewFunc) {
   };
   var sliding = function sliding(n) {
     var internalId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-    return addChild((0, _index.sliding)(n, internalId || (0, _utils.getId)('sliding_' + name), id));
+    return addChild((0, _index.sliding)(n, internalId || 'sliding_' + name, id));
   };
   var fixed = function fixed(n) {
-    return addChild((0, _index.fixed)(n, (0, _utils.getId)('fixed_' + name), id));
+    return addChild((0, _index.fixed)(n, 'fixed_' + name, id));
   };
   var dropping = function dropping(n) {
-    return addChild((0, _index.dropping)(n, (0, _utils.getId)('dropping_' + name), id));
+    return addChild((0, _index.dropping)(n, 'dropping_' + name, id));
   };
   var subscribe = function subscribe(to, func) {
     if (!(to.id in subscriptions)) {
       subscriptions[to.id] = (0, _index.listen)(to, func, { initialCall: true });
     }
   };
-  var VIEW_CHANNEL = sliding(1, (0, _utils.getId)('sliding_' + name + '_view'), id);
-  var PROPS_CHANNEL = sliding(1, (0, _utils.getId)('sliding_' + name + '_props'), id);
+  var VIEW_CHANNEL = sliding(1, 'sliding_' + name + '_view', id);
+  var PROPS_CHANNEL = sliding(1, 'sliding_' + name + '_props', id);
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {

@@ -1,5 +1,5 @@
 import { go, sput, sclose, grid, logger, sliding } from '../index';
-import { getId, isGeneratorFunction } from '../utils';
+import { getId, isGeneratorFunction, getFuncName } from '../utils';
 
 const DEFAULT_SELECTOR = v => v;
 const DEFAULT_REDUCER = (_, v) => v;
@@ -32,7 +32,13 @@ export default function state(initialValue, parent = null) {
       reducer = DEFAULT_REDUCER,
       onError = DEFAULT_ERROR
     ) {
-      const ch = sliding(1, getId(`sliding_State`), id);
+      let channelId = `sliding_default`;
+      if (selector !== DEFAULT_SELECTOR) {
+        channelId = `sliding_${getFuncName(selector)}`;
+      } else if (reducer !== DEFAULT_REDUCER) {
+        channelId = `sliding_${getFuncName(reducer)}`;
+      }
+      const ch = sliding(1, channelId, id);
       sput(ch, value);
       ch.afterTake((item, cb) => {
         try {

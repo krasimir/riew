@@ -2,7 +2,7 @@
   [
     {
       "who": {
-        "id": "ch_1",
+        "id": "MYChannel_1",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -26,7 +26,7 @@
     },
     {
       "who": {
-        "id": "ch_1",
+        "id": "MYChannel_1",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -38,7 +38,7 @@
     },
     {
       "who": {
-        "id": "ch_1",
+        "id": "MYChannel_1",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -55,7 +55,7 @@
     },
     {
       "who": {
-        "id": "ch_1",
+        "id": "MYChannel_1",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -76,7 +76,7 @@
     },
     {
       "who": {
-        "id": "ch_1",
+        "id": "MYChannel_1",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -97,7 +97,7 @@
     },
     {
       "who": {
-        "id": "ch_1",
+        "id": "MYChannel_1",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -114,7 +114,7 @@
     },
     {
       "who": {
-        "id": "ch_1",
+        "id": "MYChannel_1",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -131,7 +131,7 @@
     },
     {
       "who": {
-        "id": "ch_1",
+        "id": "MYChannel_1",
         "parent": null,
         "type": "CHANNEL",
         "value": [],

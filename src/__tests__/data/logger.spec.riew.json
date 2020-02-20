@@ -241,7 +241,7 @@
     },
     {
       "who": {
-        "id": "sliding_State_7",
+        "id": "sliding_default_7",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [],
@@ -253,7 +253,7 @@
     },
     {
       "who": {
-        "id": "sliding_State_7",
+        "id": "sliding_default_7",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [],
@@ -265,7 +265,83 @@
     },
     {
       "who": {
-        "id": "sliding_State_7",
+        "id": "sliding_default_7",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [
+          "bar"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "sliding_toUpperCase_8",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_toUpperCase_8",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": "bar"
+    },
+    {
+      "who": {
+        "id": "sliding_toUpperCase_8",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [
+          "bar"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_RESOLVED",
+      "meta": true
+    },
+    {
+      "who": {
+        "id": "sliding_transformToLowerCase_9",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CREATED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_transformToLowerCase_9",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_PUT_INITIATED",
+      "meta": "bar"
+    },
+    {
+      "who": {
+        "id": "sliding_transformToLowerCase_9",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -374,7 +450,7 @@
     },
     {
       "who": {
-        "id": "sliding_State_7",
+        "id": "sliding_default_7",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -388,7 +464,7 @@
     },
     {
       "who": {
-        "id": "sliding_State_7",
+        "id": "sliding_default_7",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -603,7 +679,7 @@
             "value": "bar",
             "children": [
               {
-                "id": "sliding_State_7",
+                "id": "sliding_default_7",
                 "parent": "state_6",
                 "type": "CHANNEL",
                 "value": [
@@ -616,6 +692,26 @@
                     "listen": true
                   }
                 ]
+              },
+              {
+                "id": "sliding_toUpperCase_8",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": []
+              },
+              {
+                "id": "sliding_transformToLowerCase_9",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": []
               }
             ]
           },
@@ -829,7 +925,7 @@
             "value": "bar",
             "children": [
               {
-                "id": "sliding_State_7",
+                "id": "sliding_default_7",
                 "parent": "state_6",
                 "type": "CHANNEL",
                 "value": [
@@ -842,6 +938,26 @@
                     "listen": true
                   }
                 ]
+              },
+              {
+                "id": "sliding_toUpperCase_8",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": []
+              },
+              {
+                "id": "sliding_transformToLowerCase_9",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": []
               }
             ]
           },
@@ -927,7 +1043,7 @@
             "value": "bar",
             "children": [
               {
-                "id": "sliding_State_7",
+                "id": "sliding_default_7",
                 "parent": "state_6",
                 "type": "CHANNEL",
                 "value": [
@@ -940,6 +1056,26 @@
                     "listen": true
                   }
                 ]
+              },
+              {
+                "id": "sliding_toUpperCase_8",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": []
+              },
+              {
+                "id": "sliding_transformToLowerCase_9",
+                "parent": "state_6",
+                "type": "CHANNEL",
+                "value": [
+                  "bar"
+                ],
+                "puts": [],
+                "takes": []
               }
             ]
           },
@@ -1008,7 +1144,35 @@
     },
     {
       "who": {
-        "id": "sliding_State_7",
+        "id": "sliding_default_7",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [
+          "bar"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_toUpperCase_8",
+        "parent": "state_6",
+        "type": "CHANNEL",
+        "value": [
+          "bar"
+        ],
+        "puts": [],
+        "takes": []
+      },
+      "what": "CHANNEL_CLOSED",
+      "meta": null
+    },
+    {
+      "who": {
+        "id": "sliding_transformToLowerCase_9",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -1028,7 +1192,27 @@
         "value": null,
         "children": [
           {
-            "id": "sliding_State_7",
+            "id": "sliding_default_7",
+            "parent": "state_6",
+            "type": "CHANNEL",
+            "value": [
+              "bar"
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "sliding_toUpperCase_8",
+            "parent": "state_6",
+            "type": "CHANNEL",
+            "value": [
+              "bar"
+            ],
+            "puts": [],
+            "takes": []
+          },
+          {
+            "id": "sliding_transformToLowerCase_9",
             "parent": "state_6",
             "type": "CHANNEL",
             "value": [

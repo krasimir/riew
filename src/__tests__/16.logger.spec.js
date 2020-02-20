@@ -32,7 +32,7 @@ function findItemAllFrames(itemId) {
 function findItem(itemId) {
   const allFrames = findItemAllFrames(itemId);
   if (allFrames && allFrames.length > 0) {
-    return allFrames.pop().find(({ who }) => who.id === itemId).who;
+    return allFrames.pop().find(({ who }) => who.id.match(itemId)).who;
   }
   return null;
 }
@@ -55,7 +55,7 @@ describe('Given the logger', () => {
       const c = chan('FOO');
       await delay();
       expect(findItem(c.id)).toMatchObject({
-        id: 'FOO',
+        id: 'FOO_1',
         type: 'CHANNEL',
       });
     });
@@ -102,7 +102,7 @@ describe('Given the logger', () => {
       * CHANNEL_RESET
       * CHANNEL_CREATED
       `, async () => {
-      const ch = chan();
+      const ch = chan('MYChannel');
       const ch2 = chan();
 
       listen(ch, () => {});
@@ -113,7 +113,7 @@ describe('Given the logger', () => {
       logger.enable();
       channelReset(ch2);
       await delay();
-      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationChannel);
     });
   });
@@ -132,6 +132,12 @@ describe('Given the logger', () => {
         const c = fixed(1);
         sput(c, 'foo');
         const s = state('bar');
+        s.select(function toUpperCase(v) {
+          return v.toUpperCase();
+        });
+        s.mutate(function transformToLowerCase(current) {
+          return current.toLowerCase();
+        });
         render({ c, s });
       };
       const r = riew(function MyVIew() {}, f);
@@ -140,7 +146,7 @@ describe('Given the logger', () => {
       await delay();
       r.unmount();
       await delay();
-      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationRiew);
     });
   });
