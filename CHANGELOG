@@ -1,3 +1,6 @@
+# 5.1.0
+Adding ability to set the `name` property of a channel and state.
+
 # 5.0.0
 Changing the API of the `go` function. It now accepts its args as an array.
 

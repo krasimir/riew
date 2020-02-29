@@ -33,11 +33,11 @@ const initialValue = [
     answer: null,
   },
 ];
-const questions = state(initialValue);
-const currentStep = state(0);
-const error = state(null);
+const questions = state(initialValue)`questions`;
+const currentStep = state(0)`currentStep`;
+const error = state(null)`error`;
 
-questions.select().exportAs('questions');
+questions.select()`questions`.exportAs('questions');
 
 export const ANSWER = questions.mutate(function* mutateAnswer(
   questions,
@@ -47,16 +47,18 @@ export const ANSWER = questions.mutate(function* mutateAnswer(
   return questions.map((question, i) =>
     i === currentStepIndex ? { ...question, answer: value } : question
   );
-});
+})`answer`;
 const RESET_QUESTIONS = questions.mutate(questions =>
   questions.map(q => ({ ...q, answer: null }))
-);
-export const NEXT_STEP = currentStep.mutate(currentIndex => currentIndex + 1);
-const RESET_CURRENT_STEP = currentStep.mutate(() => 0);
-export const RESET_ERROR = error.mutate(() => null);
-const CURRENT_QUESTION = sliding().exportAs('step');
-export const IS_COMPLETED = sliding();
-export const START_OVER = fixed();
+)`reset`;
+export const NEXT_STEP = currentStep.mutate(
+  currentIndex => currentIndex + 1
+)`next-step`;
+const RESET_CURRENT_STEP = currentStep.mutate(() => 0)`reset-current-step`;
+export const RESET_ERROR = error.mutate(() => null)`reset-error`;
+const CURRENT_QUESTION = sliding().exportAs('step')`step`;
+export const IS_COMPLETED = sliding()`is-completed`;
+export const START_OVER = fixed()`start-over`;
 
 listen(ANSWER, RESET_ERROR);
 listen(
