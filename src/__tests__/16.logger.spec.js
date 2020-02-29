@@ -113,7 +113,7 @@ describe('Given the logger', () => {
       logger.enable();
       channelReset(ch2);
       await delay();
-      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationChannel);
     });
   });
@@ -132,12 +132,8 @@ describe('Given the logger', () => {
         const c = fixed(1);
         sput(c, 'foo');
         const s = state('bar');
-        s.select(function toUpperCase(v) {
-          return v.toUpperCase();
-        });
-        s.mutate(function transformToLowerCase(current) {
-          return current.toLowerCase();
-        });
+        s.select(v => v.toUpperCase())`toUpperCase`;
+        s.mutate(current => current.toLowerCase())`transformToLowerCase`;
         render({ c, s });
       };
       const r = riew(function MyVIew() {}, f);
@@ -146,7 +142,7 @@ describe('Given the logger', () => {
       await delay();
       r.unmount();
       await delay();
-      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationRiew);
     });
   });

@@ -21,11 +21,11 @@ const DEFAULT_OPTIONS = {
 };
 
 export function normalizeTo(to) {
-  if (typeof to === 'function') {
-    return to;
-  }
   if (isChannel(to)) {
     return v => sput(to, v);
+  }
+  if (typeof to === 'function') {
+    return to;
   }
   throw new Error(
     `${to}${

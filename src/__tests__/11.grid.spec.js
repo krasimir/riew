@@ -54,9 +54,7 @@ describe('Given the grid', () => {
     it('should add an item to the grid and remove it', () => {
       const c = fixed();
 
-      expect(grid.nodes().find(({ id }) => c.id === id)).toMatchObject({
-        id: c.id,
-      });
+      expect(grid.nodes().find(({ id }) => c.id === id).id).toBe(c.id);
       close(c);
       expect(grid.nodes()).toHaveLength(0);
     });
@@ -65,9 +63,7 @@ describe('Given the grid', () => {
     it('should add an item to the grid and remove it', () => {
       const s = state();
 
-      expect(grid.nodes().find(({ id }) => s.id === id)).toMatchObject({
-        id: s.id,
-      });
+      expect(grid.nodes().find(({ id }) => s.id === id).id).toBe(s.id);
       s.destroy();
       expect(grid.nodes()).toHaveLength(0);
     });

@@ -322,7 +322,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we pipe from one channel to two mutation channels', () => {
-    fit('should mutate both states', () => {
+    it('should mutate both states', () => {
       const s1 = state('foo');
       const s2 = state(12);
       const X = fixed();
@@ -338,6 +338,22 @@ describe('Given a CSP state extension', () => {
 
       expect(s1.get()).toBe('foo310');
       expect(s2.get()).toBe(360);
+    });
+  });
+
+  describe('when we use the instance of a state as a tagged template', () => {
+    it('should set the name of the channel', () => {
+      const s = state(0)`foobar`;
+      sput(s, 42);
+      stake(s, v => expect(v).toBe(42));
+      expect(s.name).toBe('foobar');
+    });
+    it('should set the name of the channel even if we pass a dynamic name', () => {
+      const name = 'XXX';
+      const s = state(0)`a${name}b`;
+      sput(s, 42);
+      stake(s, v => expect(v).toBe(42));
+      expect(s.name).toBe('aXXXb');
     });
   });
 });

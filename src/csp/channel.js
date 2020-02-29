@@ -23,7 +23,6 @@ export default function chan(id, buff, parent = null) {
   channel.id = id;
   channel['@channel'] = true;
   channel.parent = parent;
-
   const api = CHANNELS.set(id, channel);
 
   buff.parent = api;

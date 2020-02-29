@@ -3,6 +3,7 @@
     {
       "who": {
         "id": "MYChannel_1",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -15,6 +16,7 @@
     {
       "who": {
         "id": "ch_2",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -27,6 +29,7 @@
     {
       "who": {
         "id": "MYChannel_1",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -39,6 +42,7 @@
     {
       "who": {
         "id": "MYChannel_1",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -56,6 +60,7 @@
     {
       "who": {
         "id": "MYChannel_1",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -77,6 +82,7 @@
     {
       "who": {
         "id": "MYChannel_1",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -98,6 +104,7 @@
     {
       "who": {
         "id": "MYChannel_1",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -115,6 +122,7 @@
     {
       "who": {
         "id": "MYChannel_1",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -132,6 +140,7 @@
     {
       "who": {
         "id": "MYChannel_1",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],
@@ -144,6 +153,7 @@
     {
       "who": {
         "id": "ch_2",
+        "name": "channel",
         "parent": null,
         "type": "CHANNEL",
         "value": [],

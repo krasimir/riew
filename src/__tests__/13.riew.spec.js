@@ -484,8 +484,8 @@ describe('Given the `riew` factory function', () => {
       await delay(2);
 
       expect(routine).toBeCalledWithArgs(
-        [expect.objectContaining({ s: expect.any(Object) })],
-        [expect.objectContaining({ s: expect.any(Object) })]
+        [expect.objectContaining({ s: expect.any(Function) })],
+        [expect.objectContaining({ s: expect.any(Function) })]
       );
       expect(view).toBeCalledWithArgs(
         [{ s: 'foo' }],
@@ -711,8 +711,8 @@ describe('Given the `riew` factory function', () => {
       const nodes = grid.nodes();
       children.forEach(c => {
         expect(
-          nodes.find(node => node.id === c.id && node.parent === r.id)
-        ).toMatchObject(expect.objectContaining({ id: c.id }));
+          nodes.find(node => node.id === c.id && node.parent === r.id).id
+        ).toBe(c.id);
       });
       r.unmount();
       expect(grid.nodes()).toStrictEqual([]);
