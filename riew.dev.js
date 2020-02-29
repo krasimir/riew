@@ -279,11 +279,18 @@ function chan(id, buff) {
     throw new Error('Channel with id "' + id + '" already exists.');
   }
 
-  var api = _index.CHANNELS.set(id, {
-    id: id,
-    '@channel': true,
-    parent: parent
-  });
+  var channel = function channel(str, name) {
+    if (str.length > 1) {
+      (0, _utils.setProp)(channel, 'name', str[0] + name + str[1]);
+    } else {
+      (0, _utils.setProp)(channel, 'name', str[0]);
+    }
+    return channel;
+  };
+  channel.id = id;
+  channel['@channel'] = true;
+  channel.parent = parent;
+  var api = _index.CHANNELS.set(id, channel);
 
   buff.parent = api;
 
@@ -760,104 +767,110 @@ var DEFAULT_ERROR = function DEFAULT_ERROR(e) {
 };
 
 function state(initialValue) {
+  var _this = this;
+
   var parent = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
   var value = initialValue;
   var id = (0, _utils.getId)('state');
-  var _children = [];
+  var children = [];
 
   function syncChildren(initiator) {
-    _children.forEach(function (c) {
+    children.forEach(function (c) {
       if (c.id !== initiator.id) {
         (0, _index.sput)(c, { value: value, syncing: true });
       }
     });
   }
 
-  var api = {
-    id: id,
-    '@state': true,
-    parent: parent,
-    children: function children() {
-      return _children;
-    },
-    chan: function chan() {
-      var selector = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : DEFAULT_SELECTOR;
-      var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_REDUCER;
-      var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_ERROR;
+  var api = function api(str, name) {
+    if (str.length > 1) {
+      (0, _utils.setProp)(api, 'name', str[0] + name + str[1]);
+    } else {
+      (0, _utils.setProp)(api, 'name', str[0]);
+    }
+    return api;
+  };
 
-      var channelId = 'sliding_default';
-      if (selector !== DEFAULT_SELECTOR) {
-        channelId = 'sliding_' + (0, _utils.getFuncName)(selector);
-      } else if (reducer !== DEFAULT_REDUCER) {
-        channelId = 'sliding_' + (0, _utils.getFuncName)(reducer);
-      }
-      var ch = (0, _index.sliding)(1, channelId, id);
-      (0, _index.sput)(ch, value);
-      ch.afterTake(function (item, cb) {
-        try {
-          if ((0, _utils.isGeneratorFunction)(selector)) {
-            (0, _index.go)(selector, function (routineRes) {
-              return cb(routineRes);
-            }, [item], id);
-            return;
-          }
-          cb(selector(item));
-        } catch (e) {
-          onError(e);
-        }
-      });
-      ch.beforePut(function (payload, cb) {
-        if (payload !== null && (typeof payload === 'undefined' ? 'undefined' : _typeof(payload)) === 'object' && 'syncing' in payload && payload.syncing) {
-          cb(payload.value);
+  (0, _utils.setProp)(api, 'name', 'state');
+
+  api.id = id;
+  api['@state'] = true;
+  api.parent = parent;
+  api.children = function () {
+    return children;
+  };
+  api.chan = function () {
+    var selector = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : DEFAULT_SELECTOR;
+    var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_REDUCER;
+    var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_ERROR;
+
+    var ch = (0, _index.sliding)(1, 'sliding', id);
+    (0, _index.sput)(ch, value);
+    ch.afterTake(function (item, cb) {
+      try {
+        if ((0, _utils.isGeneratorFunction)(selector)) {
+          (0, _index.go)(selector, function (routineRes) {
+            return cb(routineRes);
+          }, [item], id);
           return;
         }
-        try {
-          if ((0, _utils.isGeneratorFunction)(reducer)) {
-            (0, _index.go)(reducer, function (genResult) {
-              value = genResult;
-              syncChildren(ch);
-              cb(value);
-              _index.logger.log(api, 'STATE_VALUE_SET', value);
-            }, [value, payload], id);
-            return;
-          }
-          value = reducer(value, payload);
-          syncChildren(ch);
-          cb(value);
-          _index.logger.log(api, 'STATE_VALUE_SET', value);
-        } catch (e) {
-          onError(e);
+        cb(selector(item));
+      } catch (e) {
+        onError(e);
+      }
+    });
+    ch.beforePut(function (payload, cb) {
+      if (payload !== null && (typeof payload === 'undefined' ? 'undefined' : _typeof(payload)) === 'object' && 'syncing' in payload && payload.syncing) {
+        cb(payload.value);
+        return;
+      }
+      try {
+        if ((0, _utils.isGeneratorFunction)(reducer)) {
+          (0, _index.go)(reducer, function (genResult) {
+            value = genResult;
+            syncChildren(ch);
+            cb(value);
+            _index.logger.log(api, 'STATE_VALUE_SET', value);
+          }, [value, payload], id);
+          return;
         }
-      });
-      _children.push(ch);
-      return ch;
-    },
-    select: function select(selector, onError) {
-      return this.chan(selector, DEFAULT_REDUCER, onError);
-    },
-    mutate: function mutate(reducer, onError) {
-      return this.chan(DEFAULT_SELECTOR, reducer, onError);
-    },
-    destroy: function destroy() {
-      _children.forEach(function (ch) {
-        return (0, _index.sclose)(ch);
-      });
-      value = undefined;
-      _index.grid.remove(api);
-      _index.logger.log(api, 'STATE_DESTROYED');
-      return this;
-    },
-    get: function get() {
-      return value;
-    },
-    set: function set(newValue) {
-      value = newValue;
-      syncChildren({});
-      _index.logger.log(api, 'STATE_VALUE_SET', newValue);
-      return newValue;
-    }
+        value = reducer(value, payload);
+        syncChildren(ch);
+        cb(value);
+        _index.logger.log(api, 'STATE_VALUE_SET', value);
+      } catch (e) {
+        onError(e);
+      }
+    });
+    children.push(ch);
+    return ch;
   };
+  api.select = function (selector, onError) {
+    return api.chan(selector, DEFAULT_REDUCER, onError);
+  };
+  api.mutate = function (reducer, onError) {
+    return api.chan(DEFAULT_SELECTOR, reducer, onError);
+  };
+  api.destroy = function () {
+    children.forEach(function (ch) {
+      return (0, _index.sclose)(ch);
+    });
+    value = undefined;
+    _index.grid.remove(api);
+    _index.logger.log(api, 'STATE_DESTROYED');
+    return _this;
+  };
+  api.get = function () {
+    return value;
+  };
+  api.set = function (newValue) {
+    value = newValue;
+    syncChildren({});
+    _index.logger.log(api, 'STATE_VALUE_SET', newValue);
+    return newValue;
+  };
+
   _index.logger.log(api, 'STATE_CREATED');
 
   api.DEFAULT = api.chan();
@@ -902,13 +915,13 @@ var DEFAULT_OPTIONS = {
 };
 
 function normalizeTo(to) {
-  if (typeof to === 'function') {
-    return to;
-  }
   if ((0, _index.isChannel)(to)) {
     return function (v) {
       return (0, _index.sput)(to, v);
     };
+  }
+  if (typeof to === 'function') {
+    return to;
   }
   throw new Error('' + to + (typeof to !== 'undefined' ? ' (' + (typeof to === 'undefined' ? 'undefined' : _typeof(to)) + ')' : '') + ' is not a channel.' + (typeof ch === 'string' ? ' Did you forget to define it?\nExample: chan("' + to + '")' : ''));
 }
@@ -1236,6 +1249,7 @@ function normalizeRiew(r) {
 function normalizeState(s) {
   return {
     id: s.id,
+    name: s.name,
     parent: s.parent,
     type: STATE,
     value: (0, _sanitize2.default)(s.get()),
@@ -1250,6 +1264,7 @@ function normalizeState(s) {
 function normalizeChannel(c) {
   var o = {
     id: c.id,
+    name: c.name,
     parent: c.parent,
     type: CHANNEL,
     value: (0, _sanitize2.default)(c.value()),
@@ -2109,6 +2124,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
 exports.isObjectEmpty = isObjectEmpty;
 exports.requireObject = requireObject;
 exports.resetIds = resetIds;
+exports.setProp = setProp;
 var getFuncName = exports.getFuncName = function getFuncName(func) {
   if (func.name) return func.name;
   var result = /^function\s+([\w\$]+)\s*\(/.exec(func.toString());
@@ -2158,6 +2174,12 @@ var isGeneratorFunction = exports.isGeneratorFunction = function isGeneratorFunc
 };
 function resetIds() {
   ids = 0;
+}
+function setProp(who, propName, value) {
+  Object.defineProperty(who, propName, {
+    writable: true,
+    value: value
+  });
 }
 
 },{}]},{},[7])(7)

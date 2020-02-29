@@ -1,6 +1,6 @@
 {
   "name": "riew",
-  "version": "5.0.4",
+  "version": "5.1.0",
   "description": "Riew is a reactive library that uses CSP concepts for managing data and application flow.",
   "main": "./lib/index.js",
   "scripts": {
