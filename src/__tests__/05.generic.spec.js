@@ -17,6 +17,7 @@ import {
   sliding,
   use,
   riew,
+  chan,
 } from '../index';
 import { delay, Test, exercise } from '../__helpers__';
 
@@ -438,6 +439,22 @@ describe('Given a CSP', () => {
           ]
         );
       });
+    });
+  });
+
+  describe('when we use the instance of a channel as a tagged template', () => {
+    it('should set the name of the channel', () => {
+      const ch = chan()`foobar`;
+      sput(ch, 'A');
+      stake(ch, v => expect(v).toBe('A'));
+      expect(ch.name).toBe('foobar');
+    });
+    it('should set the name of the channel even if we pass a dynamic name', () => {
+      const name = 'XXX';
+      const ch = chan()`a${name}b`;
+      sput(ch, 'A');
+      stake(ch, v => expect(v).toBe('A'));
+      expect(ch.name).toBe('aXXXb');
     });
   });
 });

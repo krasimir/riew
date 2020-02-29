@@ -322,7 +322,7 @@ describe('Given a CSP state extension', () => {
     });
   });
   describe('when we pipe from one channel to two mutation channels', () => {
-    it('should mutate both states', () => {
+    fit('should mutate both states', () => {
       const s1 = state('foo');
       const s2 = state(12);
       const X = fixed();

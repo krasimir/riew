@@ -46,3 +46,9 @@ export const isGeneratorFunction = fn => {
 export function resetIds() {
   ids = 0;
 }
+export function setProp(who, propName, value) {
+  Object.defineProperty(who, propName, {
+    writable: true,
+    value,
+  });
+}

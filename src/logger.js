@@ -44,6 +44,7 @@ function normalizeState(s) {
 function normalizeChannel(c) {
   const o = {
     id: c.id,
+    name: c.name,
     parent: c.parent,
     type: CHANNEL,
     value: sanitize(c.value()),

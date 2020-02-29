@@ -1,4 +1,4 @@
-import { getId } from '../utils';
+import { getId, setProp } from '../utils';
 import { CHANNELS, logger, grid, OPEN, register } from '../index';
 import buffer from './buf';
 
@@ -12,11 +12,19 @@ export default function chan(id, buff, parent = null) {
     throw new Error(`Channel with id "${id}" already exists.`);
   }
 
-  const api = CHANNELS.set(id, {
-    id,
-    '@channel': true,
-    parent,
-  });
+  const channel = function(str, name) {
+    if (str.length > 1) {
+      setProp(channel, 'name', str[0] + name + str[1]);
+    } else {
+      setProp(channel, 'name', str[0]);
+    }
+    return channel;
+  };
+  channel.id = id;
+  channel['@channel'] = true;
+  channel.parent = parent;
+
+  const api = CHANNELS.set(id, channel);
 
   buff.parent = api;
 
