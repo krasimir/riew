@@ -30,6 +30,7 @@ function normalizeRiew(r) {
 function normalizeState(s) {
   return {
     id: s.id,
+    name: s.name,
     parent: s.parent,
     type: STATE,
     value: sanitize(s.get()),

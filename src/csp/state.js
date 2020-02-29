@@ -29,6 +29,8 @@ export default function state(initialValue, parent = null) {
     return api;
   };
 
+  setProp(api, 'name', 'state');
+
   api.id = id;
   api['@state'] = true;
   api.parent = parent;

@@ -131,7 +131,7 @@ describe('Given the logger', () => {
       const f = function*({ fixed, state, render }) {
         const c = fixed(1);
         sput(c, 'foo');
-        const s = state('bar');
+        const s = state('bar')`something`;
         s.select(v => v.toUpperCase())`toUpperCase`;
         s.mutate(current => current.toLowerCase())`transformToLowerCase`;
         render({ c, s });
