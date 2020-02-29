@@ -1560,6 +1560,9 @@ var _extends = Object.assign || function (target) {
   }return target;
 };
 
+var _templateObject = _taggedTemplateLiteral(['view'], ['view']),
+    _templateObject2 = _taggedTemplateLiteral(['props'], ['props']);
+
 exports.riew = riew;
 exports.namedRiew = namedRiew;
 
@@ -1573,6 +1576,10 @@ function _defineProperty(obj, key, value) {
   } else {
     obj[key] = value;
   }return obj;
+}
+
+function _taggedTemplateLiteral(strings, raw) {
+  return Object.freeze(Object.defineProperties(strings, { raw: { value: Object.freeze(raw) } }));
 } /* eslint-disable no-param-reassign, no-use-before-define */
 
 var Renderer = function Renderer(pushDataToView) {
@@ -1642,8 +1649,7 @@ function namedRiew(name, viewFunc) {
     return addChild((0, _index.state)(initialValue, id));
   };
   var sliding = function sliding(n) {
-    var internalId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-    return addChild((0, _index.sliding)(n, internalId || 'sliding_' + name, id));
+    return addChild((0, _index.sliding)(n, 'sliding_' + name, id));
   };
   var fixed = function fixed(n) {
     return addChild((0, _index.fixed)(n, 'fixed_' + name, id));
@@ -1656,8 +1662,8 @@ function namedRiew(name, viewFunc) {
       subscriptions[to.id] = (0, _index.listen)(to, func, { initialCall: true });
     }
   };
-  var VIEW_CHANNEL = sliding(1, 'sliding_' + name + '_view', id);
-  var PROPS_CHANNEL = sliding(1, 'sliding_' + name + '_props', id);
+  var VIEW_CHANNEL = sliding(1)(_templateObject);
+  var PROPS_CHANNEL = sliding(1)(_templateObject2);
 
   var normalizeRenderData = function normalizeRenderData(value) {
     return Object.keys(value).reduce(function (obj, key) {
