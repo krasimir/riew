@@ -11,7 +11,7 @@
         "takes": []
       },
       "what": "CHANNEL_CREATED",
-      "meta": null
+      "meta": []
     },
     {
       "who": {
@@ -24,7 +24,7 @@
         "takes": []
       },
       "what": "CHANNEL_CREATED",
-      "meta": null
+      "meta": []
     },
     {
       "who": {
@@ -213,7 +213,7 @@
         "takes": []
       },
       "what": "CHANNEL_CREATED",
-      "meta": null
+      "meta": []
     },
     {
       "who": {
@@ -253,32 +253,6 @@
         "children": []
       },
       "what": "STATE_CREATED",
-      "meta": null
-    },
-    {
-      "who": {
-        "id": "sliding_7",
-        "name": "default",
-        "parent": "state_6",
-        "type": "CHANNEL",
-        "value": [],
-        "puts": [],
-        "takes": []
-      },
-      "what": "CHANNEL_CREATED",
-      "meta": null
-    },
-    {
-      "who": {
-        "id": "sliding_7",
-        "name": "default",
-        "parent": "state_6",
-        "type": "CHANNEL",
-        "value": [],
-        "puts": [],
-        "takes": []
-      },
-      "what": "CHANNEL_PUT_INITIATED",
       "meta": "bar"
     },
     {
@@ -293,34 +267,10 @@
         "puts": [],
         "takes": []
       },
-      "what": "CHANNEL_PUT_RESOLVED",
-      "meta": true
-    },
-    {
-      "who": {
-        "id": "sliding_8",
-        "name": "toUpperCase",
-        "parent": "state_6",
-        "type": "CHANNEL",
-        "value": [],
-        "puts": [],
-        "takes": []
-      },
       "what": "CHANNEL_CREATED",
-      "meta": null
-    },
-    {
-      "who": {
-        "id": "sliding_8",
-        "name": "toUpperCase",
-        "parent": "state_6",
-        "type": "CHANNEL",
-        "value": [],
-        "puts": [],
-        "takes": []
-      },
-      "what": "CHANNEL_PUT_INITIATED",
-      "meta": "bar"
+      "meta": [
+        "bar"
+      ]
     },
     {
       "who": {
@@ -334,34 +284,10 @@
         "puts": [],
         "takes": []
       },
-      "what": "CHANNEL_PUT_RESOLVED",
-      "meta": true
-    },
-    {
-      "who": {
-        "id": "sliding_9",
-        "name": "transformToLowerCase",
-        "parent": "state_6",
-        "type": "CHANNEL",
-        "value": [],
-        "puts": [],
-        "takes": []
-      },
       "what": "CHANNEL_CREATED",
-      "meta": null
-    },
-    {
-      "who": {
-        "id": "sliding_9",
-        "name": "transformToLowerCase",
-        "parent": "state_6",
-        "type": "CHANNEL",
-        "value": [],
-        "puts": [],
-        "takes": []
-      },
-      "what": "CHANNEL_PUT_INITIATED",
-      "meta": "bar"
+      "meta": [
+        "bar"
+      ]
     },
     {
       "who": {
@@ -375,8 +301,10 @@
         "puts": [],
         "takes": []
       },
-      "what": "CHANNEL_PUT_RESOLVED",
-      "meta": true
+      "what": "CHANNEL_CREATED",
+      "meta": [
+        "bar"
+      ]
     },
     {
       "who": {

@@ -11,7 +11,7 @@
         "takes": []
       },
       "what": "CHANNEL_CREATED",
-      "meta": null
+      "meta": []
     },
     {
       "who": {
@@ -24,7 +24,7 @@
         "takes": []
       },
       "what": "CHANNEL_CREATED",
-      "meta": null
+      "meta": []
     },
     {
       "who": {

@@ -1,4 +1,4 @@
-import { go, sput, sclose, grid, logger, sliding } from '../index';
+import { go, sput, sclose, grid, logger, chan, buffer } from '../index';
 import { getId, isGeneratorFunction, setProp } from '../utils';
 
 const DEFAULT_SELECTOR = v => v;
@@ -41,8 +41,9 @@ export default function state(initialValue, parent = null) {
     reducer = DEFAULT_REDUCER,
     onError = DEFAULT_ERROR
   ) => {
-    const ch = sliding(1, 'sliding', id);
-    sput(ch, value);
+    const buff = buffer.sliding(1);
+    buff.setValue([value]);
+    const ch = chan('sliding', buff, id);
     ch.afterTake((item, cb) => {
       try {
         if (isGeneratorFunction(selector)) {
@@ -109,7 +110,7 @@ export default function state(initialValue, parent = null) {
     return newValue;
   };
 
-  logger.log(api, 'STATE_CREATED');
+  logger.log(api, 'STATE_CREATED', value);
 
   api.DEFAULT = api.chan()`default`;
 

@@ -46,8 +46,8 @@ describe('Given a CSP state extension', () => {
       expect(s1.select().buff.getValue()).toStrictEqual(['foo']);
       expect(s1.mutate().buff.getValue()).toStrictEqual(['foo']);
       const s2 = state();
-      expect(s2.select().buff.getValue()).toStrictEqual([null]);
-      expect(s2.mutate().buff.getValue()).toStrictEqual([null]);
+      expect(s2.select().buff.getValue()).toStrictEqual([undefined]);
+      expect(s2.mutate().buff.getValue()).toStrictEqual([undefined]);
     });
     describe('and we create a selector', () => {
       it('should return a channel which value is always calculated via the select function and the state value is always the canonical one', () => {

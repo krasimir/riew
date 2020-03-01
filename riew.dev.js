@@ -314,7 +314,7 @@ function chan(id, buff) {
     return (0, _index.register)(key, api);
   };
   _index.grid.add(api);
-  _index.logger.log(api, 'CHANNEL_CREATED');
+  _index.logger.log(api, 'CHANNEL_CREATED', api.value());
 
   return api;
 }
@@ -813,8 +813,9 @@ function state(initialValue) {
     var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_REDUCER;
     var onError = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULT_ERROR;
 
-    var ch = (0, _index.sliding)(1, 'sliding', id);
-    (0, _index.sput)(ch, value);
+    var buff = _index.buffer.sliding(1);
+    buff.setValue([value]);
+    var ch = (0, _index.chan)('sliding', buff, id);
     ch.afterTake(function (item, cb) {
       try {
         if ((0, _utils.isGeneratorFunction)(selector)) {
@@ -879,7 +880,7 @@ function state(initialValue) {
     return newValue;
   };
 
-  _index.logger.log(api, 'STATE_CREATED');
+  _index.logger.log(api, 'STATE_CREATED', value);
 
   api.DEFAULT = api.chan()(_templateObject);
 

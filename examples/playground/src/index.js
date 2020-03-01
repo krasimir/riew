@@ -10,8 +10,15 @@ import {
   inspector,
   stake,
   state,
-} from 'riew';
+  listen,
+} from '../../../src';
 
 inspector(() => {}, true);
 
 const s = state('foo');
+const toLowerCase = s.select(v => v.toLowerCase())`toLowerCase`;
+
+listen(toLowerCase, v => console.log(v));
+sput(s, 'BAR');
+
+// const update = s.mutate((current, payload) => current + payload);

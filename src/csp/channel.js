@@ -41,7 +41,7 @@ export default function chan(id, buff, parent = null) {
   api.afterTake = buff.afterTake;
   api.exportAs = key => register(key, api);
   grid.add(api);
-  logger.log(api, 'CHANNEL_CREATED');
+  logger.log(api, 'CHANNEL_CREATED', api.value());
 
   return api;
 }

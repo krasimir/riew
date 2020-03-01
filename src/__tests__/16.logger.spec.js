@@ -143,7 +143,7 @@ describe('Given the logger', () => {
       logger.enable();
       channelReset(ch2);
       await delay();
-      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationChannel);
     });
   });
