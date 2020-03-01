@@ -258,7 +258,7 @@
     {
       "who": {
         "id": "sliding_7",
-        "name": "channel",
+        "name": "default",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [],
@@ -271,7 +271,7 @@
     {
       "who": {
         "id": "sliding_7",
-        "name": "channel",
+        "name": "default",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [],
@@ -284,7 +284,7 @@
     {
       "who": {
         "id": "sliding_7",
-        "name": "channel",
+        "name": "default",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -481,7 +481,7 @@
     {
       "who": {
         "id": "sliding_7",
-        "name": "channel",
+        "name": "default",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -496,7 +496,7 @@
     {
       "who": {
         "id": "sliding_7",
-        "name": "channel",
+        "name": "default",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -722,7 +722,7 @@
             "children": [
               {
                 "id": "sliding_7",
-                "name": "channel",
+                "name": "default",
                 "parent": "state_6",
                 "type": "CHANNEL",
                 "value": [
@@ -981,7 +981,7 @@
             "children": [
               {
                 "id": "sliding_7",
-                "name": "channel",
+                "name": "default",
                 "parent": "state_6",
                 "type": "CHANNEL",
                 "value": [
@@ -1106,7 +1106,7 @@
             "children": [
               {
                 "id": "sliding_7",
-                "name": "channel",
+                "name": "default",
                 "parent": "state_6",
                 "type": "CHANNEL",
                 "value": [
@@ -1213,7 +1213,7 @@
     {
       "who": {
         "id": "sliding_7",
-        "name": "channel",
+        "name": "default",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -1265,7 +1265,7 @@
         "children": [
           {
             "id": "sliding_7",
-            "name": "channel",
+            "name": "default",
             "parent": "state_6",
             "type": "CHANNEL",
             "value": [

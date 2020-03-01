@@ -111,7 +111,7 @@ export default function state(initialValue, parent = null) {
 
   logger.log(api, 'STATE_CREATED');
 
-  api.DEFAULT = api.chan();
+  api.DEFAULT = api.chan()`default`;
 
   grid.add(api);
 

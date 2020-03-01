@@ -172,7 +172,7 @@ describe('Given the logger', () => {
       await delay();
       r.unmount();
       await delay();
-      clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
+      // clipboardy.writeSync(JSON.stringify(logger.frames(), null, 2));
       expect(logger.frames()).toStrictEqual(expectationRiew);
     });
   });

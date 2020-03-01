@@ -751,11 +751,17 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
 };
 
+var _templateObject = _taggedTemplateLiteral(['default'], ['default']);
+
 exports.default = state;
 
 var _index = require('../index');
 
 var _utils = require('../utils');
+
+function _taggedTemplateLiteral(strings, raw) {
+  return Object.freeze(Object.defineProperties(strings, { raw: { value: Object.freeze(raw) } }));
+}
 
 var DEFAULT_SELECTOR = function DEFAULT_SELECTOR(v) {
   return v;
@@ -875,7 +881,7 @@ function state(initialValue) {
 
   _index.logger.log(api, 'STATE_CREATED');
 
-  api.DEFAULT = api.chan();
+  api.DEFAULT = api.chan()(_templateObject);
 
   _index.grid.add(api);
 
