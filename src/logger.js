@@ -121,6 +121,20 @@ export default function Logger() {
   api.disable = () => {
     enabled = false;
   };
+  api.setWhoName = (id, name) => {
+    data.forEach(action => {
+      if (action.who.id === id) {
+        action.who.name = name;
+      }
+    });
+    frames.forEach(frame => {
+      frame.forEach(action => {
+        if (action.who.id === id) {
+          action.who.name = name;
+        }
+      });
+    });
+  };
 
   return api;
 }

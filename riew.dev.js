@@ -285,6 +285,7 @@ function chan(id, buff) {
     } else {
       (0, _utils.setProp)(channel, 'name', str[0]);
     }
+    _index.logger.setWhoName(channel.id, channel.name);
     return channel;
   };
   channel.id = id;
@@ -789,6 +790,7 @@ function state(initialValue) {
     } else {
       (0, _utils.setProp)(api, 'name', str[0]);
     }
+    _index.logger.setWhoName(api.id, api.name);
     return api;
   };
 
@@ -1353,6 +1355,20 @@ function Logger() {
   };
   api.disable = function () {
     enabled = false;
+  };
+  api.setWhoName = function (id, name) {
+    data.forEach(function (action) {
+      if (action.who.id === id) {
+        action.who.name = name;
+      }
+    });
+    frames.forEach(function (frame) {
+      frame.forEach(function (action) {
+        if (action.who.id === id) {
+          action.who.name = name;
+        }
+      });
+    });
   };
 
   return api;

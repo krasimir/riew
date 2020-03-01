@@ -26,6 +26,7 @@ export default function state(initialValue, parent = null) {
     } else {
       setProp(api, 'name', str[0]);
     }
+    logger.setWhoName(api.id, api.name);
     return api;
   };
 

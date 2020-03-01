@@ -44,18 +44,36 @@ describe('Given the logger', () => {
   });
   describe('and we call the `frame` method', () => {
     it('should create a snapshot that contains a riew', async () => {
-      const r = riew(() => {});
+      const r = riew(function Foo() {});
       await delay();
       expect(findItem(r.id)).toMatchObject({
         id: r.id,
+        name: 'Foo',
         type: 'RIEW',
       });
     });
     it('should create a snapshot that contains a channel', async () => {
-      const c = chan('FOO');
+      const c = chan('FOO')`XXX`;
       await delay();
       expect(findItem(c.id)).toMatchObject({
         id: 'FOO_1',
+        name: 'XXX',
+        type: 'CHANNEL',
+      });
+    });
+    it('should set the name of the channel', async () => {
+      const c1 = chan('FOO')`foo`;
+      const c2 = chan('BAR');
+      await delay();
+      c2`bar`;
+      expect(findItem(c1.id)).toMatchObject({
+        id: 'FOO_1',
+        name: 'foo',
+        type: 'CHANNEL',
+      });
+      expect(findItem(c2.id)).toMatchObject({
+        id: 'BAR_2',
+        name: 'bar',
         type: 'CHANNEL',
       });
     });
@@ -66,6 +84,18 @@ describe('Given the logger', () => {
         id: s.id,
         type: 'STATE',
         value: 42,
+      });
+    });
+    it('should set the name of the state', async () => {
+      const s1 = state('FOO')`foo`;
+      const s2 = state('BAR');
+      await delay();
+      s2`bar`;
+      expect(findItem(s1.id)).toMatchObject({
+        name: 'foo',
+      });
+      expect(findItem(s2.id)).toMatchObject({
+        name: 'bar',
       });
     });
     it('should create a snapshot that contains a routine', async () => {

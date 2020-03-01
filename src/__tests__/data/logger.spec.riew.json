@@ -3,7 +3,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_2",
-        "name": "channel",
+        "name": "view",
         "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [],
@@ -16,7 +16,7 @@
     {
       "who": {
         "id": "sliding_MyVIew_3",
-        "name": "channel",
+        "name": "props",
         "parent": "MyVIew_riew_1",
         "type": "CHANNEL",
         "value": [],
@@ -246,7 +246,7 @@
     {
       "who": {
         "id": "state_6",
-        "name": "state",
+        "name": "something",
         "parent": "MyVIew_riew_1",
         "type": "STATE",
         "value": "bar",
@@ -299,7 +299,7 @@
     {
       "who": {
         "id": "sliding_8",
-        "name": "channel",
+        "name": "toUpperCase",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [],
@@ -312,7 +312,7 @@
     {
       "who": {
         "id": "sliding_8",
-        "name": "channel",
+        "name": "toUpperCase",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [],
@@ -325,7 +325,7 @@
     {
       "who": {
         "id": "sliding_8",
-        "name": "channel",
+        "name": "toUpperCase",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [
@@ -340,7 +340,7 @@
     {
       "who": {
         "id": "sliding_9",
-        "name": "channel",
+        "name": "transformToLowerCase",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [],
@@ -353,7 +353,7 @@
     {
       "who": {
         "id": "sliding_9",
-        "name": "channel",
+        "name": "transformToLowerCase",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [],
@@ -366,7 +366,7 @@
     {
       "who": {
         "id": "sliding_9",
-        "name": "channel",
+        "name": "transformToLowerCase",
         "parent": "state_6",
         "type": "CHANNEL",
         "value": [

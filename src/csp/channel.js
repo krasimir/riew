@@ -18,6 +18,7 @@ export default function chan(id, buff, parent = null) {
     } else {
       setProp(channel, 'name', str[0]);
     }
+    logger.setWhoName(channel.id, channel.name);
     return channel;
   };
   channel.id = id;
