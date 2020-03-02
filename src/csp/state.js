@@ -15,7 +15,7 @@ export default function state(initialValue, parent = null) {
   function syncChildren(initiator) {
     children.forEach(c => {
       if (c.id !== initiator.id) {
-        sput(c, { value, syncing: true });
+        sput(c, { value, __syncing: true });
       }
     });
   }
@@ -59,8 +59,8 @@ export default function state(initialValue, parent = null) {
       if (
         payload !== null &&
         typeof payload === 'object' &&
-        'syncing' in payload &&
-        payload.syncing
+        '__syncing' in payload &&
+        payload.__syncing
       ) {
         cb(payload.value);
         return;

@@ -36,7 +36,7 @@
         "puts": [],
         "takes": []
       },
-      "what": "CHANNEL_TAKE_INITIATED",
+      "what": "CHANNEL_LISTEN",
       "meta": null
     },
     {

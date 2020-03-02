@@ -161,7 +161,10 @@ function CSPBuffer(size = 0, { dropping, sliding } = DEFAULT_OPTIONS) {
   };
   api.take = (callback, options) => {
     let unsubscribe = () => {};
-    logger.log(api.parent, 'CHANNEL_TAKE_INITIATED');
+    logger.log(
+      api.parent,
+      options && options.listen ? 'CHANNEL_LISTEN' : 'CHANNEL_TAKE_INITIATED'
+    );
     api.hooks.beforeTake(
       undefined,
       () =>

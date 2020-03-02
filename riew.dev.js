@@ -205,7 +205,7 @@ function CSPBuffer() {
   };
   api.take = function (callback, options) {
     var unsubscribe = function unsubscribe() {};
-    _index.logger.log(api.parent, 'CHANNEL_TAKE_INITIATED');
+    _index.logger.log(api.parent, options && options.listen ? 'CHANNEL_LISTEN' : 'CHANNEL_TAKE_INITIATED');
     api.hooks.beforeTake(undefined, function () {
       return unsubscribe = take(function (takeOpRes) {
         return api.hooks.afterTake(takeOpRes, function (afterTakeItem) {
@@ -785,7 +785,7 @@ function state(initialValue) {
   function syncChildren(initiator) {
     children.forEach(function (c) {
       if (c.id !== initiator.id) {
-        (0, _index.sput)(c, { value: value, syncing: true });
+        (0, _index.sput)(c, { value: value, __syncing: true });
       }
     });
   }
@@ -830,7 +830,7 @@ function state(initialValue) {
       }
     });
     ch.beforePut(function (payload, cb) {
-      if (payload !== null && (typeof payload === 'undefined' ? 'undefined' : _typeof(payload)) === 'object' && 'syncing' in payload && payload.syncing) {
+      if (payload !== null && (typeof payload === 'undefined' ? 'undefined' : _typeof(payload)) === 'object' && '__syncing' in payload && payload.__syncing) {
         cb(payload.value);
         return;
       }
